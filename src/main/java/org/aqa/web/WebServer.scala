@@ -41,6 +41,7 @@ import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessSubHTML
 import org.aqa.webrun.phase2.vmat.VMATChartHistoryRestlet
 import org.aqa.webrun.phase2.wedge.WedgeChartHistoryRestlet
 import org.aqa.webrun.phase2.wedge.WedgeUseAsBaseline
+import org.aqa.webrun.wl.WLHistoryRestlet
 import org.restlet.Application
 import org.restlet.Component
 import org.restlet.Request
@@ -538,6 +539,7 @@ class WebServer extends Application with Logging {
         new VMATChartHistoryRestlet,
         new WedgeChartHistoryRestlet,
         new SymmetryAndFlatnessHistoryRestlet,
+        new WLHistoryRestlet,
         new DailyQASummary,
         new DataCollectionSummary,
         new SymmetryAndFlatnessSubHTML,

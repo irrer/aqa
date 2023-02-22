@@ -41,9 +41,9 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
     // Process in parallel for speed.  Afterwards, sort by data time.
     val resultList = runReq.epidList.par.map(rtimage => new WLProcessImage(extendedData, rtimage, runReq).process).toList.sortBy(_.elapsedTime_ms)
 
-    val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, resultList)
     resultList.map(_.toWinstonLutz).map(_.insert)
     logger.info(s"Inserted ${resultList.size} WinstonLutz rows into database.")
+    val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, resultList)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, mainHtmlText)
     logger.info("Wrote main HTML file " + file.getAbsolutePath)

@@ -9,6 +9,7 @@ import org.aqa.db.WinstonLutz
 import org.aqa.web.C3ChartHistory
 import org.aqa.Util
 
+import java.awt.Color
 import java.util.Date
 
 class WLChart(outputPK: Long) extends Logging {
@@ -31,7 +32,7 @@ class WLChart(outputPK: Long) extends Logging {
       MaintenanceRecord.getRange(machine.machinePK.get, first, last).filter(m => !m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline))
     }
 
-    val chartIdOpt = Some("C_" + Util.textToId(history.head.winstonLutz.beamName.get))
+    val chartIdOpt = Some("C_" + Util.textToId(history.head.winstonLutz.beamNameOf))
 
     case class YData(name: String, data: WinstonLutz.WinstonLutzHistory => Double) {}
 
@@ -48,12 +49,20 @@ class WLChart(outputPK: Long) extends Logging {
     )
 
     val dateList = {
-      val list = history.map(h => h.output.dataDate.get.getTime.asInstanceOf[Date])
+      val list = history.map(h => h.output.dataDate.get.asInstanceOf[Date])
       yData.map(_ => list)
     }
 
     val yIndex = history.indexWhere(_.output.outputPK.get == outputPK)
-
+    val yColorList = Seq(
+      Color.red,
+      Color.green,
+      Color.black,
+      Color.lightGray,
+      Color.orange,
+      Color.blue,
+      Color.magenta
+    )
     new C3ChartHistory(
       chartIdOpt = chartIdOpt,
       maintenanceList = maintenanceList,
@@ -69,7 +78,7 @@ class WLChart(outputPK: Long) extends Logging {
       yValues = yData.map(yd => history.map(yd.data)),
       yIndex = yIndex,
       yFormat = ".3r",
-      yColorList = Seq(),
+      yColorList = yColorList,
       setBaselineList = Seq()
     )
   }
@@ -82,6 +91,6 @@ class WLChart(outputPK: Long) extends Logging {
     list.groupBy(_.winstonLutz.beamNameOf).toSeq.sortBy(_._1).map(_._2.sortBy(_.output.dataDate.get.getTime))
   }
 
-  val chartList = historyForAllBeams.map(makeChart)
+  val chartList: Seq[C3ChartHistory] = historyForAllBeams.map(makeChart)
 
 }

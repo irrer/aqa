@@ -56,7 +56,6 @@
     <orderEntry type="library" name="Maven: org.apache.poi:poi-ooxml:5.2.3" level="project" />
     <orderEntry type="library" name="Maven: org.apache.poi:poi-ooxml-lite:5.2.3" level="project" />
     <orderEntry type="library" name="Maven: org.apache.xmlbeans:xmlbeans:5.1.1" level="project" />
-    <orderEntry type="library" name="Maven: xml-apis:xml-apis:1.4.01" level="project" />
     <orderEntry type="library" name="Maven: org.apache.commons:commons-compress:1.21" level="project" />
     <orderEntry type="library" name="Maven: com.github.virtuald:curvesapi:1.07" level="project" />
     <orderEntry type="library" name="Maven: org.gnu:gnu-crypto:2.0.1" level="project" />

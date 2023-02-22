@@ -365,7 +365,7 @@ object C3ChartHistory {
   }
 
   def htmlHelp(): Elem = {
-    <a rel="/static/images/ChartScrollAndScale.png" class="screenshot" href="/static/images/ChartScrollAndScale.png"><img src="/static/images/ChartScrollAndScaleIcon.png" height="10px"/> Help</a>
+    <a rel="/static/images/ChartScrollAndScale.png" class="screenshot" href="/static/images/ChartScrollAndScale.png"><img src="/static/images/ChartScrollAndScaleIcon.png" height="10px;"/> Help</a>
   }
 
   /**

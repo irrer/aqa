@@ -1528,7 +1528,7 @@ object Util extends Logging {
     */
   def getBeamOfRtimage(plan: AttributeList, BeamNumber: Int): Option[AttributeList] = {
     try {
-      val beam = DicomUtil.seqToAttr(plan, TagByName.BeamNumber).find(bs => bs.get(TagByName.BeamNumber).getIntegerValues.head == BeamNumber)
+      val beam = DicomUtil.seqToAttr(plan, TagByName.BeamSequence).find(bs => bs.get(TagByName.BeamNumber).getIntegerValues.head == BeamNumber)
       beam
     } catch {
       case _: Throwable => None

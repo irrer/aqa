@@ -9,6 +9,7 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.opensourcephysics.numerics.CubicSpline
 
 import java.awt.image.BufferedImage
@@ -1016,6 +1017,11 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
 
       diag("Image processing Results:\n" + imageResult.toString)
 
+      if (true) { // TODO rm
+        val j = MeasureTBLREdges.imageCollimatorPositions(rtimage, runReq.rtplan.get)
+        Trace.trace("expected: " + j)
+        Trace.trace()
+      }
       WLgenHtml.generateHtml(extendedData, subDir, imageResult)
 
       imageResult

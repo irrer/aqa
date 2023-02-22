@@ -3,6 +3,7 @@ package org.aqa.webrun.wl
 import org.aqa.webrun.ExtendedData
 import org.aqa.Config
 import org.aqa.Logging
+import org.aqa.web.C3ChartHistory
 import org.aqa.web.WebUtil
 
 import java.awt.Color
@@ -268,16 +269,44 @@ object WLMainHtml extends Logging {
         </table>
       }
 
+      val wlChart = new WLChart(extendedData.output.outputPK.get)
+
+      val chartHtml: Seq[Elem] = {
+        def toElem(beamName: String, chart: C3ChartHistory) = {
+          <div style="border:solid grey 1px; margin-top:16px;">
+            <center>
+              <h3>{beamName}</h3>
+            </center>
+            {chart.html}
+          </div>
+        }
+
+        val list = wlChart.beamNameList.zip(wlChart.chartList)
+
+        val help = <div style="margin-top:20px;margin-bottom:8px;">{C3ChartHistory.htmlHelp()}</div>
+        help +: list.map(nameChart => toElem(nameChart._1, nameChart._2))
+      }
+
+      // val javaScript = wlChart.chartList.map(_.javascript).mkString("\n")
+      val runScript = s"""<script src='/WLHistoryRestlet?outputPK=${extendedData.output.outputPK.get.toString}'></script>"""
+
       val content: Elem = {
         <div>
           {headTable2}
           {headTable1}
           {readyForEvaluationNote}
           {imageHtml}
+          {chartHtml}
         </div>
       }
 
-      val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), "Winston Lutz")
+      // @formatter:off
+      val text = WebUtil.wrapBody(
+        content = ExtendedData.wrapExtendedData(extendedData, content),
+        pageTitle = "Winston Lutz",
+        c3 = true,
+        runScript = Some(runScript) )
+      // @formatter:on
       text
     }
 
