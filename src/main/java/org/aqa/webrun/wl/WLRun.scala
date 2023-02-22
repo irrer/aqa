@@ -39,7 +39,9 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
 
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
     // Process in parallel for speed.  Afterwards, sort by data time.
-    val resultList = runReq.epidList.par.map(rtimage => new WLProcessImage(extendedData, rtimage, runReq).process).toList.sortBy(_.elapsedTime_ms)
+    val results = runReq.epidList.par.map(rtimage => new WLProcessImage(extendedData, rtimage, runReq).process).toList //
+
+    val resultList = results.filter(_.isRight).map(_.right.get).sortBy(_.elapsedTime_ms)
 
     resultList.map(_.toWinstonLutz).map(_.insert)
     logger.info(s"Inserted ${resultList.size} WinstonLutz rows into database.")
@@ -48,8 +50,8 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
     Util.writeFile(file, mainHtmlText)
     logger.info("Wrote main HTML file " + file.getAbsolutePath)
 
-    val statusList = resultList.map(_.imageStatus).distinct
-    if (statusList.contains(ImageStatus.Passed) && statusList.size == 1)
+    val statusList = results.filter(_.isLeft).map(_.left.get).distinct
+    if (statusList.isEmpty)
       ProcedureStatus.pass
     else
       ProcedureStatus.fail

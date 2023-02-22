@@ -32,22 +32,28 @@ import scala.xml.Elem
   */
 case class WinstonLutz(
     // @formatter:off
-    winstonLutzPK: Option[Long],  // primary key
-    outputPK: Long,               // output primary key
-    rtimageUID: String,           // SOP series instance UID of EPID image
-    rtplanUID: String,            // SOP series instance UID of referenced RTPLAN
-    beamName: Option[String],     // Name of beam in RTPLAN (if available)
-    gantryAngle_deg: Double,      // Angle of gantry in degrees.  This is the raw value from the RTIMAGE and is not rounded.
-    collimatorAngle_deg: Double,  // Angle of collimator in degrees.  This is the raw value from the RTIMAGE and is not rounded.
-    dataDate: java.sql.Timestamp,          // time and date that this image was captured at the treatment machine
+    winstonLutzPK        : Option[Long]       , // primary key
+    outputPK             : Long               , // output primary key
+    rtimageUID           : String             , // SOP series instance UID of EPID image
+    rtplanUID            : String             , // SOP series instance UID of referenced RTPLAN
+    beamName             : Option[String]     , // Name of beam in RTPLAN (if available)
+    gantryAngle_deg      : Double             , // Angle of gantry in degrees.  This is the raw value from the RTIMAGE and is not rounded.
+    collimatorAngle_deg  : Double             , // Angle of collimator in degrees.  This is the raw value from the RTIMAGE and is not rounded.
+    dataDate             : java.sql.Timestamp , // time and date that this image was captured at the treatment machine
     //
-    topEdge_mm: Double,           // width of measurement rectangle.  Not required to calculate values, but provides an indication of the number of pixels used to establish the edge measurements.
-    bottomEdge_mm: Double,        // distance between measurements of the same edge.  Needed to calculate skew angle.
-    leftEdge_mm: Double,          // width of measurement rectangle.  Not required to calculate values, but provides an indication of the number of pixels used to establish the edge measurements.
-    rightEdge_mm: Double,         // distance between measurements of the same edge.  Needed to calculate skew angle.
-    ballX_mm: Double,             // width of measurement rectangle.  Not required to calculate values, but provides an indication of the number of pixels used to establish the edge measurements.
-    ballY_mm: Double              // width of measurement rectangle.  Not required to calculate values, but provides an indication of the number of pixels used to establish the edge measurements.
-    // @formatter:on
+    topEdge_mm           : Double             , // measured top edge of rectangle
+    bottomEdge_mm        : Double             , // measured bottom edge of rectangle
+    leftEdge_mm          : Double             , // measured left edge of rectangle
+    rightEdge_mm         : Double             , // measured right edge of rectangle
+    //
+    ballX_mm             : Double             , // width of measurement rectangle.  Not required to calculate values, but provides an indication of the number of pixels used to establish the edge measurements.
+    ballY_mm             : Double             , // width of measurement rectangle.  Not required to calculate values, but provides an indication of the number of pixels used to establish the edge measurements.
+    //
+    topEdgePlanned_mm    : Option[Double]     , // planned top edge of rectangle
+    bottomEdgePlanned_mm : Option[Double]     , // planned bottom edge of rectangle
+    leftEdgePlanned_mm   : Option[Double]     , // planned left edge of rectangle
+    rightEdgePlanned_mm  : Option[Double]       // planned right edge of rectangle
+  // @formatter:on
 ) {
 
   def insert: WinstonLutz = {
@@ -73,14 +79,26 @@ case class WinstonLutz(
   def insertOrUpdate(): Int = Db.run(WinstonLutz.query.insertOrUpdate(this))
 
   //noinspection ScalaWeakerAccess
-  def boxCenterX: Double = (leftEdge_mm + rightEdge_mm) / 2
+  def boxCenterX_mm: Double = (leftEdge_mm + rightEdge_mm) / 2
   //noinspection ScalaWeakerAccess
-  def boxCenterY: Double = (topEdge_mm + bottomEdge_mm) / 2
+  def boxCenterY_mm: Double = (topEdge_mm + bottomEdge_mm) / 2
   //noinspection ScalaWeakerAccess
-  def errorX: Double = boxCenterX - ballX_mm
+  def errorX_mm: Double = boxCenterX_mm - ballX_mm
   //noinspection ScalaWeakerAccess
-  def errorY: Double = boxCenterY - ballY_mm
-  def errorXY: Double = Math.sqrt((errorX * errorX) + (errorY * errorY))
+  def errorY_mm: Double = boxCenterY_mm - ballY_mm
+  def errorXY_mm: Double = Math.sqrt((errorX_mm * errorX_mm) + (errorY_mm * errorY_mm))
+
+  /** top edge measured - planned */
+  def topError_mm: Option[Double] = if (topEdgePlanned_mm.isDefined) Some(topEdge_mm - topEdgePlanned_mm.get) else None
+
+  /** bottom edge measured - planned */
+  def bottomError_mm: Option[Double] = if (bottomEdgePlanned_mm.isDefined) Some(bottomEdge_mm - bottomEdgePlanned_mm.get) else None
+
+  /** left edge measured - planned */
+  def leftError_mm: Option[Double] = if (leftEdgePlanned_mm.isDefined) Some(leftEdge_mm - leftEdgePlanned_mm.get) else None
+
+  /** right edge measured - planned */
+  def rightError_mm: Option[Double] = if (rightEdgePlanned_mm.isDefined) Some(rightEdge_mm - rightEdgePlanned_mm.get) else None
 }
 
 object WinstonLutz extends ProcedureOutput with Logging {
@@ -114,6 +132,14 @@ object WinstonLutz extends ProcedureOutput with Logging {
 
     def ballY_mm = column[Double]("ballY_mm")
 
+    def topEdgePlanned_mm = column[Option[Double]]("topEdgePlanned_mm")
+
+    def bottomEdgePlanned_mm = column[Option[Double]]("bottomEdgePlanned_mm")
+
+    def leftEdgePlanned_mm = column[Option[Double]]("leftEdgePlanned_mm")
+
+    def rightEdgePlanned_mm = column[Option[Double]]("rightEdgePlanned_mm")
+
     def * =
       (
         winstonLutzPK.?,
@@ -129,7 +155,11 @@ object WinstonLutz extends ProcedureOutput with Logging {
         leftEdge_mm,
         rightEdge_mm,
         ballX_mm,
-        ballY_mm
+        ballY_mm,
+        topEdgePlanned_mm,
+        bottomEdgePlanned_mm,
+        leftEdgePlanned_mm,
+        rightEdgePlanned_mm
       ) <> (WinstonLutz.apply _ tupled, WinstonLutz.unapply)
 
     def outputFK = foreignKey("WinstonLutz_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)

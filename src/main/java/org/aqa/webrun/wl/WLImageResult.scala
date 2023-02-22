@@ -205,6 +205,8 @@ class WLImageResult(
         None
     }
 
+    val planned = if (runReq.rtplan.isDefined) Some(WLPlanned(rtplan = runReq.rtplan.get, rtimage)) else None
+
     val wl = WinstonLutz(
       winstonLutzPK = None,
       outputPK = extendedData.output.outputPK.get,
@@ -219,7 +221,11 @@ class WLImageResult(
       leftEdge_mm = left_mm,
       rightEdge_mm = right_mm,
       ballX_mm = ballCenter_mm.getX,
-      ballY_mm = ballCenter_mm.getY
+      ballY_mm = ballCenter_mm.getY,
+      topEdgePlanned_mm = planned.map(_.top),
+      bottomEdgePlanned_mm = planned.map(_.bottom),
+      leftEdgePlanned_mm = planned.map(_.left),
+      rightEdgePlanned_mm = planned.map(_.right)
     )
     wl
   }

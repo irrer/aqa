@@ -34,17 +34,32 @@ class WLChart(outputPK: Long) extends Logging {
 
     val chartIdOpt = Some("C_" + Util.textToId(history.head.winstonLutz.beamNameOf))
 
-    case class YData(name: String, data: WinstonLutz.WinstonLutzHistory => Double) {}
+    abstract class YD(val name: String, val color: Color) {
+      def get(h: WinstonLutz.WinstonLutzHistory): Double
+    }
+    class YData(name: String, color: Color, data: WinstonLutz.WinstonLutzHistory => Double) extends YD(name, color) {
+      def get(h: WinstonLutz.WinstonLutzHistory): Double = data(h)
+    }
+    class YDataOpt(name: String, color: Color, data: WinstonLutz.WinstonLutzHistory => Option[Double]) extends YD(name, color) {
+      def get(h: WinstonLutz.WinstonLutzHistory): Double = if (data(h).isDefined) data(h).get else 0.0
+    }
 
-    val yData = Seq(
+    val yData: Seq[YD] = Seq(
       // @formatter:off
-      YData("R (Total Offset)" , h => h.winstonLutz.errorXY   ),
-      YData("X offset"         , h => h.winstonLutz.errorX    ),
-      YData("Y offset"         , h => h.winstonLutz.errorY    ),
-      YData("X box center"     , h => h.winstonLutz.boxCenterX),
-      YData("Y box center"     , h => h.winstonLutz.boxCenterY),
-      YData("X ball center"    , h => h.winstonLutz.ballX_mm  ),
-      YData("Y ball center"    , h => h.winstonLutz.ballY_mm  )
+      new YData   ("R (Total Offset)"      , new Color(0xff0000), h => h.winstonLutz.errorXY_mm     ),
+      new YData   ("X offset"              , new Color(0x444444), h => h.winstonLutz.errorX_mm      ),
+      new YData   ("Y offset"              , new Color(0x888888), h => h.winstonLutz.errorY_mm      ),
+      
+      new YData   ("X box center"          , new Color(0x00ffff), h => h.winstonLutz.boxCenterX_mm  ),
+      new YData   ("Y box center"          , new Color(0x006666), h => h.winstonLutz.boxCenterY_mm  ),
+      
+      new YData   ("X ball center"         , new Color(0xff00ff), h => h.winstonLutz.ballX_mm       ),
+      new YData   ("Y ball center"         , new Color(0x990099), h => h.winstonLutz.ballY_mm       ),
+      //
+      new YDataOpt("Top edge - planned"    , new Color(0xffc800), h => h.winstonLutz.topError_mm    ),
+      new YDataOpt("Bottom edge - planned" , new Color(0x44ff44), h => h.winstonLutz.bottomError_mm ),
+      new YDataOpt("Left edge - planned"   , new Color(0x000080), h => h.winstonLutz.leftError_mm   ),
+      new YDataOpt("Right edge - planned"  , new Color(0x804000), h => h.winstonLutz.rightError_mm  )
       // @formatter:on
     )
 
@@ -54,15 +69,9 @@ class WLChart(outputPK: Long) extends Logging {
     }
 
     val yIndex = history.indexWhere(_.output.outputPK.get == outputPK)
-    val yColorList = Seq(
-      Color.red,
-      Color.green,
-      Color.black,
-      Color.lightGray,
-      Color.orange,
-      Color.blue,
-      Color.magenta
-    )
+
+    val yColorList = yData.map(_.color)
+
     new C3ChartHistory(
       chartIdOpt = chartIdOpt,
       maintenanceList = maintenanceList,
@@ -75,7 +84,7 @@ class WLChart(outputPK: Long) extends Logging {
       yRange = None,
       yAxisLabels = yData.map(_.name),
       yDataLabel = "mm",
-      yValues = yData.map(yd => history.map(yd.data)),
+      yValues = yData.map(yd => history.map(yd.get)),
       yIndex = yIndex,
       yFormat = ".2r",
       yColorList = yColorList,
