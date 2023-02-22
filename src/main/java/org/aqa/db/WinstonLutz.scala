@@ -63,7 +63,7 @@ case class WinstonLutz(
     */
   def beamNameOf: String = {
     if (beamName.isDefined)
-      beamName.get
+      beamName.get.replaceFirst("^[0-9] ", "").trim
     else {
       val name = "WL G" + Util.angleRoundedTo90(gantryAngle_deg) + " C" + Util.angleRoundedTo90(collimatorAngle_deg)
       name

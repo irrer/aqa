@@ -42,6 +42,9 @@ object WLMainHtml extends Logging {
 
     def irTextHtml(ir: WLImageResult): Seq[Elem] = {
       def fmtDbl(value: Double): String = value.formatted("%6.2f").trim
+      def hiFmtDbl(d: Double): String = d.formatted("%9.6f").trim
+
+      val wl = ir.toWinstonLutz
 
       val diagnostics: Elem = {
         val elem =
@@ -83,10 +86,11 @@ object WLMainHtml extends Logging {
         <td style='background: #eeeeee'>
           <center>
             <h3 title='Gantry angle, collimator angle, and time since start'><b>{getNameHtml(ir)}</b></h3>
-            <p>
+            <p>Beam {wl.beamNameOf}</p>
+            <p title={hiFmtDbl(ir.offX) + ", " + hiFmtDbl(ir.offY)}>
             Offset in mm X = {fmtDbl(ir.offX)} Y = {fmtDbl(ir.offY)}
             </p>
-            <p>
+            <p title={hiFmtDbl(ir.offXY)}>
               R = {fmtDbl(ir.offXY)}  {passedText(ir)}
             </p>
             <p>

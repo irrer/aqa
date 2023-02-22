@@ -38,13 +38,13 @@ class WLChart(outputPK: Long) extends Logging {
 
     val yData = Seq(
       // @formatter:off
-      YData("Total Error"  , h => h.winstonLutz.errorXY   ),
-      YData("X error"      , h => h.winstonLutz.errorX    ),
-      YData("Y error"      , h => h.winstonLutz.errorY    ),
-      YData("X box center" , h => h.winstonLutz.boxCenterX),
-      YData("Y box center" , h => h.winstonLutz.boxCenterY),
-      YData("X ball center", h => h.winstonLutz.ballX_mm  ),
-      YData("Y ball center", h => h.winstonLutz.ballY_mm  )
+      YData("R (Total Offset)" , h => h.winstonLutz.errorXY   ),
+      YData("X offset"         , h => h.winstonLutz.errorX    ),
+      YData("Y offset"         , h => h.winstonLutz.errorY    ),
+      YData("X box center"     , h => h.winstonLutz.boxCenterX),
+      YData("Y box center"     , h => h.winstonLutz.boxCenterY),
+      YData("X ball center"    , h => h.winstonLutz.ballX_mm  ),
+      YData("Y ball center"    , h => h.winstonLutz.ballY_mm  )
       // @formatter:on
     )
 
@@ -77,7 +77,7 @@ class WLChart(outputPK: Long) extends Logging {
       yDataLabel = "mm",
       yValues = yData.map(yd => history.map(yd.data)),
       yIndex = yIndex,
-      yFormat = ".3r",
+      yFormat = ".2r",
       yColorList = yColorList,
       setBaselineList = Seq()
     )
