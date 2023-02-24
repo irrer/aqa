@@ -9,7 +9,7 @@
         <module name="aqa" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
+    <bytecodeTargetLevel target="8">
       <module name="aqa" target="1.8" />
     </bytecodeTargetLevel>
   </component>

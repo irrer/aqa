@@ -298,12 +298,12 @@ object SymmetryAndFlatnessAnalysis extends Logging {
         val bs = r.baseline
         val sf = r.symmetryAndFlatness
         val text = {
-          "    " + sf.beamName.formatted("%16s") + " : " +
-            "    axial sym:" + sf.axialSymmetryPass(bs).toString.formatted("%5s") + " : " +
-            "    flatness:" + sf.flatnessPass(bs).toString.formatted("%5s") + " : " +
-            "    transverse sym:" + sf.transverseSymmetryPass(bs).toString.formatted("%5s") + " : " +
-            "    profile const:" + sf.profileConstancyPass(bs).toString.formatted("%5s") + " : " +
-            "    all: " + sf.allPass(bs).toString.formatted("%5s")
+          "    " + sf.beamName.format("%16s") + " : " +
+            "    axial sym:" + sf.axialSymmetryPass(bs).toString.format("%5s") + " : " +
+            "    flatness:" + sf.flatnessPass(bs).toString.format("%5s") + " : " +
+            "    transverse sym:" + sf.transverseSymmetryPass(bs).toString.format("%5s") + " : " +
+            "    profile const:" + sf.profileConstancyPass(bs).toString.format("%5s") + " : " +
+            "    all: " + sf.allPass(bs).toString.format("%5s")
         }
         text
       }

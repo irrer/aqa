@@ -70,7 +70,7 @@ class TestUtil_DateTime extends FlatSpec with Matchers {
     val dateTime = Util.extractDateTimeAndPatientIdFromDicomAl(al)
 
     def toText(t: Date) = {
-      val orig = "orig: " + (dateText + " " + timeText).formatted("%-26s")
+      val orig = "orig: " + (dateText + " " + timeText).format("%-26s")
       val ms = "ms: " + t.getTime.formatted("%14d")
       val humanReadable = "human readable:" + dateFormat.format(t)
       val out = " out: " + dicomFormat.format(t)

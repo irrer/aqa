@@ -37,7 +37,7 @@ object EdgesFromPlan extends Logging {
     */
   case class BeamLimit(position_mm: Double, edgeType: GapSkew.EdgeType) {
     override def toString: String = {
-      "limit_mm: " + fmt2(position_mm) + "    isJaw: " + edgeType.toString.formatted("%6s")
+      "limit_mm: " + fmt2(position_mm) + "    isJaw: " + edgeType.toString.format("%6s")
     }
   }
 

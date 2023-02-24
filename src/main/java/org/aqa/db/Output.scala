@@ -480,8 +480,8 @@ object Output extends Logging {
         println(
           (index + 1).formatted("%5d") + ((index + 1) / count).formatted("%7.3f") +
             "    outputPK: " + outputPK +
-            "    " + elapsed.formatted("%10s") +
-            "    " + remain.formatted("%10s") +
+            "    " + elapsed.format("%10s") +
+            "    " + remain.format("%10s") +
             "  " + output.dir.getAbsolutePath +
             "    fileSystem size: " + fileSystem.length.formatted("%10d") +
             "    db size: " + db.zippedContent.length.formatted("%10d") + fsg

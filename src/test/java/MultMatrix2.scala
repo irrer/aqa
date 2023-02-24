@@ -55,7 +55,7 @@ object MultMatrix2 {
     def tryRtimage(rtimage: AttributeList): String = {
       val DeviceSerialNumber = rtimage.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrEmptyString
 
-      val DevSerNo = DeviceSerialNumber.formatted("%6s")
+      val DevSerNo = DeviceSerialNumber.format("%6s")
       val frameOfRef = Util.getAttrValue(rtimage, TagFromName.FrameOfReferenceUID).get
       val PatientID = Util.getAttrValue(rtimage, TagFromName.PatientID).get
       val date = Util.standardDateFormat.format(Util.extractDateTimeAndPatientIdFromDicomAl(rtimage)._1.head)
@@ -71,7 +71,7 @@ object MultMatrix2 {
       val reg = regList.find(reg => reg.frameOfRefUID.equals(frameOfRef))
       if (reg.isDefined) {
         def p2sT(p: Point3d) = p2s(p) + " --> " + p2s(reg.get.transform(p))
-        //    "    planUID: " + planUID.formatted("%-60s") +
+        //    "    planUID: " + planUID.format("%-60s") +
 
         PatientID +
           "    DevSerNo: " + DevSerNo +
@@ -83,7 +83,7 @@ object MultMatrix2 {
         PatientID +
           "    DevSerNo: " + DevSerNo +
           "    date: " + date +
-          "    No reg for " + frameOfRef.formatted("%-60s") +
+          "    No reg for " + frameOfRef.format("%-60s") +
           "    isoPoint: " + p2s(isoPoint) +
           "    XRayImgRcptrTrans: " + p2s(XRayImageReceptorTranslation)
 

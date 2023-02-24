@@ -540,7 +540,7 @@ object Config extends Logging {
     * Encapsulate the configuration for pair of VMAT beams.
     */
   case class VMATBeamPair(name: String, MLC: String, OPEN: String, IsolationBorder_mm: Double) {
-    override def toString: String = name + "    MLC: " + MLC.formatted("%-14s") + "    OPEN: " + OPEN.formatted("%-14s") + "    IsolationBorder_mm: " + IsolationBorder_mm.formatted("%6.3f")
+    override def toString: String = name + "    MLC: " + MLC.format("%-14s") + "    OPEN: " + OPEN.format("%-14s") + "    IsolationBorder_mm: " + IsolationBorder_mm.formatted("%6.3f")
   }
 
   /**
@@ -730,7 +730,7 @@ object Config extends Logging {
     val dicomFile = new DicomFile(file)
     val fileIsValid: Boolean = dicomFile.attributeList.isDefined
 
-    override def toString: String = "manufacturer: " + manufacturer + "  collimator model: " + collimatorModel.formatted("%-12s") + "  file: " + file.getName
+    override def toString: String = "manufacturer: " + manufacturer + "  collimator model: " + collimatorModel.format("%-12s") + "  file: " + file.getName
   }
 
   private def getPlanFileList: Seq[PlanFileConfig] = {

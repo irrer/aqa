@@ -140,7 +140,7 @@ object LeafPositionAnalysis extends Logging {
         "pix: " + coarse_pix.round.formatted("%5d") +
           "    precise: " + precisePosition.formatted("%8.3f") +
           "    leaf: " + planIndex.formatted("%2d") +
-          "    isBetween: " + isBetweenPeaks.toString.formatted("%1s") +
+          "    isBetween: " + isBetweenPeaks.toString.format("%1s") +
           "    planned: " + Util.fmtDbl(planned) +
           "    score: " + Util.fmtDbl(score)
       }

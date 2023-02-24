@@ -397,7 +397,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
       val yIntercept = meanY - (slope * meanX)
 
       diagnosticMessage(
-        "Edge stats for " + name.formatted("%8s") +
+        "Edge stats for " + name.format("%8s") +
           "    min: " + fmt(sum.min) +
           "    max: " + fmt(sum.max) +
           "    avg: " + fmt(avg) +
@@ -446,7 +446,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
       val pct = ((rawExtremeAveragesRange - brightnessRange).abs / rawExtremeAveragesRange) * 100.0
       val brightnessMessage = "edge brightness   Max percent diff range allowed: " + Config.WLMaxAllowedBrightnessRangePercentDifference +
         "  image brightness range: " + rawExtremeAveragesRange.formatted("%7.2f") +
-        name.formatted("%s8") + " edge brightness range: " + brightnessRange.formatted("%7.2f") + "    percent diff: " + pct.formatted("%7.3f")
+        name.format("%8s") + " edge brightness range: " + brightnessRange.formatted("%7.2f") + "    percent diff: " + pct.formatted("%7.3f")
       diagnosticMessage(brightnessMessage)
 
       if (pct >= Config.WLMaxAllowedBrightnessRangePercentDifference) {

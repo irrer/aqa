@@ -1633,7 +1633,7 @@ object Util extends Logging {
       fileNameList.map(fn => {
         val f = new File(fn)
         val dtp = dateTimeAndPatientIdFromDicom(f)
-        println("file: " + f.getName.formatted("%-20s") + "    " + dtp.dateTime + "    " + dtp.PatientID)
+        println("file: " + f.getName.format("%-20s") + "    " + dtp.dateTime + "    " + dtp.PatientID)
       })
     }
   }

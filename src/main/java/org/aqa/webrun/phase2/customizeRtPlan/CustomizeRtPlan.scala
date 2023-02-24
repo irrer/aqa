@@ -583,7 +583,7 @@ object CustomizeRtPlan extends Logging {
         list.map(ga => Util.fmtDbl(ga)).mkString("  ")
       }
 
-      num.formatted("%3d") + "    " + "    " + name.formatted("%-16s") + "    " + energy.formatted("%5.1f") + "    " + fff + "    gantry angles: " + gantryAngleList
+      num.formatted("%3d") + "    " + "    " + name.format("%-16s") + "    " + energy.formatted("%5.1f") + "    " + fff + "    gantry angles: " + gantryAngleList
     }
 
     "Number of beams: " + beamAlList.size + "\n    " + beamAlList.map(beamAl => showBeam(beamAl)).mkString("\n    ")

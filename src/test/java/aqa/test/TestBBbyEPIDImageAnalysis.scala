@@ -56,8 +56,8 @@ class TestBBbyEPIDImageAnalysis extends FlatSpec with Matchers {
     def show(al: AttributeList): String = {
       def fmt(d: Double) = d.formatted("%7.1f")
       val StationName = al.get(TagFromName.StationName).getSingleStringValueOrEmptyString
-      val DeviceSerialNumber = al.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrEmptyString.formatted("%16s")
-      val PatientID = al.get(TagFromName.PatientID).getSingleStringValueOrEmptyString.formatted("%20s")
+      val DeviceSerialNumber = al.get(TagFromName.DeviceSerialNumber).getSingleStringValueOrEmptyString.format("%16s")
+      val PatientID = al.get(TagFromName.PatientID).getSingleStringValueOrEmptyString.format("%20s")
       val GantryAngle = {
         val ga = al.get(TagByName.GantryAngle).getDoubleValues.head.round.toInt
         (ga % 360).formatted("%4d")

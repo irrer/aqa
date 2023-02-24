@@ -545,7 +545,7 @@ object DicomSeries extends Logging {
     * @param procedure Procedure that processes the plan.
     */
   case class RtplanProcedure(rtplanUID: String, procedure: Procedure) {
-    override def toString: String = rtplanUID.formatted("%-64s") + " " + procedure.fullName
+    override def toString: String = rtplanUID.format("%-64s") + " " + procedure.fullName
   }
 
   /**
@@ -587,9 +587,9 @@ object DicomSeries extends Logging {
       override def toString: String =
         pk.formatted("%6d") +
           " inputPK: " + inputPK.formatted("%6d") +
-          " : " + serUid.formatted("%-70s") +
-          " : " + modality.formatted("%-12s") +
-          " : " + procName.formatted("%-16s")
+          " : " + serUid.format("%-70s") +
+          " : " + modality.format("%-12s") +
+          " : " + procName.format("%-16s")
     }
 
     val action = for {
