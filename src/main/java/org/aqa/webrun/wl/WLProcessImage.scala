@@ -79,7 +79,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
     val X_INCREMENT: Double = 0.001
 
     /** Expected radius of ball in (units of) number of pixels. */
-    val BALL_RADIUS = toPixels(Config.WLBallRadius)
+    val BALL_RADIUS = toPixels(Config.WLBallDiameter / 2.0)
 
     val annotate = new WLAnnotate(SCALE, BALL_RADIUS)
 
@@ -604,7 +604,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
 
       val coarseCenter = coarseBallLocate
       // not sure why 0.3 works
-      val radius: Int = (toPixels(Config.WLBallRadius) + (tol.toDouble * 0.3) + 0.5).toInt
+      val radius: Int = (toPixels(Config.WLBallDiameter / 2.0) + (tol.toDouble * 0.3) + 0.5).toInt
       val leftEdge = coarseCenter._1 + tol2 - radius
       val topEdge = coarseCenter._2 + tol2 - radius
       val ballRoi = subSection(areaOfInterest, leftEdge, radius * 2, topEdge, radius * 2)

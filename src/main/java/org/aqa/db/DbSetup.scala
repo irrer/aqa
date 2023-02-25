@@ -97,6 +97,7 @@ object DbSetup extends Logging {
     Machine.query,
     MachineBeamEnergy.query,
     MachineDailyQA.query,
+    MachineWL.query,
     Input.query,
     InputFiles.query,
     MachineLog.query,

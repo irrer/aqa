@@ -950,7 +950,7 @@ object Config extends Logging {
   val WLBadPixelCorrectionRadius: Int = logMainText("WLBadPixelCorrectionRadius", "2").toInt
   val WLScale: Int = logMainText("WLScale", "16").toInt
   val WLNumBackgroundPixels: Int = logMainText("WLNumBackgroundPixels", "5").toInt
-  val WLBallRadius: Double = logMainText("WLBallRadius", "2.5").toDouble
+  val WLBallDiameter: Double = logMainText("WLBallDiameter", "5.0").toDouble
   val WLFieldWidth: Double = logMainText("WLFieldWidth", "20.0").toDouble
   val WLBoxEdgeTolerance: Double = logMainText("WLBoxEdgeTolerance", "5.5").toDouble
   val WLBallAreaFlatnessRatioLowerLimit: Double = logMainText("WLBallAreaFlatnessRatioLowerLimit", "5.0").toDouble

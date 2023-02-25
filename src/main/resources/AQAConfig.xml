@@ -975,9 +975,8 @@ Note that when building a package for release, the Maven build process uses the 
      Must be a positive integer 1 or greater.  Must be a positive integer. -->
     <WLNumBackgroundPixels>5</WLNumBackgroundPixels>
 
-    <!-- The expected approximate radius of the ball in mm.  Must be a positive floating point. -->
-    <WLBallRadius>2.5</WLBallRadius>
-    <!-- <BallRadius>1.25</BallRadius> -->
+    <!-- The expected approximate diameter of the ball in mm.  Must be a positive floating point.  Default is 5.0 -->
+    <WLBallDiameter>5.0</WLBallDiameter>
 
     <!-- The expected approximate width of the collimator field (box) in mm.  Must be a positive floating point. -->
     <WLFieldWidth>20.0</WLFieldWidth>
