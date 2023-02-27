@@ -94,8 +94,8 @@ class MachineDailyQAUpdate extends Restlet with SubUrlAdmin {
   /** Return an error if the passLimit field is not valid. */
   private def validatePassMax(valueMap: ValueMapT): StyleMapT = {
     0 match {
-      case _ if valueMap(passLimit.label).trim.isEmpty => Error.make(warningLimit, "Warning can not be empty")
-      case _ if !isPosDbl(valueMap(passLimit.label))   => Error.make(warningLimit, "Warning must be a floating point value greater than zero.")
+      case _ if valueMap(passLimit.label).trim.isEmpty => Error.make(passLimit, "Warning can not be empty")
+      case _ if !isPosDbl(valueMap(passLimit.label))   => Error.make(passLimit, "Warning must be a floating point value greater than zero.")
       case _                                           => styleNone
     }
   }
@@ -103,7 +103,7 @@ class MachineDailyQAUpdate extends Restlet with SubUrlAdmin {
   /** Return an error if the warningLimit field is not valid. */
   private def validateWarningMax(valueMap: ValueMapT): StyleMapT = {
     0 match {
-      case _ if valueMap(warningLimit.label).trim.isEmpty => Error.make(passLimit, "Pass can not be empty")
+      case _ if valueMap(warningLimit.label).trim.isEmpty => Error.make(warningLimit, "Pass can not be empty")
       case _ if !isPosDbl(valueMap(warningLimit.label))   => Error.make(warningLimit, "Pass must be a floating point value greater than zero.")
       case _                                              => styleNone
     }
