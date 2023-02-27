@@ -94,8 +94,8 @@ class MachineDailyQAUpdate extends Restlet with SubUrlAdmin {
   /** Return an error if the passLimit field is not valid. */
   private def validatePassMax(valueMap: ValueMapT): StyleMapT = {
     0 match {
-      case _ if valueMap(passLimit.label).trim.isEmpty => Error.make(passLimit, "Warning can not be empty")
-      case _ if !isPosDbl(valueMap(passLimit.label))   => Error.make(passLimit, "Warning must be a floating point value greater than zero.")
+      case _ if valueMap(passLimit.label).trim.isEmpty => Error.make(passLimit, "Pass limit can not be empty")
+      case _ if !isPosDbl(valueMap(passLimit.label))   => Error.make(passLimit, "Pass limit must be a floating point value greater than zero.")
       case _                                           => styleNone
     }
   }
@@ -103,8 +103,8 @@ class MachineDailyQAUpdate extends Restlet with SubUrlAdmin {
   /** Return an error if the warningLimit field is not valid. */
   private def validateWarningMax(valueMap: ValueMapT): StyleMapT = {
     0 match {
-      case _ if valueMap(warningLimit.label).trim.isEmpty => Error.make(warningLimit, "Pass can not be empty")
-      case _ if !isPosDbl(valueMap(warningLimit.label))   => Error.make(warningLimit, "Pass must be a floating point value greater than zero.")
+      case _ if valueMap(warningLimit.label).trim.isEmpty => Error.make(warningLimit, "Warning limit can not be empty")
+      case _ if !isPosDbl(valueMap(warningLimit.label))   => Error.make(warningLimit, "Warning limit must be a floating point value greater than zero.")
       case _                                              => styleNone
     }
   }
@@ -117,7 +117,7 @@ class MachineDailyQAUpdate extends Restlet with SubUrlAdmin {
       val p = valueMap(passLimit.label).trim.toDouble
       val w = valueMap(warningLimit.label).trim.toDouble
 
-      if (w >= p) styleNone else Error.make(passLimit, "Warning must be less than or equal to Pass.")
+      if (w >= p) styleNone else Error.make(passLimit, "Pass limit must be less than or equal to Pass.")
     } catch {
       case _: Throwable => Error.make(passLimit, "Invalid values for one or both of Pass and Warn.")
     }
