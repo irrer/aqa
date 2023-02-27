@@ -32,6 +32,7 @@ object MachineDailyQAList {
 class MachineDailyQAList extends GenericList[MachineDailyQA.MachineDailyQAExtended] with WebUtil.SubUrlAdmin {
 
   type MDQ = MachineDailyQA.MachineDailyQAExtended
+  override val canCreate: Boolean = false // do not allow user to create, they can only edit
 
   override def listName = "Daily QA Parameter"
 
@@ -62,6 +63,6 @@ class MachineDailyQAList extends GenericList[MachineDailyQA.MachineDailyQAExtend
 
   private val requireXRayOffsetCol = new Column[MDQ]("Require X-Ray Offset", _.machineDailyQA.requireXRayOffset.toString)
 
-  override val columnList = Seq(idCol, typeCol, passCol, warningCol, requireXRayOffsetCol)
+  override val columnList: Seq[Column[MDQ]] = Seq(idCol, typeCol, passCol, warningCol, requireXRayOffsetCol)
 
 }
