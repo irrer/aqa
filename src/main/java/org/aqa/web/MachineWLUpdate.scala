@@ -16,7 +16,6 @@
 
 package org.aqa.web
 
-import org.aqa.Config
 import org.aqa.db.Machine
 import org.aqa.db.MachineWL
 import org.aqa.web.WebUtil._
@@ -181,10 +180,11 @@ class MachineWLUpdate extends Restlet with SubUrlAdmin {
   }
 
   private def defaultValueMap(valueMap: ValueMapT): ValueMapT = {
+    val wlParameters = MachineWL.getMachineWLOrDefault(valueMap(machineWLPK.label).toLong)
     Map(
       (machineWLPK.label, valueMap(machineWLPK.label)),
-      (passLimit.label, Config.WLPassLimit.toString),
-      (ballDiameter.label, Config.WLBallDiameter.toString)
+      (passLimit.label, wlParameters.passLimit_mm.toString),
+      (ballDiameter.label, wlParameters.ballDiameter_mm.toString)
     )
   }
 
