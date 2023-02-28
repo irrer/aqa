@@ -3,6 +3,7 @@ package org.aqa.webrun.wl
 import org.aqa.webrun.ExtendedData
 import org.aqa.Config
 import org.aqa.Logging
+import org.aqa.db.MachineWL
 import org.aqa.web.C3ChartHistory
 import org.aqa.web.WebUtil
 
@@ -16,6 +17,8 @@ object WLMainHtml extends Logging {
     // val relativeUrl = jobDir.getAbsolutePath.substring(Config.DataDirectory.getAbsolutePath.length + 1).replace('\\', '/')
 
     val groupStartTime = resultList.map(_.contentTime).minBy(_.getTime)
+
+    val wlParameters = MachineWL.getMachineWLOrDefault(extendedData.machine.machinePK.get)
 
     val passStyle = s"color: #000000; background: #${Config.WLPassColor};"
     val cautionStyle = s"color: #000000; background: yellow;"
@@ -228,7 +231,7 @@ object WLMainHtml extends Logging {
             <td> Tongue &amp; Groove Offsets dX = 0.0 dY = 0.0 </td>
           </tr>
           <tr>
-            <td> Radial Offset Tolerance, Rtol = {Config.WLPassLimit} mm </td>
+            <td> Radial Offset Tolerance, Rtol = {wlParameters.passLimit_mm} mm </td>
           </tr>
         </table>
       }

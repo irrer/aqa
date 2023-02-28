@@ -21,6 +21,8 @@ import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 import org.aqa.Util
 
+import java.sql.Timestamp
+import java.util.Date
 import scala.xml.Elem
 
 /**
@@ -277,6 +279,38 @@ object WinstonLutz extends ProcedureOutput with Logging {
     // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
     // throw an exception.
     val sr = search.result
+    val tsList = Db.run(sr).map(os => WinstonLutzHistory(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
+
+    tsList
+  }
+
+  /**
+    * Get a given number of history of WinstonLutz results that are on or earlier than the given date.
+    *
+    * @param date : At or earlier than this date
+    * @param count : Return up to this many results
+    * @param institutionPK : Restrict to this institution.
+    * @return Chunk of history sorted by date.
+    *
+    */
+  def historyByDate(date: Date, count: Int, institutionPK: Long): Seq[WinstonLutzHistory] = {
+
+    val timeStamp = new Timestamp(date.getTime)
+
+    val search = for {
+      machine <- Machine.query.filter(m => m.institutionPK === institutionPK)
+      output <- Output.query.filter(o => (o.dataDate <= timeStamp) && (o.machinePK === machine.machinePK))
+      winstonLutz <- WinstonLutz.query.filter(c => c.outputPK === output.outputPK)
+    } yield {
+      (output, winstonLutz)
+    }
+
+    val sortedSearch = search.sortBy(_._1.dataDate.desc).take(count)
+
+    // Fetch entire history from the database.  Also sort by dataDate.  This sorting also has the
+    // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
+    // throw an exception.
+    val sr = sortedSearch.result
     val tsList = Db.run(sr).map(os => WinstonLutzHistory(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
 
     tsList

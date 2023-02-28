@@ -7,6 +7,7 @@ import edu.umro.util.Utility
 import edu.umro.DicomDict.TagByName
 import org.aqa.Config
 import org.aqa.Util
+import org.aqa.db.MachineWL
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.ImageStatus.ImageStatus
 import org.opensourcephysics.numerics.CubicSpline
@@ -35,6 +36,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
   import org.aqa.webrun.wl.WLProcessImage.unitize
   import org.aqa.webrun.wl.WLProcessImage.SearchRange
   import org.aqa.webrun.wl.WLProcessImage.toCubicSpline
+
+  private val wlParameters = MachineWL.getMachineWLOrDefault(extendedData.machine.machinePK.get)
 
   private val trans = new IsoImagePlaneTranslator(rtimage)
   private val ResolutionX = trans.pix2IsoDistX(1)
@@ -79,7 +82,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
     val X_INCREMENT: Double = 0.001
 
     /** Expected radius of ball in (units of) number of pixels. */
-    val BALL_RADIUS = toPixels(Config.WLBallDiameter / 2.0)
+    val BALL_RADIUS = toPixels(wlParameters.ballDiameter_mm / 2.0)
 
     val annotate = new WLAnnotate(SCALE, BALL_RADIUS)
 
@@ -604,7 +607,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
 
       val coarseCenter = coarseBallLocate
       // not sure why 0.3 works
-      val radius: Int = (toPixels(Config.WLBallDiameter / 2.0) + (tol.toDouble * 0.3) + 0.5).toInt
+      val radius: Int = (toPixels(wlParameters.ballDiameter_mm / 2.0) + (tol.toDouble * 0.3) + 0.5).toInt
       val leftEdge = coarseCenter._1 + tol2 - radius
       val topEdge = coarseCenter._2 + tol2 - radius
       val ballRoi = subSection(areaOfInterest, leftEdge, radius * 2, topEdge, radius * 2)
@@ -849,6 +852,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
     /**
       * Indicate that something is wrong with the image.
       */
+    /*
     def imageError(status: ImageStatus.Value, msg: String, marginalPixelList: Seq[WLBadPixel]): WLImageResult = {
       val fullMsg = "Image " + imageName + "  " + msg
       logger.error(fullMsg)
@@ -876,6 +880,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
       WLgenHtml.generateHtml(extendedData, subDir, imageResult)
       imageResult
     }
+     */
 
     def correctUnscaledEdges(edgesUnscaled: Edges): Edges = {
       def scaleX(x: Double): Double = (x * ResolutionX) / ResolutionX
@@ -960,11 +965,11 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
       val errorScaledXYCombined = Math.sqrt((errorScaledX * errorScaledX) + (errorScaledY * errorScaledY))
 
       val passed: ImageStatus.ImageStatus = {
-        val p = annotate.annotateImage(normalPng, normalGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true, imageName)
+        val p = annotate.annotateImage(normalPng, normalGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true, imageName, passLimit_mm = wlParameters.passLimit_mm)
         p
       }
-      annotate.annotateImage(brightPng, brightGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true, imageName)
-      annotate.annotateImage(blackPng, blackGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = false, imageName)
+      annotate.annotateImage(brightPng, brightGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true, imageName, passLimit_mm = wlParameters.passLimit_mm)
+      annotate.annotateImage(blackPng, blackGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = false, imageName, passLimit_mm = wlParameters.passLimit_mm)
 
       val pixelData = constructPixelData(blackPng, areaOfInterest)
 

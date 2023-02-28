@@ -205,7 +205,8 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
                      errorScaledY: Double,
                      errorScaledXYCombined: Double,
                      background: Boolean,
-                     imageName: String
+                     imageName: String,
+                     passLimit_mm: Double
                    ): ImageStatus.Value = {
     def fmt(d: Double) = d.formatted("%6.2f").replaceAll(" ", "")
 
@@ -224,7 +225,7 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
     graphics.drawString(text1, xPosn1.toInt, yPosn1.toInt)
 
     val combinedXY = "R = " + fmt(errorScaledXYCombined)
-    val passed = if (errorScaledXYCombined <= Config.WLPassLimit) ImageStatus.Passed else ImageStatus.OffsetLimitExceeded
+    val passed = if (errorScaledXYCombined <= passLimit_mm) ImageStatus.Passed else ImageStatus.OffsetLimitExceeded
     val statusText: String = {
       if (passed == ImageStatus.Passed) "PASSED" else "FAILED"
     }

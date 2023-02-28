@@ -42,6 +42,7 @@ import org.aqa.webrun.phase2.vmat.VMATChartHistoryRestlet
 import org.aqa.webrun.phase2.wedge.WedgeChartHistoryRestlet
 import org.aqa.webrun.phase2.wedge.WedgeUseAsBaseline
 import org.aqa.webrun.wl.WLHistoryRestlet
+import org.aqa.webrun.wl.WLNav
 import org.restlet.Application
 import org.restlet.Component
 import org.restlet.Request
@@ -537,6 +538,7 @@ class WebServer extends Application with Logging {
         new CollimatorCenteringChartHistoryRestlet,
         new BBbyCBCTChartHistoryRestlet,
         new BBbyEPIDChartHistoryRestlet,
+        new WLNav,
         new BBbyEPIDChartHistoryPartialRestlet,
         new VMATChartHistoryRestlet,
         new WedgeChartHistoryRestlet,

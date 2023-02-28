@@ -433,7 +433,7 @@ object Output extends Logging {
 
   /**
     * Get the list of outputs sorted by data data for the given machine and procedure.
-    * @param machinePK Machine to match.
+    * @param machinePK   Machine to match.
     * @param procedurePK Procedure to match.
     * @return List of outputs, sorted by data date.
     */
