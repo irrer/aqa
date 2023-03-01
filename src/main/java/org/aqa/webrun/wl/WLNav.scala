@@ -21,7 +21,7 @@ import scala.xml.Elem
 
 class WLNav extends Restlet with SubUrlRoot with Logging {
 
-  private val rowsPerPageDefault = 20
+  private val rowsPerPageDefault = 100
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
     val action: String = pathOf + "?" + name + "=" + name
@@ -35,13 +35,21 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
   private val oldestButton = makeButton(" Oldest >> ", primary = true, ButtonType.BtnDefault)
 
   // class WebInputText(override val label: String, showLabel: Boolean, col: Int, offset: Int, placeholder: String, aqaAlias: Boolean) extends IsInput(label) with ToHtml {
-  private val rowsPerPageField = new WebInputText(label = "Rows/Page", showLabel = true, col = 2, offset = 0, placeholder = rowsPerPageDefault.toString, aqaAlias = false)
+  private val rowsPerPageField = new WebInputText(label = "Rows/Page", showLabel = true, col = 1, offset = 0, placeholder = rowsPerPageDefault.toString, aqaAlias = false)
 
   private val datePicker = new WebInputDatePicker(label = "Date", col = 6, offset = 0, showLabel = false, submitOnChange = true)
 
   private def list = new WebUtil.WebPlainText(label = "Winston Lutz Results", showLabel = false, col = 10, offset = 0, html = makeList)
 
-  private def form = new WebForm(pathOf, List(List(newestButton, prevButton, nextButton, oldestButton), List(datePicker, rowsPerPageField), List(list)))
+  //  class WebForm(action: String, title: Option[String], rowList: List[WebRow], fileUpload: Int, runScript: Option[String] = None)
+  private def form =
+    new WebForm(
+      pathOf,
+      title = None,
+      rowList = List(List(newestButton, prevButton, nextButton, oldestButton, rowsPerPageField), List(datePicker), List(list)),
+      fileUpload = -1,
+      runScript = Some(WLUpdateRestlet.makeJS)
+    )
   private def setFormResponse(valueMap: ValueMapT, response: Response): Unit = form.setFormResponse(valueMap, errorMap = styleNone, pageTitle = "Winston Lutz", response, Status.SUCCESS_OK)
 
   private val wlProcedurePK = Procedure.ProcOfWinstonLutz.get.procedurePK.get
@@ -105,15 +113,17 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
       </tr>
     }
 
-    <table>
-      <tr>
-        <td style={padding}><b>Date</b></td>
-        <td style={padding}></td>
-        <td style={padding}><b>Machine</b></td>
-        <td style={padding}></td>
-      </tr>
-      {dataList.map(toRow)}
-    </table>
+    <div>
+      <table>
+        <tr>
+          <td style={padding}><b>Date</b></td>
+          <td style={padding}></td>
+          <td style={padding}><b>Machine</b></td>
+          <td style={padding}></td>
+        </tr>
+        {dataList.map(toRow)}
+      </table>
+    </div>
     // Output.getByProcedure(Procedure.ProcOfWinstonLutz.get.procedurePK.get)
   }
 

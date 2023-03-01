@@ -51,6 +51,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
     logger.info("Wrote main HTML file " + file.getAbsolutePath)
 
     val statusList = results.filter(_.isLeft).map(_.left.get).distinct
+    WLUpdateRestlet.updateWL()
     if (statusList.isEmpty)
       ProcedureStatus.pass
     else

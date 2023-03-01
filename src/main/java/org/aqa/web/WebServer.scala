@@ -43,6 +43,7 @@ import org.aqa.webrun.phase2.wedge.WedgeChartHistoryRestlet
 import org.aqa.webrun.phase2.wedge.WedgeUseAsBaseline
 import org.aqa.webrun.wl.WLHistoryRestlet
 import org.aqa.webrun.wl.WLNav
+import org.aqa.webrun.wl.WLUpdateRestlet
 import org.restlet.Application
 import org.restlet.Component
 import org.restlet.Request
@@ -551,6 +552,7 @@ class WebServer extends Application with Logging {
         new GapSkewLatestHtml,
         new Phase2CsvRestlet,
         new MachineLogXml,
+        new WLUpdateRestlet,
         anonymousTranslate,
         getSeries,
         new CustomizeRtPlanInterface,
