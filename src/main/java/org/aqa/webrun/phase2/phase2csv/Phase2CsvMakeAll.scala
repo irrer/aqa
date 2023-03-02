@@ -48,7 +48,8 @@ object Phase2CsvMakeAll extends Logging {
       new VMAT_T2_DR_GSCsv,
       new VMAT_T2_DG_RSCsv,
       new VMAT_T3MLCSpeedCsv,
-      new WedgePointCsv
+      new WedgePointCsv,
+      new WinstonLutzCsv
     )
 
     for (institutionPK <- metadataCache.institutionNameMap.keys) {
