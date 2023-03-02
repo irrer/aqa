@@ -18,7 +18,6 @@ package org.aqa.webrun.phase2.phase2csv
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.FileUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -486,15 +485,6 @@ object Phase2Csv extends Logging {
     * in the consortium CSV directory.
     */
   def writeDoc(colList: Seq[CsvCol[Any]], dataName: String): Unit = {
-    if (true) {
-      Trace.trace(colList.size)
-      val j0 = colList.head
-      Trace.trace(j0)
-      val j1 = colList(1)
-      Trace.trace(j1)
-      val t = colList.head.getClass
-      Trace.trace(t)
-    }
     val name = "Definitions for " + dataName + " CSV columns."
     val content: Elem = {
       <div class="col-md-10 col-md-offset-1 ">
