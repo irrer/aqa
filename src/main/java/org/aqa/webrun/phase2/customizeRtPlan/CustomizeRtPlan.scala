@@ -45,6 +45,7 @@ object CustomizeRtPlan extends Logging {
   private val patternPhase3 = ".*phase *3.*"
   private val patternDailyQA = ".*daily.*qa.*"
   private val patternGapSkew = ".*gap.*skew.*"
+  private val patternWinstonLutz = ".*winston.*lutz.*"
   private val patternLOC = ".*loc.*"
   private val patternLOCBaseline = ".*baseline.*"
   private val patternLOCDelivery = ".*delivery.*"
@@ -110,6 +111,18 @@ object CustomizeRtPlan extends Logging {
     */
   def getCollimatorCompatibleGapSkewPlanForMachine(machine: Machine): Option[Config.PlanFileConfig] = {
     getCollimatorCompatiblePlanForMachine(machine, patternGapSkew).headOption
+  }
+
+  /**
+    * Get the template rtplan for the given machine for Winston Lutz.  If none exists, return None, which
+    * can happen if the system does not have such a plan configured.  This informs the user
+    * interface so that it can tell the user.
+    *
+    * Note that both the baseline and delivery entries have to be configured (regardless of RTPLAN file
+    * existence) or this will return None.
+    */
+  def getCollimatorCompatibleWinstonLutzPlanForMachine(machine: Machine): Option[Config.PlanFileConfig] = {
+    getCollimatorCompatiblePlanForMachine(machine, patternWinstonLutz).headOption
   }
 
   /**
@@ -780,6 +793,25 @@ object CustomizeRtPlan extends Logging {
     val anonDicom = saveAnonymizedDicom(machine, userPK, rtplan, Procedure.ProcOfGapSkew.get.procedurePK)
 
     setupPatientProcedure(machine.institutionPK, anonDicom.get(TagByName.PatientID), Procedure.ProcOfGapSkew)
+    rtplan
+  }
+
+  /**
+    * Given all the required information, create an rtplan that is compatible with the given machine for Winston Lutz.
+    */
+  def makePlanWinstonLutz(machine: Machine, userPK: Long, planSpecification: PlanSpecification): AttributeList = {
+
+    val rtplan = DicomUtil.clone(getCollimatorCompatibleWinstonLutzPlanForMachine(machine).get.dicomFile.attributeList.get)
+    replaceAllUIDs(rtplan) // change UIDs so that this plan will be considered new and unique from all others.
+
+    planSpecification.setOverrides(rtplan)
+
+    setRtplanDateTimeToNow(rtplan)
+
+    removeVarianPrivateTagAttributes(rtplan)
+    val anonDicom = saveAnonymizedDicom(machine, userPK, rtplan, Procedure.ProcOfWinstonLutz.get.procedurePK)
+
+    setupPatientProcedure(machine.institutionPK, anonDicom.get(TagByName.PatientID), Procedure.ProcOfWinstonLutz)
     rtplan
   }
 

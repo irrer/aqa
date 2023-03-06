@@ -123,13 +123,18 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
   private val createLocButton = makeButton("Create LOC", ButtonType.BtnPrimary)
   private val createDailyQAButton = makeButton("Create Daily QA", ButtonType.BtnPrimary)
   private val createGapSkewButton = makeButton("Create Gap Skew", ButtonType.BtnPrimary)
+  private val createWinstonLutzButton = makeButton("Create Winston Lutz", ButtonType.BtnPrimary)
   private val cancelButton = makeButton("Cancel", ButtonType.BtnDefault)
   private val backButton = makeButton("Back", ButtonType.BtnDefault)
 
-  private val assignButtonList: WebRow = List(createPhase2Button, createPhase3Button, createLocButton, createDailyQAButton, createGapSkewButton, cancelButton, machinePK)
+  private val assignButtonList1: WebRow = List(createPhase2Button, createPhase3Button, createLocButton)
+  private val assignButtonList2: WebRow = List(createDailyQAButton, createGapSkewButton, createWinstonLutzButton)
+  private val assignButtonList3: WebRow = List(cancelButton, machinePK)
+
+  private def makeForm = new WebForm(pathOf, List(row0, row1, row2) ++ List(assignButtonList1) ++ List(assignButtonList2) ++ List(assignButtonList3))
 
   private def formSelect(valueMap: ValueMapT, response: Response, machine: Machine): Unit = {
-    val form = new WebForm(pathOf, List(row0, row1, row2) ++ List(assignButtonList))
+    val form = makeForm
 
     // if field is empty
     def empty(label: String) = !valueMap.contains(label) || valueMap(label).trim.isEmpty
@@ -236,12 +241,22 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
   }
 
   /**
-    * Make sure fields are valid for DailyQA.
+    * Make sure fields are valid for Gap Skew.
     */
   private def validateGapSkew(valueMap: ValueMapT): StyleMapT = {
     val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
     val gapSkewRtplan = CustomizeRtPlan.getCollimatorCompatibleGapSkewPlanForMachine(machine)
     val conf = validateConfigAndRtplanFileExists(gapSkewRtplan, machine, "Gap Skew", createGapSkewButton)
+    validateEntryFields(valueMap) ++ conf
+  }
+
+  /**
+    * Make sure fields are valid for Winston Lutz.
+    */
+  private def validateWinstonLutz(valueMap: ValueMapT): StyleMapT = {
+    val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
+    val winstonLutzRtplan = CustomizeRtPlan.getCollimatorCompatibleWinstonLutzPlanForMachine(machine)
+    val conf = validateConfigAndRtplanFileExists(winstonLutzRtplan, machine, "WinstonLutz", createWinstonLutzButton)
     validateEntryFields(valueMap) ++ conf
   }
 
@@ -361,7 +376,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     * Show the user a message saying why the creation of a custom rtplan failed.
     */
   private def showFailedCustomize(valueMap: ValueMapT, styleMap: StyleMapT, response: Response): Unit = {
-    val form = new WebForm(pathOf, List(row0, row1, row2) ++ List(assignButtonList))
+    val form = makeForm
     form.setFormResponse(valueMap, styleMap, pageTitleSelect, response, Status.SUCCESS_OK)
   }
 
@@ -432,6 +447,19 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     }
   }
 
+  private def validateAndMakeWinstonLutzPlan(valueMap: ValueMapT, response: Response): Unit = {
+    val styleMap = validateWinstonLutz(valueMap)
+    if (styleMap.nonEmpty) {
+      showFailedCustomize(valueMap, styleMap, response)
+    } else {
+      val userPK = getUser(valueMap).get.userPK.get
+      val planSpecification = makePlanSpec(valueMap)
+      val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
+      val rtplan = CustomizeRtPlan.makePlanWinstonLutz(machine, userPK, planSpecification)
+      showDownload(Seq((rtplan, "Winston Lutz")), "WinstonLutz", valueMap, machine, response)
+    }
+  }
+
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
     val valueMap = getValueMap(request)
@@ -454,6 +482,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
         case _ if buttonIs(valueMap, createLocButton)                                                            => validateAndMakeLocPlan(valueMap, response)
         case _ if buttonIs(valueMap, createDailyQAButton)                                                        => validateAndMakeDailyQAPlan(valueMap, response)
         case _ if buttonIs(valueMap, createGapSkewButton)                                                        => validateAndMakeGapSkewPlan(valueMap, response)
+        case _ if buttonIs(valueMap, createWinstonLutzButton)                                                    => validateAndMakeWinstonLutzPlan(valueMap, response)
         case _                                                                                                   => formSelect(valueMap, response, machine.get) // first time viewing the form.  Set defaults
       }
     } catch {
