@@ -170,14 +170,14 @@ object RunProcedure extends Logging {
   private def deleteDirLater(dir: File): Unit = {
     Future {
       val start = System.currentTimeMillis()
-      val timeout = start + 5 * 60 * 1000
+      val timeout = start + 60 * 1000
 
       while (dir.exists() && (timeout > System.currentTimeMillis())) {
-        Thread.sleep(5 * 1000)
+        Thread.sleep(10 * 1000)
         try {
           Util.deleteFileTreeSafely(dir)
           if (dir.exists())
-            logger.warn("Attempt to delete directory failed. Will retry to delete old directory : " + dir.getAbsolutePath + "\n")
+            logger.warn("deleteDirLater: Attempt to delete directory failed. Will retry to delete old directory : " + dir.getAbsolutePath + "\n")
           else
             logger.info("Deleted " + dir.getAbsolutePath + " after: " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
         } catch {
