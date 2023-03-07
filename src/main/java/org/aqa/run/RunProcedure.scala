@@ -21,6 +21,7 @@ import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
 import edu.umro.util.Utility
+import org.apache.commons.io.FileUtils
 import org.aqa.Config
 import org.aqa.DicomFile
 import org.aqa.Logging
@@ -161,56 +162,6 @@ object RunProcedure extends Logging {
 
     logger.info("New input directory: " + inputDir.getAbsolutePath)
     inputDir
-  }
-
-  /**
-    * Delete the given directory later, waiting for locks to be released.
-    * @param dir Directory to be deleted.
-    */
-  private def deleteDirLater(dir: File): Unit = {
-    Future {
-      val start = System.currentTimeMillis()
-      val timeout = start + 60 * 1000
-
-      while (dir.exists() && (timeout > System.currentTimeMillis())) {
-        Thread.sleep(10 * 1000)
-        try {
-          Util.deleteFileTreeSafely(dir)
-          if (dir.exists())
-            logger.warn("deleteDirLater: Attempt to delete directory failed. Will retry to delete old directory : " + dir.getAbsolutePath + "\n")
-          else
-            logger.info("Deleted " + dir.getAbsolutePath + " after: " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
-        } catch {
-          case _: Throwable =>
-        }
-      }
-      if (dir.exists())
-        logger.warn("Unable to delete old directory : " + dir.getAbsolutePath + "\n")
-    }
-  }
-
-  /**
-    * Move all of the files from the old to the new directory.
-    */
-  private def renameFile(oldDir: File, newDir: File): Boolean = {
-    logger.info("Attempting to rename file from : " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath)
-
-    def copyFiles: Boolean = {
-      try {
-        Util.mkdirs(newDir.getParentFile)
-        Utility.copyFileTree(oldDir, newDir)
-        logger.info("Used copyFileTree to successfully copy from : " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath)
-        deleteDirLater(oldDir)
-
-        newDir.isDirectory
-      } catch {
-        case t: Throwable =>
-          logger.error("Unable to rename file " + oldDir.getAbsolutePath + " to " + newDir.getAbsolutePath + " : " + fmtEx(t))
-          false
-      }
-    }
-
-    copyFiles
   }
 
   /**
@@ -455,10 +406,10 @@ object RunProcedure extends Logging {
     // practical) link to the database.
     val inputDir = makeInputDir(machine, procedure, inputWithoutDir.inputPK.get)
 
-    // move input files to their final resting place
-    if (sessionDir.isDefined)
-      renameFile(sessionDir.get, inputDir)
-    else
+    // Copy input files to their final resting place.  Note: doing a 'move' or 'rename' fails sometimes because the source file is locked.
+    if (sessionDir.isDefined) {
+      Utility.copyFileTree(sessionDir.get, inputDir)
+    } else
       Util.mkdirs(inputDir)
     if (!inputDir.exists)
       throw new RuntimeException("Unable to rename temporary directory " + sessionDir + " to input directory " + inputDir.getAbsolutePath)
@@ -774,4 +725,10 @@ object RunProcedure extends Logging {
     logger.info("Done handling previously running procedures.")
   }
 
+  def main(args: Array[String]): Unit = {
+    val src = new File("""D:\tmp\jj""")
+    val dest = new File("""D:\tmp\kk""")
+    FileUtils.copyDirectory(src, dest, false)
+    println("done")
+  }
 }

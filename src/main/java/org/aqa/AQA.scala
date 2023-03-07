@@ -53,6 +53,7 @@ object AQA extends Logging {
         if (Config.MonitorThreadCountInterval_ms > 0) ThreadMonitor.monitorThreads(Config.MonitorThreadCountInterval_ms)
 
         new PeriodicRestart(Config.RestartTime)
+        TmpCleanup.cleanup()
         DicomSeries.fixRedundantInBackground(delFlag = true, delay_ms = 30 * 1000)
         logger.info("AQA service started")
       } else
