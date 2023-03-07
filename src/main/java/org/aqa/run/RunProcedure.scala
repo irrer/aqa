@@ -21,7 +21,6 @@ import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
 import edu.umro.util.Utility
-import org.apache.commons.io.FileUtils
 import org.aqa.Config
 import org.aqa.DicomFile
 import org.aqa.Logging
@@ -725,10 +724,4 @@ object RunProcedure extends Logging {
     logger.info("Done handling previously running procedures.")
   }
 
-  def main(args: Array[String]): Unit = {
-    val src = new File("""D:\tmp\jj""")
-    val dest = new File("""D:\tmp\kk""")
-    FileUtils.copyDirectory(src, dest, false)
-    println("done")
-  }
 }
