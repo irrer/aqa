@@ -10,6 +10,7 @@ import org.aqa.Util
 import org.aqa.db.MachineWL
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.ImageStatus.ImageStatus
+import org.aqa.PlannedRectangle
 import org.opensourcephysics.numerics.CubicSpline
 
 import java.awt.image.BufferedImage
@@ -998,7 +999,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
       diagnosticMessage("R mm " + fmt(errorScaledXYCombined))
 
       if (runReq.rtplan.isDefined) {
-        val expected = WLPlanned(runReq.rtplan.get, rtimage)
+        val expected = PlannedRectangle(runReq.rtplan.get, rtimage)
         diagnosticMessage("expected edges: " + expected)
       }
 
