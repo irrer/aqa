@@ -1,11 +1,9 @@
-package org.aqa.webrun.wl
+package org.aqa
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.DicomBeam
-import org.aqa.Logging
-import org.aqa.Util
 
-case class WLPlanned(rtplan: AttributeList, rtimage: AttributeList) extends Logging {
+case class PlannedRectangle(rtplan: AttributeList, rtimage: AttributeList) extends Logging {
 
   val cps: DicomBeam = DicomBeam(rtplan, rtimage)
 

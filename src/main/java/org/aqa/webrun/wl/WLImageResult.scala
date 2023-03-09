@@ -10,6 +10,7 @@ import org.aqa.db.WinstonLutz
 import org.aqa.webrun.wl
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.PlannedRectangle
 
 import java.io.File
 import java.sql.Timestamp
@@ -164,14 +165,9 @@ class WLImageResult(
           list.foldLeft("")((t, bad) => { t + "    " + bad + "\n" })
     }
 
-    // WLImageResult(status, boxP = null, ballP = null,boxEdgesP =  null, directory = subDir, rtimage = rtimage,  pixels = null, badPixelList =  null, marginalPixelList, extendedData)
-
     "" +
       "    Directory: " + directory.getAbsolutePath + "\n" +
       s"    Status: $imageStatus\n" +
-      "    Box Center: " + box + "\n" +
-      "    Ball Center: " + ball + "\n" +
-      "    Box Edges: " + boxEdges + "\n" +
       "    Offset: " + (if (ok) new Point(offX, offY).toString else "not available") + "\n" +
       "    sqrt(x*x + y*y): " + (if (ok) offXY.formatted("%8.5f") else "not available") + "\n" +
       s"    Box  left      pix: $left_pix\n" +
@@ -205,7 +201,7 @@ class WLImageResult(
         None
     }
 
-    val planned = if (runReq.rtplan.isDefined) Some(WLPlanned(rtplan = runReq.rtplan.get, rtimage)) else None
+    val planned = if (runReq.rtplan.isDefined) Some(PlannedRectangle(rtplan = runReq.rtplan.get, rtimage)) else None
 
     val wl = WinstonLutz(
       winstonLutzPK = None,

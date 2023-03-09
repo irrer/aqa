@@ -5,6 +5,7 @@ import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.util.Utility
 import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.MachineWL
@@ -601,7 +602,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
         writeImageLater(image, "ball_fine")
 
         if (singleMax(cSpline, cSum) && singleMax(rSpline, rSum)) {
-          diagnosticMessage("Ball fine location relative to box in pixels: " + fineX.center + ", " + fineY.center)
+          diagnosticMessage("Ball fine location relative to area of interest in pixels: " + fineX.center + ", " + fineY.center)
           Some(fineX.center, fineY.center)
         } else None
       }
@@ -727,8 +728,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
         val edgeRight = eRight.right.get + (width - tol2)
 
         val edges = new Edges(edgeTop, edgeBottom, edgeLeft, edgeRight)
-        diagnosticMessage("\n\nUnscaled box dimensions in pixels")
-        diagnostics.write(edges.toString.getBytes)
+        //diagnosticMessage(s"\n\nUnscaled box dimensions in pixels\n$edges")
+        //diagnostics.write(edges.toString.getBytes)
         Right(edges)
       } else
         Left(status)
@@ -987,12 +988,12 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
         edgesUnscaled.right * ResolutionX
       )
 
-      diagnosticMessage("\n\nScaled box dimensions in mm")
-      diagnostics.write(edgesScaled.toString.getBytes)
+      //diagnosticMessage("\n\nScaled box dimensions in mm")
+      //diagnostics.write(edgesScaled.toString.getBytes)
 
-      diagnosticMessage("\n\n")
-      diagnosticMessage("ball center mm   X: " + fmt(ballCenterScaledX) + "    Y: " + fmt(ballCenterScaledY))
-      diagnosticMessage("box  center mm   X: " + fmt(boxCenterScaledX) + "    Y: " + fmt(boxCenterScaledY))
+      // diagnosticMessage("\n\n")
+      // diagnosticMessage("ball center mm   X: " + fmt(ballCenterScaledX) + "    Y: " + fmt(ballCenterScaledY))
+      // diagnosticMessage("box  center mm   X: " + fmt(boxCenterScaledX) + "    Y: " + fmt(boxCenterScaledY))
 
       diagnosticMessage("X Offset mm " + fmt(errorScaledX))
       diagnosticMessage("Y Offset mm " + fmt(errorScaledY))
