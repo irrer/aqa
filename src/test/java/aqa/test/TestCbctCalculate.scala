@@ -30,7 +30,7 @@ import java.io.File
 import javax.vecmath.Point3d
 
 /**
- * Test the BBbyCBCTExecute.calculate function, which does the matrix operations needed to map
+ * Test the BBbyCBCTExecute.measure function, which does the matrix operations needed to map
  * CBCT coordinates into RTPLAN coordinates.
  *
  */
