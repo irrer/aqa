@@ -1,0 +1,1367 @@
+0002,0000 UL  FileMetaInformationGroupLength: 186
+0002,0001 OB  FileMetaInformationVersion: 0x0 0x1
+0002,0002 UI  MediaStorageSOPClassUID: 1.2.840.10008.5.1.4.1.1.481.5 (RT Plan Storage)
+0002,0003 UI  MediaStorageSOPInstanceUID: 1.2.246.352.71.5.700377998926.2262337.20230106102023
+0002,0010 UI  TransferSyntaxUID: 1.2.840.10008.1.2
+0002,0012 UI  ImplementationClassUID: 1.2.246.352.70.2.1.160.3
+0002,0013 SH  ImplementationVersionName: DCIE 2.2
+0008,0005 CS  SpecificCharacterSet: ISO_IR 192
+0008,0012 DA  InstanceCreationDate: 20230106
+0008,0013 TM  InstanceCreationTime: 102249
+0008,0016 UI  SOPClassUID: 1.2.840.10008.5.1.4.1.1.481.5 (RT Plan Storage)
+0008,0018 UI  SOPInstanceUID: 1.2.246.352.71.5.700377998926.2262337.20230106102023
+0008,0020 DA  StudyDate: 20190820
+0008,0030 TM  StudyTime: 140559.107
+0008,0050 SH  AccessionNumber: <null>
+0008,0060 CS  Modality: RTPLAN
+0008,0070 LO  Manufacturer: Varian Medical Systems
+0008,0090 PN  ReferringPhysicianName: <null>
+0008,1010 SH  StationName: cmn-ro-ariadb.ma
+0008,1030 LO  StudyDescription: 
+0008,103e LO  SeriesDescription: ARIA RadOnc Plans
+0008,1070 PN  OperatorsName: Barnes, Michael
+0008,1090 LO  ManufacturerModelName: ARIA RadOnc
+0010,0010 PN  PatientName: MegaQA^ver1
+0010,0020 LO  PatientID: zzzMegaQA_01
+0010,0030 DA  PatientBirthDate: <null>
+0010,0040 CS  PatientSex: <null>
+0018,1000 LO  DeviceSerialNumber: 700377998926
+0018,1020 LO  SoftwareVersions: 15.6.8
+0020,000d UI  StudyInstanceUID: 1.2.246.352.205.5469742509352948036.18032890301503588252
+0020,000e UI  SeriesInstanceUID: 1.2.246.352.71.2.700377998926.6952385.20210304095330
+0020,0010 SH  StudyID: Phantom1
+0020,0011 IS  SeriesNumber: 66
+0020,0052 UI  FrameOfReferenceUID: 1.2.246.352.205.4978234876124630499.2952303173325809589
+0020,1040 LO  PositionReferenceIndicator: <null>
+300a,0002 SH  RTPlanLabel: aQA Edge_FS
+300a,0003 LO  RTPlanName: none
+300a,0006 DA  RTPlanDate: 20230106
+300a,0007 TM  RTPlanTime: 102023.13
+300a,000a CS  PlanIntent: CURATIVE
+300a,000c CS  RTPlanGeometry: PATIENT
+300a,0010 SQ  DoseReferenceSequence: 
+  Item 1 / 2
+    300a,0012 IS  DoseReferenceNumber: 1
+    300a,0013 UI  DoseReferenceUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+    300a,0014 CS  DoseReferenceStructureType: SITE
+    300a,0016 LO  DoseReferenceDescription: MLCPosi_04
+    300a,0020 CS  DoseReferenceType: ORGAN_AT_RISK
+    300a,0023 DS  DeliveryMaximumDose: 20
+    300a,002c DS  OrganAtRiskMaximumDose: 20
+    3267,0010 LO  VarianCreator3267: Varian Medical Systems VISION 3267
+    3267,1000 SH  ReferencedPatientVolumeID: MLCPosi_02
+  Item 2 / 2
+    300a,0012 IS  DoseReferenceNumber: 2
+    300a,0013 UI  DoseReferenceUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.4
+    300a,0014 CS  DoseReferenceStructureType: SITE
+    300a,0016 LO  DoseReferenceDescription: Beam_04
+    300a,0020 CS  DoseReferenceType: ORGAN_AT_RISK
+    3267,0010 LO  VarianCreator3267: Varian Medical Systems VISION 3267
+    3267,1000 SH  ReferencedPatientVolumeID: Beam_02
+300a,0040 SQ  ToleranceTableSequence: 
+  Item 1 / 1
+    300a,0042 IS  ToleranceTableNumber: 1
+    300a,0043 SH  ToleranceTableLabel: PHYSICS TOL
+    300a,0044 DS  GantryAngleTolerance: 1
+    300a,0046 DS  BeamLimitingDeviceAngleTolerance: 1
+    300a,0048 SQ  BeamLimitingDeviceToleranceSequence: 
+      Item 1 / 4
+        300a,004a DS  BeamLimitingDevicePositionTolerance: 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+      Item 2 / 4
+        300a,004a DS  BeamLimitingDevicePositionTolerance: 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: ASYMX
+      Item 3 / 4
+        300a,004a DS  BeamLimitingDevicePositionTolerance: 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+      Item 4 / 4
+        300a,004a DS  BeamLimitingDevicePositionTolerance: 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: ASYMY
+    300a,004c DS  PatientSupportAngleTolerance: 1
+    300a,004f FL  TableTopPitchAngleTolerance: 1
+    300a,0050 FL  TableTopRollAngleTolerance: 1
+    300a,0051 DS  TableTopVerticalPositionTolerance: 700
+    300a,0052 DS  TableTopLongitudinalPositionTolerance: 1400
+    300a,0053 DS  TableTopLateralPositionTolerance: 150
+300a,0070 SQ  FractionGroupSequence: 
+  Item 1 / 1
+    300a,0071 IS  FractionGroupNumber: 1
+    300a,0078 IS  NumberOfFractionsPlanned: 10
+    300a,0080 IS  NumberOfBeams: 16
+    300a,00a0 IS  NumberOfBrachyApplicationSetups: 0
+    300c,0004 SQ  ReferencedBeamSequence: 
+      Item 1 / 16
+        300c,0006 IS  ReferencedBeamNumber: 23
+        3249,0010 LO  VarianCreator3249: Varian Medical Systems VISION 3249
+        3249,1000 DS  MaximumTreatmentTime: 0.5
+        3249,1010 UI  ReferencedPrimaryDoseRefUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+      Item 2 / 16
+        300c,0006 IS  ReferencedBeamNumber: 24
+        3249,0010 LO  VarianCreator3249: Varian Medical Systems VISION 3249
+        3249,1000 DS  MaximumTreatmentTime: 0.5
+        3249,1010 UI  ReferencedPrimaryDoseRefUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+      Item 3 / 16
+        300c,0006 IS  ReferencedBeamNumber: 41
+        3249,0010 LO  VarianCreator3249: Varian Medical Systems VISION 3249
+        3249,1000 DS  MaximumTreatmentTime: 0.5
+        3249,1010 UI  ReferencedPrimaryDoseRefUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+      Item 4 / 16
+        300c,0006 IS  ReferencedBeamNumber: 40
+        3249,0010 LO  VarianCreator3249: Varian Medical Systems VISION 3249
+        3249,1000 DS  MaximumTreatmentTime: 0.5
+        3249,1010 UI  ReferencedPrimaryDoseRefUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+      Item 5 / 16
+        300c,0006 IS  ReferencedBeamNumber: 42
+        3249,0010 LO  VarianCreator3249: Varian Medical Systems VISION 3249
+        3249,1000 DS  MaximumTreatmentTime: 0.5
+        3249,1010 UI  ReferencedPrimaryDoseRefUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+      Item 6 / 16
+        300c,0006 IS  ReferencedBeamNumber: 43
+        3249,0010 LO  VarianCreator3249: Varian Medical Systems VISION 3249
+        3249,1000 DS  MaximumTreatmentTime: 0.5
+        3249,1010 UI  ReferencedPrimaryDoseRefUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+      Item 7 / 16
+        300c,0006 IS  ReferencedBeamNumber: 49
+        3249,0010 LO  VarianCreator3249: Varian Medical Systems VISION 3249
+        3249,1000 DS  MaximumTreatmentTime: 0.5
+        3249,1010 UI  ReferencedPrimaryDoseRefUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+      Item 8 / 16
+        300c,0006 IS  ReferencedBeamNumber: 48
+        3249,0010 LO  VarianCreator3249: Varian Medical Systems VISION 3249
+        3249,1000 DS  MaximumTreatmentTime: 0.5
+        3249,1010 UI  ReferencedPrimaryDoseRefUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+      Item 9 / 16
+        300c,0006 IS  ReferencedBeamNumber: 52
+        3249,0010 LO  VarianCreator3249: Varian Medical Systems VISION 3249
+        3249,1000 DS  MaximumTreatmentTime: 0.21428571428571
+        3249,1010 UI  ReferencedPrimaryDoseRefUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+      Item 10 / 16
+        300c,0006 IS  ReferencedBeamNumber: 53
+        3249,0010 LO  VarianCreator3249: Varian Medical Systems VISION 3249
+        3249,1000 DS  MaximumTreatmentTime: 0.21428571428571
+        3249,1010 UI  ReferencedPrimaryDoseRefUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+      Item 11 / 16
+        300c,0006 IS  ReferencedBeamNumber: 45
+        3249,0010 LO  VarianCreator3249: Varian Medical Systems VISION 3249
+        3249,1000 DS  MaximumTreatmentTime: 0.21428571428571
+        3249,1010 UI  ReferencedPrimaryDoseRefUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+      Item 12 / 16
+        300c,0006 IS  ReferencedBeamNumber: 44
+        3249,0010 LO  VarianCreator3249: Varian Medical Systems VISION 3249
+        3249,1000 DS  MaximumTreatmentTime: 0.21428571428571
+        3249,1010 UI  ReferencedPrimaryDoseRefUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+      Item 13 / 16
+        300c,0006 IS  ReferencedBeamNumber: 46
+        3249,0010 LO  VarianCreator3249: Varian Medical Systems VISION 3249
+        3249,1000 DS  MaximumTreatmentTime: 0.125
+        3249,1010 UI  ReferencedPrimaryDoseRefUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+      Item 14 / 16
+        300c,0006 IS  ReferencedBeamNumber: 47
+        3249,0010 LO  VarianCreator3249: Varian Medical Systems VISION 3249
+        3249,1000 DS  MaximumTreatmentTime: 0.125
+        3249,1010 UI  ReferencedPrimaryDoseRefUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+      Item 15 / 16
+        300c,0006 IS  ReferencedBeamNumber: 51
+        3249,0010 LO  VarianCreator3249: Varian Medical Systems VISION 3249
+        3249,1000 DS  MaximumTreatmentTime: 0.125
+        3249,1010 UI  ReferencedPrimaryDoseRefUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+      Item 16 / 16
+        300c,0006 IS  ReferencedBeamNumber: 50
+        3249,0010 LO  VarianCreator3249: Varian Medical Systems VISION 3249
+        3249,1000 DS  MaximumTreatmentTime: 0.125
+        3249,1010 UI  ReferencedPrimaryDoseRefUID: 1.3.6.1.4.1.22361.22330218066993.1921899837.1566355077930.3
+300a,00b0 SQ  BeamSequence: 
+  Item 1 / 16
+    0008,0070 LO  Manufacturer: Varian Medical Systems
+    0008,0080 LO  InstitutionName: NMMH
+    0008,1040 LO  InstitutionalDepartmentName: Radiation Oncolo
+    0008,1090 LO  ManufacturerModelName: TDS
+    0018,1000 LO  DeviceSerialNumber: 2033
+    3002,0050 SQ  PrimaryFluenceModeSequence: 
+      Item 1 / 1
+        3002,0051 CS  FluenceMode: STANDARD
+    300a,00b2 SH  TreatmentMachineName: Lawson3
+    300a,00b3 CS  PrimaryDosimeterUnit: MU
+    300a,00b4 DS  SourceAxisDistance: 1000
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 2 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+    300a,00c0 IS  BeamNumber: 23
+    300a,00c2 LO  BeamName: 6x-10-Jaw-270
+    300a,00c4 CS  BeamType: STATIC
+    300a,00c6 CS  RadiationType: PHOTON
+    300a,00ce CS  TreatmentDeliveryType: TREATMENT
+    300a,00d0 IS  NumberOfWedges: 0
+    300a,00e0 IS  NumberOfCompensators: 0
+    300a,00ed IS  NumberOfBoli: 0
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,010e DS  FinalCumulativeMetersetWeight: 1
+    300a,0110 IS  NumberOfControlPoints: 2
+    300a,0111 SQ  ControlPointSequence: 
+      Item 1 / 2
+        300a,0112 IS  ControlPointIndex: 0
+        300a,0114 DS  NominalBeamEnergy: 6
+        300a,0115 DS  DoseRateSet: 600
+        300a,011a SQ  BeamLimitingDevicePositionSequence: 
+          Item 1 / 2
+            300a,00b8 CS  RTBeamLimitingDeviceType: X
+            300a,011c DS  LeafJawPositions: -50 \ 50
+          Item 2 / 2
+            300a,00b8 CS  RTBeamLimitingDeviceType: Y
+            300a,011c DS  LeafJawPositions: -50 \ 50
+        300a,011e DS  GantryAngle: 0
+        300a,011f CS  GantryRotationDirection: NONE
+        300a,0120 DS  BeamLimitingDeviceAngle: 270
+        300a,0121 CS  BeamLimitingDeviceRotationDirection: NONE
+        300a,0122 DS  PatientSupportAngle: 0
+        300a,0123 CS  PatientSupportRotationDirection: NONE
+        300a,0125 DS  TableTopEccentricAngle: 0
+        300a,0126 CS  TableTopEccentricRotationDirection: NONE
+        300a,0128 DS  TableTopVerticalPosition: -200
+        300a,0129 DS  TableTopLongitudinalPosition: 200
+        300a,012a DS  TableTopLateralPosition: 0
+        300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+        300a,0134 DS  CumulativeMetersetWeight: 0
+        300a,0140 FL  TableTopPitchAngle: 0
+        300a,0142 CS  TableTopPitchRotationDirection: NONE
+        300a,0144 FL  TableTopRollAngle: 0
+        300a,0146 CS  TableTopRollRotationDirection: NONE
+      Item 2 / 2
+        300a,0112 IS  ControlPointIndex: 1
+        300a,0134 DS  CumulativeMetersetWeight: 1
+    300c,006a IS  ReferencedPatientSetupNumber: 23
+    300c,00a0 IS  ReferencedToleranceTableNumber: 1
+    3285,0010 LO  VarianCreator3285: Varian Medical Systems VISION 3285
+    3285,1000 SQ  PrimaryFluenceModeSequenceVarian: unknown
+  Item 2 / 16
+    0008,0070 LO  Manufacturer: Varian Medical Systems
+    0008,0080 LO  InstitutionName: NMMH
+    0008,1040 LO  InstitutionalDepartmentName: Radiation Oncolo
+    0008,1090 LO  ManufacturerModelName: TDS
+    0018,1000 LO  DeviceSerialNumber: 2033
+    3002,0050 SQ  PrimaryFluenceModeSequence: 
+      Item 1 / 1
+        3002,0051 CS  FluenceMode: STANDARD
+    300a,00b2 SH  TreatmentMachineName: Lawson3
+    300a,00b3 CS  PrimaryDosimeterUnit: MU
+    300a,00b4 DS  SourceAxisDistance: 1000
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 2 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+    300a,00c0 IS  BeamNumber: 24
+    300a,00c2 LO  BeamName: 6x-10-Jaw-90
+    300a,00c4 CS  BeamType: STATIC
+    300a,00c6 CS  RadiationType: PHOTON
+    300a,00ce CS  TreatmentDeliveryType: TREATMENT
+    300a,00d0 IS  NumberOfWedges: 0
+    300a,00e0 IS  NumberOfCompensators: 0
+    300a,00ed IS  NumberOfBoli: 0
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,010e DS  FinalCumulativeMetersetWeight: 1
+    300a,0110 IS  NumberOfControlPoints: 2
+    300a,0111 SQ  ControlPointSequence: 
+      Item 1 / 2
+        300a,0112 IS  ControlPointIndex: 0
+        300a,0114 DS  NominalBeamEnergy: 6
+        300a,0115 DS  DoseRateSet: 600
+        300a,011a SQ  BeamLimitingDevicePositionSequence: 
+          Item 1 / 2
+            300a,00b8 CS  RTBeamLimitingDeviceType: X
+            300a,011c DS  LeafJawPositions: -50 \ 50
+          Item 2 / 2
+            300a,00b8 CS  RTBeamLimitingDeviceType: Y
+            300a,011c DS  LeafJawPositions: -50 \ 50
+        300a,011e DS  GantryAngle: 0
+        300a,011f CS  GantryRotationDirection: NONE
+        300a,0120 DS  BeamLimitingDeviceAngle: 90
+        300a,0121 CS  BeamLimitingDeviceRotationDirection: NONE
+        300a,0122 DS  PatientSupportAngle: 0
+        300a,0123 CS  PatientSupportRotationDirection: NONE
+        300a,0125 DS  TableTopEccentricAngle: 0
+        300a,0126 CS  TableTopEccentricRotationDirection: NONE
+        300a,0128 DS  TableTopVerticalPosition: -200
+        300a,0129 DS  TableTopLongitudinalPosition: 200
+        300a,012a DS  TableTopLateralPosition: 0
+        300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+        300a,0134 DS  CumulativeMetersetWeight: 0
+        300a,0140 FL  TableTopPitchAngle: 0
+        300a,0142 CS  TableTopPitchRotationDirection: NONE
+        300a,0144 FL  TableTopRollAngle: 0
+        300a,0146 CS  TableTopRollRotationDirection: NONE
+      Item 2 / 2
+        300a,0112 IS  ControlPointIndex: 1
+        300a,0134 DS  CumulativeMetersetWeight: 1
+    300c,006a IS  ReferencedPatientSetupNumber: 24
+    300c,00a0 IS  ReferencedToleranceTableNumber: 1
+    3285,0010 LO  VarianCreator3285: Varian Medical Systems VISION 3285
+    3285,1000 SQ  PrimaryFluenceModeSequenceVarian: unknown
+  Item 3 / 16
+    0008,0070 LO  Manufacturer: Varian Medical Systems
+    0008,0080 LO  InstitutionName: NMMH
+    0008,1040 LO  InstitutionalDepartmentName: Radiation Oncolo
+    0008,1090 LO  ManufacturerModelName: TDS
+    0018,1000 LO  DeviceSerialNumber: 2033
+    3002,0050 SQ  PrimaryFluenceModeSequence: 
+      Item 1 / 1
+        3002,0051 CS  FluenceMode: STANDARD
+    300a,00b2 SH  TreatmentMachineName: Lawson3
+    300a,00b3 CS  PrimaryDosimeterUnit: MU
+    300a,00b4 DS  SourceAxisDistance: 1000
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 2 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 3 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: MLCX
+        300a,00bc IS  NumberOfLeafJawPairs: 60
+        300a,00be DS  LeafPositionBoundaries: -110 \ -105 \ -100 \ -95 \ -90 \ -85 \ -80 \ -75 \ -70 \ -65 \ -60 \ -55 \ -50 \ -45 \ -40 \ -37.5 \ -35 \ -32.5 \ -30 \ -27.5 \ -25 \ -22.5 \ -20 \ -17.5 \ -15 \ -12.5 \ -10 \ -7.5 \ -5 \ -2.5 \ 0 \ 2.5 \ 5 \ 7.5 \ 10 \ 12.5 \ 15 \ 17.5 \ 20 \ 22.5 \ 25 \ 27.5 \ 30 \ 32.5 \ 35 \ 37.5 \ 40 \ 45 \ 50 \ 55 \ 60 \ 65 \ 70 \ 75 \ 80 \ 85 \ 90 \ 95 \ 100 \ 105 \ 110
+    300a,00c0 IS  BeamNumber: 41
+    300a,00c2 LO  BeamName: 6x-10-MLC-90
+    300a,00c4 CS  BeamType: STATIC
+    300a,00c6 CS  RadiationType: PHOTON
+    300a,00ce CS  TreatmentDeliveryType: TREATMENT
+    300a,00d0 IS  NumberOfWedges: 0
+    300a,00e0 IS  NumberOfCompensators: 0
+    300a,00ed IS  NumberOfBoli: 0
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,010e DS  FinalCumulativeMetersetWeight: 1
+    300a,0110 IS  NumberOfControlPoints: 2
+    300a,0111 SQ  ControlPointSequence: 
+      Item 1 / 2
+        300a,0112 IS  ControlPointIndex: 0
+        300a,0114 DS  NominalBeamEnergy: 6
+        300a,0115 DS  DoseRateSet: 600
+        300a,011a SQ  BeamLimitingDevicePositionSequence: 
+          Item 1 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: X
+            300a,011c DS  LeafJawPositions: -100 \ 100
+          Item 2 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: Y
+            300a,011c DS  LeafJawPositions: -100 \ 100
+          Item 3 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: MLCX
+            300a,011c DS  LeafJawPositions: 50 (repeated 12 times) \ -50 (repeated 36 times) \ 50 (repeated 72 times)
+        300a,011e DS  GantryAngle: 0
+        300a,011f CS  GantryRotationDirection: NONE
+        300a,0120 DS  BeamLimitingDeviceAngle: 90
+        300a,0121 CS  BeamLimitingDeviceRotationDirection: NONE
+        300a,0122 DS  PatientSupportAngle: 0
+        300a,0123 CS  PatientSupportRotationDirection: NONE
+        300a,0125 DS  TableTopEccentricAngle: 0
+        300a,0126 CS  TableTopEccentricRotationDirection: NONE
+        300a,0128 DS  TableTopVerticalPosition: -200
+        300a,0129 DS  TableTopLongitudinalPosition: 200
+        300a,012a DS  TableTopLateralPosition: 0
+        300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+        300a,0134 DS  CumulativeMetersetWeight: 0
+        300a,0140 FL  TableTopPitchAngle: 0
+        300a,0142 CS  TableTopPitchRotationDirection: NONE
+        300a,0144 FL  TableTopRollAngle: 0
+        300a,0146 CS  TableTopRollRotationDirection: NONE
+      Item 2 / 2
+        300a,0112 IS  ControlPointIndex: 1
+        300a,0134 DS  CumulativeMetersetWeight: 1
+    300c,006a IS  ReferencedPatientSetupNumber: 41
+    300c,00a0 IS  ReferencedToleranceTableNumber: 1
+    3285,0010 LO  VarianCreator3285: Varian Medical Systems VISION 3285
+    3285,1000 SQ  PrimaryFluenceModeSequenceVarian: unknown
+  Item 4 / 16
+    0008,0070 LO  Manufacturer: Varian Medical Systems
+    0008,0080 LO  InstitutionName: NMMH
+    0008,1040 LO  InstitutionalDepartmentName: Radiation Oncolo
+    0008,1090 LO  ManufacturerModelName: TDS
+    0018,1000 LO  DeviceSerialNumber: 2033
+    3002,0050 SQ  PrimaryFluenceModeSequence: 
+      Item 1 / 1
+        3002,0051 CS  FluenceMode: STANDARD
+    300a,00b2 SH  TreatmentMachineName: Lawson3
+    300a,00b3 CS  PrimaryDosimeterUnit: MU
+    300a,00b4 DS  SourceAxisDistance: 1000
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 2 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 3 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: MLCX
+        300a,00bc IS  NumberOfLeafJawPairs: 60
+        300a,00be DS  LeafPositionBoundaries: -110 \ -105 \ -100 \ -95 \ -90 \ -85 \ -80 \ -75 \ -70 \ -65 \ -60 \ -55 \ -50 \ -45 \ -40 \ -37.5 \ -35 \ -32.5 \ -30 \ -27.5 \ -25 \ -22.5 \ -20 \ -17.5 \ -15 \ -12.5 \ -10 \ -7.5 \ -5 \ -2.5 \ 0 \ 2.5 \ 5 \ 7.5 \ 10 \ 12.5 \ 15 \ 17.5 \ 20 \ 22.5 \ 25 \ 27.5 \ 30 \ 32.5 \ 35 \ 37.5 \ 40 \ 45 \ 50 \ 55 \ 60 \ 65 \ 70 \ 75 \ 80 \ 85 \ 90 \ 95 \ 100 \ 105 \ 110
+    300a,00c0 IS  BeamNumber: 40
+    300a,00c2 LO  BeamName: 6x-10-MLC-270
+    300a,00c4 CS  BeamType: STATIC
+    300a,00c6 CS  RadiationType: PHOTON
+    300a,00ce CS  TreatmentDeliveryType: TREATMENT
+    300a,00d0 IS  NumberOfWedges: 0
+    300a,00e0 IS  NumberOfCompensators: 0
+    300a,00ed IS  NumberOfBoli: 0
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,010e DS  FinalCumulativeMetersetWeight: 1
+    300a,0110 IS  NumberOfControlPoints: 2
+    300a,0111 SQ  ControlPointSequence: 
+      Item 1 / 2
+        300a,0112 IS  ControlPointIndex: 0
+        300a,0114 DS  NominalBeamEnergy: 6
+        300a,0115 DS  DoseRateSet: 600
+        300a,011a SQ  BeamLimitingDevicePositionSequence: 
+          Item 1 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: X
+            300a,011c DS  LeafJawPositions: -100 \ 100
+          Item 2 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: Y
+            300a,011c DS  LeafJawPositions: -100 \ 100
+          Item 3 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: MLCX
+            300a,011c DS  LeafJawPositions: 50 (repeated 12 times) \ -50 (repeated 36 times) \ 50 (repeated 72 times)
+        300a,011e DS  GantryAngle: 0
+        300a,011f CS  GantryRotationDirection: NONE
+        300a,0120 DS  BeamLimitingDeviceAngle: 270
+        300a,0121 CS  BeamLimitingDeviceRotationDirection: NONE
+        300a,0122 DS  PatientSupportAngle: 0
+        300a,0123 CS  PatientSupportRotationDirection: NONE
+        300a,0125 DS  TableTopEccentricAngle: 0
+        300a,0126 CS  TableTopEccentricRotationDirection: NONE
+        300a,0128 DS  TableTopVerticalPosition: -200
+        300a,0129 DS  TableTopLongitudinalPosition: 200
+        300a,012a DS  TableTopLateralPosition: 0
+        300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+        300a,0134 DS  CumulativeMetersetWeight: 0
+        300a,0140 FL  TableTopPitchAngle: 0
+        300a,0142 CS  TableTopPitchRotationDirection: NONE
+        300a,0144 FL  TableTopRollAngle: 0
+        300a,0146 CS  TableTopRollRotationDirection: NONE
+      Item 2 / 2
+        300a,0112 IS  ControlPointIndex: 1
+        300a,0134 DS  CumulativeMetersetWeight: 1
+    300c,006a IS  ReferencedPatientSetupNumber: 40
+    300c,00a0 IS  ReferencedToleranceTableNumber: 1
+    3285,0010 LO  VarianCreator3285: Varian Medical Systems VISION 3285
+    3285,1000 SQ  PrimaryFluenceModeSequenceVarian: unknown
+  Item 5 / 16
+    0008,0070 LO  Manufacturer: Varian Medical Systems
+    0008,0080 LO  InstitutionName: NMMH
+    0008,1040 LO  InstitutionalDepartmentName: Radiation Oncolo
+    0008,1090 LO  ManufacturerModelName: TDS
+    0018,1000 LO  DeviceSerialNumber: 2033
+    3002,0050 SQ  PrimaryFluenceModeSequence: 
+      Item 1 / 1
+        3002,0051 CS  FluenceMode: STANDARD
+    300a,00b2 SH  TreatmentMachineName: Lawson3
+    300a,00b3 CS  PrimaryDosimeterUnit: MU
+    300a,00b4 DS  SourceAxisDistance: 1000
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 2 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 3 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: MLCX
+        300a,00bc IS  NumberOfLeafJawPairs: 60
+        300a,00be DS  LeafPositionBoundaries: -110 \ -105 \ -100 \ -95 \ -90 \ -85 \ -80 \ -75 \ -70 \ -65 \ -60 \ -55 \ -50 \ -45 \ -40 \ -37.5 \ -35 \ -32.5 \ -30 \ -27.5 \ -25 \ -22.5 \ -20 \ -17.5 \ -15 \ -12.5 \ -10 \ -7.5 \ -5 \ -2.5 \ 0 \ 2.5 \ 5 \ 7.5 \ 10 \ 12.5 \ 15 \ 17.5 \ 20 \ 22.5 \ 25 \ 27.5 \ 30 \ 32.5 \ 35 \ 37.5 \ 40 \ 45 \ 50 \ 55 \ 60 \ 65 \ 70 \ 75 \ 80 \ 85 \ 90 \ 95 \ 100 \ 105 \ 110
+    300a,00c0 IS  BeamNumber: 42
+    300a,00c2 LO  BeamName: 10x-10-MLC-270
+    300a,00c4 CS  BeamType: STATIC
+    300a,00c6 CS  RadiationType: PHOTON
+    300a,00ce CS  TreatmentDeliveryType: TREATMENT
+    300a,00d0 IS  NumberOfWedges: 0
+    300a,00e0 IS  NumberOfCompensators: 0
+    300a,00ed IS  NumberOfBoli: 0
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,010e DS  FinalCumulativeMetersetWeight: 1
+    300a,0110 IS  NumberOfControlPoints: 2
+    300a,0111 SQ  ControlPointSequence: 
+      Item 1 / 2
+        300a,0112 IS  ControlPointIndex: 0
+        300a,0114 DS  NominalBeamEnergy: 10
+        300a,0115 DS  DoseRateSet: 600
+        300a,011a SQ  BeamLimitingDevicePositionSequence: 
+          Item 1 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: X
+            300a,011c DS  LeafJawPositions: -100 \ 100
+          Item 2 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: Y
+            300a,011c DS  LeafJawPositions: -100 \ 100
+          Item 3 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: MLCX
+            300a,011c DS  LeafJawPositions: 50 (repeated 12 times) \ -50 (repeated 36 times) \ 50 (repeated 72 times)
+        300a,011e DS  GantryAngle: 0
+        300a,011f CS  GantryRotationDirection: NONE
+        300a,0120 DS  BeamLimitingDeviceAngle: 270
+        300a,0121 CS  BeamLimitingDeviceRotationDirection: NONE
+        300a,0122 DS  PatientSupportAngle: 0
+        300a,0123 CS  PatientSupportRotationDirection: NONE
+        300a,0125 DS  TableTopEccentricAngle: 0
+        300a,0126 CS  TableTopEccentricRotationDirection: NONE
+        300a,0128 DS  TableTopVerticalPosition: -200
+        300a,0129 DS  TableTopLongitudinalPosition: 200
+        300a,012a DS  TableTopLateralPosition: 0
+        300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+        300a,0134 DS  CumulativeMetersetWeight: 0
+        300a,0140 FL  TableTopPitchAngle: 0
+        300a,0142 CS  TableTopPitchRotationDirection: NONE
+        300a,0144 FL  TableTopRollAngle: 0
+        300a,0146 CS  TableTopRollRotationDirection: NONE
+      Item 2 / 2
+        300a,0112 IS  ControlPointIndex: 1
+        300a,0134 DS  CumulativeMetersetWeight: 1
+    300c,006a IS  ReferencedPatientSetupNumber: 42
+    300c,00a0 IS  ReferencedToleranceTableNumber: 1
+    3285,0010 LO  VarianCreator3285: Varian Medical Systems VISION 3285
+    3285,1000 SQ  PrimaryFluenceModeSequenceVarian: unknown
+  Item 6 / 16
+    0008,0070 LO  Manufacturer: Varian Medical Systems
+    0008,0080 LO  InstitutionName: NMMH
+    0008,1040 LO  InstitutionalDepartmentName: Radiation Oncolo
+    0008,1090 LO  ManufacturerModelName: TDS
+    0018,1000 LO  DeviceSerialNumber: 2033
+    3002,0050 SQ  PrimaryFluenceModeSequence: 
+      Item 1 / 1
+        3002,0051 CS  FluenceMode: STANDARD
+    300a,00b2 SH  TreatmentMachineName: Lawson3
+    300a,00b3 CS  PrimaryDosimeterUnit: MU
+    300a,00b4 DS  SourceAxisDistance: 1000
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 2 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 3 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: MLCX
+        300a,00bc IS  NumberOfLeafJawPairs: 60
+        300a,00be DS  LeafPositionBoundaries: -110 \ -105 \ -100 \ -95 \ -90 \ -85 \ -80 \ -75 \ -70 \ -65 \ -60 \ -55 \ -50 \ -45 \ -40 \ -37.5 \ -35 \ -32.5 \ -30 \ -27.5 \ -25 \ -22.5 \ -20 \ -17.5 \ -15 \ -12.5 \ -10 \ -7.5 \ -5 \ -2.5 \ 0 \ 2.5 \ 5 \ 7.5 \ 10 \ 12.5 \ 15 \ 17.5 \ 20 \ 22.5 \ 25 \ 27.5 \ 30 \ 32.5 \ 35 \ 37.5 \ 40 \ 45 \ 50 \ 55 \ 60 \ 65 \ 70 \ 75 \ 80 \ 85 \ 90 \ 95 \ 100 \ 105 \ 110
+    300a,00c0 IS  BeamNumber: 43
+    300a,00c2 LO  BeamName: 10x-10-MLC-90
+    300a,00c4 CS  BeamType: STATIC
+    300a,00c6 CS  RadiationType: PHOTON
+    300a,00ce CS  TreatmentDeliveryType: TREATMENT
+    300a,00d0 IS  NumberOfWedges: 0
+    300a,00e0 IS  NumberOfCompensators: 0
+    300a,00ed IS  NumberOfBoli: 0
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,010e DS  FinalCumulativeMetersetWeight: 1
+    300a,0110 IS  NumberOfControlPoints: 2
+    300a,0111 SQ  ControlPointSequence: 
+      Item 1 / 2
+        300a,0112 IS  ControlPointIndex: 0
+        300a,0114 DS  NominalBeamEnergy: 10
+        300a,0115 DS  DoseRateSet: 600
+        300a,011a SQ  BeamLimitingDevicePositionSequence: 
+          Item 1 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: X
+            300a,011c DS  LeafJawPositions: -100 \ 100
+          Item 2 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: Y
+            300a,011c DS  LeafJawPositions: -100 \ 100
+          Item 3 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: MLCX
+            300a,011c DS  LeafJawPositions: 50 (repeated 12 times) \ -50 (repeated 36 times) \ 50 (repeated 72 times)
+        300a,011e DS  GantryAngle: 0
+        300a,011f CS  GantryRotationDirection: NONE
+        300a,0120 DS  BeamLimitingDeviceAngle: 90
+        300a,0121 CS  BeamLimitingDeviceRotationDirection: NONE
+        300a,0122 DS  PatientSupportAngle: 0
+        300a,0123 CS  PatientSupportRotationDirection: NONE
+        300a,0125 DS  TableTopEccentricAngle: 0
+        300a,0126 CS  TableTopEccentricRotationDirection: NONE
+        300a,0128 DS  TableTopVerticalPosition: -200
+        300a,0129 DS  TableTopLongitudinalPosition: 200
+        300a,012a DS  TableTopLateralPosition: 0
+        300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+        300a,0134 DS  CumulativeMetersetWeight: 0
+        300a,0140 FL  TableTopPitchAngle: 0
+        300a,0142 CS  TableTopPitchRotationDirection: NONE
+        300a,0144 FL  TableTopRollAngle: 0
+        300a,0146 CS  TableTopRollRotationDirection: NONE
+      Item 2 / 2
+        300a,0112 IS  ControlPointIndex: 1
+        300a,0134 DS  CumulativeMetersetWeight: 1
+    300c,006a IS  ReferencedPatientSetupNumber: 43
+    300c,00a0 IS  ReferencedToleranceTableNumber: 1
+    3285,0010 LO  VarianCreator3285: Varian Medical Systems VISION 3285
+    3285,1000 SQ  PrimaryFluenceModeSequenceVarian: unknown
+  Item 7 / 16
+    0008,0070 LO  Manufacturer: Varian Medical Systems
+    0008,0080 LO  InstitutionName: NMMH
+    0008,1040 LO  InstitutionalDepartmentName: Radiation Oncolo
+    0008,1090 LO  ManufacturerModelName: TDS
+    0018,1000 LO  DeviceSerialNumber: 2033
+    3002,0050 SQ  PrimaryFluenceModeSequence: 
+      Item 1 / 1
+        3002,0051 CS  FluenceMode: STANDARD
+    300a,00b2 SH  TreatmentMachineName: Lawson3
+    300a,00b3 CS  PrimaryDosimeterUnit: MU
+    300a,00b4 DS  SourceAxisDistance: 1000
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 2 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+    300a,00c0 IS  BeamNumber: 49
+    300a,00c2 LO  BeamName: 10x-10-Jaw-90
+    300a,00c4 CS  BeamType: STATIC
+    300a,00c6 CS  RadiationType: PHOTON
+    300a,00ce CS  TreatmentDeliveryType: TREATMENT
+    300a,00d0 IS  NumberOfWedges: 0
+    300a,00e0 IS  NumberOfCompensators: 0
+    300a,00ed IS  NumberOfBoli: 0
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,010e DS  FinalCumulativeMetersetWeight: 1
+    300a,0110 IS  NumberOfControlPoints: 2
+    300a,0111 SQ  ControlPointSequence: 
+      Item 1 / 2
+        300a,0112 IS  ControlPointIndex: 0
+        300a,0114 DS  NominalBeamEnergy: 10
+        300a,0115 DS  DoseRateSet: 600
+        300a,011a SQ  BeamLimitingDevicePositionSequence: 
+          Item 1 / 2
+            300a,00b8 CS  RTBeamLimitingDeviceType: X
+            300a,011c DS  LeafJawPositions: -50 \ 50
+          Item 2 / 2
+            300a,00b8 CS  RTBeamLimitingDeviceType: Y
+            300a,011c DS  LeafJawPositions: -50 \ 50
+        300a,011e DS  GantryAngle: 0
+        300a,011f CS  GantryRotationDirection: NONE
+        300a,0120 DS  BeamLimitingDeviceAngle: 90
+        300a,0121 CS  BeamLimitingDeviceRotationDirection: NONE
+        300a,0122 DS  PatientSupportAngle: 0
+        300a,0123 CS  PatientSupportRotationDirection: NONE
+        300a,0125 DS  TableTopEccentricAngle: 0
+        300a,0126 CS  TableTopEccentricRotationDirection: NONE
+        300a,0128 DS  TableTopVerticalPosition: -200
+        300a,0129 DS  TableTopLongitudinalPosition: 200
+        300a,012a DS  TableTopLateralPosition: 0
+        300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+        300a,0134 DS  CumulativeMetersetWeight: 0
+        300a,0140 FL  TableTopPitchAngle: 0
+        300a,0142 CS  TableTopPitchRotationDirection: NONE
+        300a,0144 FL  TableTopRollAngle: 0
+        300a,0146 CS  TableTopRollRotationDirection: NONE
+      Item 2 / 2
+        300a,0112 IS  ControlPointIndex: 1
+        300a,0134 DS  CumulativeMetersetWeight: 1
+    300c,006a IS  ReferencedPatientSetupNumber: 49
+    300c,00a0 IS  ReferencedToleranceTableNumber: 1
+    3285,0010 LO  VarianCreator3285: Varian Medical Systems VISION 3285
+    3285,1000 SQ  PrimaryFluenceModeSequenceVarian: unknown
+  Item 8 / 16
+    0008,0070 LO  Manufacturer: Varian Medical Systems
+    0008,0080 LO  InstitutionName: NMMH
+    0008,1040 LO  InstitutionalDepartmentName: Radiation Oncolo
+    0008,1090 LO  ManufacturerModelName: TDS
+    0018,1000 LO  DeviceSerialNumber: 2033
+    3002,0050 SQ  PrimaryFluenceModeSequence: 
+      Item 1 / 1
+        3002,0051 CS  FluenceMode: STANDARD
+    300a,00b2 SH  TreatmentMachineName: Lawson3
+    300a,00b3 CS  PrimaryDosimeterUnit: MU
+    300a,00b4 DS  SourceAxisDistance: 1000
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 2 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+    300a,00c0 IS  BeamNumber: 48
+    300a,00c2 LO  BeamName: 10x-10-Jaw-270
+    300a,00c4 CS  BeamType: STATIC
+    300a,00c6 CS  RadiationType: PHOTON
+    300a,00ce CS  TreatmentDeliveryType: TREATMENT
+    300a,00d0 IS  NumberOfWedges: 0
+    300a,00e0 IS  NumberOfCompensators: 0
+    300a,00ed IS  NumberOfBoli: 0
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,010e DS  FinalCumulativeMetersetWeight: 1
+    300a,0110 IS  NumberOfControlPoints: 2
+    300a,0111 SQ  ControlPointSequence: 
+      Item 1 / 2
+        300a,0112 IS  ControlPointIndex: 0
+        300a,0114 DS  NominalBeamEnergy: 10
+        300a,0115 DS  DoseRateSet: 600
+        300a,011a SQ  BeamLimitingDevicePositionSequence: 
+          Item 1 / 2
+            300a,00b8 CS  RTBeamLimitingDeviceType: X
+            300a,011c DS  LeafJawPositions: -50 \ 50
+          Item 2 / 2
+            300a,00b8 CS  RTBeamLimitingDeviceType: Y
+            300a,011c DS  LeafJawPositions: -50 \ 50
+        300a,011e DS  GantryAngle: 0
+        300a,011f CS  GantryRotationDirection: NONE
+        300a,0120 DS  BeamLimitingDeviceAngle: 270
+        300a,0121 CS  BeamLimitingDeviceRotationDirection: NONE
+        300a,0122 DS  PatientSupportAngle: 0
+        300a,0123 CS  PatientSupportRotationDirection: NONE
+        300a,0125 DS  TableTopEccentricAngle: 0
+        300a,0126 CS  TableTopEccentricRotationDirection: NONE
+        300a,0128 DS  TableTopVerticalPosition: -200
+        300a,0129 DS  TableTopLongitudinalPosition: 200
+        300a,012a DS  TableTopLateralPosition: 0
+        300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+        300a,0134 DS  CumulativeMetersetWeight: 0
+        300a,0140 FL  TableTopPitchAngle: 0
+        300a,0142 CS  TableTopPitchRotationDirection: NONE
+        300a,0144 FL  TableTopRollAngle: 0
+        300a,0146 CS  TableTopRollRotationDirection: NONE
+      Item 2 / 2
+        300a,0112 IS  ControlPointIndex: 1
+        300a,0134 DS  CumulativeMetersetWeight: 1
+    300c,006a IS  ReferencedPatientSetupNumber: 48
+    300c,00a0 IS  ReferencedToleranceTableNumber: 1
+    3285,0010 LO  VarianCreator3285: Varian Medical Systems VISION 3285
+    3285,1000 SQ  PrimaryFluenceModeSequenceVarian: unknown
+  Item 9 / 16
+    0008,0070 LO  Manufacturer: Varian Medical Systems
+    0008,0080 LO  InstitutionName: NMMH
+    0008,1040 LO  InstitutionalDepartmentName: Radiation Oncolo
+    0008,1090 LO  ManufacturerModelName: TDS
+    0018,1000 LO  DeviceSerialNumber: 2033
+    3002,0050 SQ  PrimaryFluenceModeSequence: 
+      Item 1 / 1
+        3002,0051 CS  FluenceMode: NON_STANDARD
+        3002,0052 SH  FluenceModeID: FFF
+    300a,00b2 SH  TreatmentMachineName: Lawson3
+    300a,00b3 CS  PrimaryDosimeterUnit: MU
+    300a,00b4 DS  SourceAxisDistance: 1000
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 2 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+    300a,00c0 IS  BeamNumber: 52
+    300a,00c2 LO  BeamName: 6fff-10-Jaw-270
+    300a,00c4 CS  BeamType: STATIC
+    300a,00c6 CS  RadiationType: PHOTON
+    300a,00ce CS  TreatmentDeliveryType: TREATMENT
+    300a,00d0 IS  NumberOfWedges: 0
+    300a,00e0 IS  NumberOfCompensators: 0
+    300a,00ed IS  NumberOfBoli: 0
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,010e DS  FinalCumulativeMetersetWeight: 1
+    300a,0110 IS  NumberOfControlPoints: 2
+    300a,0111 SQ  ControlPointSequence: 
+      Item 1 / 2
+        300a,0112 IS  ControlPointIndex: 0
+        300a,0114 DS  NominalBeamEnergy: 6
+        300a,0115 DS  DoseRateSet: 1400
+        300a,011a SQ  BeamLimitingDevicePositionSequence: 
+          Item 1 / 2
+            300a,00b8 CS  RTBeamLimitingDeviceType: X
+            300a,011c DS  LeafJawPositions: -50 \ 50
+          Item 2 / 2
+            300a,00b8 CS  RTBeamLimitingDeviceType: Y
+            300a,011c DS  LeafJawPositions: -50 \ 50
+        300a,011e DS  GantryAngle: 0
+        300a,011f CS  GantryRotationDirection: NONE
+        300a,0120 DS  BeamLimitingDeviceAngle: 270
+        300a,0121 CS  BeamLimitingDeviceRotationDirection: NONE
+        300a,0122 DS  PatientSupportAngle: 0
+        300a,0123 CS  PatientSupportRotationDirection: NONE
+        300a,0125 DS  TableTopEccentricAngle: 0
+        300a,0126 CS  TableTopEccentricRotationDirection: NONE
+        300a,0128 DS  TableTopVerticalPosition: -200
+        300a,0129 DS  TableTopLongitudinalPosition: 200
+        300a,012a DS  TableTopLateralPosition: 0
+        300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+        300a,0134 DS  CumulativeMetersetWeight: 0
+        300a,0140 FL  TableTopPitchAngle: 0
+        300a,0142 CS  TableTopPitchRotationDirection: NONE
+        300a,0144 FL  TableTopRollAngle: 0
+        300a,0146 CS  TableTopRollRotationDirection: NONE
+      Item 2 / 2
+        300a,0112 IS  ControlPointIndex: 1
+        300a,0134 DS  CumulativeMetersetWeight: 1
+    300c,006a IS  ReferencedPatientSetupNumber: 52
+    300c,00a0 IS  ReferencedToleranceTableNumber: 1
+    3285,0010 LO  VarianCreator3285: Varian Medical Systems VISION 3285
+    3285,1000 SQ  PrimaryFluenceModeSequenceVarian: unknown
+  Item 10 / 16
+    0008,0070 LO  Manufacturer: Varian Medical Systems
+    0008,0080 LO  InstitutionName: NMMH
+    0008,1040 LO  InstitutionalDepartmentName: Radiation Oncolo
+    0008,1090 LO  ManufacturerModelName: TDS
+    0018,1000 LO  DeviceSerialNumber: 2033
+    3002,0050 SQ  PrimaryFluenceModeSequence: 
+      Item 1 / 1
+        3002,0051 CS  FluenceMode: NON_STANDARD
+        3002,0052 SH  FluenceModeID: FFF
+    300a,00b2 SH  TreatmentMachineName: Lawson3
+    300a,00b3 CS  PrimaryDosimeterUnit: MU
+    300a,00b4 DS  SourceAxisDistance: 1000
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 2 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+    300a,00c0 IS  BeamNumber: 53
+    300a,00c2 LO  BeamName: 6fff-10-Jaw-90
+    300a,00c4 CS  BeamType: STATIC
+    300a,00c6 CS  RadiationType: PHOTON
+    300a,00ce CS  TreatmentDeliveryType: TREATMENT
+    300a,00d0 IS  NumberOfWedges: 0
+    300a,00e0 IS  NumberOfCompensators: 0
+    300a,00ed IS  NumberOfBoli: 0
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,010e DS  FinalCumulativeMetersetWeight: 1
+    300a,0110 IS  NumberOfControlPoints: 2
+    300a,0111 SQ  ControlPointSequence: 
+      Item 1 / 2
+        300a,0112 IS  ControlPointIndex: 0
+        300a,0114 DS  NominalBeamEnergy: 6
+        300a,0115 DS  DoseRateSet: 1400
+        300a,011a SQ  BeamLimitingDevicePositionSequence: 
+          Item 1 / 2
+            300a,00b8 CS  RTBeamLimitingDeviceType: X
+            300a,011c DS  LeafJawPositions: -50 \ 50
+          Item 2 / 2
+            300a,00b8 CS  RTBeamLimitingDeviceType: Y
+            300a,011c DS  LeafJawPositions: -50 \ 50
+        300a,011e DS  GantryAngle: 0
+        300a,011f CS  GantryRotationDirection: NONE
+        300a,0120 DS  BeamLimitingDeviceAngle: 90
+        300a,0121 CS  BeamLimitingDeviceRotationDirection: NONE
+        300a,0122 DS  PatientSupportAngle: 0
+        300a,0123 CS  PatientSupportRotationDirection: NONE
+        300a,0125 DS  TableTopEccentricAngle: 0
+        300a,0126 CS  TableTopEccentricRotationDirection: NONE
+        300a,0128 DS  TableTopVerticalPosition: -200
+        300a,0129 DS  TableTopLongitudinalPosition: 200
+        300a,012a DS  TableTopLateralPosition: 0
+        300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+        300a,0134 DS  CumulativeMetersetWeight: 0
+        300a,0140 FL  TableTopPitchAngle: 0
+        300a,0142 CS  TableTopPitchRotationDirection: NONE
+        300a,0144 FL  TableTopRollAngle: 0
+        300a,0146 CS  TableTopRollRotationDirection: NONE
+      Item 2 / 2
+        300a,0112 IS  ControlPointIndex: 1
+        300a,0134 DS  CumulativeMetersetWeight: 1
+    300c,006a IS  ReferencedPatientSetupNumber: 53
+    300c,00a0 IS  ReferencedToleranceTableNumber: 1
+    3285,0010 LO  VarianCreator3285: Varian Medical Systems VISION 3285
+    3285,1000 SQ  PrimaryFluenceModeSequenceVarian: unknown
+  Item 11 / 16
+    0008,0070 LO  Manufacturer: Varian Medical Systems
+    0008,0080 LO  InstitutionName: NMMH
+    0008,1040 LO  InstitutionalDepartmentName: Radiation Oncolo
+    0008,1090 LO  ManufacturerModelName: TDS
+    0018,1000 LO  DeviceSerialNumber: 2033
+    3002,0050 SQ  PrimaryFluenceModeSequence: 
+      Item 1 / 1
+        3002,0051 CS  FluenceMode: NON_STANDARD
+        3002,0052 SH  FluenceModeID: FFF
+    300a,00b2 SH  TreatmentMachineName: Lawson3
+    300a,00b3 CS  PrimaryDosimeterUnit: MU
+    300a,00b4 DS  SourceAxisDistance: 1000
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 2 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 3 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: MLCX
+        300a,00bc IS  NumberOfLeafJawPairs: 60
+        300a,00be DS  LeafPositionBoundaries: -110 \ -105 \ -100 \ -95 \ -90 \ -85 \ -80 \ -75 \ -70 \ -65 \ -60 \ -55 \ -50 \ -45 \ -40 \ -37.5 \ -35 \ -32.5 \ -30 \ -27.5 \ -25 \ -22.5 \ -20 \ -17.5 \ -15 \ -12.5 \ -10 \ -7.5 \ -5 \ -2.5 \ 0 \ 2.5 \ 5 \ 7.5 \ 10 \ 12.5 \ 15 \ 17.5 \ 20 \ 22.5 \ 25 \ 27.5 \ 30 \ 32.5 \ 35 \ 37.5 \ 40 \ 45 \ 50 \ 55 \ 60 \ 65 \ 70 \ 75 \ 80 \ 85 \ 90 \ 95 \ 100 \ 105 \ 110
+    300a,00c0 IS  BeamNumber: 45
+    300a,00c2 LO  BeamName: 6fff-10-MLC-90
+    300a,00c4 CS  BeamType: STATIC
+    300a,00c6 CS  RadiationType: PHOTON
+    300a,00ce CS  TreatmentDeliveryType: TREATMENT
+    300a,00d0 IS  NumberOfWedges: 0
+    300a,00e0 IS  NumberOfCompensators: 0
+    300a,00ed IS  NumberOfBoli: 0
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,010e DS  FinalCumulativeMetersetWeight: 1
+    300a,0110 IS  NumberOfControlPoints: 2
+    300a,0111 SQ  ControlPointSequence: 
+      Item 1 / 2
+        300a,0112 IS  ControlPointIndex: 0
+        300a,0114 DS  NominalBeamEnergy: 6
+        300a,0115 DS  DoseRateSet: 1400
+        300a,011a SQ  BeamLimitingDevicePositionSequence: 
+          Item 1 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: X
+            300a,011c DS  LeafJawPositions: -100 \ 100
+          Item 2 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: Y
+            300a,011c DS  LeafJawPositions: -100 \ 100
+          Item 3 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: MLCX
+            300a,011c DS  LeafJawPositions: 50 (repeated 12 times) \ -50 (repeated 36 times) \ 50 (repeated 72 times)
+        300a,011e DS  GantryAngle: 0
+        300a,011f CS  GantryRotationDirection: NONE
+        300a,0120 DS  BeamLimitingDeviceAngle: 90
+        300a,0121 CS  BeamLimitingDeviceRotationDirection: NONE
+        300a,0122 DS  PatientSupportAngle: 0
+        300a,0123 CS  PatientSupportRotationDirection: NONE
+        300a,0125 DS  TableTopEccentricAngle: 0
+        300a,0126 CS  TableTopEccentricRotationDirection: NONE
+        300a,0128 DS  TableTopVerticalPosition: -200
+        300a,0129 DS  TableTopLongitudinalPosition: 200
+        300a,012a DS  TableTopLateralPosition: 0
+        300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+        300a,0134 DS  CumulativeMetersetWeight: 0
+        300a,0140 FL  TableTopPitchAngle: 0
+        300a,0142 CS  TableTopPitchRotationDirection: NONE
+        300a,0144 FL  TableTopRollAngle: 0
+        300a,0146 CS  TableTopRollRotationDirection: NONE
+      Item 2 / 2
+        300a,0112 IS  ControlPointIndex: 1
+        300a,0134 DS  CumulativeMetersetWeight: 1
+    300c,006a IS  ReferencedPatientSetupNumber: 45
+    300c,00a0 IS  ReferencedToleranceTableNumber: 1
+    3285,0010 LO  VarianCreator3285: Varian Medical Systems VISION 3285
+    3285,1000 SQ  PrimaryFluenceModeSequenceVarian: unknown
+  Item 12 / 16
+    0008,0070 LO  Manufacturer: Varian Medical Systems
+    0008,0080 LO  InstitutionName: NMMH
+    0008,1040 LO  InstitutionalDepartmentName: Radiation Oncolo
+    0008,1090 LO  ManufacturerModelName: TDS
+    0018,1000 LO  DeviceSerialNumber: 2033
+    3002,0050 SQ  PrimaryFluenceModeSequence: 
+      Item 1 / 1
+        3002,0051 CS  FluenceMode: NON_STANDARD
+        3002,0052 SH  FluenceModeID: FFF
+    300a,00b2 SH  TreatmentMachineName: Lawson3
+    300a,00b3 CS  PrimaryDosimeterUnit: MU
+    300a,00b4 DS  SourceAxisDistance: 1000
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 2 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 3 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: MLCX
+        300a,00bc IS  NumberOfLeafJawPairs: 60
+        300a,00be DS  LeafPositionBoundaries: -110 \ -105 \ -100 \ -95 \ -90 \ -85 \ -80 \ -75 \ -70 \ -65 \ -60 \ -55 \ -50 \ -45 \ -40 \ -37.5 \ -35 \ -32.5 \ -30 \ -27.5 \ -25 \ -22.5 \ -20 \ -17.5 \ -15 \ -12.5 \ -10 \ -7.5 \ -5 \ -2.5 \ 0 \ 2.5 \ 5 \ 7.5 \ 10 \ 12.5 \ 15 \ 17.5 \ 20 \ 22.5 \ 25 \ 27.5 \ 30 \ 32.5 \ 35 \ 37.5 \ 40 \ 45 \ 50 \ 55 \ 60 \ 65 \ 70 \ 75 \ 80 \ 85 \ 90 \ 95 \ 100 \ 105 \ 110
+    300a,00c0 IS  BeamNumber: 44
+    300a,00c2 LO  BeamName: 6fff-10-MLC-270
+    300a,00c4 CS  BeamType: STATIC
+    300a,00c6 CS  RadiationType: PHOTON
+    300a,00ce CS  TreatmentDeliveryType: TREATMENT
+    300a,00d0 IS  NumberOfWedges: 0
+    300a,00e0 IS  NumberOfCompensators: 0
+    300a,00ed IS  NumberOfBoli: 0
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,010e DS  FinalCumulativeMetersetWeight: 1
+    300a,0110 IS  NumberOfControlPoints: 2
+    300a,0111 SQ  ControlPointSequence: 
+      Item 1 / 2
+        300a,0112 IS  ControlPointIndex: 0
+        300a,0114 DS  NominalBeamEnergy: 6
+        300a,0115 DS  DoseRateSet: 1400
+        300a,011a SQ  BeamLimitingDevicePositionSequence: 
+          Item 1 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: X
+            300a,011c DS  LeafJawPositions: -100 \ 100
+          Item 2 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: Y
+            300a,011c DS  LeafJawPositions: -100 \ 100
+          Item 3 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: MLCX
+            300a,011c DS  LeafJawPositions: 50 (repeated 12 times) \ -50 (repeated 36 times) \ 50 (repeated 72 times)
+        300a,011e DS  GantryAngle: 0
+        300a,011f CS  GantryRotationDirection: NONE
+        300a,0120 DS  BeamLimitingDeviceAngle: 270
+        300a,0121 CS  BeamLimitingDeviceRotationDirection: NONE
+        300a,0122 DS  PatientSupportAngle: 0
+        300a,0123 CS  PatientSupportRotationDirection: NONE
+        300a,0125 DS  TableTopEccentricAngle: 0
+        300a,0126 CS  TableTopEccentricRotationDirection: NONE
+        300a,0128 DS  TableTopVerticalPosition: -200
+        300a,0129 DS  TableTopLongitudinalPosition: 200
+        300a,012a DS  TableTopLateralPosition: 0
+        300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+        300a,0134 DS  CumulativeMetersetWeight: 0
+        300a,0140 FL  TableTopPitchAngle: 0
+        300a,0142 CS  TableTopPitchRotationDirection: NONE
+        300a,0144 FL  TableTopRollAngle: 0
+        300a,0146 CS  TableTopRollRotationDirection: NONE
+      Item 2 / 2
+        300a,0112 IS  ControlPointIndex: 1
+        300a,0134 DS  CumulativeMetersetWeight: 1
+    300c,006a IS  ReferencedPatientSetupNumber: 44
+    300c,00a0 IS  ReferencedToleranceTableNumber: 1
+    3285,0010 LO  VarianCreator3285: Varian Medical Systems VISION 3285
+    3285,1000 SQ  PrimaryFluenceModeSequenceVarian: unknown
+  Item 13 / 16
+    0008,0070 LO  Manufacturer: Varian Medical Systems
+    0008,0080 LO  InstitutionName: NMMH
+    0008,1040 LO  InstitutionalDepartmentName: Radiation Oncolo
+    0008,1090 LO  ManufacturerModelName: TDS
+    0018,1000 LO  DeviceSerialNumber: 2033
+    3002,0050 SQ  PrimaryFluenceModeSequence: 
+      Item 1 / 1
+        3002,0051 CS  FluenceMode: NON_STANDARD
+        3002,0052 SH  FluenceModeID: FFF
+    300a,00b2 SH  TreatmentMachineName: Lawson3
+    300a,00b3 CS  PrimaryDosimeterUnit: MU
+    300a,00b4 DS  SourceAxisDistance: 1000
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 2 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 3 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: MLCX
+        300a,00bc IS  NumberOfLeafJawPairs: 60
+        300a,00be DS  LeafPositionBoundaries: -110 \ -105 \ -100 \ -95 \ -90 \ -85 \ -80 \ -75 \ -70 \ -65 \ -60 \ -55 \ -50 \ -45 \ -40 \ -37.5 \ -35 \ -32.5 \ -30 \ -27.5 \ -25 \ -22.5 \ -20 \ -17.5 \ -15 \ -12.5 \ -10 \ -7.5 \ -5 \ -2.5 \ 0 \ 2.5 \ 5 \ 7.5 \ 10 \ 12.5 \ 15 \ 17.5 \ 20 \ 22.5 \ 25 \ 27.5 \ 30 \ 32.5 \ 35 \ 37.5 \ 40 \ 45 \ 50 \ 55 \ 60 \ 65 \ 70 \ 75 \ 80 \ 85 \ 90 \ 95 \ 100 \ 105 \ 110
+    300a,00c0 IS  BeamNumber: 46
+    300a,00c2 LO  BeamName: 10fff-10-MLC-270
+    300a,00c4 CS  BeamType: STATIC
+    300a,00c6 CS  RadiationType: PHOTON
+    300a,00ce CS  TreatmentDeliveryType: TREATMENT
+    300a,00d0 IS  NumberOfWedges: 0
+    300a,00e0 IS  NumberOfCompensators: 0
+    300a,00ed IS  NumberOfBoli: 0
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,010e DS  FinalCumulativeMetersetWeight: 1
+    300a,0110 IS  NumberOfControlPoints: 2
+    300a,0111 SQ  ControlPointSequence: 
+      Item 1 / 2
+        300a,0112 IS  ControlPointIndex: 0
+        300a,0114 DS  NominalBeamEnergy: 10
+        300a,0115 DS  DoseRateSet: 2400
+        300a,011a SQ  BeamLimitingDevicePositionSequence: 
+          Item 1 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: X
+            300a,011c DS  LeafJawPositions: -100 \ 100
+          Item 2 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: Y
+            300a,011c DS  LeafJawPositions: -100 \ 100
+          Item 3 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: MLCX
+            300a,011c DS  LeafJawPositions: 50 (repeated 12 times) \ -50 (repeated 36 times) \ 50 (repeated 72 times)
+        300a,011e DS  GantryAngle: 0
+        300a,011f CS  GantryRotationDirection: NONE
+        300a,0120 DS  BeamLimitingDeviceAngle: 270
+        300a,0121 CS  BeamLimitingDeviceRotationDirection: NONE
+        300a,0122 DS  PatientSupportAngle: 0
+        300a,0123 CS  PatientSupportRotationDirection: NONE
+        300a,0125 DS  TableTopEccentricAngle: 0
+        300a,0126 CS  TableTopEccentricRotationDirection: NONE
+        300a,0128 DS  TableTopVerticalPosition: -200
+        300a,0129 DS  TableTopLongitudinalPosition: 200
+        300a,012a DS  TableTopLateralPosition: 0
+        300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+        300a,0134 DS  CumulativeMetersetWeight: 0
+        300a,0140 FL  TableTopPitchAngle: 0
+        300a,0142 CS  TableTopPitchRotationDirection: NONE
+        300a,0144 FL  TableTopRollAngle: 0
+        300a,0146 CS  TableTopRollRotationDirection: NONE
+      Item 2 / 2
+        300a,0112 IS  ControlPointIndex: 1
+        300a,0134 DS  CumulativeMetersetWeight: 1
+    300c,006a IS  ReferencedPatientSetupNumber: 46
+    300c,00a0 IS  ReferencedToleranceTableNumber: 1
+    3285,0010 LO  VarianCreator3285: Varian Medical Systems VISION 3285
+    3285,1000 SQ  PrimaryFluenceModeSequenceVarian: unknown
+  Item 14 / 16
+    0008,0070 LO  Manufacturer: Varian Medical Systems
+    0008,0080 LO  InstitutionName: NMMH
+    0008,1040 LO  InstitutionalDepartmentName: Radiation Oncolo
+    0008,1090 LO  ManufacturerModelName: TDS
+    0018,1000 LO  DeviceSerialNumber: 2033
+    3002,0050 SQ  PrimaryFluenceModeSequence: 
+      Item 1 / 1
+        3002,0051 CS  FluenceMode: NON_STANDARD
+        3002,0052 SH  FluenceModeID: FFF
+    300a,00b2 SH  TreatmentMachineName: Lawson3
+    300a,00b3 CS  PrimaryDosimeterUnit: MU
+    300a,00b4 DS  SourceAxisDistance: 1000
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 2 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 3 / 3
+        300a,00b8 CS  RTBeamLimitingDeviceType: MLCX
+        300a,00bc IS  NumberOfLeafJawPairs: 60
+        300a,00be DS  LeafPositionBoundaries: -110 \ -105 \ -100 \ -95 \ -90 \ -85 \ -80 \ -75 \ -70 \ -65 \ -60 \ -55 \ -50 \ -45 \ -40 \ -37.5 \ -35 \ -32.5 \ -30 \ -27.5 \ -25 \ -22.5 \ -20 \ -17.5 \ -15 \ -12.5 \ -10 \ -7.5 \ -5 \ -2.5 \ 0 \ 2.5 \ 5 \ 7.5 \ 10 \ 12.5 \ 15 \ 17.5 \ 20 \ 22.5 \ 25 \ 27.5 \ 30 \ 32.5 \ 35 \ 37.5 \ 40 \ 45 \ 50 \ 55 \ 60 \ 65 \ 70 \ 75 \ 80 \ 85 \ 90 \ 95 \ 100 \ 105 \ 110
+    300a,00c0 IS  BeamNumber: 47
+    300a,00c2 LO  BeamName: 10fff-10-MLC-90
+    300a,00c4 CS  BeamType: STATIC
+    300a,00c6 CS  RadiationType: PHOTON
+    300a,00ce CS  TreatmentDeliveryType: TREATMENT
+    300a,00d0 IS  NumberOfWedges: 0
+    300a,00e0 IS  NumberOfCompensators: 0
+    300a,00ed IS  NumberOfBoli: 0
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,010e DS  FinalCumulativeMetersetWeight: 1
+    300a,0110 IS  NumberOfControlPoints: 2
+    300a,0111 SQ  ControlPointSequence: 
+      Item 1 / 2
+        300a,0112 IS  ControlPointIndex: 0
+        300a,0114 DS  NominalBeamEnergy: 10
+        300a,0115 DS  DoseRateSet: 2400
+        300a,011a SQ  BeamLimitingDevicePositionSequence: 
+          Item 1 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: X
+            300a,011c DS  LeafJawPositions: -100 \ 100
+          Item 2 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: Y
+            300a,011c DS  LeafJawPositions: -100 \ 100
+          Item 3 / 3
+            300a,00b8 CS  RTBeamLimitingDeviceType: MLCX
+            300a,011c DS  LeafJawPositions: 50 (repeated 12 times) \ -50 (repeated 36 times) \ 50 (repeated 72 times)
+        300a,011e DS  GantryAngle: 0
+        300a,011f CS  GantryRotationDirection: NONE
+        300a,0120 DS  BeamLimitingDeviceAngle: 90
+        300a,0121 CS  BeamLimitingDeviceRotationDirection: NONE
+        300a,0122 DS  PatientSupportAngle: 0
+        300a,0123 CS  PatientSupportRotationDirection: NONE
+        300a,0125 DS  TableTopEccentricAngle: 0
+        300a,0126 CS  TableTopEccentricRotationDirection: NONE
+        300a,0128 DS  TableTopVerticalPosition: -200
+        300a,0129 DS  TableTopLongitudinalPosition: 200
+        300a,012a DS  TableTopLateralPosition: 0
+        300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+        300a,0134 DS  CumulativeMetersetWeight: 0
+        300a,0140 FL  TableTopPitchAngle: 0
+        300a,0142 CS  TableTopPitchRotationDirection: NONE
+        300a,0144 FL  TableTopRollAngle: 0
+        300a,0146 CS  TableTopRollRotationDirection: NONE
+      Item 2 / 2
+        300a,0112 IS  ControlPointIndex: 1
+        300a,0134 DS  CumulativeMetersetWeight: 1
+    300c,006a IS  ReferencedPatientSetupNumber: 47
+    300c,00a0 IS  ReferencedToleranceTableNumber: 1
+    3285,0010 LO  VarianCreator3285: Varian Medical Systems VISION 3285
+    3285,1000 SQ  PrimaryFluenceModeSequenceVarian: unknown
+  Item 15 / 16
+    0008,0070 LO  Manufacturer: Varian Medical Systems
+    0008,0080 LO  InstitutionName: NMMH
+    0008,1040 LO  InstitutionalDepartmentName: Radiation Oncolo
+    0008,1090 LO  ManufacturerModelName: TDS
+    0018,1000 LO  DeviceSerialNumber: 2033
+    3002,0050 SQ  PrimaryFluenceModeSequence: 
+      Item 1 / 1
+        3002,0051 CS  FluenceMode: NON_STANDARD
+        3002,0052 SH  FluenceModeID: FFF
+    300a,00b2 SH  TreatmentMachineName: Lawson3
+    300a,00b3 CS  PrimaryDosimeterUnit: MU
+    300a,00b4 DS  SourceAxisDistance: 1000
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 2 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+    300a,00c0 IS  BeamNumber: 51
+    300a,00c2 LO  BeamName: 10fff-10-Jaw-90
+    300a,00c4 CS  BeamType: STATIC
+    300a,00c6 CS  RadiationType: PHOTON
+    300a,00ce CS  TreatmentDeliveryType: TREATMENT
+    300a,00d0 IS  NumberOfWedges: 0
+    300a,00e0 IS  NumberOfCompensators: 0
+    300a,00ed IS  NumberOfBoli: 0
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,010e DS  FinalCumulativeMetersetWeight: 1
+    300a,0110 IS  NumberOfControlPoints: 2
+    300a,0111 SQ  ControlPointSequence: 
+      Item 1 / 2
+        300a,0112 IS  ControlPointIndex: 0
+        300a,0114 DS  NominalBeamEnergy: 10
+        300a,0115 DS  DoseRateSet: 2400
+        300a,011a SQ  BeamLimitingDevicePositionSequence: 
+          Item 1 / 2
+            300a,00b8 CS  RTBeamLimitingDeviceType: X
+            300a,011c DS  LeafJawPositions: -50 \ 50
+          Item 2 / 2
+            300a,00b8 CS  RTBeamLimitingDeviceType: Y
+            300a,011c DS  LeafJawPositions: -50 \ 50
+        300a,011e DS  GantryAngle: 0
+        300a,011f CS  GantryRotationDirection: NONE
+        300a,0120 DS  BeamLimitingDeviceAngle: 90
+        300a,0121 CS  BeamLimitingDeviceRotationDirection: NONE
+        300a,0122 DS  PatientSupportAngle: 0
+        300a,0123 CS  PatientSupportRotationDirection: NONE
+        300a,0125 DS  TableTopEccentricAngle: 0
+        300a,0126 CS  TableTopEccentricRotationDirection: NONE
+        300a,0128 DS  TableTopVerticalPosition: -200
+        300a,0129 DS  TableTopLongitudinalPosition: 200
+        300a,012a DS  TableTopLateralPosition: 0
+        300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+        300a,0134 DS  CumulativeMetersetWeight: 0
+        300a,0140 FL  TableTopPitchAngle: 0
+        300a,0142 CS  TableTopPitchRotationDirection: NONE
+        300a,0144 FL  TableTopRollAngle: 0
+        300a,0146 CS  TableTopRollRotationDirection: NONE
+      Item 2 / 2
+        300a,0112 IS  ControlPointIndex: 1
+        300a,0134 DS  CumulativeMetersetWeight: 1
+    300c,006a IS  ReferencedPatientSetupNumber: 51
+    300c,00a0 IS  ReferencedToleranceTableNumber: 1
+    3285,0010 LO  VarianCreator3285: Varian Medical Systems VISION 3285
+    3285,1000 SQ  PrimaryFluenceModeSequenceVarian: unknown
+  Item 16 / 16
+    0008,0070 LO  Manufacturer: Varian Medical Systems
+    0008,0080 LO  InstitutionName: NMMH
+    0008,1040 LO  InstitutionalDepartmentName: Radiation Oncolo
+    0008,1090 LO  ManufacturerModelName: TDS
+    0018,1000 LO  DeviceSerialNumber: 2033
+    3002,0050 SQ  PrimaryFluenceModeSequence: 
+      Item 1 / 1
+        3002,0051 CS  FluenceMode: NON_STANDARD
+        3002,0052 SH  FluenceModeID: FFF
+    300a,00b2 SH  TreatmentMachineName: Lawson3
+    300a,00b3 CS  PrimaryDosimeterUnit: MU
+    300a,00b4 DS  SourceAxisDistance: 1000
+    300a,00b6 SQ  BeamLimitingDeviceSequence: 
+      Item 1 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: X
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+      Item 2 / 2
+        300a,00b8 CS  RTBeamLimitingDeviceType: Y
+        300a,00bc IS  NumberOfLeafJawPairs: 1
+    300a,00c0 IS  BeamNumber: 50
+    300a,00c2 LO  BeamName: 10fff-10-Jaw-270
+    300a,00c4 CS  BeamType: STATIC
+    300a,00c6 CS  RadiationType: PHOTON
+    300a,00ce CS  TreatmentDeliveryType: TREATMENT
+    300a,00d0 IS  NumberOfWedges: 0
+    300a,00e0 IS  NumberOfCompensators: 0
+    300a,00ed IS  NumberOfBoli: 0
+    300a,00f0 IS  NumberOfBlocks: 0
+    300a,010e DS  FinalCumulativeMetersetWeight: 1
+    300a,0110 IS  NumberOfControlPoints: 2
+    300a,0111 SQ  ControlPointSequence: 
+      Item 1 / 2
+        300a,0112 IS  ControlPointIndex: 0
+        300a,0114 DS  NominalBeamEnergy: 10
+        300a,0115 DS  DoseRateSet: 2400
+        300a,011a SQ  BeamLimitingDevicePositionSequence: 
+          Item 1 / 2
+            300a,00b8 CS  RTBeamLimitingDeviceType: X
+            300a,011c DS  LeafJawPositions: -50 \ 50
+          Item 2 / 2
+            300a,00b8 CS  RTBeamLimitingDeviceType: Y
+            300a,011c DS  LeafJawPositions: -50 \ 50
+        300a,011e DS  GantryAngle: 0
+        300a,011f CS  GantryRotationDirection: NONE
+        300a,0120 DS  BeamLimitingDeviceAngle: 270
+        300a,0121 CS  BeamLimitingDeviceRotationDirection: NONE
+        300a,0122 DS  PatientSupportAngle: 0
+        300a,0123 CS  PatientSupportRotationDirection: NONE
+        300a,0125 DS  TableTopEccentricAngle: 0
+        300a,0126 CS  TableTopEccentricRotationDirection: NONE
+        300a,0128 DS  TableTopVerticalPosition: -200
+        300a,0129 DS  TableTopLongitudinalPosition: 200
+        300a,012a DS  TableTopLateralPosition: 0
+        300a,012c DS  IsocenterPosition: 0 \ 0 \ 0
+        300a,0134 DS  CumulativeMetersetWeight: 0
+        300a,0140 FL  TableTopPitchAngle: 0
+        300a,0142 CS  TableTopPitchRotationDirection: NONE
+        300a,0144 FL  TableTopRollAngle: 0
+        300a,0146 CS  TableTopRollRotationDirection: NONE
+      Item 2 / 2
+        300a,0112 IS  ControlPointIndex: 1
+        300a,0134 DS  CumulativeMetersetWeight: 1
+    300c,006a IS  ReferencedPatientSetupNumber: 50
+    300c,00a0 IS  ReferencedToleranceTableNumber: 1
+    3285,0010 LO  VarianCreator3285: Varian Medical Systems VISION 3285
+    3285,1000 SQ  PrimaryFluenceModeSequenceVarian: unknown
+300a,0180 SQ  PatientSetupSequence: 
+  Item 1 / 16
+    0018,5100 CS  PatientPosition: HFS
+    300a,0182 IS  PatientSetupNumber: 23
+    300a,01b0 CS  SetupTechnique: ISOCENTRIC
+  Item 2 / 16
+    0018,5100 CS  PatientPosition: HFS
+    300a,0182 IS  PatientSetupNumber: 24
+    300a,01b0 CS  SetupTechnique: ISOCENTRIC
+  Item 3 / 16
+    0018,5100 CS  PatientPosition: HFS
+    300a,0182 IS  PatientSetupNumber: 41
+    300a,01b0 CS  SetupTechnique: ISOCENTRIC
+  Item 4 / 16
+    0018,5100 CS  PatientPosition: HFS
+    300a,0182 IS  PatientSetupNumber: 40
+    300a,01b0 CS  SetupTechnique: ISOCENTRIC
+  Item 5 / 16
+    0018,5100 CS  PatientPosition: HFS
+    300a,0182 IS  PatientSetupNumber: 42
+    300a,01b0 CS  SetupTechnique: ISOCENTRIC
+  Item 6 / 16
+    0018,5100 CS  PatientPosition: HFS
+    300a,0182 IS  PatientSetupNumber: 43
+    300a,01b0 CS  SetupTechnique: ISOCENTRIC
+  Item 7 / 16
+    0018,5100 CS  PatientPosition: HFS
+    300a,0182 IS  PatientSetupNumber: 49
+    300a,01b0 CS  SetupTechnique: ISOCENTRIC
+  Item 8 / 16
+    0018,5100 CS  PatientPosition: HFS
+    300a,0182 IS  PatientSetupNumber: 48
+    300a,01b0 CS  SetupTechnique: ISOCENTRIC
+  Item 9 / 16
+    0018,5100 CS  PatientPosition: HFS
+    300a,0182 IS  PatientSetupNumber: 52
+    300a,01b0 CS  SetupTechnique: ISOCENTRIC
+  Item 10 / 16
+    0018,5100 CS  PatientPosition: HFS
+    300a,0182 IS  PatientSetupNumber: 53
+    300a,01b0 CS  SetupTechnique: ISOCENTRIC
+  Item 11 / 16
+    0018,5100 CS  PatientPosition: HFS
+    300a,0182 IS  PatientSetupNumber: 45
+    300a,01b0 CS  SetupTechnique: ISOCENTRIC
+  Item 12 / 16
+    0018,5100 CS  PatientPosition: HFS
+    300a,0182 IS  PatientSetupNumber: 44
+    300a,01b0 CS  SetupTechnique: ISOCENTRIC
+  Item 13 / 16
+    0018,5100 CS  PatientPosition: HFS
+    300a,0182 IS  PatientSetupNumber: 46
+    300a,01b0 CS  SetupTechnique: ISOCENTRIC
+  Item 14 / 16
+    0018,5100 CS  PatientPosition: HFS
+    300a,0182 IS  PatientSetupNumber: 47
+    300a,01b0 CS  SetupTechnique: ISOCENTRIC
+  Item 15 / 16
+    0018,5100 CS  PatientPosition: HFS
+    300a,0182 IS  PatientSetupNumber: 51
+    300a,01b0 CS  SetupTechnique: ISOCENTRIC
+  Item 16 / 16
+    0018,5100 CS  PatientPosition: HFS
+    300a,0182 IS  PatientSetupNumber: 50
+    300a,01b0 CS  SetupTechnique: ISOCENTRIC
+300c,0060 SQ  ReferencedStructureSetSequence: 
+  Item 1 / 1
+    0008,1150 UI  ReferencedSOPClassUID: 1.2.840.10008.5.1.4.1.1.481.3 (RT Structure Set Storage)
+    0008,1155 UI  ReferencedSOPInstanceUID: 1.2.246.352.71.4.700377998926.411889.20190820161305
+300e,0002 CS  ApprovalStatus: UNAPPROVED
+3253,0010 LO  VarianCreator3253: Varian Medical Systems VISION 3253
+3253,1000 OB  ExtendedInterfaceData: unknown
+3253,1001 IS  ExtendedInterfaceLength: 4552
+3253,1002 CS  ExtendedInterfaceFormat: ExtendedIF

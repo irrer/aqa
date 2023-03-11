@@ -15,11 +15,11 @@ case class FSAnalyze(rtplan: AttributeList, rtimageList: Seq[AttributeList]) {
 
   private def isValidSet(measureList: Seq[FSMeasure]): Boolean = {
     // @formatter:off
-    measureList.size == 4                                                  &&
-    measureList.exists(m => measureList.exists(m => m.isJaw && m.is090 )) &&
-    measureList.exists(m => measureList.exists(m => m.isJaw && m.is270 )) &&
-    measureList.exists(m => measureList.exists(m => m.isMLC && m.is090 )) &&
-    measureList.exists(m => measureList.exists(m => m.isMLC && m.is270 ))
+    measureList.size == 4                                                 &&
+    measureList.exists(m => m.isJaw && m.is090) &&
+    measureList.exists(m => m.isJaw && m.is270) &&
+    measureList.exists(m => m.isMLC && m.is090) &&
+    measureList.exists(m => m.isMLC && m.is270)
     // @formatter:on
   }
 
@@ -32,8 +32,9 @@ case class FSAnalyze(rtplan: AttributeList, rtimageList: Seq[AttributeList]) {
     )
   }
 
+  //noinspection ScalaWeakerAccess
   // measure edges for each image
-  val measureList = rtimageList.map(rtimage => FSMeasure(rtplan, rtimage))
+  val measureList: Seq[FSMeasure] = rtimageList.map(rtimage => FSMeasure(rtplan, rtimage))
 
   // make sets of four based on energy
   val setList: Seq[FSSet] = {

@@ -18,8 +18,6 @@ package aqa.test
 
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.DicomFileUtilities
-import edu.umro.DicomDict.TagByName
-import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Util
 import org.aqa.webrun.focalSpot.FSAnalyze
@@ -43,12 +41,6 @@ class TestFocalSpotAnalyze extends FlatSpec with Matchers with Logging {
     FileUtil.deleteFileTree(outDir)
     outDir.mkdirs()
 
-    def NominalBeamEnergyOf(rtplan: AttributeList, rtimage: AttributeList): Double = {
-      val beam = Util.getBeamOfRtimage(plan = rtplan, rtimage).get
-      val NominalBeamEnergy = DicomUtil.findAllSingle(beam, TagByName.NominalBeamEnergy).head.getDoubleValues.head
-      NominalBeamEnergy
-    }
-
     def showResult(inDir: File, fsSet: FSSet): Unit = {
 
       val outSubDir = new File(outDir, inDir.getName)
@@ -67,6 +59,7 @@ class TestFocalSpotAnalyze extends FlatSpec with Matchers with Logging {
       save(fsSet.mlc270)
 
       println("Alignment: " + fsSet.alignment)
+      println
     }
 
     def readDicomFile(file: File): Option[AttributeList] = {
@@ -76,7 +69,7 @@ class TestFocalSpotAnalyze extends FlatSpec with Matchers with Logging {
           al.read(file)
           Some(al)
         } catch {
-          case _ => None
+          case _: Throwable => None
         }
       } else
         None
@@ -84,13 +77,13 @@ class TestFocalSpotAnalyze extends FlatSpec with Matchers with Logging {
 
     def doMlc(inDir: File, alList: Seq[AttributeList]): Unit = {
 
-      println("Processing " + inDir.getAbsolutePath)
+      println("\n\nProcessing " + inDir.getAbsolutePath)
       val rtplan = alList.find(Util.isRtplan).get
       val rtimageList = alList.filter(Util.isRtimage)
 
       val fsSetList = FSAnalyze(rtplan, rtimageList).setList
 
-      fsSetList.map(fsSet => showResult(inDir, fsSet))
+      fsSetList.foreach(fsSet => showResult(inDir, fsSet))
 
     }
 
@@ -112,6 +105,6 @@ class TestFocalSpotAnalyze extends FlatSpec with Matchers with Logging {
     list.foreach(da => doMlc(da._1, da._2))
 
     true should be(true)
-    println("Done.")
+    println("\nDone.")
   }
 }
