@@ -1,25 +1,23 @@
 package org.aqa.webrun.focalSpot
 
 import com.pixelmed.dicom.AttributeList
-import edu.umro.DicomDict.TagByName
-import edu.umro.ScalaUtil.DicomUtil
-import org.aqa.Util
 
 case class FSAnalyze(rtplan: AttributeList, rtimageList: Seq[AttributeList]) {
 
-  private def NominalBeamEnergyOf(rtimage: AttributeList): Double = {
-    val beam = Util.getBeamOfRtimage(plan = rtplan, rtimage).get
-    val NominalBeamEnergy = DicomUtil.findAllSingle(beam, TagByName.NominalBeamEnergy).head.getDoubleValues.head
-    NominalBeamEnergy
-  }
+  private val maxEpidRange_mm = 1.0
 
   private def isValidSet(measureList: Seq[FSMeasure]): Boolean = {
+    def epidRange: Double = {
+      val list = measureList.map(_.RTImageSID_mm)
+      list.max - list.min
+    }
     // @formatter:off
-    measureList.size == 4                                                 &&
+    measureList.size == 4                       &&
     measureList.exists(m => m.isJaw && m.is090) &&
     measureList.exists(m => m.isJaw && m.is270) &&
     measureList.exists(m => m.isMLC && m.is090) &&
-    measureList.exists(m => m.isMLC && m.is270)
+    measureList.exists(m => m.isMLC && m.is270) &&
+    epidRange < maxEpidRange_mm   // must have similar epid positions.
     // @formatter:on
   }
 
@@ -38,7 +36,7 @@ case class FSAnalyze(rtplan: AttributeList, rtimageList: Seq[AttributeList]) {
 
   // make sets of four based on energy
   val setList: Seq[FSSet] = {
-    val groupList = measureList.groupBy(m => NominalBeamEnergyOf(m.rtimage)).values.toSeq
+    val groupList = measureList.groupBy(_.NominalBeamEnergy).values.toSeq
     groupList.filter(isValidSet).map(toSet)
   }
 

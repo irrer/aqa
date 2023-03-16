@@ -21,10 +21,14 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList) {
 
   private val KVP = DicomUtil.findAllSingle(rtimage, TagByName.KVP).head.getDoubleValues.head
   private val ExposureTime = DicomUtil.findAllSingle(rtimage, TagByName.ExposureTime).head.getDoubleValues.head
-
   private val beam = Util.getBeamOfRtimage(plan = rtplan, rtimage).get
 
   def beamName: String = DicomUtil.getBeamNameOfRtimage(rtplan, rtimage).get
+
+  val NominalBeamEnergy = DicomUtil.findAllSingle(beam, TagByName.NominalBeamEnergy).head.getDoubleValues.head
+
+  val RTImageSID_mm: Double = rtimage.get(TagByName.RTImageSID).getDoubleValues.head
+  val dEpid_mm: Double = RTImageSID_mm
 
   /** True if the collimator angle rounded to 90 degrees is 90. */
   val is090: Boolean = Util.angleRoundedTo90(Util.collimatorAngle(rtimage)) == 90
