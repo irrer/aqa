@@ -11,6 +11,7 @@ import org.aqa.Util
 import org.aqa.db.FocalSpot
 
 import java.awt.Color
+import java.awt.image.BufferedImage
 
 case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Long) {
 
@@ -31,15 +32,15 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
   private val beam = Util.getBeamOfRtimage(plan = rtplan, rtimage).get
   private val dicomBeam = DicomBeam(rtplan, rtimage)
 
-  val gantryAngleRounded_deg = Util.angleRoundedTo90(Util.gantryAngle(rtimage))
-  val collimatorAngleRounded_deg = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
+  val gantryAngleRounded_deg: Int = Util.angleRoundedTo90(Util.gantryAngle(rtimage))
+  val collimatorAngleRounded_deg: Int = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
 
   def beamName: String = DicomUtil.getBeamNameOfRtimage(rtplan, rtimage).get
 
-  val NominalBeamEnergy = DicomUtil.findAllSingle(beam, TagByName.NominalBeamEnergy).head.getDoubleValues.head
+  val NominalBeamEnergy: Double = DicomUtil.findAllSingle(beam, TagByName.NominalBeamEnergy).head.getDoubleValues.head
 
   val RTImageSID_mm: Double = rtimage.get(TagByName.RTImageSID).getDoubleValues.head
-  val dEpid_mm: Double = RTImageSID_mm
+  val dEpid_mm: Double = RTImageSID_mm + XRayImageReceptorTranslation.getZ
 
   /** True if the collimator angle rounded to 90 degrees is 90. */
   val is090: Boolean = Util.angleRoundedTo90(Util.collimatorAngle(rtimage)) == 90
@@ -91,28 +92,32 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
     floodOffset = new java.awt.Point(0, 0),
     thresholdPercent = 0.5)
 
-  val focalSpot = FocalSpot(
-    focalSpotPK                 = None,
-    outputPK                    = outputPK,
-    SOPInstanceUID              = Util.sopOfAl(rtimage),
-    gantryAngleRounded_deg      = gantryAngleRounded_deg,
-    collimatorAngleRounded_deg  = collimatorAngleRounded_deg,
-    beamName                    = Util.getBeamNameOfRtimage(rtplan, rtimage).get,
-    KVP                         = KVP,
-    RTImageSID_mm               = RTImageSID_mm,
-    ExposureTime                = ExposureTime,
-    topEdge_mm                  = analysisResult.measurementSet.top - XRayImageReceptorTranslation.getY,
-    bottomEdge_mm               = analysisResult.measurementSet.bottom - XRayImageReceptorTranslation.getY,
-    leftEdge_mm                 = analysisResult.measurementSet.left + XRayImageReceptorTranslation.getX,
-    rightEdge_mm                = analysisResult.measurementSet.right + XRayImageReceptorTranslation.getX,
-    topEdgePlanned_mm           = if (collimatorAngleRounded_deg == 90) X2Planned_mm else X1Planned_mm, // plannedTBLR.top,
-    bottomEdgePlanned_mm        = if (collimatorAngleRounded_deg == 90) X1Planned_mm else X2Planned_mm, // plannedTBLR.bottom,
-    leftEdgePlanned_mm          = if (collimatorAngleRounded_deg == 90) Y2Planned_mm else Y1Planned_mm, // plannedTBLR.left,
-    rightEdgePlanned_mm         = if (collimatorAngleRounded_deg == 90) Y1Planned_mm else Y2Planned_mm // plannedTBLR.right
+  val focalSpot: FocalSpot = FocalSpot(
+    focalSpotPK                      = None,
+    outputPK                         = outputPK,
+    SOPInstanceUID                   = Util.sopOfAl(rtimage),
+    gantryAngleRounded_deg           = gantryAngleRounded_deg,
+    collimatorAngleRounded_deg       = collimatorAngleRounded_deg,
+    beamName                         = Util.getBeamNameOfRtimage(rtplan, rtimage).get,
+    isJaw                            = isJaw,
+    KVP                              = KVP,
+    RTImageSID_mm                    = RTImageSID_mm,
+    ExposureTime                     = ExposureTime,
+    XRayImageReceptorTranslationX_mm = XRayImageReceptorTranslation.getX,
+    XRayImageReceptorTranslationY_mm = XRayImageReceptorTranslation.getY,
+    XRayImageReceptorTranslationZ_mm = XRayImageReceptorTranslation.getZ,
+    topEdge_mm                       = translator.pix2IsoCoordY(analysisResult.measurementSet.top)    - XRayImageReceptorTranslation.getY,
+    bottomEdge_mm                    = translator.pix2IsoCoordY(analysisResult.measurementSet.bottom) - XRayImageReceptorTranslation.getY,
+    leftEdge_mm                      = translator.pix2IsoCoordX(analysisResult.measurementSet.left)   + XRayImageReceptorTranslation.getX,
+    rightEdge_mm                     = translator.pix2IsoCoordX(analysisResult.measurementSet.right)  + XRayImageReceptorTranslation.getX,
+    topEdgePlanned_mm                = if (collimatorAngleRounded_deg == 90) X2Planned_mm else X1Planned_mm, // plannedTBLR.top,
+    bottomEdgePlanned_mm             = if (collimatorAngleRounded_deg == 90) X1Planned_mm else X2Planned_mm, // plannedTBLR.bottom,
+    leftEdgePlanned_mm               = if (collimatorAngleRounded_deg == 90) Y2Planned_mm else Y1Planned_mm, // plannedTBLR.left,
+    rightEdgePlanned_mm              = if (collimatorAngleRounded_deg == 90) Y1Planned_mm else Y2Planned_mm // plannedTBLR.right
   )
   // @formatter:on
 
   Util.addGraticules(analysisResult.bufferedImage, new IsoImagePlaneTranslator(rtimage), Color.GRAY)
-  val bufferedImage = analysisResult.bufferedImage
+  val bufferedImage: BufferedImage = analysisResult.bufferedImage
 
 }

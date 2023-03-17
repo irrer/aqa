@@ -26,25 +26,30 @@ import scala.xml.Elem
   */
 case class FocalSpot(
     // @formatter:off
-    focalSpotPK                : Option[Long], // primary key
-    outputPK                   : Long,   // output primary key
-    SOPInstanceUID             : String, // UID of RTIMAGE
-    gantryAngleRounded_deg     : Int,    // Gantry angle rounded to the nearest multiple of 90 degrees
-    collimatorAngleRounded_deg : Int,    // Collimator angle rounded to the nearest multiple of 90 degrees
-    beamName                   : String, // name of beam
-    KVP                        : Double, // beam energy               : DICOM 0018,0060 : https://dicom.innolitics.com/ciods/rt-image/rt-image/30020030/00180060
-    RTImageSID_mm              : Double, // source to imager distance : DICOM 3002,0026 : https://dicom.innolitics.com/ciods/rt-image/rt-image/30020026
-    ExposureTime               : Double, // exposure time             : DICOM 0018,1150 : https://dicom.innolitics.com/ciods/rt-image/rt-image/00181150
-    //
-    topEdge_mm                 : Double, // top edge measurement
-    bottomEdge_mm              : Double, // bottom edge measurement
-    leftEdge_mm                : Double, // left edge measurement
-    rightEdge_mm               : Double, // right edge measurement
-    //
-    topEdgePlanned_mm          : Double, // planned top edge
-    bottomEdgePlanned_mm       : Double, // planned bottom edge
-    leftEdgePlanned_mm         : Double, // planned left edge
-    rightEdgePlanned_mm        : Double  // planned right edge
+    focalSpotPK                      : Option[Long], // primary key
+    outputPK                         : Long,    // output primary key
+    SOPInstanceUID                   : String,  // UID of RTIMAGE
+    gantryAngleRounded_deg           : Int,     // Gantry angle rounded to the nearest multiple of 90 degrees
+    collimatorAngleRounded_deg       : Int,     // Collimator angle rounded to the nearest multiple of 90 degrees
+    beamName                         : String,  // name of beam
+    isJaw                            : Boolean, // true if edges are defined by jaw, false if defined by MLC
+    KVP                              : Double,  // beam energy                    : DICOM 0018,0060 : https://dicom.innolitics.com/ciods/rt-image/rt-image/30020030/00180060
+    RTImageSID_mm                    : Double,  // source to imager distance      : DICOM 3002,0026 : https://dicom.innolitics.com/ciods/rt-image/rt-image/30020026
+    ExposureTime                     : Double,  // exposure time                  : DICOM 0018,1150 : https://dicom.innolitics.com/ciods/rt-image/rt-image/00181150
+
+    XRayImageReceptorTranslationX_mm : Double,  // XRayImageReceptorTranslation X : DICOM 3002,000d : https://dicom.innolitics.com/ciods/rt-image/rt-image/3002000d
+    XRayImageReceptorTranslationY_mm : Double,  // XRayImageReceptorTranslation Y : DICOM 3002,000d : (same as above)
+    XRayImageReceptorTranslationZ_mm : Double,  // XRayImageReceptorTranslation Z : DICOM 3002,000d : (same as above)
+
+    topEdge_mm                       : Double,  // top edge measurement
+    bottomEdge_mm                    : Double,  // bottom edge measurement
+    leftEdge_mm                      : Double,  // left edge measurement
+    rightEdge_mm                     : Double,  // right edge measurement
+
+    topEdgePlanned_mm                : Double,  // planned top edge
+    bottomEdgePlanned_mm             : Double,  // planned bottom edge
+    leftEdgePlanned_mm               : Double,  // planned left edge
+    rightEdgePlanned_mm              : Double   // planned right edge
     // @formatter:on
 ) {
 
@@ -66,9 +71,13 @@ case class FocalSpot(
        gantryAngleRounded_deg: $gantryAngleRounded_deg
        collimatorAngleRounded_deg: $collimatorAngleRounded_deg
        beamName: $beamName
+       edge type: ${if (isJaw) "jaw" else "MLC"}
        KVP: $KVP
        RTImageSID_mm: $RTImageSID_mm
        ExposureTime: $ExposureTime
+       XRayImageReceptorTranslationX_mm: $XRayImageReceptorTranslationX_mm
+       XRayImageReceptorTranslationY_mm: $XRayImageReceptorTranslationY_mm
+       XRayImageReceptorTranslationZ_mm: $XRayImageReceptorTranslationZ_mm
        topEdge_mm: $topEdge_mm
        bottomEdge_mm: $bottomEdge_mm
        leftEdge_mm: $leftEdge_mm
@@ -91,9 +100,13 @@ object FocalSpot extends ProcedureOutput {
     def gantryAngleRounded_deg = column[Int]("gantryAngleRounded_deg")
     def collimatorAngleRounded_deg = column[Int]("collimatorAngleRounded_deg")
     def beamName = column[String]("beamName")
+    def isJaw = column[Boolean]("isJaw")
     def KVP = column[Double]("KVP")
     def RTImageSID_mm = column[Double]("RTImageSID_mm")
     def ExposureTime = column[Double]("ExposureTime")
+    def XRayImageReceptorTranslationX_mm = column[Double]("XRayImageReceptorTranslationX_mm")
+    def XRayImageReceptorTranslationY_mm = column[Double]("XRayImageReceptorTranslationY_mm")
+    def XRayImageReceptorTranslationZ_mm = column[Double]("XRayImageReceptorTranslationZ_mm")
     def topEdge_mm = column[Double]("topEdge_mm")
     def bottomEdge_mm = column[Double]("bottomEdge_mm")
     def leftEdge_mm = column[Double]("leftEdge_mm")
@@ -111,9 +124,13 @@ object FocalSpot extends ProcedureOutput {
         gantryAngleRounded_deg,
         collimatorAngleRounded_deg,
         beamName,
+        isJaw,
         KVP,
         RTImageSID_mm,
         ExposureTime,
+        XRayImageReceptorTranslationX_mm,
+        XRayImageReceptorTranslationY_mm,
+        XRayImageReceptorTranslationZ_mm,
         topEdge_mm,
         bottomEdge_mm,
         leftEdge_mm,
