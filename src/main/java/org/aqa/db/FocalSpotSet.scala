@@ -1,0 +1,161 @@
+/*
+ * Copyright 2021 Regents of the University of Michigan
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.aqa.db
+
+import org.aqa.db.Db.driver.api._
+import org.aqa.procedures.ProcedureOutput
+
+import scala.xml.Elem
+
+/**
+  * Store and instance of all of the data for a single image of focal spot.
+  */
+case class FocalSpotSet(
+                         // @formatter:off
+                         focalSpotSetPK : Option[Long], // primary key
+                         outputPK       : Long, // output primary key
+                         //
+                         focalSpotAlignmentX: Double,
+                         focalSpotAlignmentY: Double,
+                         //
+                         jaw090PK       : Long,
+                         jaw270PK       : Long,
+                         mlc090PK       : Long,
+                         mlc270PK       : Long
+                         // @formatter:on
+) {
+
+  def insert: FocalSpotSet = {
+    val insertQuery = FocalSpotSet.query returning FocalSpotSet.query.map(_.focalSpotSetPK) into
+      ((focalSpotSet, focalSpotSetPK) => focalSpotSet.copy(focalSpotSetPK = Some(focalSpotSetPK)))
+
+    val action = insertQuery += this
+    val result = Db.run(action)
+    result
+  }
+
+  def insertOrUpdate(): Int = Db.run(FocalSpotSet.query.insertOrUpdate(this))
+
+  override def toString: String = {
+    s"""focalSpotSetPK: $focalSpotSetPK
+       outputPK: $outputPK
+       focalSpotAlignmentY: $focalSpotAlignmentX
+       focalSpotAlignmentY: $focalSpotAlignmentY
+   """
+  }
+
+}
+
+object FocalSpotSet extends ProcedureOutput {
+  class FocalSpotSetTable(tag: Tag) extends Table[FocalSpotSet](tag, "focalSpotSet") {
+
+    def focalSpotSetPK = column[Long]("focalSpotSetPK", O.PrimaryKey, O.AutoInc)
+    def outputPK = column[Long]("outputPK")
+    def focalSpotAlignmentX = column[Double]("focalSpotAlignmentX")
+    def focalSpotAlignmentY = column[Double]("focalSpotAlignmentY")
+    def jaw090PK = column[Long]("jaw090PK")
+    def jaw270PK = column[Long]("jaw270PK")
+    def mlc090PK = column[Long]("mlc090PK")
+    def mlc270PK = column[Long]("mlc270PK")
+
+    def * =
+      (
+        focalSpotSetPK.?,
+        outputPK,
+        focalSpotAlignmentX,
+        focalSpotAlignmentY,
+        jaw090PK,
+        jaw270PK,
+        mlc090PK,
+        mlc270PK
+      ) <> (FocalSpotSet.apply _ tupled, FocalSpotSet.unapply)
+
+    def outputFK = foreignKey("FocalSpotSet_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def jaw090FK = foreignKey("FocalSpotSet_jaw090PKPKConstraint", jaw090PK, FocalSpot.query)(_.focalSpotPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def jaw270FK = foreignKey("FocalSpotSet_jaw270PKPKConstraint", jaw270PK, FocalSpot.query)(_.focalSpotPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def mlc090FK = foreignKey("FocalSpotSet_mlc090PKPKConstraint", mlc090PK, FocalSpot.query)(_.focalSpotPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def mlc270FK = foreignKey("FocalSpotSet_mlc270PKPKConstraint", mlc270PK, FocalSpot.query)(_.focalSpotPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+  }
+
+  val query = TableQuery[FocalSpotSetTable]
+
+  override val topXmlLabel = "FocalSpotSet"
+
+  def get(focalSpotSetPK: Long): Option[FocalSpotSet] = {
+    val action = for {
+      inst <- FocalSpotSet.query if inst.focalSpotSetPK === focalSpotSetPK
+    } yield inst
+    Db.run(action.result).headOption
+  }
+
+  /**
+    * Get a list of all rows for the given output
+    */
+  def getByOutput(outputPK: Long): Seq[FocalSpotSet] = {
+    val action = for {
+      inst <- FocalSpotSet.query if inst.outputPK === outputPK
+    } yield inst
+    Db.run(action.result)
+  }
+
+  def delete(focalSpotSetPK: Long): Int = {
+    val q = query.filter(_.focalSpotSetPK === focalSpotSetPK)
+    val action = q.delete
+    Db.run(action)
+  }
+
+  def deleteByOutputPK(outputPK: Long): Int = {
+    val q = query.filter(_.outputPK === outputPK)
+    val action = q.delete
+    Db.run(action)
+  }
+
+  def insert(list: Seq[FocalSpotSet]): Seq[Int] = {
+    val ops = list.map { imgId => FocalSpotSet.query.insertOrUpdate(imgId) }
+    Db.perform(ops)
+  }
+
+  override def insert(elem: Elem, outputPK: Long): Int = {
+    throw new RuntimeException("Focal Spot insert not defined for Elem data.")
+  }
+
+  def insertSeq(list: Seq[FocalSpotSet]): Unit = {
+    val ops = list.map { loc => FocalSpotSet.query.insertOrUpdate(loc) }
+    Db.perform(ops)
+  }
+
+  case class FocalSpotSetHistory(output: Output, focalSpotSet: FocalSpotSet) {}
+
+  /**
+    * Get the entire history of Focal Spot data for the given machine.
+    * @param machinePK Machine to get data for.
+    * @param procedurePK For this procedure.
+    * @return List of history items sorted by data date.
+    */
+  def history(machinePK: Long, procedurePK: Long): Seq[FocalSpotSetHistory] = {
+
+    val search = for {
+      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
+      focalSpotSet <- FocalSpotSet.query.filter(w => (w.outputPK === output.outputPK))
+    } yield (output, focalSpotSet)
+
+    val focalSpotSetList = Db.run(search.result).map(outFocal => FocalSpotSetHistory(outFocal._1, outFocal._2)).sortBy(_.output.dataDate.get.getTime)
+
+    focalSpotSetList
+  }
+
+}

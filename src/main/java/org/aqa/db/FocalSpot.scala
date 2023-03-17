@@ -32,8 +32,9 @@ case class FocalSpot(
     gantryAngleRounded_deg     : Int,    // Gantry angle rounded to the nearest multiple of 90 degrees
     collimatorAngleRounded_deg : Int,    // Collimator angle rounded to the nearest multiple of 90 degrees
     beamName                   : String, // name of beam
-    KVP                        : Double, // beam energy   : DICOM 0018,0060 : https://dicom.innolitics.com/ciods/rt-image/rt-image/30020030/00180060
-    ExposureTime               : Double, // exposure time : DICOM 0018,1150 : https://dicom.innolitics.com/ciods/rt-image/rt-image/00181150
+    KVP                        : Double, // beam energy               : DICOM 0018,0060 : https://dicom.innolitics.com/ciods/rt-image/rt-image/30020030/00180060
+    RTImageSID_mm              : Double, // source to imager distance : DICOM 3002,0026 : https://dicom.innolitics.com/ciods/rt-image/rt-image/30020026
+    ExposureTime               : Double, // exposure time             : DICOM 0018,1150 : https://dicom.innolitics.com/ciods/rt-image/rt-image/00181150
     //
     topEdge_mm                 : Double, // top edge measurement
     bottomEdge_mm              : Double, // bottom edge measurement
@@ -66,6 +67,7 @@ case class FocalSpot(
        collimatorAngleRounded_deg: $collimatorAngleRounded_deg
        beamName: $beamName
        KVP: $KVP
+       RTImageSID_mm: $RTImageSID_mm
        ExposureTime: $ExposureTime
        topEdge_mm: $topEdge_mm
        bottomEdge_mm: $bottomEdge_mm
@@ -90,6 +92,7 @@ object FocalSpot extends ProcedureOutput {
     def collimatorAngleRounded_deg = column[Int]("collimatorAngleRounded_deg")
     def beamName = column[String]("beamName")
     def KVP = column[Double]("KVP")
+    def RTImageSID_mm = column[Double]("RTImageSID_mm")
     def ExposureTime = column[Double]("ExposureTime")
     def topEdge_mm = column[Double]("topEdge_mm")
     def bottomEdge_mm = column[Double]("bottomEdge_mm")
@@ -109,6 +112,7 @@ object FocalSpot extends ProcedureOutput {
         collimatorAngleRounded_deg,
         beamName,
         KVP,
+        RTImageSID_mm,
         ExposureTime,
         topEdge_mm,
         bottomEdge_mm,
@@ -175,16 +179,14 @@ object FocalSpot extends ProcedureOutput {
   /**
     * Get the entire history of Focal Spot data for the given machine.
     * @param machinePK Machine to get data for.
-    * @param gantryAngle Gantry angle rounded to nearest 90 degrees.
+    * @param procedurePK For this procedure.
     * @return List of history items sorted by data date.
     */
-  def history(machinePK: Long, gantryAngle: Option[Int], procedurePK: Long): Seq[ColCentHistory] = {
-
-    val ga = if (gantryAngle.isDefined) gantryAngle.get else 0
+  def history(machinePK: Long, procedurePK: Long): Seq[ColCentHistory] = {
 
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
-      colCent <- FocalSpot.query.filter(w => (w.outputPK === output.outputPK) && (w.gantryAngleRounded_deg === ga))
+      colCent <- FocalSpot.query.filter(w => (w.outputPK === output.outputPK))
     } yield (output, colCent)
 
     val sorted = Db.run(search.result).map(oc => ColCentHistory(oc._1, oc._2)).sortBy(_.output.dataDate.get.getTime)

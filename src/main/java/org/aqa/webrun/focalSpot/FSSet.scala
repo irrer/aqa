@@ -65,10 +65,10 @@ case class FSSet(jaw090: FSMeasure, jaw270: FSMeasure, mlc090: FSMeasure, mlc270
   }
 
   /** Focal spot alignment for X .  Ideally this should be 0. */
-  val alignX: Double = aX * (jawXCenter - mlcXCenter)
+  val focalSpotAlignmentX: Double = aX * (jawXCenter - mlcXCenter)
 
   /** Focal spot alignment for Y .  Ideally this should be 0. */
-  val alignY: Double = aY * (jawYCenter - mlcYCenter)
+  val focalSpotAlignmentY: Double = aY * (jawYCenter - mlcYCenter)
 
   val matlab: String =
     s"""

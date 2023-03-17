@@ -885,6 +885,8 @@ object Config extends Logging {
   val VMATBeamPairList: Seq[VMATBeamPair] = getVMATBeamPairList
   val VMATHistoryRange: Int = logMainText("VMATHistoryRange", "1000000").toInt
 
+  val FocalSpotBeamNameList : Seq[String] = getBeamNameList("FocalSpotBeamNameList")
+
   private val DailyQAInProgressInterval_min: Double = logMainText("DailyQAInProgressInterval_min", "30.0").toDouble
   val DailyQAInProgressInterval_ms: Long = (DailyQAInProgressInterval_min * 60 * 1000).round
   val DailyQACBCTLimit_mm: Double = logMainText("DailyQACBCTLimit_mm", "1.0").toDouble

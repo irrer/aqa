@@ -36,6 +36,7 @@ import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.WebRunProcedure
+import org.aqa.webrun.focalSpot.FSAnalysis
 import org.aqa.webrun.phase2.centerDose.CenterDoseAnalysis
 import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringAnalysis
 import org.aqa.webrun.phase2.collimatorPosition.CollimatorPositionAnalysis
@@ -412,7 +413,8 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure(procedure) with Run
                       () => WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
                       () => SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
                       () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
-                      () => VMATAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource)
+                      () => VMATAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
+                      () => FSAnalysis.runProcedure(extendedData, runReq)
                     )
 
                     val list = seq.par.map(f => f())

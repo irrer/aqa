@@ -19,8 +19,8 @@ package aqa.test
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.DicomFileUtilities
 import edu.umro.ScalaUtil.FileUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
-import org.aqa.webrun.focalSpot.FSAnalyze
 import org.aqa.webrun.focalSpot.FSSet
 import org.aqa.Config
 import org.aqa.Logging
@@ -58,7 +58,8 @@ class TestFocalSpotAnalyze extends FlatSpec with Matchers with Logging {
       save(fsSet.mlc090)
       save(fsSet.mlc270)
 
-      println("Alignment: " + fsSet.alignment)
+      Trace.trace("X Alignment: " + fsSet.focalSpotAlignmentX)
+      Trace.trace("Y Alignment: " + fsSet.focalSpotAlignmentY)
       println
     }
 
@@ -81,9 +82,10 @@ class TestFocalSpotAnalyze extends FlatSpec with Matchers with Logging {
       val rtplan = alList.find(Util.isRtplan).get
       val rtimageList = alList.filter(Util.isRtimage)
 
-      val fsSetList = FSAnalyze(rtplan, rtimageList).setList
+      ??? // TODO
+      // val fsSetList = FSAnalysis(rtplan, rtimageList).setList
 
-      fsSetList.foreach(fsSet => showResult(inDir, fsSet))
+      // fsSetList.foreach(fsSet => showResult(inDir, fsSet))
 
     }
 
