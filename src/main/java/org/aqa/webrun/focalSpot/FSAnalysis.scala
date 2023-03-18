@@ -61,7 +61,7 @@ object FSAnalysis extends Logging {
     logger.info(s"Inserted to DB FocalSpotSet $focalSpotSet")
   }
 
-  val subProcedureName = "FocalSpot"
+  val subProcedureName = "Focal Spot"
 
   case class FocalSpotResult(sum: Elem, stats: ProcedureStatus.Value) extends SubProcedureResult(sum, stats, subProcedureName)
 
