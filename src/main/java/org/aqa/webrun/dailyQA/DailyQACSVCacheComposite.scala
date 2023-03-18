@@ -88,6 +88,13 @@ class DailyQACSVCacheComposite(hostRef: String, institutionPK: Long) extends Cac
   private val MachineColHeader = "Machine"
   private val PatientIDColHeader = "PatientID"
 
+  private def xyzDistance(dataSet: DailyDataSetComposite): String = {
+    val x = dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm
+    val y = dataSet.cbct.cbctY_mm - dataSet.cbct.rtplanY_mm
+    val z = dataSet.cbct.cbctZ_mm - dataSet.cbct.rtplanZ_mm
+    Math.sqrt((x*x) + (y*y) + (z*z)).toString
+  }
+
   private val colList = Seq[Col](
     Col(MachineColHeader, dataSet => dataSet.machine.id),
     Col("Acquired", dataSet => Util.spreadsheetDateFormat.format(dataSet.output.dataDate.get)),
@@ -97,6 +104,7 @@ class DailyQACSVCacheComposite(hostRef: String, institutionPK: Long) extends Cac
     Col("X CBCT - ISO mm", dataSet => (dataSet.cbct.cbctX_mm - dataSet.cbct.rtplanX_mm).toString),
     Col("Y CBCT - ISO mm", dataSet => (dataSet.cbct.cbctY_mm - dataSet.cbct.rtplanY_mm).toString),
     Col("Z CBCT - ISO mm", dataSet => (dataSet.cbct.cbctZ_mm - dataSet.cbct.rtplanZ_mm).toString),
+    Col("XYZ total Distance CBCT to ISO mm", xyzDistance),
     Col("X/lat Table Movement cm", dataSet => dblOptToString10(dataSet.composite.tableXlateral_mm)),
     Col("Y/vert Table Movement cm", dataSet => dblOptToString10(dataSet.composite.tableYvertical_mm)),
     Col("Z/lng Table Movement cm", dataSet => dblOptToString10(dataSet.composite.tableZlongitudinal_mm)),

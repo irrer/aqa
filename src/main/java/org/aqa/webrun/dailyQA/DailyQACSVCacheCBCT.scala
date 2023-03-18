@@ -86,6 +86,18 @@ class DailyQACSVCacheCBCT(hostRef: String, institutionPK: Long) extends CacheCSV
         }
     ),
     Col(
+      "XYZ CBCT mm",
+      dataSet =>
+        dataSet.cbct match {
+          case Some(c) =>
+            val x = c.cbctX_mm
+            val y = c.cbctY_mm
+            val z = c.cbctZ_mm
+            Math.sqrt((x * x) + (y * y) + (z * z)).toString
+          case _ => "NA"
+        }
+    ),
+    Col(
       "X ISO mm",
       dataSet =>
         dataSet.cbct match {
