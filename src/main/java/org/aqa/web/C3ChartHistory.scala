@@ -139,7 +139,7 @@ class C3ChartHistory(
   val minY: Double = all.min
   val maxY: Double = all.max
 
-  val yRangeY: C3Chart.YRange = {
+  private val yRangeY: C3Chart.YRange = {
     val minYt = if (tolerance.isDefined) Math.min(minY, tolerance.get.min) else minY
     val maxYt = if (tolerance.isDefined) Math.max(maxY, tolerance.get.max) else maxY
     (tolerance.isDefined, yRange.isDefined) match {
