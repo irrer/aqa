@@ -65,15 +65,25 @@ case class FSSet(jaw090: FSMeasure, jaw270: FSMeasure, mlc090: FSMeasure, mlc270
   }
 
   /** Focal spot alignment for X .  Ideally this should be 0. */
-  val focalSpotAlignmentX: Double = aX * (jawXCenter - mlcXCenter)
+  val focalSpotAlignmentX_mm: Double = aX * (jawXCenter - mlcXCenter)
 
   /** Focal spot alignment for Y .  Ideally this should be 0. */
-  val focalSpotAlignmentY: Double = aY * (jawYCenter - mlcYCenter)
+  val focalSpotAlignmentY_mm: Double = aY * (jawYCenter - mlcYCenter)
 
   val matlab: String =
     s"""
        |
        |""".stripMargin
+
+  val htmlFileName = {
+    val text = {
+      if (jaw090.NominalBeamEnergy.round == jaw090.NominalBeamEnergy)
+        jaw090.NominalBeamEnergy.round.toString
+      else
+        jaw090.NominalBeamEnergy.toString
+    }
+    s"MV${text}.html"
+  }
 }
 
 object FSSet {

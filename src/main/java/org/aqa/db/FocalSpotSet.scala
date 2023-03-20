@@ -26,16 +26,17 @@ import scala.xml.Elem
   */
 case class FocalSpotSet(
                          // @formatter:off
-                         focalSpotSetPK : Option[Long], // primary key
-                         outputPK       : Long, // output primary key
+                         focalSpotSetPK         : Option[Long], // primary key
+                         outputPK               : Long, // output primary key
+                         KVP_kv                 : Double, // beam energy in KV
                          //
-                         focalSpotAlignmentX: Double,
-                         focalSpotAlignmentY: Double,
+                         focalSpotAlignmentX_mm : Double, // (mis) alignment in X axis
+                         focalSpotAlignmentY_mm : Double, // (mis) alignment in Y axis
                          //
-                         jaw090PK       : Long,
-                         jaw270PK       : Long,
-                         mlc090PK       : Long,
-                         mlc270PK       : Long
+                         jaw090PK               : Long,
+                         jaw270PK               : Long,
+                         mlc090PK               : Long,
+                         mlc270PK               : Long
                          // @formatter:on
 ) {
 
@@ -51,10 +52,11 @@ case class FocalSpotSet(
   def insertOrUpdate(): Int = Db.run(FocalSpotSet.query.insertOrUpdate(this))
 
   override def toString: String = {
-    s"""focalSpotSetPK: $focalSpotSetPK
-       outputPK: $outputPK
-       focalSpotAlignmentY: $focalSpotAlignmentX
-       focalSpotAlignmentY: $focalSpotAlignmentY
+    s"""focalSpotSetPK       : $focalSpotSetPK
+       outputPK              : $outputPK
+       MV                    : ${KVP_kv / 1000.0}
+       focalSpotAlignmentX_mm: $focalSpotAlignmentX_mm
+       focalSpotAlignmentY_mm: $focalSpotAlignmentY_mm
    """
   }
 
@@ -65,8 +67,9 @@ object FocalSpotSet extends ProcedureOutput {
 
     def focalSpotSetPK = column[Long]("focalSpotSetPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
-    def focalSpotAlignmentX = column[Double]("focalSpotAlignmentX")
-    def focalSpotAlignmentY = column[Double]("focalSpotAlignmentY")
+    def KVP_kv = column[Double]("KVP_kv")
+    def focalSpotAlignmentX_mm = column[Double]("focalSpotAlignmentX_mm")
+    def focalSpotAlignmentY_mm = column[Double]("focalSpotAlignmentY_mm")
     def jaw090PK = column[Long]("jaw090PK")
     def jaw270PK = column[Long]("jaw270PK")
     def mlc090PK = column[Long]("mlc090PK")
@@ -76,8 +79,9 @@ object FocalSpotSet extends ProcedureOutput {
       (
         focalSpotSetPK.?,
         outputPK,
-        focalSpotAlignmentX,
-        focalSpotAlignmentY,
+        KVP_kv,
+        focalSpotAlignmentX_mm,
+        focalSpotAlignmentY_mm,
         jaw090PK,
         jaw270PK,
         mlc090PK,

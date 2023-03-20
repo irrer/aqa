@@ -25,32 +25,32 @@ import scala.xml.Elem
   * Store and instance of all of the data for a single image of focal spot.
   */
 case class FocalSpot(
-    // @formatter:off
-    focalSpotPK                      : Option[Long], // primary key
-    outputPK                         : Long,    // output primary key
-    SOPInstanceUID                   : String,  // UID of RTIMAGE
-    gantryAngleRounded_deg           : Int,     // Gantry angle rounded to the nearest multiple of 90 degrees
-    collimatorAngleRounded_deg       : Int,     // Collimator angle rounded to the nearest multiple of 90 degrees
-    beamName                         : String,  // name of beam
-    isJaw                            : Boolean, // true if edges are defined by jaw, false if defined by MLC
-    KVP                              : Double,  // beam energy                    : DICOM 0018,0060 : https://dicom.innolitics.com/ciods/rt-image/rt-image/30020030/00180060
-    RTImageSID_mm                    : Double,  // source to imager distance      : DICOM 3002,0026 : https://dicom.innolitics.com/ciods/rt-image/rt-image/30020026
-    ExposureTime                     : Double,  // exposure time                  : DICOM 0018,1150 : https://dicom.innolitics.com/ciods/rt-image/rt-image/00181150
+                      // @formatter:off
+                      focalSpotPK                      : Option[Long], // primary key
+                      outputPK                         : Long, // output primary key
+                      SOPInstanceUID                   : String, // UID of RTIMAGE
+                      gantryAngleRounded_deg           : Int, // Gantry angle rounded to the nearest multiple of 90 degrees
+                      collimatorAngleRounded_deg       : Int, // Collimator angle rounded to the nearest multiple of 90 degrees
+                      beamName                         : String, // name of beam
+                      isJaw                            : Boolean, // true if edges are defined by jaw, false if defined by MLC
+                      KVP_kv                           : Double, // beam energy in kv              : DICOM 0018,0060 : https://dicom.innolitics.com/ciods/rt-image/rt-image/30020030/00180060
+                      RTImageSID_mm                    : Double, // source to imager distance      : DICOM 3002,0026 : https://dicom.innolitics.com/ciods/rt-image/rt-image/30020026
+                      ExposureTime                     : Double, // exposure time                  : DICOM 0018,1150 : https://dicom.innolitics.com/ciods/rt-image/rt-image/00181150
 
-    XRayImageReceptorTranslationX_mm : Double,  // XRayImageReceptorTranslation X : DICOM 3002,000d : https://dicom.innolitics.com/ciods/rt-image/rt-image/3002000d
-    XRayImageReceptorTranslationY_mm : Double,  // XRayImageReceptorTranslation Y : DICOM 3002,000d : (same as above)
-    XRayImageReceptorTranslationZ_mm : Double,  // XRayImageReceptorTranslation Z : DICOM 3002,000d : (same as above)
+                      XRayImageReceptorTranslationX_mm : Double, // XRayImageReceptorTranslation X : DICOM 3002,000d : https://dicom.innolitics.com/ciods/rt-image/rt-image/3002000d
+                      XRayImageReceptorTranslationY_mm : Double, // XRayImageReceptorTranslation Y : DICOM 3002,000d : (same as above)
+                      XRayImageReceptorTranslationZ_mm : Double, // XRayImageReceptorTranslation Z : DICOM 3002,000d : (same as above)
 
-    topEdge_mm                       : Double,  // top edge measurement
-    bottomEdge_mm                    : Double,  // bottom edge measurement
-    leftEdge_mm                      : Double,  // left edge measurement
-    rightEdge_mm                     : Double,  // right edge measurement
+                      topEdge_mm                       : Double, // top edge measurement
+                      bottomEdge_mm                    : Double, // bottom edge measurement
+                      leftEdge_mm                      : Double, // left edge measurement
+                      rightEdge_mm                     : Double, // right edge measurement
 
-    topEdgePlanned_mm                : Double,  // planned top edge
-    bottomEdgePlanned_mm             : Double,  // planned bottom edge
-    leftEdgePlanned_mm               : Double,  // planned left edge
-    rightEdgePlanned_mm              : Double   // planned right edge
-    // @formatter:on
+                      topEdgePlanned_mm                : Double, // planned top edge
+                      bottomEdgePlanned_mm             : Double, // planned bottom edge
+                      leftEdgePlanned_mm               : Double, // planned left edge
+                      rightEdgePlanned_mm              : Double // planned right edge
+                      // @formatter:on
 ) {
 
   def insert: FocalSpot = {
@@ -72,7 +72,7 @@ case class FocalSpot(
        collimatorAngleRounded_deg: $collimatorAngleRounded_deg
        beamName: $beamName
        edge type: ${if (isJaw) "jaw" else "MLC"}
-       KVP: $KVP
+       KVP_kv: $KVP_kv
        RTImageSID_mm: $RTImageSID_mm
        ExposureTime: $ExposureTime
        XRayImageReceptorTranslationX_mm: $XRayImageReceptorTranslationX_mm
@@ -101,7 +101,7 @@ object FocalSpot extends ProcedureOutput {
     def collimatorAngleRounded_deg = column[Int]("collimatorAngleRounded_deg")
     def beamName = column[String]("beamName")
     def isJaw = column[Boolean]("isJaw")
-    def KVP = column[Double]("KVP")
+    def KVP_kv = column[Double]("KVP_kv")
     def RTImageSID_mm = column[Double]("RTImageSID_mm")
     def ExposureTime = column[Double]("ExposureTime")
     def XRayImageReceptorTranslationX_mm = column[Double]("XRayImageReceptorTranslationX_mm")
@@ -125,7 +125,7 @@ object FocalSpot extends ProcedureOutput {
         collimatorAngleRounded_deg,
         beamName,
         isJaw,
-        KVP,
+        KVP_kv,
         RTImageSID_mm,
         ExposureTime,
         XRayImageReceptorTranslationX_mm,
@@ -191,7 +191,7 @@ object FocalSpot extends ProcedureOutput {
     Db.perform(ops)
   }
 
-  case class ColCentHistory(output: Output, colCent: FocalSpot) {}
+  case class FocalSpotHistory(output: Output, focalSpot: FocalSpot) {}
 
   /**
     * Get the entire history of Focal Spot data for the given machine.
@@ -199,14 +199,14 @@ object FocalSpot extends ProcedureOutput {
     * @param procedurePK For this procedure.
     * @return List of history items sorted by data date.
     */
-  def history(machinePK: Long, procedurePK: Long): Seq[ColCentHistory] = {
+  def history(machinePK: Long, procedurePK: Long): Seq[FocalSpotHistory] = {
 
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       colCent <- FocalSpot.query.filter(w => (w.outputPK === output.outputPK))
     } yield (output, colCent)
 
-    val sorted = Db.run(search.result).map(oc => ColCentHistory(oc._1, oc._2)).sortBy(_.output.dataDate.get.getTime)
+    val sorted = Db.run(search.result).map(oc => FocalSpotHistory(oc._1, oc._2)).sortBy(_.output.dataDate.get.getTime)
 
     sorted
   }

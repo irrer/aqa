@@ -49,8 +49,9 @@ object FSAnalysis extends Logging {
     val focalSpotSet = FocalSpotSet(
       focalSpotSetPK = None,
       outputPK = outputPK,
-      focalSpotAlignmentX = fsSet.focalSpotAlignmentX,
-      focalSpotAlignmentY = fsSet.focalSpotAlignmentY,
+      KVP_kv = fsJaw090.KVP_kv,
+      focalSpotAlignmentX_mm = fsSet.focalSpotAlignmentX_mm,
+      focalSpotAlignmentY_mm = fsSet.focalSpotAlignmentY_mm,
       jaw090PK = fsJaw090.focalSpotPK.get,
       jaw270PK = fsJaw270.focalSpotPK.get,
       mlc090PK = fsMlc090.focalSpotPK.get,

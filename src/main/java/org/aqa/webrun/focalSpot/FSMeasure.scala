@@ -100,7 +100,7 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
     collimatorAngleRounded_deg       = collimatorAngleRounded_deg,
     beamName                         = Util.getBeamNameOfRtimage(rtplan, rtimage).get,
     isJaw                            = isJaw,
-    KVP                              = KVP,
+    KVP_kv                              = KVP,
     RTImageSID_mm                    = RTImageSID_mm,
     ExposureTime                     = ExposureTime,
     XRayImageReceptorTranslationX_mm = XRayImageReceptorTranslation.getX,

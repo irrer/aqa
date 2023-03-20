@@ -58,8 +58,8 @@ class TestFocalSpotAnalyze extends FlatSpec with Matchers with Logging {
       save(fsSet.mlc090)
       save(fsSet.mlc270)
 
-      Trace.trace("X Alignment: " + fsSet.focalSpotAlignmentX)
-      Trace.trace("Y Alignment: " + fsSet.focalSpotAlignmentY)
+      Trace.trace("X Alignment: " + fsSet.focalSpotAlignmentX_mm)
+      Trace.trace("Y Alignment: " + fsSet.focalSpotAlignmentY_mm)
       println
     }
 

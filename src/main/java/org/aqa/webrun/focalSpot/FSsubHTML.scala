@@ -1,7 +1,6 @@
 package org.aqa.webrun.focalSpot
 
 import org.aqa.run.ProcedureStatus
-import org.aqa.webrun.focalSpot.FSHTML.fmtLo
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
@@ -33,6 +32,9 @@ object FSsubHTML {
           </table>
         </div>
       </div>
+      <div class="row">
+        Put main chart here
+      </div>
     </div>
   }
 
@@ -42,17 +44,15 @@ object FSsubHTML {
     * @param fsSet Result of focal spot analyses.
     * @return URL for this HTML
     */
-  def makeHtml(extendedData: ExtendedData, runReq: RunReq, fsSet: FSSet): String = {
-
-    val htmlFileName = s"FocalSpot_${fmtLo(fsSet.jaw090.NominalBeamEnergy)}.html"
-    val focalSpotDir = new File(extendedData.output.dir, "FocalSpot")
-    focalSpotDir.mkdirs()
+  def makeHtml(extendedData: ExtendedData, runReq: RunReq, fsSet: FSSet): Unit = {
+    val mainHtmlFile = {
+      val dir = FSHTML.focalSpotDir(extendedData.output)
+      new File(dir, fsSet.htmlFileName)
+    }
 
     val content = makeContent(extendedData, runReq, fsSet: FSSet)
     val text = Phase2Util.wrapSubProcedure(extendedData, content, FSAnalysis.subProcedureName, ProcedureStatus.done, None, runReq)
-    val mainHtmlFile = new File(focalSpotDir, htmlFileName)
     Util.writeBinaryFile(mainHtmlFile, text.getBytes)
-    htmlFileName
   }
 
 }
