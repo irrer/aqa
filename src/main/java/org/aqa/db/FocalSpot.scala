@@ -62,6 +62,9 @@ case class FocalSpot(
     result
   }
 
+  val centerX = (leftEdge_mm + rightEdge_mm ) / 2
+  val centerY = (leftEdge_mm + rightEdge_mm ) / 2
+
   def insertOrUpdate(): Int = Db.run(FocalSpot.query.insertOrUpdate(this))
 
   override def toString: String = {

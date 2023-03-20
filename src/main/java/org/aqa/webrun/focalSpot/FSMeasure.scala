@@ -51,32 +51,53 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
   /** True if the X1 and X2 boundaries of the field are defined by the MLC. */
   val isMLC: Boolean = dicomBeam.mlcX1PosList.nonEmpty
 
-  val X1Planned_mm: Double = {
+  private val X1Planned_mm: Double = {
     if (isMLC)
       -dicomBeam.mlcX1PosList(dicomBeam.mlcX1PosList.size / 2)
     else
       -dicomBeam.x1Jaw.get
   }
 
-  val X2Planned_mm: Double = {
+  private val X2Planned_mm: Double = {
     if (isMLC)
       -dicomBeam.mlcX2PosList(dicomBeam.mlcX2PosList.size / 2)
     else
       -dicomBeam.x2Jaw.get
   }
 
-  val Y1Planned_mm: Double = {
+  private val Y1Planned_mm: Double = {
     if (isMLC) {
-      dicomBeam.mlcX1PosList(dicomBeam.mlcX1PosList.size / 2)
+
+      val list1 = dicomBeam.mlcX1PosList
+      val indices = list1.indices.dropRight(1)
+      val index1 = indices.find(i => list1(i) != list1(i + 1))
+
+      val list2 = dicomBeam.mlcX2PosList
+      val index2 = indices.find(i => list2(i) != list2(i + 1))
+
+      val index = Seq(index1, index2).flatten.head
+
+      dicomBeam.leafBoundaryList(index + 1)
     } else
       dicomBeam.y1Jaw.get
   }
 
-  val Y2Planned_mm: Double = {
-    if (isMLC)
-      dicomBeam.mlcX1PosList(dicomBeam.mlcX1PosList.size / 2)
-    else
-      dicomBeam.y1Jaw.get
+  private val Y2Planned_mm: Double = {
+    if (isMLC) {
+      val list1 = dicomBeam.mlcX1PosList
+      //noinspection ReverseFind
+      val indices = list1.indices.tail.reverse
+      val index1 = indices.find(i => list1(i) != list1(i - 1))
+
+      val list2 = dicomBeam.mlcX2PosList
+      //noinspection ReverseFind
+      val index2 = indices.find(i => list2(i) != list2(i - 1))
+
+      val index = Seq(index1, index2).flatten.head
+
+      dicomBeam.leafBoundaryList(index)
+    } else
+      -dicomBeam.y1Jaw.get
   }
 
   /** True if the X1 and X2 boundaries of the field are defined by the jaw. */
@@ -100,7 +121,7 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
     collimatorAngleRounded_deg       = collimatorAngleRounded_deg,
     beamName                         = Util.getBeamNameOfRtimage(rtplan, rtimage).get,
     isJaw                            = isJaw,
-    KVP_kv                              = KVP,
+    KVP_kv                           = KVP,
     RTImageSID_mm                    = RTImageSID_mm,
     ExposureTime                     = ExposureTime,
     XRayImageReceptorTranslationX_mm = XRayImageReceptorTranslation.getX,
@@ -110,10 +131,10 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
     bottomEdge_mm                    = translator.pix2IsoCoordY(analysisResult.measurementSet.bottom) - XRayImageReceptorTranslation.getY,
     leftEdge_mm                      = translator.pix2IsoCoordX(analysisResult.measurementSet.left)   + XRayImageReceptorTranslation.getX,
     rightEdge_mm                     = translator.pix2IsoCoordX(analysisResult.measurementSet.right)  + XRayImageReceptorTranslation.getX,
-    topEdgePlanned_mm                = if (collimatorAngleRounded_deg == 90) X2Planned_mm else X1Planned_mm, // plannedTBLR.top,
-    bottomEdgePlanned_mm             = if (collimatorAngleRounded_deg == 90) X1Planned_mm else X2Planned_mm, // plannedTBLR.bottom,
-    leftEdgePlanned_mm               = if (collimatorAngleRounded_deg == 90) Y2Planned_mm else Y1Planned_mm, // plannedTBLR.left,
-    rightEdgePlanned_mm              = if (collimatorAngleRounded_deg == 90) Y1Planned_mm else Y2Planned_mm // plannedTBLR.right
+    topEdgePlanned_mm                = X2Planned_mm, // plannedTBLR.top,
+    bottomEdgePlanned_mm             = X1Planned_mm, // plannedTBLR.bottom,
+    leftEdgePlanned_mm               = Y1Planned_mm, // plannedTBLR.left,
+    rightEdgePlanned_mm              = Y2Planned_mm  // plannedTBLR.right
   )
   // @formatter:on
 
