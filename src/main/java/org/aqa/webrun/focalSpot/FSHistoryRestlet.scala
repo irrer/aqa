@@ -49,16 +49,15 @@ class FSHistoryRestlet extends Restlet with SubUrlRoot with Logging {
       super.handle(request, response)
       val valueMap = getValueMap(request)
 
-        val outputPK = valueMap(FSHistoryRestlet.outputPKTag).toInt
+      val outputPK = valueMap(FSHistoryRestlet.outputPKTag).toLong
 
       if (valueMap.contains(FSHistoryRestlet.mvTag)) {
-        val mvText = valueMap(FSHistoryRestlet.mvTag)
-        val javascript = ??? // new FSmvChart(outputPK, mvText).chart.javascript
+        val mv = valueMap(FSHistoryRestlet.mvTag).toDouble
+        val javascript = new FSmvChart(outputPK, mv).chartPair._1.javascript
+        val edgeJavascript = new FSmvChart(outputPK, mv).chartPair._2.javascript
         response.setStatus(Status.SUCCESS_OK)
-        response.setEntity(javascript, MediaType.APPLICATION_JAVASCRIPT)
-      }
-
-      else {
+        response.setEntity(javascript + edgeJavascript, MediaType.APPLICATION_JAVASCRIPT)
+      } else {
         val javascript = new FSMainChart(outputPK).chart.javascript
         response.setStatus(Status.SUCCESS_OK)
         response.setEntity(javascript, MediaType.APPLICATION_JAVASCRIPT)

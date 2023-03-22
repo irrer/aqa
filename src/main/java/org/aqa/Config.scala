@@ -885,7 +885,15 @@ object Config extends Logging {
   val VMATBeamPairList: Seq[VMATBeamPair] = getVMATBeamPairList
   val VMATHistoryRange: Int = logMainText("VMATHistoryRange", "1000000").toInt
 
-  val FocalSpotBeamNameList : Seq[String] = getBeamNameList("FocalSpotBeamNameList")
+  private val TrueBeamSourceToXJawDistance_cm: Double = logMainText("TrueBeamSourceToXJawDistance_cm", "40.6").toDouble
+  private val TrueBeamSourceToYJawDistance_cm: Double = logMainText("TrueBeamSourceToYJawDistance_cm", "31.9").toDouble
+  private val TrueBeamSourceToMLCDistance_cm: Double = logMainText("TrueBeamSourceToMLCDistance_cm", "49.0").toDouble
+
+  val TrueBeamSourceToXJawDistance_mm: Double = TrueBeamSourceToXJawDistance_cm * 10
+  val TrueBeamSourceToYJawDistance_mm: Double = TrueBeamSourceToYJawDistance_cm * 10
+  val TrueBeamSourceToMLCDistance_mm: Double = TrueBeamSourceToMLCDistance_cm * 10
+
+  val FocalSpotBeamNameList: Seq[String] = getBeamNameList("FocalSpotBeamNameList")
 
   private val DailyQAInProgressInterval_min: Double = logMainText("DailyQAInProgressInterval_min", "30.0").toDouble
   val DailyQAInProgressInterval_ms: Long = (DailyQAInProgressInterval_min * 60 * 1000).round

@@ -25,7 +25,7 @@ import scala.xml.Elem
   * Store and instance of all of the data for a single image of focal spot.
   */
 case class FocalSpotSet(
-                         // @formatter:off
+    // @formatter:off
                          focalSpotSetPK         : Option[Long], // primary key
                          outputPK               : Long, // output primary key
                          KVP_kv                 : Double, // beam energy in KV
@@ -146,7 +146,8 @@ object FocalSpotSet extends ProcedureOutput {
 
   /**
     * Get the entire history of Focal Spot data for the given machine.
-    * @param machinePK Machine to get data for.
+    *
+    * @param machinePK   Machine to get data for.
     * @param procedurePK For this procedure.
     * @return List of history items sorted by data date.
     */
@@ -155,6 +156,25 @@ object FocalSpotSet extends ProcedureOutput {
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       focalSpotSet <- FocalSpotSet.query.filter(w => (w.outputPK === output.outputPK))
+    } yield (output, focalSpotSet)
+
+    val focalSpotSetList = Db.run(search.result).map(outFocal => FocalSpotSetHistory(outFocal._1, outFocal._2)).sortBy(_.output.dataDate.get.getTime)
+
+    focalSpotSetList
+  }
+
+  /**
+    * Get the entire history of Focal Spot data for the given machine.
+    * @param machinePK Machine to get data for.
+    * @param procedurePK For this procedure.
+    * @param kvp_kv For this KVP only.
+    * @return List of history items sorted by data date.
+    */
+  def history(machinePK: Long, procedurePK: Long, kvp_kv: Double): Seq[FocalSpotSetHistory] = {
+
+    val search = for {
+      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
+      focalSpotSet <- FocalSpotSet.query.filter(fs => (fs.outputPK === output.outputPK) && (fs.KVP_kv === kvp_kv))
     } yield (output, focalSpotSet)
 
     val focalSpotSetList = Db.run(search.result).map(outFocal => FocalSpotSetHistory(outFocal._1, outFocal._2)).sortBy(_.output.dataDate.get.getTime)

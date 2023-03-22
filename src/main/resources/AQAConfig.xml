@@ -474,6 +474,17 @@ Note that when building a package for release, the Maven build process uses the 
         <BeamName FloodCompensation='false'>M10G270C270</BeamName>
     </CollimatorPositionBeamList>
 
+
+    <!-- Distance from radiation source to X jaws for Varian TrueBeam.  Floating point value in cm.  Default: 40.6. -->
+    <TrueBeamSourceToXJawDistance_cm>40.6</TrueBeamSourceToXJawDistance_cm>
+
+    <!-- Distance from radiation source to Y jaws for Varian TrueBeam.  Floating point value in cm.  Default: 31.9. -->
+    <TrueBeamSourceToYJawDistance_cm>31.9</TrueBeamSourceToYJawDistance_cm>
+
+    <!-- Distance from radiation source to MLC for Varian TrueBeam.  Floating point value in cm.  Default: 49.0. -->
+    <TrueBeamSourceToMLCDistance_cm>49.0</TrueBeamSourceToMLCDistance_cm>
+
+
     <!-- List of beam names of that can be used to calculate focal spot. -->
     <FocalSpotBeamNameList>
         <BeamName>6x-10-Jaw-90</BeamName>

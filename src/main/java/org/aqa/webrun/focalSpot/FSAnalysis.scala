@@ -21,7 +21,7 @@ object FSAnalysis extends Logging {
       list.max - list.min
     }
     // @formatter:off
-    measureList.size == 4                       &&
+    measureList.size > 3                        &&
     measureList.exists(m => m.isJaw && m.is090) &&
     measureList.exists(m => m.isJaw && m.is270) &&
     measureList.exists(m => m.isMLC && m.is090) &&

@@ -25,7 +25,7 @@ import scala.xml.Elem
   * Store and instance of all of the data for a single image of focal spot.
   */
 case class FocalSpot(
-                      // @formatter:off
+    // @formatter:off
                       focalSpotPK                      : Option[Long], // primary key
                       outputPK                         : Long, // output primary key
                       SOPInstanceUID                   : String, // UID of RTIMAGE
@@ -62,8 +62,13 @@ case class FocalSpot(
     result
   }
 
-  val centerX = (leftEdge_mm + rightEdge_mm ) / 2
-  val centerY = (leftEdge_mm + rightEdge_mm ) / 2
+  val centerX = (leftEdge_mm + rightEdge_mm) / 2
+  val centerY = (leftEdge_mm + rightEdge_mm) / 2
+
+  val topEdgeError_mm = topEdge_mm - topEdgePlanned_mm
+  val bottomEdgeError_mm = bottomEdge_mm - bottomEdgePlanned_mm
+  val leftEdgeError_mm = leftEdge_mm - leftEdgePlanned_mm
+  val rightEdgeError_mm = rightEdge_mm - rightEdgePlanned_mm
 
   def insertOrUpdate(): Int = Db.run(FocalSpot.query.insertOrUpdate(this))
 
@@ -92,6 +97,7 @@ case class FocalSpot(
    """
   }
 
+  val isMLC = !isJaw
 }
 
 object FocalSpot extends ProcedureOutput {
@@ -198,7 +204,8 @@ object FocalSpot extends ProcedureOutput {
 
   /**
     * Get the entire history of Focal Spot data for the given machine.
-    * @param machinePK Machine to get data for.
+    *
+    * @param machinePK   Machine to get data for.
     * @param procedurePK For this procedure.
     * @return List of history items sorted by data date.
     */
@@ -207,6 +214,25 @@ object FocalSpot extends ProcedureOutput {
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       colCent <- FocalSpot.query.filter(w => (w.outputPK === output.outputPK))
+    } yield (output, colCent)
+
+    val sorted = Db.run(search.result).map(oc => FocalSpotHistory(oc._1, oc._2)).sortBy(_.output.dataDate.get.getTime)
+
+    sorted
+  }
+
+  /**
+    * Get the entire history of Focal Spot data for the given machine.
+    * @param machinePK Machine to get data for.
+    * @param procedurePK For this procedure.
+    * @param kvp_kv For this KVP.
+    * @return List of history items sorted by data date.
+    */
+  def history(machinePK: Long, procedurePK: Long, kvp_kv: Double): Seq[FocalSpotHistory] = {
+
+    val search = for {
+      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
+      colCent <- FocalSpot.query.filter(fs => (fs.outputPK === output.outputPK) && (fs.KVP_kv === kvp_kv))
     } yield (output, colCent)
 
     val sorted = Db.run(search.result).map(oc => FocalSpotHistory(oc._1, oc._2)).sortBy(_.output.dataDate.get.getTime)

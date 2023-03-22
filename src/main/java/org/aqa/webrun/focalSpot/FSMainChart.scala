@@ -19,7 +19,6 @@ package org.aqa.webrun.focalSpot
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.FocalSpotSet
-import org.aqa.db.Input
 import org.aqa.db.Machine
 import org.aqa.db.MaintenanceCategory
 import org.aqa.db.MaintenanceRecord
@@ -39,7 +38,6 @@ class FSMainChart(outputPK: Long) extends Logging {
 
   private val output: Output = Output.get(outputPK).get
   private val procedure: Procedure = Procedure.get(output.procedurePK).get
-  private val input: Input = Input.get(output.inputPK).get
   private val machine: Machine = Machine.get(output.machinePK.get).get
 
   /** Focal spot sets. */
@@ -81,7 +79,17 @@ class FSMainChart(outputPK: Long) extends Logging {
       setList.head.flatMap(h => Seq(mvText(h.focalSpotSet) + " X", mvText(h.focalSpotSet) + " Y"))
     }
 
-    val colorList = Seq(Color.green, Color.blue, Color.black, Color.red, Color.orange, Color.cyan, Color.magenta, Color.yellow, Color.pink, Color.gray)
+    val colorList = Seq(
+      Color.green,
+      Color.blue,
+      Color.black,
+      Color.red,
+      Color.orange,
+      Color.cyan,
+      Color.magenta,
+      Color.yellow,
+      Color.pink,
+      Color.gray)
 
     new C3ChartHistory(
       chartIdOpt = Some(chartId),

@@ -8,6 +8,7 @@ import org.aqa.Util
 import org.aqa.web.WebServer
 import org.aqa.Config
 import org.aqa.db.Output
+import org.aqa.web.C3ChartHistory
 
 import java.io.File
 import scala.xml.Elem
@@ -15,6 +16,7 @@ import scala.xml.Elem
 object FSHTML {
 
   val focalSpotDirName = "FocalSpot"
+  val htmlFileName = "FocalSpot.html"
 
   def focalSpotDir(output: Output): File = new File(output.dir, focalSpotDirName)
 
@@ -102,6 +104,7 @@ object FSHTML {
       </div>
       <div class="row">
         <div class="col-md-10 col-md-offset-1">
+          {C3ChartHistory.htmlHelp()}
           {chartHtml}
         </div>
       </div>
@@ -115,7 +118,6 @@ object FSHTML {
     * @return Report for all focal spot sets.
     */
   def makeHtml(extendedData: ExtendedData, runReq: RunReq, fsSetList: Seq[FSSet]): Elem = {
-    val htmlFileName = "FocalSpot.html"
     val dir = focalSpotDir(extendedData.output)
     dir.mkdirs()
 

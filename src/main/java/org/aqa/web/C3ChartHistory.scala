@@ -47,7 +47,7 @@ import scala.xml.Elem
   * @param yFormat     : Formatting for y values.   Examples: .3g .4g  Reference: http://bl.ocks.org/zanarmstrong/05c1e95bf7aa16c4768e
   */
 class C3ChartHistory(
-    chartIdOpt: Option[String],
+    val chartIdOpt: Option[String],
     maintenanceList: Seq[MaintenanceRecord],
     width: Option[Int],
     height: Option[Int],
