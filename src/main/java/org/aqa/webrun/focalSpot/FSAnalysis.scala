@@ -77,7 +77,7 @@ object FSAnalysis extends Logging {
         nameList.map(beamName => runReq.rtimageMap(beamName))
       }
 
-      val measureList: Seq[FSMeasure] = rtimageList.map(rtimage => FSMeasure(runReq.rtplan, rtimage, outputPK)).toSeq
+      val measureList: Seq[FSMeasure] = rtimageList.map(rtimage => FSMeasure(runReq.rtplan, rtimage, outputPK)).toSeq // TODO do in par
 
       // make sets of four based on energy
       val fsSetList: Seq[FSSet] = {

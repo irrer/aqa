@@ -6,7 +6,9 @@ object FSMatlab {
 
   def fsToMatlab(fsMeasure: FSMeasure): String = {
 
-    val NominalBeamEnergyText = { if (fsMeasure.NominalBeamEnergy == fsMeasure.NominalBeamEnergy.round) fsMeasure.NominalBeamEnergy.round.toString else fsMeasure.NominalBeamEnergy.toString }
+    val NominalBeamEnergyText = {
+      if (fsMeasure.NominalBeamEnergy == fsMeasure.NominalBeamEnergy.round) fsMeasure.NominalBeamEnergy.round.toString else fsMeasure.NominalBeamEnergy.toString
+    }
 
     val typeOf = if (fsMeasure.isMLC) "MLC" else "Jaw"
     val prefix = "MV" + NominalBeamEnergyText + "_" + typeOf + "_" + fsMeasure.collimatorAngleRounded_deg.formatted("%03d") + "_"
@@ -15,7 +17,6 @@ object FSMatlab {
     val RTImageSID = fsMeasure.rtimage.get(TagByName.RTImageSID).getDoubleValues.head
     val RadiationMachineSAD = fsMeasure.rtimage.get(TagByName.RadiationMachineSAD).getDoubleValues.head
     val ImagePlanePixelSpacing = fsMeasure.rtimage.get(TagByName.ImagePlanePixelSpacing).getDoubleValues.toSeq
-    val RTImagePosition = fsMeasure.rtimage.get(TagByName.RTImagePosition).getDoubleValues.toSeq
 
     val top_px = fsMeasure.analysisResult.measurementSet.top
     val bottom_px = fsMeasure.analysisResult.measurementSet.bottom
@@ -25,12 +26,61 @@ object FSMatlab {
     // format all numbers like this
     val f = "%20.16f"
 
-    val matlab: String =
+    /* Construct the Matlab text for the image position of the upper right corner of the image. */
+    val RTImagePositionText = {
+      val RTImagePositionAttr = fsMeasure.rtimage.get(TagByName.RTImagePosition)
+
+      val calcText = {
+        if (RTImagePositionAttr == null) {
+          // The RTImagePosition attribute is not available.
+          val Columns = fsMeasure.rtimage.get(TagByName.Columns).getIntegerValues.head
+          val Rows = fsMeasure.rtimage.get(TagByName.Rows).getIntegerValues.head
+          s"""
+             |
+             |% This attribute is missing from the RTIMAGE file: DICOM 3002,0012 RTImagePosition : RT Image Plane, Position and Orientation (in mm) : https://dicom.innolitics.com/ciods/rt-image/rt-image/30020012
+             |% So instead it is being calculated using the pixel sizes (in mm) and size (in pixels) of the imager.
+             |
+             |% DICOM 0028,0010 Rows : Number of rows of pixels in the image : https://dicom.innolitics.com/ciods/rt-image/image-pixel/00280010
+             |${prefix}Rows = $Rows;
+             |
+             |% DICOM 0028,0011 Columns : Number of columns of pixels in the image : https://dicom.innolitics.com/ciods/rt-image/image-pixel/00280011
+             |${prefix}Columns = $Columns;
+             |
+             |${prefix}imagePosX = -(((${prefix}Columns - 1.0) / 2) * ${prefix}pixSizeX) / ${prefix}beamExpansion;
+             |${prefix}imagePosY =  (((${prefix}Rows    - 1.0) / 2) * ${prefix}pixSizeY) / ${prefix}beamExpansion;
+             |
+             |""".stripMargin
+        } else {
+          val RTImagePosition = RTImagePositionAttr.getDoubleValues
+          s"""
+             |
+             |% DICOM 3002,0012 RTImagePosition : RT Image Plane, Position and Orientation (in mm) : https://dicom.innolitics.com/ciods/rt-image/rt-image/30020012
+             |${prefix}imagePosX = ${RTImagePosition.head} / ${prefix}beamExpansion;
+             |${prefix}imagePosY = ${RTImagePosition(1)} / ${prefix}beamExpansion;
+             |fprintf("\\n");
+             |
+             |""".stripMargin
+        }
+      }
+
+      // print the results for imagePosX and imagePosY
+      val printText = {
+        s"""
+           |
+           |fprintf("${prefix}imagePosX: $f\\n", ${prefix}imagePosX);
+           |fprintf("${prefix}imagePosY: $f\\n", ${prefix}imagePosY);
+           |fprintf("\\n");
+           |
+           |""".stripMargin
+      }
+      calcText + printText
+    }
+
+    val measureText: String = {
       s"""
-         |
          |% --------------------------------------------------------------------------------------------------------
          |
-         |fprintf("Matlab code calculating focal spot values for $typeOf ${fsMeasure.collimatorAngleRounded_deg} for MV $NominalBeamEnergyText\\n");
+         |fprintf("Matlab code calculating edge positions used for focal spot calculation for $typeOf ${fsMeasure.collimatorAngleRounded_deg} for MV $NominalBeamEnergyText\\n");
          |
          |% DICOM 3002,000D XRayImageReceptorTranslation : https://dicom.innolitics.com/ciods/rt-image/rt-image/3002000d
          |${prefix}transX = ${translation.head};
@@ -59,12 +109,7 @@ object FSMatlab {
          |fprintf("${prefix}beamExpansion: $f\\n", ${prefix}beamExpansion);
          |fprintf("\\n");
          |
-         |% DICOM 3002,0012 RTImagePosition : RT Image Plane, Position and Orientation (in mm) : https://dicom.innolitics.com/ciods/rt-image/rt-image/30020012
-         |${prefix}imagePosX = ${RTImagePosition.head} / ${prefix}beamExpansion;
-         |${prefix}imagePosY = ${RTImagePosition(1)} / ${prefix}beamExpansion;
-         |fprintf("${prefix}imagePosX: $f\\n", ${prefix}imagePosX);
-         |fprintf("${prefix}imagePosY: $f\\n", ${prefix}imagePosY);
-         |fprintf("\\n");
+         |$RTImagePositionText
          |
          |% Expansion ratio between isoplane and image plane for X and Y pixels
          |${prefix}expandX = ${prefix}beamExpansion / ${prefix}pixSizeX;
@@ -106,11 +151,19 @@ object FSMatlab {
          |${prefix}centerY_mm = ( ${prefix}top_mm  + ${prefix}bottom_mm ) / 2.0;
          |fprintf("${prefix}centerX_mm  : $f\\n", ${prefix}centerX_mm);
          |fprintf("${prefix}centerY_mm  : $f\\n", ${prefix}centerY_mm);
-         |fprintf("\\n-----------------------------\\n");
+         |fprintf("\\n\\n-----------------------------\\n\\n");
+         |""".stripMargin
+    }
+
+    val focalSpotText = {
+      s"""
+         |$measureText
          |
          |""".stripMargin
+    }
 
-    matlab
+    // reduce multiple blank lines to single blank lines.
+    focalSpotText
   }
 
 }
