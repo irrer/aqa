@@ -104,7 +104,7 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
   val isJaw: Boolean = !isMLC
 
   // @formatter:off
-  private val analysisResult = MeasureTBLREdges.measure(
+  val analysisResult: MeasureTBLREdges.AnalysisResult = MeasureTBLREdges.measure(
     dicomImage,
     translator,
     expected_mm = None, // Some(plannedTBLR),

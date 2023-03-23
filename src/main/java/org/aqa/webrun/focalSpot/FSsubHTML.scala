@@ -12,6 +12,9 @@ import scala.xml.Elem
 
 object FSsubHTML {
 
+  /* Name of file where Matlab code is written. */
+  private val matlabFileName = "matlab.txt"
+
   private def row(fsMeasure: FSMeasure): Elem = {
     val fs = fsMeasure.focalSpot
 
@@ -39,7 +42,8 @@ object FSsubHTML {
     * @param fsSet        Result of focal spot analyses.
     * @return Report for all focal spot sets.
     */
-  private def makeContent(extendedData: ExtendedData, runReq: RunReq, fsSet: FSSet, fsMvChart: FSmvChart): Elem = {
+  private def makeContent(extendedData: ExtendedData, fsSet: FSSet, fsMvChart: FSmvChart): Elem = {
+
     val mvText = {
       val mv = fsSet.jaw090.NominalBeamEnergy
       if (mv.round == mv)
@@ -73,10 +77,16 @@ object FSsubHTML {
       </td>
     }
 
+    // write Matlab file
+    val matlabFile = new File(FSHTML.focalSpotDir(extendedData.output), matlabFileName)
+    val matlabText = Seq(fsSet.jaw090, fsSet.jaw270, fsSet.mlc090, fsSet.mlc270).map(FSMatlab.fsToMatlab).mkString("\n")
+    Util.writeFile(matlabFile, matlabText)
+
     <div class="row">
       <center>
         <h2>MV: {mvText} Alignment: {alignment}</h2>
         <a href={FSHTML.htmlFileName} title="Return to focal spot summary page.">Focal Spot Summary</a>
+        <a href={matlabFileName} title="Download Matlab code demonstrating calculations." style="margin-left:50px;">Matlab</a>
       </center>
       <div class="row">
         <div class="col-md-8 col-md-offset-2">
@@ -162,7 +172,7 @@ object FSsubHTML {
 
     val fsMvChart = new FSmvChart(extendedData.output.outputPK.get, fsSet.jaw090.focalSpot.KVP_kv / 1000)
 
-    val content = makeContent(extendedData, runReq, fsSet: FSSet, fsMvChart)
+    val content = makeContent(extendedData, fsSet: FSSet, fsMvChart)
 
     val javascript = zoomScript + chartScript(extendedData, fsSet) + fsMvChart.chartPair._1.javascript + fsMvChart.chartPair._2.javascript
     val text = Phase2Util.wrapSubProcedure(extendedData, content, FSAnalysis.subProcedureName, ProcedureStatus.done, runScript = Some(javascript), runReq)
