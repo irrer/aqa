@@ -6,11 +6,12 @@ import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.Util
 import org.aqa.web.C3ChartHistory
+import org.aqa.Logging
 
 import java.io.File
 import scala.xml.Elem
 
-object FSsubHTML {
+object FSsubHTML extends Logging {
 
   /* Name of file where Matlab code is written. */
   private val matlabFileName = "matlab.txt"
@@ -79,7 +80,7 @@ object FSsubHTML {
 
     // write Matlab file
     val matlabFile = new File(FSHTML.focalSpotDir(extendedData.output), matlabFileName)
-    val matlabText = Seq(fsSet.jaw090, fsSet.jaw270, fsSet.mlc090, fsSet.mlc270).map(FSMatlab.fsToMatlab).mkString("\n")
+    val matlabText = Seq(fsSet.jaw090, fsSet.jaw270, fsSet.mlc090, fsSet.mlc270).map(FSMatlab.focalSpotEdgeMatlabText).mkString("\n") + FSMatlab.focalSpotAggregateMatlabText(fsSet)
     Util.writeFile(matlabFile, matlabText)
 
     <div class="row">

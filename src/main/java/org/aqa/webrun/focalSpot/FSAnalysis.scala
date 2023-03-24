@@ -82,7 +82,7 @@ object FSAnalysis extends Logging {
       // make sets of four based on energy
       val fsSetList: Seq[FSSet] = {
         val groupList = measureList.groupBy(_.NominalBeamEnergy).values.toSeq
-        groupList.filter(isValidSet).map(toSet)
+        groupList.filter(isValidSet).map(toSet).sortBy(_.jaw090.NominalBeamEnergy)
       }
 
       val NominalBeamEnergyList = fsSetList.map(_.jaw090.NominalBeamEnergy).mkString(", ")

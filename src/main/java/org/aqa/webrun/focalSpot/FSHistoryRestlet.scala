@@ -27,7 +27,7 @@ import org.restlet.data.Status
 /**
   * Support for generating JS scripts on request.
   */
-object FSHistoryRestlet {
+object FSHistoryRestlet extends Logging {
   val path = new String((new FSHistoryRestlet).pathOf)
 
   val outputPKTag = "outputPK"
