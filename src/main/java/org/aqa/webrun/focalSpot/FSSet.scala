@@ -15,6 +15,8 @@ import org.aqa.Logging
   */
 case class FSSet(jaw090: FSMeasure, jaw270: FSMeasure, mlc090: FSMeasure, mlc270: FSMeasure) extends Logging {
 
+  val mvText = jaw090.mvText
+
   private val measureList = Seq(jaw090, jaw270, mlc090, mlc270)
 
   // @formatter:off
@@ -105,12 +107,6 @@ case class FSSet(jaw090: FSMeasure, jaw270: FSMeasure, mlc090: FSMeasure, mlc270
   )
 
   val htmlFileName: String = {
-    val text = {
-      if (jaw090.NominalBeamEnergy.round == jaw090.NominalBeamEnergy)
-        jaw090.NominalBeamEnergy.round.toString
-      else
-        jaw090.NominalBeamEnergy.toString
-    }
-    s"MV$text.html"
+    s"MV${jaw090.mvText}.html"
   }
 }

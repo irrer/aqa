@@ -22,6 +22,10 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
   private val collimatorAngle = Util.collimatorAngle(rtimage)
 
   private val KVP = DicomUtil.findAllSingle(rtimage, TagByName.KVP).head.getDoubleValues.head
+  val mv = KVP / 1000.0
+
+  /** MV energy formatted to the minimal string that represents its full precision. */
+  val mvText = if (mv.round == mv) mv.round.toString else mv.toString
   private val ExposureTime = DicomUtil.findAllSingle(rtimage, TagByName.ExposureTime).head.getDoubleValues.head
 
   private val XRayImageReceptorTranslation = {

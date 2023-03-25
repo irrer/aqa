@@ -60,6 +60,8 @@ case class FocalSpotSet(
    """
   }
 
+  val mv: Double = KVP_kv / 1000.0
+  val mvText: String = if (mv.round == mv) mv.round.toString else mv.toString
 }
 
 object FocalSpotSet extends ProcedureOutput {

@@ -14,7 +14,7 @@ import scala.xml.Elem
 object FSsubHTML extends Logging {
 
   /* Name of file where Matlab code is written. */
-  private val matlabFileName = "matlab.txt"
+  private def matlabFileName(fsSet: FSSet) = s"matlabMV${fsSet.mvText}.txt"
 
   private def row(fsMeasure: FSMeasure): Elem = {
     val fs = fsMeasure.focalSpot
@@ -45,13 +45,7 @@ object FSsubHTML extends Logging {
     */
   private def makeContent(extendedData: ExtendedData, fsSet: FSSet, fsMvChart: FSmvChart): Elem = {
 
-    val mvText = {
-      val mv = fsSet.jaw090.NominalBeamEnergy
-      if (mv.round == mv)
-        mv.round.toString
-      else
-        mv.toString
-    }
+    val mvText = fsSet.mvText
 
     val alignment: Elem = {
       val x = fsSet.focalSpotAlignmentX_mm
@@ -79,15 +73,15 @@ object FSsubHTML extends Logging {
     }
 
     // write Matlab file
-    val matlabFile = new File(FSHTML.focalSpotDir(extendedData.output), matlabFileName)
-    val matlabText = Seq(fsSet.jaw090, fsSet.jaw270, fsSet.mlc090, fsSet.mlc270).map(FSMatlab.focalSpotEdgeMatlabText).mkString("\n") + FSMatlab.focalSpotAggregateMatlabText(fsSet)
+    val matlabFile = new File(FSHTML.focalSpotDir(extendedData.output), matlabFileName(fsSet))
+    val matlabText = FSMatlab.generateMatlabCode(fsSet)
     Util.writeFile(matlabFile, matlabText)
 
     <div class="row">
       <center>
         <h2>MV: {mvText} Alignment: {alignment}</h2>
         <a href={FSHTML.htmlFileName} title="Return to focal spot summary page.">Focal Spot Summary</a>
-        <a href={matlabFileName} title="Download Matlab code demonstrating calculations." style="margin-left:50px;">Matlab</a>
+        <a href={matlabFileName(fsSet)} title="Download Matlab code demonstrating calculations." style="margin-left:50px;">Matlab</a>
       </center>
       <div class="row">
         <div class="col-md-8 col-md-offset-2">

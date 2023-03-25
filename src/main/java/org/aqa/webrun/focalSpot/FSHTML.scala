@@ -43,7 +43,7 @@ object FSHTML {
         "X: " + fmtHi(fsSet.focalSpotAlignmentX_mm) + ", " + fmtHi(fsSet.focalSpotAlignmentY_mm)
       }
 
-      <div title={title}>{fmtLo(fsSet.jaw090.NominalBeamEnergy)} MV : {fmtLo(fsSet.focalSpotAlignmentX_mm) + ", " + fmtLo(fsSet.focalSpotAlignmentY_mm)}</div>
+      <div title={title}>{fsSet.mvText} MV : {fmtLo(fsSet.focalSpotAlignmentX_mm) + ", " + fmtLo(fsSet.focalSpotAlignmentY_mm)}</div>
     }
 
     val elem = {

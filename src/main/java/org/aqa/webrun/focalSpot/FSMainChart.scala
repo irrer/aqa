@@ -76,20 +76,11 @@ class FSMainChart(outputPK: Long) extends Logging {
         val mv = fsSet.KVP_kv / 1000.0
         if (mv.round == mv) mv.round.toString else Util.fmtDbl(mv)
       }
-      setList.head.flatMap(h => Seq(mvText(h.focalSpotSet) + " X", mvText(h.focalSpotSet) + " Y"))
+
+      setList.head.flatMap(h => Seq(h.focalSpotSet.mvText + " X", h.focalSpotSet.mvText + " Y"))
     }
 
-    val colorList = Seq(
-      Color.green,
-      Color.blue,
-      Color.black,
-      Color.red,
-      Color.orange,
-      Color.cyan,
-      Color.magenta,
-      Color.yellow,
-      Color.pink,
-      Color.gray)
+    val colorList = Seq(Color.green, Color.blue, Color.black, Color.red, Color.orange, Color.cyan, Color.magenta, Color.yellow, Color.pink, Color.gray)
 
     new C3ChartHistory(
       chartIdOpt = Some(chartId),

@@ -98,6 +98,8 @@ case class FocalSpot(
   }
 
   val isMLC = !isJaw
+
+  val beamLimiterName: String = if (isJaw) "Jaw" else "MLC"
 }
 
 object FocalSpot extends ProcedureOutput {
