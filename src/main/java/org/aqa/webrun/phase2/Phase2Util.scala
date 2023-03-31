@@ -195,7 +195,7 @@ object Phase2Util extends Logging {
   /**
     * Wrap Phase2 HTML with nice headers.
     */
-  def wrapSubProcedure(extendedData: ExtendedData, content: Elem, title: String, status: ProcedureStatus.Value, runScript: Option[String], runReq: RunReq): String = {
+  def wrapSubProcedure(extendedData: ExtendedData, content: Elem, title: String, status: ProcedureStatus.Value, runScript: Option[String], rtimageMap: Map[String, AttributeList]): String = {
 
     def mainReport: Elem = {
       val href = WebServer.urlOfResultsFile(extendedData.output.dir) + "/" + Output.displayFilePrefix + ".html"
@@ -241,8 +241,13 @@ object Phase2Util extends Logging {
     val machType = extendedData.machineType.manufacturer + " " + extendedData.machineType.model + " " + extendedData.machineType.version
 
     val pixelSpacing = {
-      runReq.imageSize.getX.round.toInt.toString + " * " + runReq.imageSize.getY.round.toInt.toString +
-        " pixels " + runReq.floodTranslator.pix2IsoDistX(1).formatted("%5.3f") + " * " + runReq.floodTranslator.pix2IsoDistY(1).formatted("%5.3f") +
+      val rtimage = rtimageMap.values.head
+      val width = rtimage.get(TagByName.Columns).getIntegerValues.head
+      val height = rtimage.get(TagByName.Rows).getIntegerValues.head
+      val trans = new IsoImagePlaneTranslator(rtimage)
+
+      width.toString + " * " + height.toString +
+        " pixels " + trans.pix2IsoDistX(1).formatted("%5.3f") + " * " + trans.pix2IsoDistY(1).formatted("%5.3f") +
         " mm"
     }
 

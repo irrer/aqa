@@ -3,7 +3,6 @@ package org.aqa.webrun.focalSpot
 import org.aqa.run.ProcedureStatus
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
-import org.aqa.webrun.phase2.RunReq
 import org.aqa.Util
 import org.aqa.web.WebServer
 import org.aqa.Config
@@ -91,11 +90,11 @@ object FSHTML {
     * Make the main HTML content for the given data set.
     *
     * @param extendedData metadata.
-    * @param runReq DICOM data.
+    * @param fsRunReq DICOM data.
     * @param fsSetList    Result of focal spot analyses.
     * @return Report for all focal spot sets.
     */
-  private def makeContent(extendedData: ExtendedData, runReq: RunReq, fsSetList: Seq[FSSet], chartHtml: Elem): Elem = {
+  private def makeContent(extendedData: ExtendedData, fsRunReq: FSRunReq, fsSetList: Seq[FSSet], chartHtml: Elem): Elem = {
     <div class="row">
       <div class="row">
         <div class="col-md-2 col-md-offset-5">
@@ -117,17 +116,17 @@ object FSHTML {
     * @param fsSetList Result of focal spot analyses.
     * @return Report for all focal spot sets.
     */
-  def makeHtml(extendedData: ExtendedData, runReq: RunReq, fsSetList: Seq[FSSet]): Elem = {
+  def makeHtml(extendedData: ExtendedData, fsRunReq: FSRunReq, fsSetList: Seq[FSSet]): Elem = {
     val dir = focalSpotDir(extendedData.output)
     dir.mkdirs()
 
     val mainChart = new FSMainChart(outputPK = extendedData.output.outputPK.get).chart
 
-    fsSetList.foreach(fsSet => FSsubHTML.makeHtml(extendedData, runReq, fsSet))
+    fsSetList.foreach(fsSet => FSsubHTML.makeHtml(extendedData, fsRunReq, fsSet))
 
-    val content = makeContent(extendedData, runReq, fsSetList.sortBy(_.jaw090.NominalBeamEnergy), mainChart.html)
+    val content = makeContent(extendedData, fsRunReq, fsSetList.sortBy(_.jaw090.NominalBeamEnergy), mainChart.html)
     val javascript = s"""<script src="${FSHistoryRestlet.path}?${FSHistoryRestlet.outputPKTag}=${extendedData.output.outputPK.get}"></script>"""
-    val text = Phase2Util.wrapSubProcedure(extendedData, content, FSAnalysis.subProcedureName, ProcedureStatus.done, runScript = Some(javascript), runReq = runReq)
+    val text = Phase2Util.wrapSubProcedure(extendedData, content, FSAnalysis.subProcedureName, ProcedureStatus.done, runScript = Some(javascript), rtimageMap = fsRunReq.rtimageMap)
     val mainHtmlFile = new File(dir, htmlFileName)
     Util.writeBinaryFile(mainHtmlFile, text.getBytes)
 

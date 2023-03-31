@@ -37,6 +37,7 @@ import org.aqa.web.WebUtil._
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.WebRunProcedure
 import org.aqa.webrun.focalSpot.FSAnalysis
+import org.aqa.webrun.focalSpot.FSRunReq
 import org.aqa.webrun.phase2.centerDose.CenterDoseAnalysis
 import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringAnalysis
 import org.aqa.webrun.phase2.collimatorPosition.CollimatorPositionAnalysis
@@ -373,7 +374,7 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure(procedure) with Run
         case _                                    => extendedData.procedure.fullName
       }
     }
-    val text = Phase2Util.wrapSubProcedure(extendedData, table, procedureName, procedureStatus, None, runReq)
+    val text = Phase2Util.wrapSubProcedure(extendedData, table, procedureName, procedureStatus, None, runReq.rtimageMap)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeBinaryFile(file, text.getBytes)
   }
@@ -414,7 +415,7 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure(procedure) with Run
                       () => SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
                       () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
                       () => VMATAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
-                      () => FSAnalysis.runProcedure(extendedData, runReq)
+                      () => FSAnalysis.runProcedure(extendedData, FSRunReq(runReq.rtplan, runReq.rtimageMap))
                     )
 
                     val list = seq.par.map(f => f())

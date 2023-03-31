@@ -125,7 +125,7 @@ object CenterDoseHTML extends Logging {
     }
 
     // write the report to the output directory
-    val text = Phase2Util.wrapSubProcedure(extendedData, content, "Center Dose", status, Some(CenterDoseChartHistoryRestlet.makeReference(extendedData.output.outputPK.get)), runReq)
+    val text = Phase2Util.wrapSubProcedure(extendedData, content, "Center Dose", status, Some(CenterDoseChartHistoryRestlet.makeReference(extendedData.output.outputPK.get)), runReq.rtimageMap)
     val file = new File(extendedData.output.dir, htmlFileName)
     Util.writeBinaryFile(file, text.getBytes)
 

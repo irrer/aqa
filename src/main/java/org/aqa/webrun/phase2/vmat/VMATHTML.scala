@@ -233,7 +233,7 @@ object VMATHTML {
       VMATChartHistoryRestlet.makeReference(extendedData.output.outputPK.get)
 
     val mainFile = new File(vmatDir, "VMAT.html")
-    val text = Phase2Util.wrapSubProcedure(extendedData, content, "VMAT", status, Some(js), runReq)
+    val text = Phase2Util.wrapSubProcedure(extendedData, content, "VMAT", status, Some(js), runReq.rtimageMap)
     Util.writeBinaryFile(mainFile, text.getBytes)
     val iconImage = if (status.toString.equals(ProcedureStatus.pass.toString)) Config.passImageUrl else Config.failImageUrl
     <div>

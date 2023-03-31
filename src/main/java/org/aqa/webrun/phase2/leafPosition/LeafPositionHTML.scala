@@ -169,7 +169,7 @@ object LeafPositionHTML extends Logging {
     }
 
     val script = zoomScript + "\n<script>\n" + chart.javascript + "\n</script>\n"
-    val html = Phase2Util.wrapSubProcedure(extendedData, content, LeafPositionAnalysis.subProcedureName, beamResult.status, Some(script), runReq)
+    val html = Phase2Util.wrapSubProcedure(extendedData, content, LeafPositionAnalysis.subProcedureName, beamResult.status, Some(script), runReq.rtimageMap)
     Util.writeFile(htmlFile, html)
 
     (url, imageFileName)
@@ -251,7 +251,7 @@ object LeafPositionHTML extends Logging {
         makeMainHtml(subDir, extendedData, runReq, beamResultList, collimatorCenteringResource)
 
     val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
-    val html = Phase2Util.wrapSubProcedure(extendedData, mainHtml, LeafPositionAnalysis.subProcedureName, status, None, runReq)
+    val html = Phase2Util.wrapSubProcedure(extendedData, mainHtml, LeafPositionAnalysis.subProcedureName, status, None, runReq.rtimageMap)
     Util.writeFile(mainHtmlFile, html)
 
     val maxOffset: Option[Double] = {

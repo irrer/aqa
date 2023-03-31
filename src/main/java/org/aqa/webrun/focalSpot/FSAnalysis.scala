@@ -1,7 +1,7 @@
 package org.aqa.webrun.focalSpot
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.phase2.RunReq
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.FocalSpotSet
@@ -66,33 +66,42 @@ object FSAnalysis extends Logging {
 
   case class FocalSpotResult(sum: Elem, sts: ProcedureStatus.Value) extends SubProcedureResult(sum, sts, subProcedureName)
 
-  def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, FocalSpotResult] = {
+  def runProcedure(extendedData: ExtendedData, fsRunReq: FSRunReq): Either[Elem, FocalSpotResult] = {
 
+    Trace.trace()
     try {
       logger.info(s"Starting processing of $subProcedureName")
       val outputPK = extendedData.output.outputPK.get
 
+      Trace.trace()
       val rtimageList = {
-        val nameList = runReq.rtimageMap.keys.filter(beamName => Config.FocalSpotBeamNameList.contains(beamName))
-        nameList.map(beamName => runReq.rtimageMap(beamName))
+        val nameList = fsRunReq.rtimageMap.keys.filter(beamName => Config.FocalSpotBeamNameList.contains(beamName))
+        nameList.map(beamName => fsRunReq.rtimageMap(beamName))
       }
 
-      val measureList: Seq[FSMeasure] = rtimageList.map(rtimage => FSMeasure(runReq.rtplan, rtimage, outputPK)).toSeq // TODO do in par
+      Trace.trace()
+      val measureList: Seq[FSMeasure] = rtimageList.map(rtimage => FSMeasure(fsRunReq.rtplan, rtimage, outputPK)).toSeq // TODO do in par
 
+      Trace.trace()
       // make sets of four based on energy
       val fsSetList: Seq[FSSet] = {
         val groupList = measureList.groupBy(_.NominalBeamEnergy).values.toSeq
         groupList.filter(isValidSet).map(toSet).sortBy(_.jaw090.NominalBeamEnergy)
       }
 
+      Trace.trace()
       val NominalBeamEnergyList = fsSetList.map(_.jaw090.NominalBeamEnergy).mkString(", ")
       logger.info(s"Found ${fsSetList.size} sets of focal spot data with nominal beam energies of $NominalBeamEnergyList.")
 
+      Trace.trace()
       fsSetList.foreach(fsSet => storeToDb(fsSet, outputPK))
 
-      val sum = FSHTML.makeHtml(extendedData, runReq, fsSetList)
+      Trace.trace()
+      val sum = FSHTML.makeHtml(extendedData, fsRunReq, fsSetList)
+      Trace.trace()
       val focalSpotResult = FocalSpotResult(sum, ProcedureStatus.done)
       logger.info(s"Finished processing of $subProcedureName")
+      Trace.trace()
       Right(focalSpotResult)
     } catch {
       case t: Throwable =>

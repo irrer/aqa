@@ -295,7 +295,7 @@ object CollimatorCenteringHTML {
       "Collimator Centering",
       status,
       Some(script),
-      runReq
+      runReq.rtimageMap
     )
     val collimatorCenteringDir = new File(extendedData.output.dir, dirName)
     Util.mkdirs(collimatorCenteringDir)

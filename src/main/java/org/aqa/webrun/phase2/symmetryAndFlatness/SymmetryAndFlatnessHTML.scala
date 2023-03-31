@@ -116,7 +116,7 @@ object SymmetryAndFlatnessHTML extends Logging {
         </script>
       """.replace("\r", "")
     }
-    val html = Phase2Util.wrapSubProcedure(extendedData, dynamicContent, title = "Symmetry and Flatness", status, Some(runScript), runReq)
+    val html = Phase2Util.wrapSubProcedure(extendedData, dynamicContent, title = "Symmetry and Flatness", status, Some(runScript), runReq.rtimageMap)
     Util.writeFile(mainHtmlFile, html)
 
     resultList.foreach(rb => SymmetryAndFlatnessBeamProfileHTML.makeDisplay(subDir, extendedData, rb, runReq))

@@ -3,7 +3,6 @@ package org.aqa.webrun.focalSpot
 import org.aqa.run.ProcedureStatus
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
-import org.aqa.webrun.phase2.RunReq
 import org.aqa.Util
 import org.aqa.web.C3ChartHistory
 import org.aqa.Logging
@@ -159,7 +158,7 @@ object FSsubHTML extends Logging {
     * @param fsSet Result of focal spot analyses.
     * @return URL for this HTML
     */
-  def makeHtml(extendedData: ExtendedData, runReq: RunReq, fsSet: FSSet): Unit = {
+  def makeHtml(extendedData: ExtendedData, fsRunReq: FSRunReq, fsSet: FSSet): Unit = {
     val mainHtmlFile = {
       val dir = FSHTML.focalSpotDir(extendedData.output)
       new File(dir, fsSet.htmlFileName)
@@ -170,7 +169,7 @@ object FSsubHTML extends Logging {
     val content = makeContent(extendedData, fsSet: FSSet, fsMvChart)
 
     val javascript = zoomScript + chartScript(extendedData, fsSet) + fsMvChart.chartPair._1.javascript + fsMvChart.chartPair._2.javascript
-    val text = Phase2Util.wrapSubProcedure(extendedData, content, FSAnalysis.subProcedureName, ProcedureStatus.done, runScript = Some(javascript), runReq)
+    val text = Phase2Util.wrapSubProcedure(extendedData, content, FSAnalysis.subProcedureName, ProcedureStatus.done, runScript = Some(javascript), fsRunReq.rtimageMap)
     Util.writeBinaryFile(mainHtmlFile, text.getBytes)
   }
 

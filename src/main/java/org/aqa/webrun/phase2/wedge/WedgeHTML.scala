@@ -288,7 +288,7 @@ object WedgeHTML {
         respondToBaselineCheckboxScript +
         WedgeChartHistoryRestlet.makeReference(extendedData.output.outputPK.get)
 
-    val html = Phase2Util.wrapSubProcedure(extendedData, content, WedgeAnalysis.subProcedureName, status, Some(javascript), runReq)
+    val html = Phase2Util.wrapSubProcedure(extendedData, content, WedgeAnalysis.subProcedureName, status, Some(javascript), runReq.rtimageMap)
     val outFile = new File(wedgeDir, htmlFileName)
     Util.writeFile(outFile, html)
 

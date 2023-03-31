@@ -59,15 +59,27 @@ case class RunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList],
 
   private val floodExpected_mm = MeasureTBLREdges.imageCollimatorPositions(floodAttributeList, rtplan).toTBLR(Util.collimatorAngle(flood))
 
-  private val floodMeasurementAndImage = MeasureTBLREdges.measure(
-    floodCorrectedImage,
-    floodTranslator,
-    Some(floodExpected_mm),
-    Util.collimatorAngle(floodAttributeList),
-    floodCorrectedImage,
-    new Point(0, 0),
-    Config.PenumbraThresholdPercent / 100
-  )
+  private val floodMeasurementAndImage = {
+    // The beam name check is a hack to let Focal Spot use Phase3 RunReq or focal spot RunReq
+    val beamName = Util.getBeamNameOfRtimage(rtplan, flood)
+    if (beamName.get.toLowerCase().contains("flood")) {
+      MeasureTBLREdges.measure(
+        floodCorrectedImage,
+        floodTranslator,
+        Some(floodExpected_mm),
+        Util.collimatorAngle(floodAttributeList),
+        floodCorrectedImage,
+        new Point(0, 0),
+        Config.PenumbraThresholdPercent / 100
+      )
+    } else {
+      // Put in fake values.  These will never be used.
+      val tblr = MeasureTBLREdges.TBLR(0, 0, 0, 0)
+      val bufImg = new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB)
+      MeasureTBLREdges.AnalysisResult(tblr, bufImg)
+    }
+
+  }
 
   val floodMeasurement: MeasureTBLREdges.TBLR = floodMeasurementAndImage.measurementSet
 

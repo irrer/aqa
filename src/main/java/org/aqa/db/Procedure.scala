@@ -96,6 +96,7 @@ case class Procedure(
   final val isLOCBaseline = name.toLowerCase.contains("loc") && name.toLowerCase.contains("base")
   final val isGapSkew = name.toLowerCase.contains("gap") && name.toLowerCase.contains("skew")
   final val isWinstonLutz = name.toLowerCase.contains("winston") && name.toLowerCase.contains("lutz")
+  final val isFocalSpot = name.toLowerCase.contains("focal") && name.toLowerCase.contains("spot")
 
 }
 
@@ -170,6 +171,7 @@ object Procedure {
   lazy val ProcOfLOCBaseline: Option[Procedure] = list.filter(p => p.isLOCBaseline).sortBy(_.version).lastOption
   lazy val ProcOfGapSkew: Option[Procedure] = list.filter(p => p.isGapSkew).sortBy(_.version).lastOption
   lazy val ProcOfWinstonLutz: Option[Procedure] = list.filter(p => p.isWinstonLutz).sortBy(_.version).lastOption
+  lazy val ProcOfFocalSpot: Option[Procedure] = list.filter(p => p.isFocalSpot).sortBy(_.version).lastOption
 
   def main(args: Array[String]): Unit = {
     println("Starting Procedure.main")
