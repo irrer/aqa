@@ -123,12 +123,13 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
   private val createLocButton = makeButton("Create LOC", ButtonType.BtnPrimary)
   private val createDailyQAButton = makeButton("Create Daily QA", ButtonType.BtnPrimary)
   private val createGapSkewButton = makeButton("Create Gap Skew", ButtonType.BtnPrimary)
+  private val createFocalSpotButton = makeButton("Create Focal Spot", ButtonType.BtnPrimary)
   private val createWinstonLutzButton = makeButton("Create Winston Lutz", ButtonType.BtnPrimary)
   private val cancelButton = makeButton("Cancel", ButtonType.BtnDefault)
   private val backButton = makeButton("Back", ButtonType.BtnDefault)
 
   private val assignButtonList1: WebRow = List(createPhase2Button, createPhase3Button, createLocButton)
-  private val assignButtonList2: WebRow = List(createDailyQAButton, createGapSkewButton, createWinstonLutzButton)
+  private val assignButtonList2: WebRow = List(createDailyQAButton, createGapSkewButton, createWinstonLutzButton, createFocalSpotButton)
   private val assignButtonList3: WebRow = List(cancelButton, machinePK)
 
   private def makeForm = new WebForm(pathOf, List(row0, row1, row2) ++ List(assignButtonList1) ++ List(assignButtonList2) ++ List(assignButtonList3))
@@ -247,6 +248,16 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
     val gapSkewRtplan = CustomizeRtPlan.getCollimatorCompatibleGapSkewPlanForMachine(machine)
     val conf = validateConfigAndRtplanFileExists(gapSkewRtplan, machine, "Gap Skew", createGapSkewButton)
+    validateEntryFields(valueMap) ++ conf
+  }
+
+  /**
+    * Make sure fields are valid for Focal Spot.
+    */
+  private def validateFocalSpot(valueMap: ValueMapT): StyleMapT = {
+    val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
+    val focalSpotRtplan = CustomizeRtPlan.getCollimatorCompatibleFocalSpotPlanForMachine(machine)
+    val conf = validateConfigAndRtplanFileExists(focalSpotRtplan, machine, "Focal Spot", createFocalSpotButton)
     validateEntryFields(valueMap) ++ conf
   }
 
@@ -447,6 +458,19 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     }
   }
 
+  private def validateAndMakeFocalSpotPlan(valueMap: ValueMapT, response: Response): Unit = {
+    val styleMap = validateFocalSpot(valueMap)
+    if (styleMap.nonEmpty) {
+      showFailedCustomize(valueMap, styleMap, response)
+    } else {
+      val userPK = getUser(valueMap).get.userPK.get
+      val planSpecification = makePlanSpec(valueMap)
+      val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
+      val rtplan = CustomizeRtPlan.makePlanFocalSpot(machine, userPK, planSpecification)
+      showDownload(Seq((rtplan, "Focal Spot")), "Focal Spot", valueMap, machine, response)
+    }
+  }
+
   private def validateAndMakeWinstonLutzPlan(valueMap: ValueMapT, response: Response): Unit = {
     val styleMap = validateWinstonLutz(valueMap)
     if (styleMap.nonEmpty) {
@@ -482,6 +506,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
         case _ if buttonIs(valueMap, createLocButton)                                                            => validateAndMakeLocPlan(valueMap, response)
         case _ if buttonIs(valueMap, createDailyQAButton)                                                        => validateAndMakeDailyQAPlan(valueMap, response)
         case _ if buttonIs(valueMap, createGapSkewButton)                                                        => validateAndMakeGapSkewPlan(valueMap, response)
+        case _ if buttonIs(valueMap, createFocalSpotButton)                                                      => validateAndMakeFocalSpotPlan(valueMap, response)
         case _ if buttonIs(valueMap, createWinstonLutzButton)                                                    => validateAndMakeWinstonLutzPlan(valueMap, response)
         case _                                                                                                   => formSelect(valueMap, response, machine.get) // first time viewing the form.  Set defaults
       }

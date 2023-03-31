@@ -282,6 +282,9 @@ Note that when building a package for release, the Maven build process uses the 
         <PlanFile procedure='GapSkew' manufacturer='Varian' collimatorModel='HD'>rtplanGapSkewHdmlc.dcm</PlanFile>
         <PlanFile procedure='GapSkew' manufacturer='Varian' collimatorModel='Millenium'>rtplanGapSkewMillenium.dcm</PlanFile>
 
+        <PlanFile procedure='FocalSpot' manufacturer='Varian' collimatorModel='HD'>rtplanFocalSpotHdmlc.dcm</PlanFile>
+        <PlanFile procedure='FocalSpot' manufacturer='Varian' collimatorModel='Millenium'>rtplanFocalSpotMillenium.dcm</PlanFile>
+
         <PlanFile procedure='WinstonLutz' manufacturer='Varian' collimatorModel='HD'>rtplanWinstonLutzHdmlc.dcm</PlanFile>
         <PlanFile procedure='WinstonLutz' manufacturer='Varian' collimatorModel='Millenium'>rtplanWinstonLutzMillenium.dcm</PlanFile>
     </PlanFileList>
@@ -487,18 +490,26 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- List of beam names of that can be used to calculate focal spot. -->
     <FocalSpotBeamNameList>
-        <BeamName>6x-10-Jaw-90</BeamName>
-        <BeamName>6x-10-Jaw-270</BeamName>
-        <BeamName>6x-10-MLC-90</BeamName>
-        <BeamName>6x-10-MLC-270</BeamName>
-        <BeamName>10x-10-Jaw-90</BeamName>
+        <BeamName>10fff-10-Jaw-270</BeamName>
+        <BeamName>10fff-10-Jaw-90</BeamName>
+        <BeamName>10fff-10-MLC-270</BeamName>
+        <BeamName>10fff-10-MLC-90</BeamName>
         <BeamName>10x-10-Jaw-270</BeamName>
-        <BeamName>10x-10-MLC-90</BeamName>
+        <BeamName>10x-10-Jaw-90</BeamName>
         <BeamName>10x-10-MLC-270</BeamName>
-        <BeamName>15x-10-Jaw-90</BeamName>
+        <BeamName>10x-10-MLC-90</BeamName>
         <BeamName>15x-10-Jaw-270</BeamName>
-        <BeamName>15x-10-MLC-90</BeamName>
+        <BeamName>15x-10-Jaw-90</BeamName>
         <BeamName>15x-10-MLC-270</BeamName>
+        <BeamName>15x-10-MLC-90</BeamName>
+        <BeamName>6fff-10-Jaw-270</BeamName>
+        <BeamName>6fff-10-Jaw-90</BeamName>
+        <BeamName>6fff-10-MLC-270</BeamName>
+        <BeamName>6fff-10-MLC-90</BeamName>
+        <BeamName>6x-10-Jaw-270</BeamName>
+        <BeamName>6x-10-Jaw-90</BeamName>
+        <BeamName>6x-10-MLC-270</BeamName>
+        <BeamName>6x-10-MLC-90</BeamName>
     </FocalSpotBeamNameList>
 
     <!-- The thickness of the band in mm in the isoplane across the center of the image used for drawing the wedge profile. -->
