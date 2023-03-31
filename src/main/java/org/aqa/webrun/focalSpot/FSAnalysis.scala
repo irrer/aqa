@@ -64,7 +64,7 @@ object FSAnalysis extends Logging {
 
   val subProcedureName = "Focal Spot"
 
-  case class FocalSpotResult(sum: Elem, stats: ProcedureStatus.Value) extends SubProcedureResult(sum, stats, subProcedureName)
+  case class FocalSpotResult(sum: Elem, sts: ProcedureStatus.Value) extends SubProcedureResult(sum, sts, subProcedureName)
 
   def runProcedure(extendedData: ExtendedData, runReq: RunReq): Either[Elem, FocalSpotResult] = {
 
