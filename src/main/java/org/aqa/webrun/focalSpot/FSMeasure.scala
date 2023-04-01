@@ -107,6 +107,9 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
   /** True if the X1 and X2 boundaries of the field are defined by the jaw. */
   val isJaw: Boolean = !isMLC
 
+  /** True if this is an FFF beam. */
+  val isFFF: Boolean = DicomUtil.findAllSingle(beam, TagByName.FluenceModeID).map(_.getSingleStringValueOrEmptyString()).exists(_.toUpperCase().contains("FFF"))
+
   // @formatter:off
   val analysisResult: MeasureTBLREdges.AnalysisResult = MeasureTBLREdges.measure(
     dicomImage,
@@ -125,6 +128,7 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
     collimatorAngleRounded_deg       = collimatorAngleRounded_deg,
     beamName                         = Util.getBeamNameOfRtimage(rtplan, rtimage).get,
     isJaw                            = isJaw,
+    isFFF                            = isFFF,
     KVP_kv                           = KVP,
     RTImageSID_mm                    = RTImageSID_mm,
     ExposureTime                     = ExposureTime,
@@ -141,6 +145,8 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
     rightEdgePlanned_mm              = Y2Planned_mm  // plannedTBLR.right
   )
   // @formatter:on
+
+  val fluenceName: String = focalSpot.fluenceName
 
   Util.addGraticules(analysisResult.bufferedImage, new IsoImagePlaneTranslator(rtimage), Color.GRAY)
   val bufferedImage: BufferedImage = analysisResult.bufferedImage

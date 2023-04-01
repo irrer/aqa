@@ -147,7 +147,7 @@ object FSsubHTML extends Logging {
   private def chartScript(extendedData: ExtendedData, fsSet: FSSet): String = {
     s"""
        |
-       |<script src="/FSHistoryRestlet?${FSHistoryRestlet.outputPKTag}=${extendedData.output.outputPK.get}&${FSHistoryRestlet.mvTag}=${fsSet.jaw090.NominalBeamEnergy}"></script>
+       |<script src="/FSHistoryRestlet?${FSHistoryRestlet.outputPKTag}=${extendedData.output.outputPK.get}&${FSHistoryRestlet.mvTag}=${fsSet.jaw090.NominalBeamEnergy}&${FSHistoryRestlet.fluenceNameTag}=${fsSet.jaw090.fluenceName}"></script>
        |
        |""".stripMargin
   }
@@ -164,7 +164,7 @@ object FSsubHTML extends Logging {
       new File(dir, fsSet.htmlFileName)
     }
 
-    val fsMvChart = new FSmvChart(extendedData.output.outputPK.get, fsSet.jaw090.focalSpot.KVP_kv / 1000)
+    val fsMvChart = new FSmvChart(extendedData.output.outputPK.get, fsSet.jaw090.focalSpot.KVP_kv / 1000, fsSet.jaw090.fluenceName)
 
     val content = makeContent(extendedData, fsSet: FSSet, fsMvChart)
 

@@ -22,23 +22,24 @@ import org.aqa.procedures.ProcedureOutput
 import scala.xml.Elem
 
 /**
-  * Store and instance of all of the data for a single image of focal spot.
-  */
+ * Store and instance of all of the data for a single image of focal spot.
+ */
 case class FocalSpotSet(
-    // @formatter:off
-                         focalSpotSetPK         : Option[Long], // primary key
-                         outputPK               : Long, // output primary key
-                         KVP_kv                 : Double, // beam energy in KV
-                         //
-                         focalSpotAlignmentX_mm : Double, // (mis) alignment in X axis
-                         focalSpotAlignmentY_mm : Double, // (mis) alignment in Y axis
-                         //
-                         jaw090PK               : Long,
-                         jaw270PK               : Long,
-                         mlc090PK               : Long,
-                         mlc270PK               : Long
-                         // @formatter:on
-) {
+                         // @formatter:off
+      focalSpotSetPK         : Option[Long], // primary key
+      outputPK               : Long,    // output primary key
+      KVP_kv                 : Double,  // beam energy in KV
+      isFFF                  : Boolean, // True if FFF (Flattening Filter Free), false if standard.
+      //
+      focalSpotAlignmentX_mm : Double,  // (mis) alignment in X axis
+      focalSpotAlignmentY_mm : Double,  // (mis) alignment in Y axis
+      //
+      jaw090PK               : Long,    // Jaw 090 FocalSpot.focalSpotPK public key reference
+      jaw270PK               : Long,    // Jaw 270 FocalSpot.focalSpotPK public key reference
+      mlc090PK               : Long,    // MLC 090 FocalSpot.focalSpotPK public key reference
+      mlc270PK               : Long     // MLC 270 FocalSpot.focalSpotPK public key reference
+      // @formatter:on
+                       ) {
 
   def insert: FocalSpotSet = {
     val insertQuery = FocalSpotSet.query returning FocalSpotSet.query.map(_.focalSpotSetPK) into
@@ -49,32 +50,45 @@ case class FocalSpotSet(
     result
   }
 
+  val fluenceName = if (isFFF) "FFF" else "STD"
+
   def insertOrUpdate(): Int = Db.run(FocalSpotSet.query.insertOrUpdate(this))
+
+  val mv: Double = KVP_kv / 1000.0
+  val mvText: String = if (mv.round == mv) mv.round.toString else mv.toString
 
   override def toString: String = {
     s"""focalSpotSetPK       : $focalSpotSetPK
        outputPK              : $outputPK
-       MV                    : ${KVP_kv / 1000.0}
+       MV                    : $mv
+       Fluence               : $fluenceName
        focalSpotAlignmentX_mm: $focalSpotAlignmentX_mm
        focalSpotAlignmentY_mm: $focalSpotAlignmentY_mm
    """
   }
-
-  val mv: Double = KVP_kv / 1000.0
-  val mvText: String = if (mv.round == mv) mv.round.toString else mv.toString
 }
 
 object FocalSpotSet extends ProcedureOutput {
   class FocalSpotSetTable(tag: Tag) extends Table[FocalSpotSet](tag, "focalSpotSet") {
 
     def focalSpotSetPK = column[Long]("focalSpotSetPK", O.PrimaryKey, O.AutoInc)
+
     def outputPK = column[Long]("outputPK")
+
     def KVP_kv = column[Double]("KVP_kv")
+
+    def isFFF = column[Boolean]("isFFF")
+
     def focalSpotAlignmentX_mm = column[Double]("focalSpotAlignmentX_mm")
+
     def focalSpotAlignmentY_mm = column[Double]("focalSpotAlignmentY_mm")
+
     def jaw090PK = column[Long]("jaw090PK")
+
     def jaw270PK = column[Long]("jaw270PK")
+
     def mlc090PK = column[Long]("mlc090PK")
+
     def mlc270PK = column[Long]("mlc270PK")
 
     def * =
@@ -82,6 +96,7 @@ object FocalSpotSet extends ProcedureOutput {
         focalSpotSetPK.?,
         outputPK,
         KVP_kv,
+        isFFF,
         focalSpotAlignmentX_mm,
         focalSpotAlignmentY_mm,
         jaw090PK,
@@ -91,9 +106,13 @@ object FocalSpotSet extends ProcedureOutput {
       ) <> (FocalSpotSet.apply _ tupled, FocalSpotSet.unapply)
 
     def outputFK = foreignKey("FocalSpotSet_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+
     def jaw090FK = foreignKey("FocalSpotSet_jaw090PKPKConstraint", jaw090PK, FocalSpot.query)(_.focalSpotPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+
     def jaw270FK = foreignKey("FocalSpotSet_jaw270PKPKConstraint", jaw270PK, FocalSpot.query)(_.focalSpotPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+
     def mlc090FK = foreignKey("FocalSpotSet_mlc090PKPKConstraint", mlc090PK, FocalSpot.query)(_.focalSpotPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+
     def mlc270FK = foreignKey("FocalSpotSet_mlc270PKPKConstraint", mlc270PK, FocalSpot.query)(_.focalSpotPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
@@ -109,8 +128,8 @@ object FocalSpotSet extends ProcedureOutput {
   }
 
   /**
-    * Get a list of all rows for the given output
-    */
+   * Get a list of all rows for the given output
+   */
   def getByOutput(outputPK: Long): Seq[FocalSpotSet] = {
     val action = for {
       inst <- FocalSpotSet.query if inst.outputPK === outputPK
@@ -147,12 +166,12 @@ object FocalSpotSet extends ProcedureOutput {
   case class FocalSpotSetHistory(output: Output, focalSpotSet: FocalSpotSet) {}
 
   /**
-    * Get the entire history of Focal Spot data for the given machine.
-    *
-    * @param machinePK   Machine to get data for.
-    * @param procedurePK For this procedure.
-    * @return List of history items sorted by data date.
-    */
+   * Get the entire history of Focal Spot data for the given machine.
+   *
+   * @param machinePK   Machine to get data for.
+   * @param procedurePK For this procedure.
+   * @return List of history items sorted by data date.
+   */
   def history(machinePK: Long, procedurePK: Long): Seq[FocalSpotSetHistory] = {
 
     val search = for {
@@ -166,17 +185,19 @@ object FocalSpotSet extends ProcedureOutput {
   }
 
   /**
-    * Get the entire history of Focal Spot data for the given machine.
-    * @param machinePK Machine to get data for.
-    * @param procedurePK For this procedure.
-    * @param kvp_kv For this KVP only.
-    * @return List of history items sorted by data date.
-    */
-  def history(machinePK: Long, procedurePK: Long, kvp_kv: Double): Seq[FocalSpotSetHistory] = {
+   * Get the entire history of Focal Spot data for the given machine.
+   *
+   * @param machinePK   Machine to get data for.
+   * @param procedurePK For this procedure.
+   * @param kvp_kv      For this KVP only.
+   * @param isFFF       True if FFF
+   * @return List of history items sorted by data date.
+   */
+  def history(machinePK: Long, procedurePK: Long, kvp_kv: Double, isFFF: Boolean): Seq[FocalSpotSetHistory] = {
 
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
-      focalSpotSet <- FocalSpotSet.query.filter(fs => (fs.outputPK === output.outputPK) && (fs.KVP_kv === kvp_kv))
+      focalSpotSet <- FocalSpotSet.query.filter(fs => (fs.outputPK === output.outputPK) && (fs.KVP_kv === kvp_kv) && (fs.isFFF === isFFF))
     } yield (output, focalSpotSet)
 
     val focalSpotSetList = Db.run(search.result).map(outFocal => FocalSpotSetHistory(outFocal._1, outFocal._2)).sortBy(_.output.dataDate.get.getTime)

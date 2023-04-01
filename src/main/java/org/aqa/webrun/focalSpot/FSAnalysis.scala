@@ -49,6 +49,7 @@ object FSAnalysis extends Logging {
       focalSpotSetPK = None,
       outputPK = outputPK,
       KVP_kv = fsJaw090.KVP_kv,
+      isFFF = fsJaw090.isFFF,
       focalSpotAlignmentX_mm = fsSet.focalSpotAlignmentX_mm,
       focalSpotAlignmentY_mm = fsSet.focalSpotAlignmentY_mm,
       jaw090PK = fsJaw090.focalSpotPK.get,
@@ -78,9 +79,9 @@ object FSAnalysis extends Logging {
 
       val measureList: Seq[FSMeasure] = rtimageList.map(rtimage => FSMeasure(fsRunReq.rtplan, rtimage, outputPK)).toSeq // TODO do in par
 
-      // make sets of four based on energy and fluence mode  // TODO consider fluence mode
+      // make sets of four based on energy and fluence mode
       val fsSetList: Seq[FSSet] = {
-        val groupList = measureList.groupBy(_.NominalBeamEnergy).values.toSeq
+        val groupList = measureList.groupBy(m => m.NominalBeamEnergy + ":" + m.fluenceName).values.toSeq
         groupList.filter(isValidSet).map(toSet).sortBy(_.jaw090.NominalBeamEnergy)
       }
 

@@ -32,13 +32,14 @@ object FSHistoryRestlet extends Logging {
 
   val outputPKTag = "outputPK"
   val mvTag = "MV"
+  val fluenceNameTag = "fluenceName"
 
   def mainScriptReference(outputPK: Long): String = {
     s"""<script src='$path?$outputPKTag=$outputPK'></script>"""
   }
 
-  def mvScriptReference(outputPK: Long, mv: Double): String = {
-    s"""<script src='$path?$outputPKTag=$outputPK&$mvTag=$mv'></script>"""
+  def mvScriptReference(outputPK: Long, mv: Double, isFFF: Boolean): String = {
+    s"""<script src='$path?$outputPKTag=$outputPK&$mvTag=$mv'&$fluenceNameTag=${if (isFFF) "FFF" else "STD"}'   ></script>"""
   }
 }
 
@@ -53,8 +54,9 @@ class FSHistoryRestlet extends Restlet with SubUrlRoot with Logging {
 
       if (valueMap.contains(FSHistoryRestlet.mvTag)) {
         val mv = valueMap(FSHistoryRestlet.mvTag).toDouble
-        val javascript = new FSmvChart(outputPK, mv).chartPair._1.javascript
-        val edgeJavascript = new FSmvChart(outputPK, mv).chartPair._2.javascript
+        val fluenceName = valueMap(FSHistoryRestlet.fluenceNameTag)
+        val javascript = new FSmvChart(outputPK, mv, fluenceName).chartPair._1.javascript
+        val edgeJavascript = new FSmvChart(outputPK, mv, fluenceName).chartPair._2.javascript
         response.setStatus(Status.SUCCESS_OK)
         response.setEntity(javascript + edgeJavascript, MediaType.APPLICATION_JAVASCRIPT)
       } else {

@@ -34,7 +34,7 @@ import java.util.Date
 /**
   * Make a history chart for BBbyCBCT.
   */
-class FSmvChart(outputPK: Long, mv: Double) extends Logging {
+class FSmvChart(outputPK: Long, mv: Double, fluenceName: String) extends Logging {
 
   private val units = "mm"
   private val output: Output = Output.get(outputPK).get
@@ -48,8 +48,8 @@ class FSmvChart(outputPK: Long, mv: Double) extends Logging {
   private val setHist = {
 
     /** Focal spot sets. */
-    val setHistory = FocalSpotSet.history(machine.machinePK.get, procedure.procedurePK.get, mv * 1000)
-    val fsHistory = FocalSpot.history(machine.machinePK.get, procedure.procedurePK.get, mv * 1000)
+    val setHistory = FocalSpotSet.history(machine.machinePK.get, procedure.procedurePK.get, mv * 1000, fluenceName.equals("FFF"))
+    val fsHistory = FocalSpot.history(machine.machinePK.get, procedure.procedurePK.get, mv * 1000, fluenceName.equals("FFF"))
     val fsMap = fsHistory.map(h => (h.focalSpot.focalSpotPK.get, h.focalSpot)).toMap
 
     setHistory
