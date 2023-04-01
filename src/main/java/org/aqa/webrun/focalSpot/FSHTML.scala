@@ -14,7 +14,7 @@ import scala.xml.Elem
 
 object FSHTML {
 
-  val focalSpotDirName = "FocalSpot"
+  private val focalSpotDirName = "FocalSpot"
   val htmlFileName = "FocalSpot.html"
 
   def focalSpotDir(output: Output): File = new File(output.dir, focalSpotDirName)
@@ -62,8 +62,10 @@ object FSHTML {
       <td title={fmtHi(d)}>{fmtLo(d)}</td>
     }
 
+    val id = fsSet.jaw090.mvText + (if (fsSet.jaw090.isFFF) "-FFF" else "")
+
     <tr>
-      {fmt(fsSet.jaw090.NominalBeamEnergy)}
+      <td>{id}</td>
       {fmt(fsSet.focalSpotAlignmentX_mm)}
       {fmt(fsSet.focalSpotAlignmentY_mm)}
       <td><a href={s"${fsSet.htmlFileName}"}>Details</a></td>
@@ -97,7 +99,7 @@ object FSHTML {
   private def makeContent(extendedData: ExtendedData, fsRunReq: FSRunReq, fsSetList: Seq[FSSet], chartHtml: Elem): Elem = {
     <div class="row">
       <div class="row">
-        <div class="col-md-2 col-md-offset-5">
+        <div class="col-md-3 col-md-offset-4">
           {htmlTable(fsSetList)}
         </div>
       </div>

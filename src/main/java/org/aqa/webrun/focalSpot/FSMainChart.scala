@@ -72,12 +72,11 @@ class FSMainChart(outputPK: Long) extends Logging {
     }
 
     val yAxisLabels: Seq[String] = {
-      def mvText(fsSet: FocalSpotSet): String = {
-        val mv = fsSet.KVP_kv / 1000.0
-        if (mv.round == mv) mv.round.toString else Util.fmtDbl(mv)
+      def name(fsSet: FocalSpotSet): String = {
+        fsSet.mvText + (if (fsSet.isFFF) "-FFF" else "")
       }
 
-      setList.head.flatMap(h => Seq(h.focalSpotSet.mvText + " X", h.focalSpotSet.mvText + " Y"))
+      setList.head.flatMap(h => Seq(name(h.focalSpotSet) + " X", name(h.focalSpotSet) + " Y"))
     }
 
     val colorList = Seq(Color.green, Color.blue, Color.black, Color.red, Color.orange, Color.cyan, Color.magenta, Color.yellow, Color.pink, Color.gray)

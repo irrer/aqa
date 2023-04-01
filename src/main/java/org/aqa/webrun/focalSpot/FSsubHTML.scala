@@ -76,9 +76,11 @@ object FSsubHTML extends Logging {
     val matlabText = FSMatlab.generateMatlabCode(fsSet)
     Util.writeFile(matlabFile, matlabText)
 
+    val fluenceText = if (fsSet.jaw090.isFFF) "FFF " else ""
+
     <div class="row">
       <center>
-        <h2>MV: {mvText} Alignment: {alignment}</h2>
+        <h2>{mvText} {fluenceText}MV  Alignment: {alignment}</h2>
         <a href={FSHTML.htmlFileName} title="Return to focal spot summary page.">Focal Spot Summary</a>
         <a href={matlabFileName(fsSet)} title="Download Matlab code demonstrating calculations." style="margin-left:50px;">Matlab</a>
       </center>
