@@ -19,7 +19,6 @@ package org.aqa.webrun.focalSpot
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import org.apache.commons.io.FileUtils
 import org.aqa.Util
 import org.aqa.db.DicomSeries
 import org.aqa.db.Output
@@ -38,7 +37,6 @@ import org.aqa.webrun.phase2.Phase2Util
 import org.restlet.Request
 import org.restlet.Response
 
-import java.io.File
 import java.sql.Timestamp
 import scala.xml.Elem
 
@@ -96,12 +94,12 @@ class FSRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
     FSAnalysis.runProcedure(extendedData, fsRunReq)
 
     // Copy all files into the output directory.
-    val focalSpotDir = FSHTML.focalSpotDir(extendedData.output)
-    val outputDir = extendedData.output.dir
-    Util.listDirFiles(focalSpotDir).foreach(fsFile => FileUtils.copyFile(fsFile, new File(outputDir, fsFile.getName)))
+    // val focalSpotDir = FSHTML.focalSpotDir(extendedData)
+    // val outputDir = extendedData.output.dir
+    // Util.listDirFiles(focalSpotDir).foreach(fsFile => FileUtils.copyFile(fsFile, new File(outputDir, fsFile.getName)))
 
     // Copy the main focal spot file into the display.html file so tha the framework will find it.
-    FileUtils.copyFile(new File(outputDir, FSHTML.htmlFileName), new File(outputDir, Output.displayFilePrefix + ".html"))
+    // FileUtils.copyFile(new File(outputDir, FSHTML.htmlFileName), new File(outputDir, Output.displayFilePrefix + ".html"))
 
     ProcedureStatus.done
   }

@@ -55,7 +55,7 @@ object FSsubHTML extends Logging {
     }
 
     def showImage(fsMeasure: FSMeasure): Elem = {
-      val dir = FSHTML.focalSpotDir(extendedData.output)
+      val dir = FSHTML.focalSpotDir(extendedData)
       val typeName = if (fsMeasure.isJaw) "Jaw" else "MLC"
       val imageId = typeName + fsMeasure.collimatorAngleRounded_deg.formatted("%03d")
       val pngFileName = imageId + ".png"
@@ -72,7 +72,7 @@ object FSsubHTML extends Logging {
     }
 
     // write Matlab file
-    val matlabFile = new File(FSHTML.focalSpotDir(extendedData.output), matlabFileName(fsSet))
+    val matlabFile = new File(FSHTML.focalSpotDir(extendedData), matlabFileName(fsSet))
     val matlabText = FSMatlab.generateMatlabCode(fsSet)
     Util.writeFile(matlabFile, matlabText)
 
@@ -162,7 +162,7 @@ object FSsubHTML extends Logging {
     */
   def makeHtml(extendedData: ExtendedData, fsRunReq: FSRunReq, fsSet: FSSet): Unit = {
     val mainHtmlFile = {
-      val dir = FSHTML.focalSpotDir(extendedData.output)
+      val dir = FSHTML.focalSpotDir(extendedData)
       new File(dir, fsSet.htmlFileName)
     }
 

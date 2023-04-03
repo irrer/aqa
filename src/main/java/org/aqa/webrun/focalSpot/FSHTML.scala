@@ -6,7 +6,6 @@ import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.Util
 import org.aqa.web.WebServer
 import org.aqa.Config
-import org.aqa.db.Output
 import org.aqa.web.C3ChartHistory
 
 import java.io.File
@@ -15,9 +14,14 @@ import scala.xml.Elem
 object FSHTML {
 
   private val focalSpotDirName = "FocalSpot"
-  val htmlFileName = "FocalSpot.html"
+  val htmlFileName = "display.html"
 
-  def focalSpotDir(output: Output): File = new File(output.dir, focalSpotDirName)
+  def focalSpotDir(extendedData: ExtendedData): File = {
+    if (extendedData.procedure.isFocalSpot)
+      extendedData.output.dir
+    else
+      new File(extendedData.output.dir, focalSpotDirName)
+  }
 
   def fmtLo(d: Double): String = {
     if (d.round == d)
@@ -119,7 +123,7 @@ object FSHTML {
     * @return Report for all focal spot sets.
     */
   def makeHtml(extendedData: ExtendedData, fsRunReq: FSRunReq, fsSetList: Seq[FSSet]): Elem = {
-    val dir = focalSpotDir(extendedData.output)
+    val dir = focalSpotDir(extendedData)
     dir.mkdirs()
 
     val mainChart = new FSMainChart(outputPK = extendedData.output.outputPK.get).chart

@@ -72,9 +72,14 @@ object FSAnalysis extends Logging {
       logger.info(s"Starting processing of $subProcedureName")
       val outputPK = extendedData.output.outputPK.get
 
+      // If running as procedure focal spot, then use all images. Otherwise only use the ones designated in the in configuration as focal spot beams.
       val rtimageList = {
-        val nameList = fsRunReq.rtimageMap.keys.filter(beamName => Config.FocalSpotBeamNameList.contains(beamName))
-        nameList.map(beamName => fsRunReq.rtimageMap(beamName))
+        if (extendedData.procedure.isFocalSpot)
+          fsRunReq.rtimageMap.values
+        else {
+          val nameList = fsRunReq.rtimageMap.keys.filter(beamName => Config.FocalSpotBeamNameList.contains(beamName))
+          nameList.map(beamName => fsRunReq.rtimageMap(beamName))
+        }
       }
 
       val measureList: Seq[FSMeasure] = rtimageList.map(rtimage => FSMeasure(fsRunReq.rtplan, rtimage, outputPK)).toSeq // TODO do in par
