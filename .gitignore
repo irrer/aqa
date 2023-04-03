@@ -49,3 +49,4 @@ Slick*conf
 .cache-main
 .cache-tests
 ##hs_err_pid*.log
+/.idea/scala_settings.xml
