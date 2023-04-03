@@ -17,9 +17,9 @@
 package aqa.test
 
 import org.aqa.Config
+import org.aqa.customizeRtPlan.CustomizeRtPlan
 import org.aqa.db.DbSetup
 import org.aqa.db.Machine
-import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlan
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 

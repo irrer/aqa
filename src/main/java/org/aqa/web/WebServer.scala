@@ -20,6 +20,7 @@ import edu.umro.RestletUtil.NetworkIpFilter
 import edu.umro.RestletUtil.RestletHttps
 import org.aqa.Config
 import org.aqa.Logging
+import org.aqa.customizeRtPlan.CustomizeRtPlanInterface
 import org.aqa.db.CachedUser
 import org.aqa.db.Input
 import org.aqa.db.Output
@@ -35,7 +36,6 @@ import org.aqa.webrun.gapSkew.GapSkewHistoryRestlet
 import org.aqa.webrun.gapSkew.GapSkewLatestHtml
 import org.aqa.webrun.phase2.centerDose.CenterDoseChartHistoryRestlet
 import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringChartHistoryRestlet
-import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlanInterface
 import org.aqa.webrun.phase2.phase2csv.Phase2CsvRestlet
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessHistoryRestlet
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessSubHTML

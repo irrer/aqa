@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.aqa.webrun.phase2.customizeRtPlan
+package org.aqa.customizeRtPlan
 
 import com.pixelmed.dicom.Attribute
 import com.pixelmed.dicom.AttributeFactory

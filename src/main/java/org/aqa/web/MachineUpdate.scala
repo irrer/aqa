@@ -17,6 +17,7 @@
 package org.aqa.web
 
 import org.aqa.AnonymizeUtil
+import org.aqa.customizeRtPlan.CustomizeRtPlanInterface
 import org.aqa.db.CachedUser
 import org.aqa.db.EPID
 import org.aqa.db.Input
@@ -27,7 +28,6 @@ import org.aqa.db.MachineType
 import org.aqa.db.MaintenanceRecord
 import org.aqa.db.MultileafCollimator
 import org.aqa.web.WebUtil._
-import org.aqa.webrun.phase2.customizeRtPlan.CustomizeRtPlanInterface
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
