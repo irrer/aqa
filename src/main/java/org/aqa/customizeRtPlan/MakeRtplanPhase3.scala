@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Regents of the University of Michigan
+ * Copyright 2023 Regents of the University of Michigan
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@ package org.aqa.customizeRtPlan
 
 import org.aqa.db.Procedure
 
-class MakeRtplanPhase2 extends MakeRtplanPhaseAny {
-  override def name: String = "Phase2"
+class MakeRtplanPhase3 extends MakeRtplanPhaseAny {
+  override def name: String = "Phase3"
 
-  override def planFileProcedureName: String = "Phase2"
+  override def planFileProcedureName: String = "Phase3"
 
-  override def procedure: Procedure = Procedure.ProcOfPhase2.get
+  override def procedure: Procedure = Procedure.ProcOfPhase3.get
 
 }

@@ -41,6 +41,7 @@ import org.restlet.Response
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
+import scala.xml.Elem
 
 abstract class MakeRtplan extends Logging {
 
@@ -48,6 +49,11 @@ abstract class MakeRtplan extends Logging {
 
   protected def planFileProcedureName: String
   protected def procedure: Procedure
+
+  def fileDateText: String = {
+    val dateFormat = new SimpleDateFormat("yyyy-MM-dd'_'HH-mm")
+    dateFormat.format(new Date)
+  }
 
   // protected def hdPlanFileConfig: Seq[Config.PlanFileConfig] = Config.PlanFileList.filter(pf => pf.procedure.equals(planFileProcedureName) && pf.collimatorModel.toLowerCase.contains("hd"))
 
@@ -68,7 +74,7 @@ abstract class MakeRtplan extends Logging {
     * can happen if the system does not have such a plan configured.  This informs the user
     * interface so that it can tell the user.
     */
-  private def getCollimatorCompatiblePlanForMachine(machine: Machine, procName: String = planFileProcedureName): Seq[Config.PlanFileConfig] = {
+  private def getCollimatorCompatiblePlanForMachine(machine: Machine, procName: String): Seq[Config.PlanFileConfig] = {
     val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
     val planFileList = Config.PlanFileList.filter(pf =>
       pf.procedure.equalsIgnoreCase(procName.toLowerCase()) &&
@@ -83,10 +89,10 @@ abstract class MakeRtplan extends Logging {
     * @param valueMap User entered parameters.
     * @return
     */
-  def validate(valueMap: ValueMapT): StyleMapT = {
+  def validate(valueMap: ValueMapT, procName: String = planFileProcedureName): StyleMapT = {
     val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong).get
 
-    val colList = getCollimatorCompatiblePlanForMachine(machine)
+    val colList = getCollimatorCompatiblePlanForMachine(machine, procName)
 
     val badList = colList.filterNot(_.file.isFile)
     val badText = badList.map(bad => s"Configuration problem.  Contact system administrator.  Master RTPLAN file ${bad.file.getName} does not exist.").mkString(WebUtil.titleNewline)
@@ -96,6 +102,25 @@ abstract class MakeRtplan extends Logging {
     } else {
       WebUtil.Error.make(makeButton, badText)
     }
+  }
+
+  /**
+    * Utility to show RTPLAN files.
+    * @param rtplan RTPLAN DICOM
+    * @param dicomName Name to show to user.
+    * @return
+    */
+  def dicomToElem(rtplan: AttributeList, dicomName: String): Elem = {
+    <span>
+      <h4>
+        <p/>
+        Preview {dicomName}
+      </h4>
+      <p/>
+      <pre title="DICOM meta-data">
+        {WebUtil.nl + DicomUtil.attributeListToString(rtplan)}
+      </pre>
+    </span>
   }
 
   /**
@@ -112,10 +137,11 @@ abstract class MakeRtplan extends Logging {
   def makeRtplan(
       machine: Machine,
       userPK: Long,
-      planSpecification: PlanSpecification
+      planSpecification: PlanSpecification,
+      procName: String = planFileProcedureName
   ): AttributeList = {
 
-    val rtplan = DicomUtil.clone(getCollimatorCompatiblePlanForMachine(machine).head.dicomFile.attributeList.get)
+    val rtplan = DicomUtil.clone(getCollimatorCompatiblePlanForMachine(machine, procName).head.dicomFile.attributeList.get)
 
     replaceAllUIDs(rtplan) // change UIDs so that this plan will be considered new and unique from all others.
 
@@ -132,8 +158,7 @@ abstract class MakeRtplan extends Logging {
 
   protected def makeDownloadFile(typeName: String, suffix: String): File = {
 
-    val dateFormat = new SimpleDateFormat("yyyy-MM-dd'_'HH-mm")
-    val dateText = dateFormat.format(new Date)
+    val dateText = fileDateText
     val typeText = FileUtil.replaceInvalidFileNameCharacters(typeName.replace(' ', '_'), '_')
     val fileName = s"RTPLAN_${typeText}_$dateText.$suffix"
     val file = new File(Config.tmpDirFile, fileName)
@@ -158,11 +183,7 @@ abstract class MakeRtplan extends Logging {
   ): Download = {
     val rtplan = makeRtplan(machine, userPK, planSpecification)
 
-    val elem = {
-      <div>
-        <span><h4><p/>Preview {name}</h4><p/><pre title="DICOM meta-data">{WebUtil.nl + DicomUtil.attributeListToString(rtplan)}</pre></span>
-      </div>
-    }
+    val elem = dicomToElem(rtplan, name)
 
     val file = makeDownloadFile(name, "dcm")
     DicomUtil.writeAttributeListToFile(rtplan, file, "AQA")

@@ -16,13 +16,17 @@
 
 package org.aqa.customizeRtPlan
 
+import org.aqa.db.Machine
 import org.aqa.db.Procedure
+import org.restlet.Response
 
-class MakeRtplanPhase2 extends MakeRtplanPhaseAny {
-  override def name: String = "Phase2"
+class MakeRtplanWinstonLutz extends MakeRtplan {
+  override def name: String = "Winston-Lutz"
+  override def planFileProcedureName: String = "WinstonLutz"
 
-  override def planFileProcedureName: String = "Phase2"
+  override def procedure: Procedure = Procedure.ProcOfWinstonLutz.get
 
-  override def procedure: Procedure = Procedure.ProcOfPhase2.get
-
+  override def showPlan(machine: Machine, userPK: Long, planSpecification: PlanSpecification, response: Response): Download = {
+    super.showPlan(machine, userPK, planSpecification, response)
+  }
 }
