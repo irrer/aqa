@@ -190,8 +190,6 @@ object FSMatlab {
     // calculate the average epid to source value
     val dEpid_mm: Double = (fsSet.jaw090.dEpid_mm + fsSet.jaw270.dEpid_mm + fsSet.mlc090.dEpid_mm + fsSet.mlc270.dEpid_mm) / 4.0
 
-    fsSet.jaw090.analysisResult.measurementSet.top
-
     val focalSpotText = {
       s"""
          |fprintf("------------------------ Begin summary of edge measurements for MV $mvText ------------------------\\n");
