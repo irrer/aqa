@@ -38,6 +38,8 @@ class MakeRtplanLOC extends MakeRtplan {
 
     val rtplanBaseline = makeRtplan(machine, userPK, planSpecification, "LOCBaseline")
 
+    saveDicomToDatabase(machine, userPK, rtplanDelivery, planSpecification, procedure)
+    saveDicomToDatabase(machine, userPK, rtplanBaseline, planSpecification, Procedure.ProcOfLOCBaseline.get)
     val dateText = fileDateText
 
     val deliveryFileName = s"RTPLAN_${planFileProcedureName}_$dateText.dcm"

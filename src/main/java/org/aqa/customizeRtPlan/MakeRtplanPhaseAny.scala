@@ -29,14 +29,14 @@ abstract class MakeRtplanPhaseAny extends MakeRtplan {
     val machineEnergyList = CustomizeRtPlanUtil.getMachineEnergyList(machine.machinePK.get)
 
     CustomizeRtPlanUtil.reassignPlanEnergies(rtplan, machineEnergyList)
-
+    saveDicomToDatabase(machine, userPK, rtplan, planSpecification, procedure)
     val elem = {
       <div>
         {dicomToElem(rtplan, name)}
       </div>
     }
 
-    val file = makeDownloadFile(name, "dcm")
+    val file = makeDicomDownloadFile(name)
     DicomUtil.writeAttributeListToFile(rtplan, file, "AQA")
 
     Download(elem, file)

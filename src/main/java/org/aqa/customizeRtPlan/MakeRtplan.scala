@@ -150,17 +150,35 @@ abstract class MakeRtplan extends Logging {
     setRtplanDateTimeToNow(rtplan)
 
     removeVarianPrivateTagAttributes(rtplan)
-    val anonDicom = saveAnonymizedDicom(machine, userPK, rtplan, procedure.procedurePK)
 
-    setupPatientProcedure(machine.institutionPK, anonDicom.get(TagByName.PatientID), Procedure.ProcOfGapSkew)
     rtplan
   }
 
-  protected def makeDownloadFile(typeName: String, suffix: String): File = {
+  /**
+    * After the RTPLAN has been created for the user, it needs to be put in the database so it is there when the user runs the procedure.
+    * As a convenience, it also adds the patient ID to the PatientProcedure list.
+    * @param machine For this machine.
+    * @param userPK User that is creating plan.
+    * @param rtplan Plan that has been created.
+    * @param planSpecification Plan parameters specified by user.
+    * @param procName Plan file procedure name (from Config.PlanFileList).
+    */
+  def saveDicomToDatabase(
+      machine: Machine,
+      userPK: Long,
+      rtplan: AttributeList,
+      planSpecification: PlanSpecification,
+      procedure: Procedure
+  ): Unit = {
+    val anonDicom = saveAnonymizedDicom(machine, userPK, rtplan, procedure.procedurePK)
+    setupPatientProcedure(machine.institutionPK, anonDicom.get(TagByName.PatientID), Some(procedure))
+  }
+
+  protected def makeDicomDownloadFile(typeName: String): File = {
 
     val dateText = fileDateText
     val typeText = FileUtil.replaceInvalidFileNameCharacters(typeName.replace(' ', '_'), '_')
-    val fileName = s"RTPLAN_${typeText}_$dateText.$suffix"
+    val fileName = s"RTPLAN_${typeText}_$dateText.dcm"
     val file = new File(Config.tmpDirFile, fileName)
     file
   }
@@ -182,10 +200,12 @@ abstract class MakeRtplan extends Logging {
       response: Response
   ): Download = {
     val rtplan = makeRtplan(machine, userPK, planSpecification)
+    // note: If the plan needed modifications (such as adding beams) then it would be done here.
+    saveDicomToDatabase(machine, userPK, rtplan, planSpecification, procedure)
 
     val elem = dicomToElem(rtplan, name)
 
-    val file = makeDownloadFile(name, "dcm")
+    val file = makeDicomDownloadFile(name)
     DicomUtil.writeAttributeListToFile(rtplan, file, "AQA")
 
     Download(elem, file)
