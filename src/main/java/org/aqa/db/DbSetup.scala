@@ -127,7 +127,6 @@ object DbSetup extends Logging {
     FocalSpot.query,
     BBbyEPID.query,
     FocalSpotSet.query,
-    Rect.query,
     SymmetryAndFlatness.query,
     LeafPosition.query,
     VMAT.query,
