@@ -18,14 +18,17 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
   // val planned = PlannedRectangle(rtplan, rtimage)
   // val plannedTBLR = MeasureTBLREdges.TBLR(top = -planned.top, bottom = -planned.bottom, left = planned.left, right = planned.right)
   private val dicomImage = new DicomImage(rtimage)
-  private val translator = new IsoImagePlaneTranslator(rtimage)
+  private val translator = {
+    val RTImageSID: Double = FocalSpot.roundRTImageSID(rtimage.get(TagByName.RTImageSID).getDoubleValues.head)
+    new IsoImagePlaneTranslator(rtimage, Some(RTImageSID))
+  }
   private val collimatorAngle = Util.collimatorAngle(rtimage)
 
   private val KVP = DicomUtil.findAllSingle(rtimage, TagByName.KVP).head.getDoubleValues.head
-  val mv = KVP / 1000.0
+  private val mv = KVP / 1000.0
 
   /** MV energy formatted to the minimal string that represents its full precision. */
-  val mvText = if (mv.round == mv) mv.round.toString else mv.toString
+  val mvText: String = if (mv.round == mv) mv.round.toString else mv.toString
   private val ExposureTime = DicomUtil.findAllSingle(rtimage, TagByName.ExposureTime).head.getDoubleValues.head
 
   private val XRayImageReceptorTranslation = {
@@ -43,8 +46,9 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
 
   val NominalBeamEnergy: Double = DicomUtil.findAllSingle(beam, TagByName.NominalBeamEnergy).head.getDoubleValues.head
 
-  val RTImageSID_mm: Double = rtimage.get(TagByName.RTImageSID).getDoubleValues.head
-  val dEpid_mm: Double = RTImageSID_mm + XRayImageReceptorTranslation.getZ
+  val RTImageSID_mm: Double = translator.rtimageSid // rtimage.get(TagByName.RTImageSID).getDoubleValues.head
+  /** Distance in mm from source to EPID. */
+  val dEpid_mm: Double = RTImageSID_mm
 
   /** True if the collimator angle rounded to 90 degrees is 90. */
   val is090: Boolean = Util.angleRoundedTo90(Util.collimatorAngle(rtimage)) == 90
@@ -130,15 +134,15 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
     isJaw                            = isJaw,
     isFFF                            = isFFF,
     KVP_kv                           = KVP,
-    RTImageSID_mm                    = RTImageSID_mm,
+    RTImageSID_mm                    = rtimage.get(TagByName.RTImageSID).getDoubleValues.head,
     ExposureTime                     = ExposureTime,
     XRayImageReceptorTranslationX_mm = XRayImageReceptorTranslation.getX,
     XRayImageReceptorTranslationY_mm = XRayImageReceptorTranslation.getY,
     XRayImageReceptorTranslationZ_mm = XRayImageReceptorTranslation.getZ,
-    topEdge_mm                       = translator.pix2IsoCoordY(analysisResult.measurementSet.top)    - XRayImageReceptorTranslation.getY,
-    bottomEdge_mm                    = translator.pix2IsoCoordY(analysisResult.measurementSet.bottom) - XRayImageReceptorTranslation.getY,
-    leftEdge_mm                      = translator.pix2IsoCoordX(analysisResult.measurementSet.left)   + XRayImageReceptorTranslation.getX,
-    rightEdge_mm                     = translator.pix2IsoCoordX(analysisResult.measurementSet.right)  + XRayImageReceptorTranslation.getX,
+    topEdge_mm                       = translator.pix2IsoCoordY(analysisResult.measurementSet.top),
+    bottomEdge_mm                    = translator.pix2IsoCoordY(analysisResult.measurementSet.bottom),
+    leftEdge_mm                      = translator.pix2IsoCoordX(analysisResult.measurementSet.left),
+    rightEdge_mm                     = translator.pix2IsoCoordX(analysisResult.measurementSet.right),
     topEdgePlanned_mm                = X2Planned_mm, // plannedTBLR.top,
     bottomEdgePlanned_mm             = X1Planned_mm, // plannedTBLR.bottom,
     leftEdgePlanned_mm               = Y1Planned_mm, // plannedTBLR.left,

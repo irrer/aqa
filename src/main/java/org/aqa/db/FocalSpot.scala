@@ -63,17 +63,17 @@ case class FocalSpot(
     result
   }
 
-  val centerX = (leftEdge_mm + rightEdge_mm) / 2
-  val centerY = (leftEdge_mm + rightEdge_mm) / 2
+  val centerX: Double = (leftEdge_mm + rightEdge_mm) / 2
+  val centerY: Double = (leftEdge_mm + rightEdge_mm) / 2
 
-  val topEdgeError_mm = topEdge_mm - topEdgePlanned_mm
-  val bottomEdgeError_mm = bottomEdge_mm - bottomEdgePlanned_mm
-  val leftEdgeError_mm = leftEdge_mm - leftEdgePlanned_mm
-  val rightEdgeError_mm = rightEdge_mm - rightEdgePlanned_mm
+  val topEdgeError_mm: Double = topEdge_mm - topEdgePlanned_mm
+  val bottomEdgeError_mm: Double = bottomEdge_mm - bottomEdgePlanned_mm
+  val leftEdgeError_mm: Double = leftEdge_mm - leftEdgePlanned_mm
+  val rightEdgeError_mm: Double = rightEdge_mm - rightEdgePlanned_mm
 
   def insertOrUpdate(): Int = Db.run(FocalSpot.query.insertOrUpdate(this))
 
-  val isMLC = !isJaw
+  val isMLC: Boolean = !isJaw
 
   val beamLimiterName: String = if (isJaw) "Jaw" else "MLC"
 
@@ -86,8 +86,8 @@ case class FocalSpot(
        gantryAngleRounded_deg: $gantryAngleRounded_deg
        collimatorAngleRounded_deg: $collimatorAngleRounded_deg
        beamName: $beamName
-       edge type: ${beamLimiterName}
-       fluence : ${fluenceName}
+       edge type: $beamLimiterName
+       fluence : $fluenceName
        KVP_kv: $KVP_kv
        RTImageSID_mm: $RTImageSID_mm
        ExposureTime: $ExposureTime
@@ -242,7 +242,7 @@ object FocalSpot extends ProcedureOutput {
 
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
-      colCent <- FocalSpot.query.filter(w => (w.outputPK === output.outputPK))
+      colCent <- FocalSpot.query.filter(w => w.outputPK === output.outputPK)
     } yield (output, colCent)
 
     val sorted = Db.run(search.result).map(oc => FocalSpotHistory(oc._1, oc._2)).sortBy(_.output.dataDate.get.getTime)
@@ -269,5 +269,13 @@ object FocalSpot extends ProcedureOutput {
 
     sorted
   }
+
+  /**
+   * Round the RTImageSID to the nearest 10.
+   * @param RTImageSID Raw value from attribute list.
+   * @return Value rounded.
+   */
+  def roundRTImageSID(RTImageSID: Double): Double = (RTImageSID / 10).round * 10.0
+
 
 }

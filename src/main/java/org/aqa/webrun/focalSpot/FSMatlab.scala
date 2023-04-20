@@ -2,6 +2,7 @@ package org.aqa.webrun.focalSpot
 
 import edu.umro.DicomDict.TagByName
 import org.aqa.Config
+import org.aqa.db.FocalSpot
 
 import java.util.Date
 
@@ -54,8 +55,8 @@ object FSMatlab {
     val typeOf = if (fsMeasure.isMLC) "MLC" else "Jaw"
     val prefix = typeOf + "_" + fsMeasure.collimatorAngleRounded_deg.formatted("%03d") + "_"
 
-    val translation = fsMeasure.rtimage.get(TagByName.XRayImageReceptorTranslation).getDoubleValues.toSeq
-    val RTImageSID = fsMeasure.rtimage.get(TagByName.RTImageSID).getDoubleValues.head
+    // val translation = fsMeasure.rtimage.get(TagByName.XRayImageReceptorTranslation).getDoubleValues.toSeq
+    val RTImageSID = FocalSpot.roundRTImageSID(fsMeasure.rtimage.get(TagByName.RTImageSID).getDoubleValues.head)
     val RadiationMachineSAD = fsMeasure.rtimage.get(TagByName.RadiationMachineSAD).getDoubleValues.head
     val ImagePlanePixelSpacing = fsMeasure.rtimage.get(TagByName.ImagePlanePixelSpacing).getDoubleValues.toSeq
 
@@ -116,14 +117,6 @@ object FSMatlab {
          |
          |fprintf("Matlab code calculating edge positions used for focal spot calculation for $typeOf ${fsMeasure.collimatorAngleRounded_deg} for MV $mvText\\n");
          |
-         |% DICOM 3002,000D XRayImageReceptorTranslation : https://dicom.innolitics.com/ciods/rt-image/rt-image/3002000d
-         |${prefix}transX = ${translation.head};
-         |${prefix}transY = ${translation(1)};
-         |${prefix}transZ = ${translation(2)};
-         |fprintf("${prefix}transX: $f\\n", ${prefix}transX);
-         |fprintf("${prefix}transY: $f\\n", ${prefix}transY);
-         |fprintf("${prefix}transZ: $f\\n", ${prefix}transZ);
-         |
          |% DICOM 3002,0026 RTImageSID : Distance from radiation machine source to image plane (in mm) : https://dicom.innolitics.com/ciods/rt-image/rt-image/30020026
          |${prefix}SID = $RTImageSID;
          |fprintf("${prefix}SID: $f\\n", ${prefix}SID);
@@ -164,10 +157,10 @@ object FSMatlab {
          |fprintf("\\n");
          |
          |% Edge measurements in mm in isoplane for $prefix
-         |${prefix}top_mm    = ( ${prefix}top_px    / ${prefix}expandY ) - ${prefix}imagePosY - ${prefix}transY;
-         |${prefix}bottom_mm = ( ${prefix}bottom_px / ${prefix}expandY ) - ${prefix}imagePosY - ${prefix}transY;
-         |${prefix}left_mm   = ( ${prefix}left_px   / ${prefix}expandX ) + ${prefix}imagePosX + ${prefix}transX;
-         |${prefix}right_mm  = ( ${prefix}right_px  / ${prefix}expandX ) + ${prefix}imagePosX + ${prefix}transX;
+         |${prefix}top_mm    = ( ${prefix}top_px    / ${prefix}expandY ) - ${prefix}imagePosY;
+         |${prefix}bottom_mm = ( ${prefix}bottom_px / ${prefix}expandY ) - ${prefix}imagePosY;
+         |${prefix}left_mm   = ( ${prefix}left_px   / ${prefix}expandX ) + ${prefix}imagePosX;
+         |${prefix}right_mm  = ( ${prefix}right_px  / ${prefix}expandX ) + ${prefix}imagePosX;
          |
          |fprintf("$prefix calculated top, bottom, right, left mm:    $f    $f    $f    $f\\n", ${prefix}top_mm, ${prefix}bottom_mm, ${prefix}left_mm, ${prefix}right_mm);
          |fprintf("\\n");
