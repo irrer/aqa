@@ -391,9 +391,6 @@ object Output extends Logging {
   }
 
   /**
-    */
-
-  /**
     * Get a list of outputs, restricted by the parameters.
     *
     * This is designed to support paging through a large list of outputs.
