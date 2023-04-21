@@ -20,6 +20,7 @@ import com.pixelmed.dicom.AttributeTag
 import edu.umro.ImageUtil.Watermark
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.util.OpSys
+import edu.umro.ScalaUtil.Util.daysToMs
 import org.aqa.db.MaintenanceCategory
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessPoint
 import org.aqa.webrun.wl.WLTreatmentMachine
@@ -395,7 +396,7 @@ object Config extends Logging {
 
   val MaximumDataSetRetentionCount: Int = logMainText("MaximumDataSetRetentionCount", "12").toInt
   private val MinimumDataSetRetentionAge_day: Double = logMainText("MinimumDataSetRetentionAge_day", "14.0").toDouble
-  val MinimumDataSetRetentionAge_ms: Long = (MinimumDataSetRetentionAge_day * 24 * 60 * 60 * 1000).round
+  val MinimumDataSetRetentionAge_ms: Long = daysToMs(MinimumDataSetRetentionAge_day)
 
   private val AuthenticationTimeout: Double = logMainText("AuthenticationTimeout", "7200.0").toDouble
   val AuthenticationTimeoutInMs: Long = (AuthenticationTimeout * 1000).toLong
@@ -935,7 +936,7 @@ object Config extends Logging {
   val GapSkewAngleWarn_deg: Double = logMainText("GapSkewAngleWarn_deg", "0.1").toDouble.abs
   val GapSkewAngleFail_deg: Double = logMainText("GapSkewAngleFail_deg", "0.2").toDouble.abs
   val GapSkewExpiration_day: Double = logMainText("GapSkewExpiration_day", "45").toDouble
-  val GapSkewExpiration_ms: Double = GapSkewExpiration_day.toLong * 24 * 60 * 60 * 1000
+  val GapSkewExpiration_ms: Double = daysToMs(GapSkewExpiration_day)
   val GapSkewPenumbraThickness_mm: Double = logMainText("GapSkewPenumbraThickness_mm", "8.0").toDouble
   val GapSkewMinimumFieldWidth_mm: Double = logMainText("GapSkewMinimumFieldWidth_mm", "170.0").toDouble
   val GapSkewMinimumMeasurementLength_mm: Double = logMainText("GapSkewMinimumMeasurementLength_mm", "20.0").toDouble
