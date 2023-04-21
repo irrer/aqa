@@ -19,17 +19,20 @@ package org.aqa
 import edu.umro.ScalaUtil.FileUtil
 
 import java.io.File
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 /**
   * Remove old temporary files.
+  *
+  * It can be useful to keep temporary files for a while (as opposed to deleting
+  * them immediately) so that they are available for diagnosing problems.
   */
 
 object TmpCleanup extends Logging {
 
+  /** Hard coded temporary file limit age limit (temporary file retention time). */
   private val maxAge_day = 7.0
 
+  /** Age limit (retention time) in ms. */
   private val maxAge_ms = (maxAge_day * 24 * 60 * 60 * 1000).toLong
 
   /**
@@ -47,15 +50,13 @@ object TmpCleanup extends Logging {
     * Remove all old temporary files.  Do this in a Future so that the main process is not impeded.
     */
   def cleanup(): Unit = {
-    Future[Unit] {
-      val start = System.currentTimeMillis()
-      logger.info(s"Removing all temporary files older than $maxAge_day days.")
-      val toDelete = Util.listDirFiles(Config.tmpDirFile).filter(isOld)
-      logger.info("Temporary files to remove: " + toDelete.map(_.getAbsolutePath).mkString("\n"))
-      toDelete.map(FileUtil.deleteFileTree)
-      val elapsed = System.currentTimeMillis() - start
-      logger.info(s"${toDelete.size} temporary files and directories removed in $elapsed ms.")
-    }
+    val start = System.currentTimeMillis()
+    logger.info(s"Removing all temporary files older than $maxAge_day days.")
+    val toDelete = Util.listDirFiles(Config.tmpDirFile).filter(isOld)
+    logger.info(s"Removing ${toDelete.size} temporary files: " + toDelete.map(_.getAbsolutePath).mkString("\n"))
+    toDelete.map(FileUtil.deleteFileTree)
+    val elapsed = System.currentTimeMillis() - start
+    logger.info(s"${toDelete.size} temporary files and directories removed in $elapsed ms.")
   }
 
 }

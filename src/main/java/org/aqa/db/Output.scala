@@ -512,6 +512,21 @@ object Output extends Logging {
     tsList
   }
 
+  /**
+    * Get a list outputs for the given machine.  The outputs should be distinct by their procedurePK.  For example,
+    * if there were outputs for the given machine for Phase2 and LOC, then one of each would be returned.
+    * @param machinePK Match this machine PK.
+    * @return List of outputs that are distinct by procedurePK.
+    */
+  def machineProcedureList(machinePK: Long): Seq[Output] = {
+    val search = for {
+      output <- Output.query.filter(o => o.machinePK === machinePK).distinctOn(_.procedurePK)
+    } yield output
+    val list = Db.run(search.result)
+    logger.info(s"""machineProcedureList   machinePK: $machinePK  procedurePK list: ${list.map(_.procedurePK).sorted.mkString("  ")}""")
+    list
+  }
+
   /*
   def main(args: Array[String]): Unit = {
     println("Starting Output.main")

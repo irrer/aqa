@@ -393,6 +393,10 @@ object Config extends Logging {
   val machineConfigurationDir = new File(DataDir, machineConfigurationDirName)
   Util.mkdirs(machineConfigurationDir)
 
+  val MaximumDataSetRetentionCount: Int = logMainText("MaximumDataSetRetentionCount", "12").toInt
+  private val MinimumDataSetRetentionAge_day: Double = logMainText("MinimumDataSetRetentionAge_day", "14.0").toDouble
+  val MinimumDataSetRetentionAge_ms: Long = (MinimumDataSetRetentionAge_day * 24 * 60 * 60 * 1000).round
+
   private val AuthenticationTimeout: Double = logMainText("AuthenticationTimeout", "7200.0").toDouble
   val AuthenticationTimeoutInMs: Long = (AuthenticationTimeout * 1000).toLong
 

@@ -91,6 +91,37 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Directory containing input and output data consumed by and produced by procedures. -->
     <DataDir>D:\AQA_Data</DataDir>
 
+    <!-- Number of test result sets (positive integer) to keep data on disk for fast access.  This is per machine and per
+    procedure.
+
+    When a procedure (a test, such as Phase2) is run, the results are stored in the database and web content is
+    generated and stored on local disk.  The web content is also stored in the database.  The database is intended to be the
+    'source of truth', and the copy on the local file system is for quick access and allows the web interface to show
+    files to the user.
+
+    The files on disk may be deleted to free up space on the host.  If the user tries to view one of these, then the AQA
+    system will automatically retrieve it from the database, re-establish the files on disk, and display them to the user.
+    Incidentally, this usually introduces a delay, possibly for up to a minute depending on the environment.
+
+    To avoid letting the local host's file system become full, older results are automatically deleted.  The number of
+    results kept is controlled by this value.
+
+    This value is a positive integer that specified the number of data sets for each machine of each procedure will be
+    kept.  For example, if machine M has 21 data sets for Phase2, and this value is set to 20, the the data set whose
+    files have the oldest modification time will be removed.  If the user asks to see that data set, it will automatically be
+    reinstantiated from the database.  If a machine has multiple procedures, then 20 data sets will be kept for each procedure.
+
+    Note: The file modification time represents when the files were put on disk.  This is going to be either the time they
+    were originally generated OR when they were reinstantiated from the database.
+
+    If this value is set to 0 then no files will be deleted.
+
+    If this value is not specified then it defaults to 12. -->
+    <MaximumDataSetRetentionCount>12</MaximumDataSetRetentionCount>
+
+    <!-- Minimum age for a data set file for it to be cleaned up.  Given in days as a floating point.  Default value is 14.0 -->
+    <MinimumDataSetRetentionAge_day>14.0</MinimumDataSetRetentionAge_day>
+
     <!-- Authentication timeout.  Number of seconds for a user id+password pair to be cached before re-checking with database. -->
     <AuthenticationTimeout>7200.0</AuthenticationTimeout>
 
