@@ -1,7 +1,6 @@
 package org.aqa.webrun.wl
 
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
 import org.aqa.db.Output
 import org.aqa.db.Procedure
@@ -62,14 +61,14 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
 
     val epidList = getRtimageList(alList)
 
-    val epidSeriesList = epidList.map(Util.serInstOfAl).distinct
+    // val epidSeriesList = epidList.map(Util.serInstOfAl).distinct
 
     val gantryAngleList = epidList.map(Util.gantryAngle).map(Util.angleRoundedTo90).distinct.sorted
     val orthogonalAngleList = gantryAngleList.map(_ % 180).distinct
 
     logger.info("Number of RTIMAGE files uploaded: " + epidList.size)
 
-    val numSeries = epidList.map(epid => epid.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString).distinct.sorted.size
+    // val numSeries = epidList.map(epid => epid.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString).distinct.sorted.size
 
     // first try getting the RTPLAN from the uploaded values, then from the database.
     val rtplan = {
@@ -81,7 +80,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
 
     val result: Either[WebUtil.StyleMapT, WLRunReq] = 0 match {
       case _ if epidList.isEmpty              => formError("No EPID files uploaded")
-      case _ if epidSeriesList.size > 1       => formError("EPID images are from " + numSeries + " different series.")
+      // case _ if epidSeriesList.size > 1       => formError("EPID images are from " + numSeries + " different series.")
       case _ if orthogonalAngleList.size != 2 => formError("Need to have images with both vertical and horizontal gantry angles.  Given beam had " + gantryAngleList.mkString("  "))
       case _ =>
         val runReq = WLRunReq(epidList.sortBy(dateTime), rtplan)
@@ -119,12 +118,9 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
 
   override def getProcedure: Procedure = procedure
 
-  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = {
+  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = getMachineDeviceSerialNumberListFromRtimageUtil(alList, xmlList)
 
-    val rtimageList = alList.filter(al => Util.isRtimage(al))
-    val dsnList = rtimageList.flatMap(al => Util.attributeListToDeviceSerialNumber(al)).distinct
-    dsnList
-  }
+  override def getRadiationMachineNameList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = getRadiationMachineNameListFromRtimageUtil(alList, xmlList)
 
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)

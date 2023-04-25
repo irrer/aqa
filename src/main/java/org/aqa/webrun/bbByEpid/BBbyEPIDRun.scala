@@ -73,11 +73,9 @@ class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with 
     list.headOption
   }
 
-  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = {
-    val rtimageList = alList.filter(al => Util.isRtimage(al))
-    val dsnList = rtimageList.flatMap(al => Util.attributeListToDeviceSerialNumber(al)).distinct
-    dsnList
-  }
+  override def getMachineDeviceSerialNumberList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = getMachineDeviceSerialNumberListFromRtimageUtil(alList, xmlList)
+
+  override def getRadiationMachineNameList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = getRadiationMachineNameListFromRtimageUtil(alList, xmlList)
 
   /**
     * Make the run requirements from the attribute lists.

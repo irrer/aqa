@@ -51,7 +51,7 @@ case class Machine(
     respiratoryManagement: Boolean, // True if this is supported.  Defaults to false.
     developerMode: Boolean, // True if this is supported.  Defaults to false.
     active: Boolean, // True if the machine is actively being used.  Defaults to true.  Setting to false may exclude this machine's data from some reports.
-    tpsID_real: Option[String], // ID of the machine in its associated treatment planning system.  Stored as encrypted.
+    tpsID_real: Option[String], // Equivalent DICOM: 3002,0020 RadiationMachineName.  ID of the machine in its associated treatment planning system.  Stored as encrypted.
     notes: String // optional further information
 ) extends Logging {
 
@@ -255,7 +255,7 @@ object Machine extends Logging {
     dir
   }
 
-  def getConfigDir(configurationDirectory: String) = new File(machConfigBaseDir, configurationDirectory)
+  private def getConfigDir(configurationDirectory: String) = new File(machConfigBaseDir, configurationDirectory)
 
   /**
     * Build a name and use it to create a new configuration directory for the given machine.  The name
@@ -348,8 +348,13 @@ object Machine extends Logging {
     seq
   }
 
-  def findMachinesBySerialNumber(serNo: String): Seq[Machine] = {
-    val sn = serNo.trim
+  /**
+    * Find the machines that have serial numbers that match the given serial number.
+    * @param serialNumber Serial number to look for.
+    * @return List of machines with that serial number.  Usually 0 or 1.
+    */
+  def findMachinesBySerialNumber(serialNumber: String): Seq[Machine] = {
+    val sn = serialNumber.trim
     val action = query.filter(m => m.serialNumber === sn)
     val seq = Db.run(action.result)
     seq

@@ -17,6 +17,7 @@
 package org.aqa.run
 
 import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
 import org.aqa.Logging
 import org.aqa.db.Output
 import org.aqa.db.Procedure
@@ -24,6 +25,7 @@ import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil.StyleMapT
 import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.webrun.ExtendedData
+import org.aqa.Util
 import org.restlet.Response
 
 import java.sql.Timestamp
@@ -69,13 +71,45 @@ trait RunTrait[RunReqClassType] extends Logging {
   def getProcedure: Procedure
 
   /**
+    * Utility for getting DeviceSerialNumber from RTIMAGE files.
+    *
+    * @param alList  List of DICOM files.
+    * @param xmlList Not used.
+    * @return List of serial numbers.
+    */
+  def getMachineDeviceSerialNumberListFromRtimageUtil(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = {
+    val rtimageList = alList.filter(al => Util.isRtimage(al))
+    val dsnList = rtimageList.flatMap(al => Util.attributeListToDeviceSerialNumber(al)).distinct
+    dsnList
+  }
+
+  /**
+    * Utility for getting RadiationMachineName from RTIMAGE files.
+    * @param alList List of DICOM files.
+    * @param xmlList Not used.
+    * @return List of RadiationMachineName.
+    */
+  def getRadiationMachineNameListFromRtimageUtil(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = {
+    val rtimageList = alList.filter(al => Util.isRtimage(al))
+    val machineNameList = rtimageList.map(al => al.get(TagByName.RadiationMachineName).getSingleStringValueOrEmptyString()).filter(_.nonEmpty).distinct
+    machineNameList
+  }
+
+  /**
     * Get the machine's DeviceSerialNumber from the input files.  This is used to handle the
     * case where a new machine needs to have it's serial number established.
     */
   def getMachineDeviceSerialNumberList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String]
 
+  /**
+    * Get the machine's 3002,0020 RadiationMachineName from the input files.  This is used to identify
+    * which machine the data is coming from.
+    */
+  //noinspection ScalaUnusedSymbol
+  def getRadiationMachineNameList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = Seq()
+
   /** Convenience function for constructing error messages to display to user on web page. */
-  def formError(msg: String) = Left(WebUtil.Error.make(WebUtil.uploadFileLabel, msg))
+  def formError(msg: String): Left[Map[String, WebUtil.Error], Nothing] = Left(WebUtil.Error.make(WebUtil.uploadFileLabel, msg))
 
   /**
     * Called when a redo is being performed.  If it is not ok to do the redo, then a message is

@@ -16,11 +16,13 @@
 
 package org.aqa.run
 
+import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.TagFromName
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
 import edu.umro.util.Utility
+import edu.umro.DicomDict.TagByName
 import org.aqa.Config
 import org.aqa.DicomFile
 import org.aqa.Logging
@@ -41,6 +43,7 @@ import org.aqa.web.WebServer
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
 import org.aqa.webrun.ExtendedData
+import org.aqa.AnonymizeUtil
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.data.Status
@@ -220,7 +223,7 @@ object RunProcedure extends Logging {
   /**
     * Get from machine web selector list.
     */
-  private def getMachineFromSelector(valueMap: ValueMapT): Option[Machine] = {
+  private def getMachineFromWebSelector(valueMap: ValueMapT): Option[Machine] = {
     val chosenMachine = for (pkTxt <- valueMap.get(machineSelectorLabel); pk <- Util.stringToLong(pkTxt); m <- Machine.get(pk)) yield m
     chosenMachine
   }
@@ -427,20 +430,66 @@ object RunProcedure extends Logging {
   }
 
   /**
+    * Get the list of machines from the user's institution that have a RadiationMachineName that matches
+    * one in the RadiationMachineNameList.
+    *
+    * Complicating factors: The tpsID_real field is encrypted and may not be defined.
+    *
+    * @param valueMap Web parameters, includes user ID used to get institution.
+    * @param RadiationMachineNameList Anonymized list of radiation machine names found in files uploaded by user.
+    * @return
+    */
+  private def getByRadiationMachineNameList(valueMap: ValueMapT, RadiationMachineNameList: Seq[String]): Seq[Machine] = {
+
+    try {
+      val institutionPK = WebUtil.getUser(valueMap).get.institutionPK
+      // list of machines from user's institution that have their tpsID (RadiationMachineName) defined.
+      val machList = Machine.listMachinesFromInstitution(institutionPK).filter(_.getRealTpsId.isDefined)
+
+      // De-anonymize a RadiationMachineName attribute.
+      def deAnon(name: String): String = {
+        val attr = AttributeFactory.newAttribute(TagByName.RadiationMachineName)
+        attr.addValue(name)
+        val real = AnonymizeUtil.deAnonymizeAttribute(institutionPK, attr).get.getSingleStringValueOrEmptyString()
+        real
+      }
+
+      // list of de-anonyimized radiation machine names.
+      val realList = RadiationMachineNameList.filter(_.nonEmpty).map(deAnon)
+
+      // find machines that have a name that matches one on the realList
+      val fullList = realList.flatMap(rmn => machList.find(mach => mach.getRealTpsId.get.equals(rmn)))
+      val list = fullList.groupBy(_.machinePK.get).values.map(_.head)
+      list.toSeq
+
+    } catch {
+      case t: Throwable =>
+        logger.warn(s"Unexpected error while ascertaining Machine by RadiationMachineName: ${fmtEx(t)}")
+        Seq()
+    }
+
+  }
+
+  /**
     * Validate the machine selection.
     */
-  private def validateMachineSelection(valueMap: ValueMapT, deviceSerialNumberList: Seq[String]): Either[StyleMapT, Machine] = {
+  private def validateMachineSelection(valueMap: ValueMapT, deviceSerialNumberList: Seq[String], RadiationMachineNameList: Seq[String]): Either[StyleMapT, Machine] = {
 
-    val machineByInputList = deviceSerialNumberList.distinct.flatMap(dsn => Machine.findMachinesBySerialNumber(dsn)).groupBy(_.id).map(dsnM => dsnM._2.head)
+    val machineBySerialNumberList = deviceSerialNumberList.distinct.flatMap(Machine.findMachinesBySerialNumber).groupBy(_.id).map(dsnM => dsnM._2.head)
+    val machineByRadiationMachineNameList = getByRadiationMachineNameList(valueMap, RadiationMachineNameList)
 
     // machine user chose from list
-    val chosenMachine = RunProcedure.getMachineFromSelector(valueMap)
+    val chosenMachine = RunProcedure.getMachineFromWebSelector(valueMap)
 
     val result: Either[StyleMapT, Machine] = 0 match {
-      case _ if machineByInputList.size > 1 => formError("Files come from more than one machine; please Cancel and try again.")
-      case _ if machineByInputList.nonEmpty => Right(machineByInputList.head)
-      case _ if chosenMachine.isDefined     => Right(chosenMachine.get)
-      case _                                => formError("Unknown machine.  Please choose from the 'Machine' list below or click Cancel " + WebUtil.titleNewline + "and then use the Administration interface to add a new machine.")
+      case _ if machineBySerialNumberList.size > 1         => formError("Files come from more than one machine (different serial numbers); please Cancel and try again.")
+      case _ if machineBySerialNumberList.nonEmpty         => Right(machineBySerialNumberList.head)
+      case _ if machineByRadiationMachineNameList.size > 1 => formError("Files come from more than one machine (different machine names); please Cancel and try again.")
+      case _ if machineByRadiationMachineNameList.nonEmpty =>
+        logger.info(s"Could not find machine by DeviceSerialNumber.  Instead using RadiationMachineName.   Machine: ${machineByRadiationMachineNameList.head.id}")
+        Right(machineByRadiationMachineNameList.head)
+      case _ if chosenMachine.isDefined => Right(chosenMachine.get)
+      case _                            => formError("Unknown machine.  Please choose from the 'Machine' list below or click Cancel " + WebUtil.titleNewline + "and then use the Administration interface to add a new machine.")
     }
     result
   }
@@ -451,7 +500,7 @@ object RunProcedure extends Logging {
   private def process(valueMap: ValueMapT, response: Response, runTrait: RunTrait[RunReqClass], runReq: RunReqClass, alList: Seq[AttributeList], xmlList: Seq[Elem], sync: Boolean): Unit = {
     val now = new Timestamp((new Date).getTime)
     val PatientID = runTrait.getPatientID(valueMap, alList, xmlList)
-    val machine = validateMachineSelection(valueMap, runTrait.getMachineDeviceSerialNumberList(alList, xmlList)).right.get
+    val machine = validateMachineSelection(valueMap, runTrait.getMachineDeviceSerialNumberList(alList, xmlList), runTrait.getRadiationMachineNameList(alList, xmlList)).right.get
     val user = getUser(valueMap)
     val dataDate = runTrait.getDataDate(valueMap, alList, xmlList)
 
@@ -514,7 +563,7 @@ object RunProcedure extends Logging {
 
     val xmlList = xmlFilesInSession(valueMap)
 
-    val ms = validateMachineSelection(valueMap, runTrait.getMachineDeviceSerialNumberList(alList, xmlList))
+    val ms = validateMachineSelection(valueMap, runTrait.getMachineDeviceSerialNumberList(alList, xmlList), runTrait.getRadiationMachineNameList(alList, xmlList))
 
     if (ms.isLeft) { // handle universal case of machine not identified
       logger.info("Unknown machine: " + ms.left.get)
