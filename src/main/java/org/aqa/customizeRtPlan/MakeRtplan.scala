@@ -36,6 +36,7 @@ import org.aqa.db.MultileafCollimator
 import org.aqa.web.MachineUpdate
 import org.aqa.web.WebUtil.StyleMapT
 import org.aqa.web.WebUtil.styleNone
+import org.aqa.Util
 import org.restlet.Response
 
 import java.io.File
@@ -161,7 +162,7 @@ abstract class MakeRtplan extends Logging {
     * @param userPK User that is creating plan.
     * @param rtplan Plan that has been created.
     * @param planSpecification Plan parameters specified by user.
-    * @param procName Plan file procedure name (from Config.PlanFileList).
+    * @param procedure Associated procedure.
     */
   def saveDicomToDatabase(
       machine: Machine,
@@ -206,7 +207,7 @@ abstract class MakeRtplan extends Logging {
     val elem = dicomToElem(rtplan, name)
 
     val file = makeDicomDownloadFile(name)
-    DicomUtil.writeAttributeListToFile(rtplan, file, "AQA")
+    Util.writeAttributeListToFile(rtplan, file)
 
     Download(elem, file)
   }

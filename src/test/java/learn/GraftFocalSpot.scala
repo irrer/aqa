@@ -212,11 +212,11 @@ object GraftFocalSpot {
 
     val appName = "Graft"
 
-    DicomUtil.writeAttributeListToFile(phase3rtplan, new File(outDir, "RTPLAN.dcm"), appName)
+    Util.writeAttributeListToFile(phase3rtplan, new File(outDir, "RTPLAN.dcm"), appName)
 
     fsRtimageList.foreach(rtimage => {
       val name = "RTIMAGE_" + Util.beamNumber(rtimage).formatted("%02d") + ".dcm"
-      DicomUtil.writeAttributeListToFile(rtimage, new File(outDir, name), appName)
+      Util.writeAttributeListToFile(rtimage, new File(outDir, name), appName)
     })
 
     println("Wrote files to " + outDir.getAbsolutePath)

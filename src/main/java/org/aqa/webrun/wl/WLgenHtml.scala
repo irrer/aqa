@@ -189,7 +189,7 @@ object WLgenHtml {
     }
 
     val statusText = {
-      if (imageResult.imageStatus == ImageStatus.Passed)
+      if (imageResult.imageStatus == WLImageStatus.Passed)
         "<passed> &nbsp; PASSED &nbsp; </passed>"
       else
         s"<failed> &nbsp; ${imageResult.imageStatus} &nbsp; </failed>"

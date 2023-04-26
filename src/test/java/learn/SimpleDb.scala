@@ -16,7 +16,6 @@
 
 package learn
 
-import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 import org.aqa.db.DbSetup
@@ -41,7 +40,7 @@ object SimpleDb {
       val outDir = new File("""D:\tmp\aqa\tmp\ds""")
       alList.foreach(al => {
         val file = new File(outDir, Util.sopOfAl(al) + ".dcm")
-        DicomUtil.writeAttributeListToFile(al, file, "SimpleDb")
+        Util.writeAttributeListToFile(al, file, "SimpleDb")
         Trace.trace("wrote DICOM file " + file.getAbsolutePath)
       })
     }

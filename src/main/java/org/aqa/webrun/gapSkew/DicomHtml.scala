@@ -45,7 +45,7 @@ case class DicomHtml(extendedData: ExtendedData, title: String) {
 
     def fileOf(name: String) = new File(extendedData.output.dir, name)
 
-    DicomUtil.writeAttributeListToFile(al, fileOf(dicomFileName), "AQA")
+    Util.writeAttributeListToFile(al, fileOf(dicomFileName))
 
     val content = {
       <div>

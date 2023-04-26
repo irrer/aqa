@@ -15,28 +15,20 @@
  */
 
 
-import edu.umro.ScalaUtil.Trace
 import com.pixelmed.dicom.AttributeList
-import java.io.File
-import com.pixelmed.dicom.XMLRepresentationOfDicomObjectFactory
-import java.io.ByteArrayOutputStream
-import com.pixelmed.dicom.XMLRepresentationOfDicomObjectFactory
-import java.lang.Throwable
-import scala.xml.XML
-import java.io.ByteArrayInputStream
 import com.pixelmed.dicom.TagFromName
-import edu.umro.ScalaUtil.DicomUtil
-import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.DicomDictionary
-import com.pixelmed.dicom.SequenceAttribute
-import com.pixelmed.dicom.Attribute
-import com.pixelmed.dicom.AttributeTag
-import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.XMLRepresentationOfDicomObjectFactory
+import edu.umro.ScalaUtil.Trace
+import org.aqa.Util
+
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.File
 
 object DicomXML {
 
   val fixSize = 500
-  def prnt(t: String) = {
+  def prnt(t: String): Unit = {
     println(t.take(fixSize) + "\n...\n" + t.takeRight(fixSize))
   }
 
@@ -51,12 +43,12 @@ object DicomXML {
       al.read(file)
 
       al.remove(TagFromName.PixelData)
-      DicomUtil.writeAttributeListToFile(al, new File("""D:\tmp\DicomXML.dcm"""), "DicomXML")
+      Util.writeAttributeListToFile(al, new File("""D:\tmp\DicomXML.dcm"""), "DicomXML")
 
       val baos = new ByteArrayOutputStream
 
       XMLRepresentationOfDicomObjectFactory.createDocumentAndWriteIt(al, baos)
-      baos.close
+      baos.close()
 
       val text = new String(baos.toByteArray)
 
@@ -81,10 +73,9 @@ object DicomXML {
 
       println("done")
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         println("badness: " + t.toString.take(500))
-        t.printStackTrace
-      }
+        t.printStackTrace()
     }
   }
 

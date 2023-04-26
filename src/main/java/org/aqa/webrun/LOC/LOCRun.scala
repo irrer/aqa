@@ -251,8 +251,8 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
     val openFile = new File(dir, "OPEN_Baseline.dcm")
     val transFile = new File(dir, "TRANS_Baseline.dcm")
 
-    DicomUtil.writeAttributeListToFile(runReq.baseline.baselineOpen, openFile, "AQA")
-    DicomUtil.writeAttributeListToFile(runReq.baseline.baselineTrans, transFile, "AQA")
+    Util.writeAttributeListToFile(runReq.baseline.baselineOpen, openFile)
+    Util.writeAttributeListToFile(runReq.baseline.baselineTrans, transFile)
   }
 
   /**
@@ -270,7 +270,7 @@ class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTr
       }
       val name = FileUtil.replaceInvalidFileNameCharacters("delivery" + index + imageLabel + ".dcm", '_')
       val file = new File(extendedData.output.dir, name)
-      DicomUtil.writeAttributeListToFile(al, file, "AQA")
+      Util.writeAttributeListToFile(al, file)
     }
 
     runReq.epidList.zipWithIndex.foreach(x => writeToOutputDir(x._1, x._2))

@@ -16,8 +16,8 @@
 
 package org.aqa.customizeRtPlan
 
-import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.db.Machine
+import org.aqa.Util
 import org.restlet.Response
 
 abstract class MakeRtplanPhaseAny extends MakeRtplan {
@@ -37,7 +37,7 @@ abstract class MakeRtplanPhaseAny extends MakeRtplan {
     }
 
     val file = makeDicomDownloadFile(name)
-    DicomUtil.writeAttributeListToFile(rtplan, file, "AQA")
+    Util.writeAttributeListToFile(rtplan, file)
 
     Download(elem, file)
 

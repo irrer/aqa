@@ -282,7 +282,7 @@ object BBbyCBCTHTML extends Logging {
   private def makeRegReference(extendedData: ExtendedData, regAl: AttributeList): Elem = {
 
     val dicomFile = new File(extendedData.output.dir, "registration.dcm")
-    DicomUtil.writeAttributeListToFile(regAl, dicomFile, "AQA")
+    Util.writeAttributeListToFile(regAl, dicomFile)
     val htmlRegFileName = "registration.html"
 
     val content = {
@@ -328,7 +328,7 @@ object BBbyCBCTHTML extends Logging {
     } else {
       val rtplanAl = dicomSeries.head.attributeListList.head
       val dicomFile = new File(extendedData.output.dir, "rtplan.dcm")
-      DicomUtil.writeAttributeListToFile(rtplanAl, dicomFile, "AQA")
+      Util.writeAttributeListToFile(rtplanAl, dicomFile)
       val htmlRtplanFileName = "rtplan.html"
 
       val content = {

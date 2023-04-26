@@ -38,20 +38,23 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
 
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
     // Process in parallel for speed.  Afterwards, sort by data time.
-    val results = runReq.epidList.par.map(rtimage => new WLProcessImage(extendedData, rtimage, runReq).process).toList //
+    val results = runReq.epidList.zipWithIndex.par.map(rtimageIndex => new WLProcessImage(extendedData, rtimageIndex._1, rtimageIndex._2, runReq).process).toList
+    //val results = runReq.epidList.zipWithIndex.map(rtimageIndex => new WLProcessImage(extendedData, rtimageIndex._1, rtimageIndex._2, runReq).process).toList // Use this to run non-parallel
 
-    val resultList = results.filter(_.isRight).map(_.right.get).sortBy(_.elapsedTime_ms)
+    val resultHasData = results.filter(r => WLImageStatus.hasResult(r.imageStatus))
 
-    resultList.map(_.toWinstonLutz).map(_.insert)
-    logger.info(s"Inserted ${resultList.size} WinstonLutz rows into database.")
-    val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, resultList)
+    resultHasData.map(_.toWinstonLutz).map(_.insert)
+    logger.info(s"Inserted ${resultHasData.size} WinstonLutz rows into database.")
+    val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, results, runReq)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, mainHtmlText)
     logger.info("Wrote main HTML file " + file.getAbsolutePath)
 
-    val statusList = results.filter(_.isLeft).map(_.left.get).distinct
+    // true if all images passed.
+    val allPassed = results.map(r => r.imageStatus.toString).distinct.forall(text => text.equals(WLImageStatus.Passed.toString))
+
     WLUpdateRestlet.updateWL()
-    if (statusList.isEmpty)
+    if (allPassed)
       ProcedureStatus.pass
     else
       ProcedureStatus.fail
@@ -79,7 +82,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
     }
 
     val result: Either[WebUtil.StyleMapT, WLRunReq] = 0 match {
-      case _ if epidList.isEmpty              => formError("No EPID files uploaded")
+      case _ if epidList.isEmpty => formError("No EPID files uploaded")
       // case _ if epidSeriesList.size > 1       => formError("EPID images are from " + numSeries + " different series.")
       case _ if orthogonalAngleList.size != 2 => formError("Need to have images with both vertical and horizontal gantry angles.  Given beam had " + gantryAngleList.mkString("  "))
       case _ =>
@@ -94,7 +97,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
       case Some(rtplanUid) => Phase2Util.fetchRtplan(rtplanUid, alList)
       case _               => None
     }
-    val result = WLRunReq(getRtimageList(alList), rtplan)
+    val result = WLRunReq(getRtimageList(alList).sortBy(dateTime), rtplan)
     result
   }
 

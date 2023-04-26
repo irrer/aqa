@@ -399,7 +399,7 @@ object BBbyEPIDHTML {
         } else {
           val rtplanAl = DicomSeries.getBySopInstanceUID(runReq.sopOfRTPlan.get).head.attributeListList.head
           val dicomFile = new File(extendedData.output.dir, "rtplan.dcm")
-          DicomUtil.writeAttributeListToFile(rtplanAl, dicomFile, "AQA")
+          Util.writeAttributeListToFile(rtplanAl, dicomFile)
           val htmlRtplanFileName = "rtplan.html"
 
           val content = {

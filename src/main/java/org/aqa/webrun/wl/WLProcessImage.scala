@@ -1,16 +1,13 @@
 package org.aqa.webrun.wl
 
 import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.util.Utility
-import edu.umro.DicomDict.TagByName
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.MachineWL
 import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.wl.ImageStatus.ImageStatus
 import org.aqa.PlannedRectangle
 import org.opensourcephysics.numerics.CubicSpline
 
@@ -30,7 +27,7 @@ class WLBadPixel(val x: Int, val y: Int, val rawValue: Int, val correctedValue: 
   }
 }
 
-class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq: WLRunReq) extends org.aqa.Logging {
+class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: Int, runReq: WLRunReq) extends org.aqa.Logging {
 
   import org.aqa.webrun.wl.WLProcessImage.colSum
   import org.aqa.webrun.wl.WLProcessImage.rowSum
@@ -57,7 +54,59 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
   // private  val ORIGINAL_FILE_NAME = "original" + IMAGE_FILE_SUFFIX
   private val BAD_PIXEL_FILE_NAME = "badPixels" + WLgenHtml.IMAGE_FILE_SUFFIX
 
-  def process: Either[ImageStatus, WLImageResult] = {
+  private val elapsedTime_ms = {
+    val ms = Util.dicomGetTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get.getTime
+    val elapsed_ms = ms - extendedData.output.dataDate.get.getTime
+    elapsed_ms
+  }
+
+  private val gantryRounded_deg = Util.angleRoundedTo90(Util.gantryAngle(rtimage))
+  private val collimatorRounded_deg = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
+
+  private val gantryRounded_txt = "G" + gantryRounded_deg.formatted("%03d")
+  private val collimatorRounded_txt = "C" + collimatorRounded_deg.formatted("%03d")
+  private val elapsedTime_txt = {
+    val min = elapsedTime_ms / (60 * 1000)
+    val sec = (elapsedTime_ms / 1000) % 60
+    min.formatted("%d") + ":" + sec.formatted("%02d")
+  }
+
+  private val imageName: String = gantryRounded_txt + " " + collimatorRounded_txt + " " + elapsedTime_txt
+
+  private val subDir: File = {
+    val min = elapsedTime_ms / (60 * 1000)
+    val sec = (elapsedTime_ms / 1000) % 60
+
+    val name = min.formatted("%d") + "_" + sec.formatted("%02d") + "__" + gantryRounded_txt + "__" + collimatorRounded_txt + "-" + index.formatted("%02d")
+
+    val dir = new File(extendedData.output.dir, name)
+    dir.mkdirs()
+    dir
+  }
+
+  private def makeFailedWLImageStatus(imageStatus: WLImageStatus.Value): WLImageResult = {
+    new WLImageResult(
+      imageStatus = imageStatus,
+      boxP = null,
+      ballP = null,
+      edgesUnscaled = null,
+      boxEdgesP = null,
+      directory = subDir,
+      rtimage = rtimage,
+      pixels = null,
+      coarseX = (-1, -1),
+      coarseY = (-1, -1),
+      brcX = -1,
+      brcY = -1,
+      badPixelList = Seq(),
+      marginalPixelList = Seq(),
+      extendedData = extendedData,
+      runReq
+    )
+
+  }
+
+  def process: WLImageResult = {
     logger.info("Start constructing ProcessImage for " + Util.sopOfAl(rtimage))
 
     // Number of binary search iterations before determining that the edge has
@@ -90,37 +139,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
 
     def fmt(d: Double): String = d.formatted("%10.5f")
 
-    val elapsedTime_ms = {
-      val ms = Util.dicomGetTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get.getTime
-      val elapsed_ms = ms - extendedData.output.dataDate.get.getTime
-      elapsed_ms
-    }
-
     def toPng(pix: Array[Array[Float]]): BufferedImage = toPngScaled(pix, SCALE)
-
-    val gantryRounded_deg = Util.angleRoundedTo90(Util.gantryAngle(rtimage))
-    val collimatorRounded_deg = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
-
-    val gantryRounded_txt = "G" + gantryRounded_deg.formatted("%03d")
-    val collimatorRounded_txt = "C" + collimatorRounded_deg.formatted("%03d")
-    val elapsedTime_txt = {
-      val min = elapsedTime_ms / (60 * 1000)
-      val sec = (elapsedTime_ms / 1000) % 60
-      min.formatted("%d") + ":" + sec.formatted("%02d")
-    }
-
-    val imageName: String = gantryRounded_txt + " " + collimatorRounded_txt + " " + elapsedTime_txt
-
-    val subDir: File = {
-      val min = elapsedTime_ms / (60 * 1000)
-      val sec = (elapsedTime_ms / 1000) % 60
-
-      val name = min.formatted("%d") + "_" + sec.formatted("%02d") + "__" + gantryRounded_txt + "__" + collimatorRounded_txt
-
-      val dir = new File(extendedData.output.dir, name)
-      dir.mkdirs()
-      dir
-    }
 
     val diagnostics = new PrintStream(new File(subDir, WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME))
 
@@ -144,7 +163,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
     def writeDicomAsText(attributeList: AttributeList): Unit = {
       try {
         val text = DicomUtil.attributeListToString(attributeList)
-        Utility.writeFile(new File(subDir, Util.sopOfAl(rtimage) + ".txt"), text.getBytes)
+        Util.writeFile(new File(subDir, Util.sopOfAl(rtimage) + ".txt"), text)
       } catch {
         case e: Exception =>
           diagnosticMessage("Unable to write DICOM file as text: " + e)
@@ -154,7 +173,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
     def writeDicomAsBinaryDicom(attributeList: AttributeList): Unit = {
       try {
         val file = new File(subDir, Util.sopOfAl(rtimage) + ".dcm")
-        DicomUtil.writeAttributeListToFile(attributeList, file, "AQA")
+        Util.writeAttributeListToFile(attributeList, file)
       } catch {
         case e: Exception =>
           diagnosticMessage("Unable to write DICOM file as binary DICOM: " + e)
@@ -269,15 +288,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
         }
       new File(subDir, pngName)
     }
-
-    /*
-        def writeImageNow(png: BufferedImage, name: String): Unit = {
-            val file = makePngFile(name)
-            logger.info("writing image file: " + file.getAbsolutePath + "   width: " + png.getWidth + "    height: " + png.getHeight)
-            file.delete
-            ImageIO.write(png, "png", file)
-        }
-     */
 
     def writeImageLater(img: BufferedImage, name: String): Unit = WLProcessImage.writeImage(img, makePngFile(name))
 
@@ -419,7 +429,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
       * the edge and then finding the midpoint of that spline.  Find the midpoint using a binary
       * search.
       */
-    def findEdge(pixIn: Array[Array[Float]], vertical: Boolean, name: String, rawExtremeAveragesRange: Double): Either[ImageStatus.Value, Double] = {
+    def findEdge(pixIn: Array[Array[Float]], vertical: Boolean, name: String, rawExtremeAveragesRange: Double): Either[WLImageStatus.Value, Double] = {
       val length = if (vertical) pixIn(0).length else pixIn.length
       val sum = if (vertical) colSum(pixIn) else rowSum(pixIn)
       val scaledSum = unitize(sum)
@@ -458,7 +468,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
         val errorMsg =
           "Edge " + name + " failed to meet criteria for brightness range of " + Config.WLMaxAllowedBrightnessRangePercentDifference + " percent.  " + brightnessMessage + "    Required percent" + Config.WLMaxAllowedBrightnessRangePercentDifference
         logger.error(errorMsg)
-        Left(ImageStatus.BallAreaNoisy)
+        Left(WLImageStatus.BallAreaNoisy)
       } else Right(center(0, sum.length - 1, PRECISION))
     }
 
@@ -695,7 +705,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
     /**
       * Locate the box to sub-pixel accuracy.
       */
-    def fineBoxLocate(areaOfInterest: Array[Array[Float]], rawExtremeAveragesRange: Double): Either[ImageStatus.Value, Edges] = {
+    def fineBoxLocate(areaOfInterest: Array[Array[Float]], rawExtremeAveragesRange: Double): Either[WLImageStatus.Value, Edges] = {
       val height = areaOfInterest.length
       val width = areaOfInterest(0).length
 
@@ -709,19 +719,19 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
       val eLeft = findEdge(leftArea, vertical = true, "left", rawExtremeAveragesRange)
       val eRight = findEdge(rightArea, vertical = true, "right", rawExtremeAveragesRange)
 
-      def edgeStatus(e: Either[ImageStatus.Value, Double]): ImageStatus.Value = {
+      def edgeStatus(e: Either[WLImageStatus.Value, Double]): WLImageStatus.Value = {
         e match {
-          case Right(_) => ImageStatus.Passed
+          case Right(_) => WLImageStatus.Passed
           case Left(s)  => s
         }
       }
 
-      val status: ImageStatus.Value = {
-        val list = Seq(eTop, eBottom, eLeft, eRight).map(edgeStatus).distinct.filterNot(_ == ImageStatus.Passed)
-        if (list.isEmpty) ImageStatus.Passed else list.head
+      val status: WLImageStatus.Value = {
+        val list = Seq(eTop, eBottom, eLeft, eRight).map(edgeStatus).distinct.filterNot(_ == WLImageStatus.Passed)
+        if (list.isEmpty) WLImageStatus.Passed else list.head
       }
 
-      if (status == ImageStatus.Passed) {
+      if (status == WLImageStatus.Passed) {
         val edgeTop: Double = eTop.right.get
         val edgeBottom = eBottom.right.get + (height - tol2)
         val edgeLeft = eLeft.right.get
@@ -966,7 +976,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
       val errorScaledY = boxCenterScaledY - ballCenterScaledY
       val errorScaledXYCombined = Math.sqrt((errorScaledX * errorScaledX) + (errorScaledY * errorScaledY))
 
-      val passed: ImageStatus.ImageStatus = {
+      val passed: WLImageStatus.ImageStatus = {
         val p = annotate.annotateImage(normalPng, normalGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true, imageName, passLimit_mm = wlParameters.passLimit_mm)
         p
       }
@@ -1075,7 +1085,24 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
       val rawDistinctSortedList = rawPixels.flatten.toList.distinct.sorted
 
       if (rawDistinctSortedList.size < Config.WLMinimumDistinctPixelValues) {
-        Left(ImageStatus.BoxNotFound) // imageError(ImageStatus.BoxNotFound, "Image lacks visible features", Seq[WLBadPixel]())
+        new WLImageResult(
+          imageStatus = WLImageStatus.BoxNotFound,
+          boxP = null,
+          ballP = null,
+          edgesUnscaled = null,
+          boxEdgesP = null,
+          directory = subDir,
+          rtimage = rtimage,
+          pixels = null,
+          coarseX = (-1, -1),
+          coarseY = (-1, -1),
+          brcX = -1,
+          brcY = -1,
+          badPixelList = Seq(),
+          marginalPixelList = Seq(),
+          extendedData = extendedData,
+          runReq
+        )
       } else {
 
         /* Raw pixels with bad pixels set to average pixel value */
@@ -1109,8 +1136,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
 
         val fineBoxLocateResult = fineBoxLocate(areaOfInterest, rawExtremeAveragesRange)
 
-        val result: Either[ImageStatus, WLImageResult] = fineBoxLocateResult match {
-          case Left(status) => Left(status)
+        val result: WLImageResult = fineBoxLocateResult match {
+          case Left(status) => makeFailedWLImageStatus(status)
           case Right(edgesUnscaled) =>
             val ballArea = subSection(
               areaOfInterest,
@@ -1125,7 +1152,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
             showBallBackgroundNoise(normalizeArea(ballArea), "normalized_ball_background")
 
             if (ballAreaIsFlat(areaOfInterest, edgesUnscaled)) {
-              Left(ImageStatus.BallMissing)
+              makeFailedWLImageStatus(WLImageStatus.BallMissing)
             } else {
               findBallCenter(areaOfInterest, ballArea) match {
                 case Some(ballRelativeCenter: (Double, Double)) =>
@@ -1150,8 +1177,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
 
                   diagnosticMessage(ir.toString)
                   WLgenHtml.generateHtml(extendedData, subDir, imageResult = ir)
-                  Right(ir)
-                case None => Left(ImageStatus.BallAreaNoisy)
+                  ir
+                case None => makeFailedWLImageStatus(WLImageStatus.BallAreaNoisy)
               }
             }
         }
@@ -1166,24 +1193,9 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
         diagnosticMessage(msg)
 
         val imageResult =
-          new WLImageResult(
-            imageStatus = ImageStatus.UnexpectedError,
-            boxP = null,
-            ballP = null,
-            edgesUnscaled = null,
-            boxEdgesP = null,
-            directory = subDir,
-            rtimage = rtimage,
-            pixels = null,
-            coarseX = (-1, -1),
-            coarseY = (-1, -1),
-            brcX = -1,
-            brcY = -1,
-            badPixelList = Seq(),
-            marginalPixelList = Seq(),
-            extendedData = extendedData,
-            runReq
-          )
+          makeFailedWLImageStatus(WLImageStatus.UnexpectedError)
+
+        val j = subDir
 
         diagnosticMessage(imageResult.toString)
 
@@ -1192,11 +1204,10 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
         } catch {
           case e: Exception => logger.error("ProcessImage.process tried to save results of failure: " + fmtEx(e))
         }
-        Right(imageResult)
+        imageResult
     } finally {
       diagnostics.close()
     }
-
   }
 }
 

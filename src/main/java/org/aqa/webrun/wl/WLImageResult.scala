@@ -7,7 +7,6 @@ import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Util
 import org.aqa.db.WinstonLutz
-import org.aqa.webrun.wl
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.PlannedRectangle
@@ -38,21 +37,8 @@ class Edges(val top: Double, val bottom: Double, val left: Double, val right: Do
   }
 }
 
-object ImageStatus extends Enumeration {
-  type ImageStatus = Value
-
-  val Passed: wl.ImageStatus.Value = Value("Passed")
-  val BoxNotFound: wl.ImageStatus.Value = Value("Failed: Box Not Found")
-  val OffsetLimitExceeded: wl.ImageStatus.Value = Value("Failed: Offset Limit Exceeded")
-  val BallMissing: wl.ImageStatus.Value = Value("Failed: No ball in box")
-  val BallAreaNoisy: wl.ImageStatus.Value = Value("Failed: Ball image area is noisy")
-  val EdgeExtentsNotFound: wl.ImageStatus.Value = Value("Failed: Extents of edges not found")
-  val UnknownTreatmentMachine: wl.ImageStatus.Value = Value("Failed: Unknown treatment machine")
-  val UnexpectedError: wl.ImageStatus.Value = Value("Failed: Unexpected Error")
-}
-
 class WLImageResult(
-    val imageStatus: ImageStatus.ImageStatus,
+    val imageStatus: WLImageStatus.ImageStatus,
     boxP: Point,
     ballP: Point,
     edgesUnscaled: Edges,
@@ -134,25 +120,25 @@ class WLImageResult(
 
   val gantryAngle: Int = Util.angleRoundedTo90(Util.gantryAngle(rtimage)) //attrFloat(TagByName.GantryAngle)
 
-  private val left_pix = edgesUnscaled.left + coarseX._1
-  private val right_pix = edgesUnscaled.right + coarseX._1
-  private val top_pix = edgesUnscaled.top + coarseY._1
-  private val bottom_pix = edgesUnscaled.bottom + coarseY._1
+  private def left_pix = edgesUnscaled.left + coarseX._1
+  private def right_pix = edgesUnscaled.right + coarseX._1
+  private def top_pix = edgesUnscaled.top + coarseY._1
+  private def bottom_pix = edgesUnscaled.bottom + coarseY._1
 
-  private val left_mm = trans.pix2IsoCoordX(left_pix)
-  private val right_mm = trans.pix2IsoCoordX(right_pix)
-  private val top_mm = trans.pix2IsoCoordY(top_pix)
-  private val bottom_mm = trans.pix2IsoCoordY(bottom_pix)
+  private def left_mm = trans.pix2IsoCoordX(left_pix)
+  private def right_mm = trans.pix2IsoCoordX(right_pix)
+  private def top_mm = trans.pix2IsoCoordY(top_pix)
+  private def bottom_mm = trans.pix2IsoCoordY(bottom_pix)
 
-  private val ballX_pix = brcX + coarseX._1
-  private val ballY_pix = brcY + coarseY._1
-  private val ballCenter_mm = trans.pix2Iso(ballX_pix, ballY_pix)
-  private val boxCenterX_pix = (right_pix + left_pix) / 2.0
-  private val boxCenterY_pix = (bottom_pix + top_pix) / 2.0
-  private val boxCenter_mm = trans.pix2Iso(boxCenterX_pix, boxCenterY_pix)
-  private val offsetX_mm = boxCenter_mm.getX - ballCenter_mm.getX
-  private val offsetY_mm = boxCenter_mm.getY - ballCenter_mm.getY
-  private val offset_mm = Math.sqrt((offsetX_mm * offsetX_mm) + (offsetY_mm * offsetY_mm))
+  private def ballX_pix = brcX + coarseX._1
+  private def ballY_pix = brcY + coarseY._1
+  private def ballCenter_mm = trans.pix2Iso(ballX_pix, ballY_pix)
+  private def boxCenterX_pix = (right_pix + left_pix) / 2.0
+  private def boxCenterY_pix = (bottom_pix + top_pix) / 2.0
+  private def boxCenter_mm = trans.pix2Iso(boxCenterX_pix, boxCenterY_pix)
+  private def offsetX_mm = boxCenter_mm.getX - ballCenter_mm.getX
+  private def offsetY_mm = boxCenter_mm.getY - ballCenter_mm.getY
+  private def offset_mm = Math.sqrt((offsetX_mm * offsetX_mm) + (offsetY_mm * offsetY_mm))
 
   override def toString: String = {
 
@@ -188,18 +174,18 @@ class WLImageResult(
       badPixelListToString(marginalPixelList, "marginal")
   }
 
+  val beamName: Option[String] = {
+    if (runReq.rtplan.isDefined)
+      Util.getBeamNameOfRtimage(runReq.rtplan.get, rtimage)
+    else
+      None
+  }
+
   /**
     * Construct a database object from these results.
     * @return database row content
     */
   def toWinstonLutz: WinstonLutz = {
-
-    val beamName: Option[String] = {
-      if (runReq.rtplan.isDefined)
-        Util.getBeamNameOfRtimage(runReq.rtplan.get, rtimage)
-      else
-        None
-    }
 
     val planned = if (runReq.rtplan.isDefined) Some(PlannedRectangle(rtplan = runReq.rtplan.get, rtimage)) else None
 
