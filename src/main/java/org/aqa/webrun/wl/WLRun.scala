@@ -84,7 +84,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
     val result: Either[WebUtil.StyleMapT, WLRunReq] = 0 match {
       case _ if epidList.isEmpty => formError("No EPID files uploaded")
       // case _ if epidSeriesList.size > 1       => formError("EPID images are from " + numSeries + " different series.")
-      case _ if orthogonalAngleList.size != 2 => formError("Need to have images with both vertical and horizontal gantry angles.  Given beam had " + gantryAngleList.mkString("  "))
+      // case _ if orthogonalAngleList.size != 2 => formError("Need to have images with both vertical and horizontal gantry angles.  Given beam had " + gantryAngleList.mkString("  "))
       case _ =>
         val runReq = WLRunReq(epidList.sortBy(dateTime), rtplan)
         Right(runReq)

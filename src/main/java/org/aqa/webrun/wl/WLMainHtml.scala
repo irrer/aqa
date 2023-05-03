@@ -73,15 +73,7 @@ object WLMainHtml extends Logging {
 
       def getNameHtml(ir: WLImageResult): Elem = {
         <b>
-          <span>G
-            {ir.gantryRounded_deg}
-          </span>
-          <span>C
-            {ir.collimatorRounded_deg.round}
-          </span>
-          <span>
-            {fmtTime(ir)}
-          </span>
+          {s"G${ir.gantryRounded_deg} C${ir.collimatorRounded_deg.round} ${fmtTime(ir)}"}
         </b>
       }
 
@@ -305,7 +297,7 @@ object WLMainHtml extends Logging {
         ""
       }
 
-      val badPixelsToHtml: Elem = {
+      val rtplanView: Elem = {
         if (runReq.rtplan.isDefined) {
           val fileName = "RTPLAN.txt"
           val rtplanText = DicomUtil.attributeListToString(runReq.rtplan.get)
@@ -316,6 +308,25 @@ object WLMainHtml extends Logging {
         else <span style="margin-left: 24px;margin-right: 24px;">RTPLAN Not Available</span>
       }
 
+      val passFailBanner: Elem = {
+
+        def makeElem(text: String, color: Color) = {
+          val style = s"color: #000000; background: ${toHtml(color)};"
+          <h1 style={style}>
+            <b style="margin-left:12px;margin-right:12px;">
+              {text}
+            </b>
+          </h1>
+        }
+
+        resultList.find(r => r.imageStatus != WLImageStatus.Passed) match {
+          case Some(result) =>
+            makeElem(result.imageStatus.toString, Config.WLFailColor)
+          case _ =>
+            makeElem("PASSED", Config.WLPassColor)
+        }
+      }
+
       val headTable2: Elem = {
         <table border='0' style="border-collapse:separate; border-spacing:0.5em;">
           <tr>
@@ -323,7 +334,10 @@ object WLMainHtml extends Logging {
               {csvLink()}
             </td>
             <td>
-              {badPixelsToHtml}
+              {rtplanView}
+            </td>
+            <td>
+              {passFailBanner}
             </td>
             <td>
               {resultList.size}

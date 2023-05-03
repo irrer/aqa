@@ -250,7 +250,7 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
     val yPosn3 = png.getHeight - stringRectangle3.getHeight
     graphics.drawString(imageName, xPosn3.toInt, yPosn3.toInt)
 
-    WLImageStatus.Passed
+    passed
   }
 
 
