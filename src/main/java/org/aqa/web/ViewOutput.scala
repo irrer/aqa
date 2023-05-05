@@ -20,7 +20,6 @@ import org.aqa.db.Input
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.web.WebUtil._
-import org.aqa.Config
 import org.aqa.Crypto
 import org.aqa.Util
 import org.restlet.Request
@@ -31,7 +30,7 @@ import org.restlet.Restlet
 
 import java.io.File
 import java.sql.Timestamp
-import scala.collection.mutable.HashMap
+import scala.collection.mutable
 import scala.xml.Elem
 
 /**
@@ -43,31 +42,15 @@ private class ImmutableOutput(val outputPK: Long, val inputPK: Long, val dir: Fi
 }
 
 object ViewOutput {
-  val path = WebUtil.pathOf(WebUtil.SubUrl.view, ViewOutput.getClass.getName)
+  val path: String = WebUtil.pathOf(WebUtil.SubUrl.view, ViewOutput.getClass.getName)
 
   val outputPKTag = "outputPK"
   val summaryTag = "summary"
-  val checksumTag = "checksum"
+  private val checksumTag = "checksum"
 
-  def viewOutputUrl(outputPK: Long) = {
+  def viewOutputUrl(outputPK: Long): String = {
     val url = ViewOutput.path + "?" + outputPKTag + "=" + outputPK
     url
-  }
-
-  private def shouldShowSummary(outputFileExists: Boolean, procedureIsRunning: Boolean, summaryRequested: Boolean, clientOnPendingList: Boolean): Boolean = {
-    (outputFileExists, procedureIsRunning, summaryRequested, clientOnPendingList) match {
-      case (false, _, _, _)       => true
-      case (true, _, true, false) => true
-      case _                      => false
-    }
-  }
-
-  private def shouldRemoveFromPending(outputFileExists: Boolean, procedureIsRunning: Boolean, summaryRequested: Boolean, clientOnPendingList: Boolean): Boolean = {
-    (outputFileExists, procedureIsRunning, summaryRequested, clientOnPendingList) match {
-      case (false, true, true, true) => false
-      case (_, _, _, true)           => true
-      case _                         => false
-    }
   }
 
   def showSummary(outputPK: Long, response: Response): Unit = {
@@ -75,8 +58,6 @@ object ViewOutput {
     val procedure = Procedure.get(output.procedurePK).get
     val user = output.getUser
     val elapsed = Util.elapsedTimeHumanFriendly(output.elapsedTime)
-
-    val offset = Config.DataDir.getAbsolutePath.size + 2 + WebServer.tmpDirBaseUrl.size
 
     def fileToRow(file: File): Elem = {
       val row = {
@@ -129,7 +110,7 @@ object ViewOutput {
             <div class="col-md-2">Started: {Util.timeHumanFriendly(output.startDate)}</div>
             <div class="col-md-2">Elapsed: {elapsed}</div>
           </div>
-          { val x = getCachedOutput(output.outputPK.get).dir }
+          {getCachedOutput(output.outputPK.get).dir}
           {getCachedOutput(output.outputPK.get).dir.listFiles.map(f => fileToRow(f))}
         </div>
       }
@@ -142,7 +123,7 @@ object ViewOutput {
 
   def noOutput(response: Response): Unit = {
     val text = "No such output.  Most likely it has been deleted or redone.  Click 'Results' for the latest list of outputs."
-    response.setEntity(text, MediaType.TEXT_PLAIN) // TODO
+    response.setEntity(text, MediaType.TEXT_PLAIN)
     val content = {
       <div>{text}</div>
     }
@@ -153,22 +134,22 @@ object ViewOutput {
   private def secureHashOfDirTime(dir: File): String = Crypto.secureHash(dir.listFiles.foldLeft("")((t, f) => t + f.lastModified.toString))
 
   /** Cache of output directories.  Once established, they are immutable, so caching works. */
-  private val outputDirCache = HashMap[Long, ImmutableOutput]();
+  private val outputDirCache = mutable.HashMap[Long, ImmutableOutput]()
 
   /**
     * Get the cached copy of a an output directory to save excessive database calls.
     */
   private def getCachedOutput(outputPK: Long): ImmutableOutput = {
     outputDirCache.synchronized({
-      if (!(outputDirCache.get(outputPK).isDefined)) outputDirCache.put(outputPK, new ImmutableOutput(Output.get(outputPK).get))
-      outputDirCache.get(outputPK).get
+      if (!outputDirCache.contains(outputPK)) outputDirCache.put(outputPK, new ImmutableOutput(Output.get(outputPK).get))
+      outputDirCache(outputPK)
     })
   }
 
   private def secureHashOfOutput(outputPK: Long): String = secureHashOfDirTime(getCachedOutput(outputPK).dir)
 
   /** Determine the last change time of the data. */
-  def giveStatus(outputPK: Long, status: String, response: Response) = {
+  private def giveStatus(outputPK: Long, response: Response): Unit = {
     val secHash = secureHashOfOutput(outputPK)
     response.setStatus(Status.SUCCESS_OK)
     response.setEntity(secHash, MediaType.TEXT_PLAIN)
@@ -210,30 +191,9 @@ object ViewOutput {
   */
 class ViewOutput extends Restlet with SubUrlView {
 
-  private def pageTitle = "Output"
-
-  private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
-    val action = ViewOutput.path + "?" + name + "=" + name
-    new FormButton(name, 1, 0, subUrl, action, buttonType)
-  }
-
-  private val abortButton = makeButton("Abort", true, ButtonType.BtnPrimary)
-
-  /**
-    * Abort the procedure.
-    */
-  private def abort(valueMap: ValueMapT, request: Request, response: Response) = {
-    // TODO
-  }
-
-  private def setResponseWithOutputFile(file: File, response: Response) = {
+  private def setResponseWithOutputFile(file: File, response: Response): Unit = {
     response.setStatus(Status.SUCCESS_OK)
     response.redirectSeeOther(WebServer.urlOfResultsFile(file))
-  }
-
-  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
-    val value = valueMap.get(button.label)
-    value.isDefined && value.get.toString.equals(button.label)
   }
 
   override def handle(request: Request, response: Response): Unit = {
@@ -243,7 +203,7 @@ class ViewOutput extends Restlet with SubUrlView {
 
       val checksum = valueMap.get(ViewOutput.checksumTag)
 
-      val showSummary = valueMap.get(ViewOutput.summaryTag).isDefined
+      val showSummary = valueMap.contains(ViewOutput.summaryTag)
 
       val output: Option[ImmutableOutput] = {
         try {
@@ -252,8 +212,7 @@ class ViewOutput extends Restlet with SubUrlView {
             Some(ViewOutput.getCachedOutput(outputPK))
           else
             None
-        }
-        catch {
+        } catch {
           case _: Throwable => None
         }
       }
@@ -270,11 +229,11 @@ class ViewOutput extends Restlet with SubUrlView {
       }
 
       0 match {
-        case _ if (output.isDefined && checksum.isDefined) => ViewOutput.giveStatus(output.get.outputPK, checksum.get, response)
-        case _ if (output.isDefined && showSummary)        => ViewOutput.showSummary(output.get.outputPK, response)
-        case _ if displayFile.isDefined                    => setResponseWithOutputFile(displayFile.get, response)
-        case _ if (output.isDefined)                       => ViewOutput.showSummary(output.get.outputPK, response)
-        case _                                             => ViewOutput.noOutput(response)
+        case _ if output.isDefined && checksum.isDefined => ViewOutput.giveStatus(output.get.outputPK, response)
+        case _ if output.isDefined && showSummary        => ViewOutput.showSummary(output.get.outputPK, response)
+        case _ if displayFile.isDefined                  => setResponseWithOutputFile(displayFile.get, response)
+        case _ if output.isDefined                       => ViewOutput.showSummary(output.get.outputPK, response)
+        case _                                           => ViewOutput.noOutput(response)
       }
     } catch {
       case e: Exception => internalFailure(response, "Unexpected error: " + e.getMessage)
