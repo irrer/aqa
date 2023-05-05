@@ -32,7 +32,6 @@ import org.restlet.Restlet
 import java.io.File
 import java.sql.Timestamp
 import scala.collection.mutable.HashMap
-import scala.util.Try
 import scala.xml.Elem
 
 /**
@@ -142,9 +141,10 @@ object ViewOutput {
   }
 
   def noOutput(response: Response): Unit = {
-    response.setEntity("No such output.  Most likely it has been deleted or redone.  Refresh the page for the latest list of outputs.", MediaType.TEXT_PLAIN) // TODO
+    val text = "No such output.  Most likely it has been deleted or redone.  Click 'Results' for the latest list of outputs."
+    response.setEntity(text, MediaType.TEXT_PLAIN) // TODO
     val content = {
-      <div>No such output.  Possibly it has been deleted or redone.  Refresh the page for the latest list of outputs.</div>
+      <div>{text}</div>
     }
     simpleWebPage(content, Status.CLIENT_ERROR_BAD_REQUEST, "No such output", response)
   }
@@ -236,7 +236,7 @@ class ViewOutput extends Restlet with SubUrlView {
     value.isDefined && value.get.toString.equals(button.label)
   }
 
-  override def handle(request: Request, response: Response) = {
+  override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
     try {
       val valueMap = getValueMap(request)
@@ -246,9 +246,16 @@ class ViewOutput extends Restlet with SubUrlView {
       val showSummary = valueMap.get(ViewOutput.summaryTag).isDefined
 
       val output: Option[ImmutableOutput] = {
-        val outputPK = valueMap.get(ViewOutput.outputPKTag)
-        Try(Some(ViewOutput.getCachedOutput(outputPK.get.toLong))) getOrElse None
-        // else None
+        try {
+          val outputPK = valueMap(ViewOutput.outputPKTag).toLong
+          if (Output.get(outputPK).isDefined)
+            Some(ViewOutput.getCachedOutput(outputPK))
+          else
+            None
+        }
+        catch {
+          case _: Throwable => None
+        }
       }
 
       if (output.isDefined) {
