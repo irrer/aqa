@@ -21,7 +21,7 @@ import scala.xml.Elem
 
 class WLNav extends Restlet with SubUrlRoot with Logging {
 
-  private val rowsPerPageDefault = 100
+  private val rowsPerPageDefault = 10
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
     val action: String = pathOf + "?" + name + "=" + name
