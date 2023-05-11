@@ -151,25 +151,33 @@ class WLImageResult(
           list.foldLeft("")((t, bad) => { t + "    " + bad + "\n" })
     }
 
+    def opt(dFun: () => Double): String = {
+      try {
+        dFun().toString
+      } catch {
+        case _ : Throwable => "NA"
+      }
+    }
+
     "" +
       "    Directory: " + directory.getAbsolutePath + "\n" +
       s"    Status: $imageStatus\n" +
       "    Offset: " + (if (ok) new Point(offX, offY).toString else "not available") + "\n" +
       "    sqrt(x*x + y*y): " + (if (ok) offXY.formatted("%8.5f") else "not available") + "\n" +
-      s"    Box  left      pix: $left_pix\n" +
-      s"    Box  right     pix: $right_pix\n" +
-      s"    Box  top       pix: $top_pix\n" +
-      s"    Box  bottom    pix: $bottom_pix\n" +
-      s"    Box center X,Y pix: $boxCenterX_pix, $boxCenterY_pix\n" +
-      s"    Ball X,Y       pix: $ballX_pix, $ballY_pix\n" +
-      s"    Box  left      iso mm: $left_mm\n" +
-      s"    Box  right     iso mm: $right_mm\n" +
-      s"    Box  top       iso mm: $top_mm\n" +
-      s"    Box  bottom    iso mm: $bottom_mm\n" +
-      s"    Ball X,Y       iso mm: ${ballCenter_mm.getX},${ballCenter_mm.getY}\n" +
-      s"    Box X,Y        iso mm: ${boxCenter_mm.getX}, ${boxCenter_mm.getY}\n" +
-      s"    offset X,Y     iso mm: $offsetX_mm, $offsetY_mm\n" +
-      s"    offset         iso mm: $offset_mm\n" +
+      s"    Box  left      pix: ${opt(left_pix _)}\n" +
+      s"    Box  right     pix: ${opt(right_pix _)}\n" +
+      s"    Box  top       pix: ${opt(top_pix _)}\n" +
+      s"    Box  bottom    pix: ${opt(bottom_pix _)}\n" +
+      s"    Box center X,Y pix: ${opt(boxCenterX_pix _)}, ${opt(boxCenterY_pix _)}\n" +
+      s"    Ball X,Y       pix: ${opt(ballX_pix _)}, ${opt(ballY_pix _)}\n" +
+      s"    Box  left      iso mm: ${opt(left_mm _)}\n" +
+      s"    Box  right     iso mm: ${opt(right_mm _)}\n" +
+      s"    Box  top       iso mm: ${opt(top_mm _)}\n" +
+      s"    Box  bottom    iso mm: ${opt(bottom_mm _)}\n" +
+      s"    Ball X,Y       iso mm: ${opt(ballCenter_mm.getX _)},${opt(ballCenter_mm.getY _)}\n" +
+      s"    Box X,Y        iso mm: ${opt(boxCenter_mm.getX _)}, ${opt(boxCenter_mm.getY _)}\n" +
+      s"    offset X,Y     iso mm: ${opt(offsetX_mm _)}, ${opt(offsetY_mm _)}\n" +
+      s"    offset         iso mm: ${opt(offset_mm _)}\n" +
       badPixelListToString(badPixelList, "bad") +
       badPixelListToString(marginalPixelList, "marginal")
   }
@@ -189,11 +197,18 @@ class WLImageResult(
 
     val planned = if (runReq.rtplan.isDefined) Some(PlannedRectangle(rtplan = runReq.rtplan.get, rtimage)) else None
 
+    val rtplanUID = {
+      Phase2Util.referencedPlanUIDOpt(rtimage) match {
+        case Some(uid) => uid
+        case _         => ""
+      }
+    }
+
     val wl = WinstonLutz(
       winstonLutzPK = None,
       outputPK = extendedData.output.outputPK.get,
       rtimageUID = Util.sopOfAl(rtimage),
-      rtplanUID = Phase2Util.referencedPlanUID(rtimage),
+      rtplanUID = rtplanUID,
       beamName = beamName,
       gantryAngle_deg = gantry_deg,
       collimatorAngle_deg = collimator_deg,
