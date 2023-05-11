@@ -75,7 +75,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
 
     // first try getting the RTPLAN from the uploaded values, then from the database.
     val rtplan = {
-      epidList.filter(Util.isRtimage).map(Phase2Util.referencedPlanUID).headOption match {
+      epidList.filter(Util.isRtimage).flatMap(Phase2Util.referencedPlanUIDOpt).headOption match {
         case Some(rtplanUid) => Phase2Util.fetchRtplan(rtplanUid, alList)
         case _               => None
       }
@@ -93,7 +93,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
   }
 
   override def makeRunReqForRedo(alList: Seq[AttributeList], xmlList: Seq[Elem], oldOutput: Option[Output]): WLRunReq = {
-    val rtplan = alList.filter(Util.isRtimage).map(Phase2Util.referencedPlanUID).headOption match {
+    val rtplan = alList.filter(Util.isRtimage).flatMap(Phase2Util.referencedPlanUIDOpt).headOption match {
       case Some(rtplanUid) => Phase2Util.fetchRtplan(rtplanUid, alList)
       case _               => None
     }
