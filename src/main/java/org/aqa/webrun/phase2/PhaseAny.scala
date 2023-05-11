@@ -409,14 +409,20 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure(procedure) with Run
                   case Left(fail) => Left(Seq(metadataCheck.summary, badPixel.summary, collimatorCentering.summary, fail))
                   case Right(centerDose) =>
                     val prevSummaryList = Seq(metadataCheck, badPixel, collimatorCentering, centerDose).map(r => r.summary)
-                    val seq: Seq[() => Either[Elem, SubProcedureResult]] = Seq(
-                      () => CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
-                      () => WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
-                      () => SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
-                      () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
-                      () => VMATAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
-                      () => FSAnalysis.runProcedure(extendedData, FSRunReq(runReq.rtplan, runReq.rtimageMap))
-                    )
+                    val seq: Seq[() => Either[Elem, SubProcedureResult]] = {
+                      val s = Seq(
+                        () => CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
+                        () => WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
+                        () => SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
+                        () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
+                        () => VMATAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource)
+                      )
+
+                      if (extendedData.procedure.isPhase3) { // include Focal Spot for Phase3, but not Phase2
+                        val fs = { () => FSAnalysis.runProcedure(extendedData, FSRunReq(runReq.rtplan, runReq.rtimageMap)) }
+                        s :+ fs
+                      } else s
+                    }
 
                     val list = seq.par.map(f => f())
                     val summaryList = prevSummaryList ++ list.map(r => if (r.isLeft) r.left.get else r.right.get.summary)
