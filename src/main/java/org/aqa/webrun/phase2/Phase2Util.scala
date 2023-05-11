@@ -62,6 +62,20 @@ object Phase2Util extends Logging {
   }
 
   /**
+    * Get the plan that this image references.  If it does not reference exactly one it will throw an exception.
+    */
+  def referencedPlanUIDOpt(rtimage: AttributeList): Option[String] = {
+    val planSeqList: Seq[AttributeList] = {
+      if (rtimage.get(TagByName.ReferencedRTPlanSequence) != null)
+        DicomUtil.seqToAttr(rtimage, TagByName.ReferencedRTPlanSequence)
+      else
+        Seq()
+    }
+    val planUidList = planSeqList.map(al => al.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrNull).filter(uid => uid != null).distinct
+    planUidList.headOption
+  }
+
+  /**
     * Determine if the given image references the given plan.
     */
   def imageReferencesPlan(plan: AttributeList, image: AttributeList): Boolean = {
@@ -539,8 +553,7 @@ object Phase2Util extends Logging {
       val rtplan = DicomSeries
         .getBySopInstanceUID(rtplanUid)
         .flatMap(_.attributeListList)
-        .filter(al => Util.sopOfAl(al).equals(rtplanUid))
-        .headOption
+        .find(al => Util.sopOfAl(al).equals(rtplanUid))
       rtplan
     }
 
