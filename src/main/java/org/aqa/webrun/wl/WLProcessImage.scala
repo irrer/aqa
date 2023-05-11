@@ -706,43 +706,47 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       * Locate the box to sub-pixel accuracy.
       */
     def fineBoxLocate(areaOfInterest: Array[Array[Float]], rawExtremeAveragesRange: Double): Either[WLImageStatus.Value, Edges] = {
-      val height = areaOfInterest.length
-      val width = areaOfInterest(0).length
+      try {
+        val height = areaOfInterest.length
+        val width = areaOfInterest(0).length
 
-      val topArea = subSection(areaOfInterest, tol2, width - tol4, 0, tol2)
-      val bottomArea = subSection(areaOfInterest, tol2, width - tol4, height - tol2, tol2)
-      val leftArea = subSection(areaOfInterest, 0, tol2, tol2, height - tol4)
-      val rightArea = subSection(areaOfInterest, width - tol2, tol2, tol2, height - tol4)
+        val topArea = subSection(areaOfInterest, tol2, width - tol4, 0, tol2)
+        val bottomArea = subSection(areaOfInterest, tol2, width - tol4, height - tol2, tol2)
+        val leftArea = subSection(areaOfInterest, 0, tol2, tol2, height - tol4)
+        val rightArea = subSection(areaOfInterest, width - tol2, tol2, tol2, height - tol4)
 
-      val eTop = findEdge(topArea, vertical = false, "top", rawExtremeAveragesRange)
-      val eBottom = findEdge(bottomArea, vertical = false, "bottom", rawExtremeAveragesRange)
-      val eLeft = findEdge(leftArea, vertical = true, "left", rawExtremeAveragesRange)
-      val eRight = findEdge(rightArea, vertical = true, "right", rawExtremeAveragesRange)
+        val eTop = findEdge(topArea, vertical = false, "top", rawExtremeAveragesRange)
+        val eBottom = findEdge(bottomArea, vertical = false, "bottom", rawExtremeAveragesRange)
+        val eLeft = findEdge(leftArea, vertical = true, "left", rawExtremeAveragesRange)
+        val eRight = findEdge(rightArea, vertical = true, "right", rawExtremeAveragesRange)
 
-      def edgeStatus(e: Either[WLImageStatus.Value, Double]): WLImageStatus.Value = {
-        e match {
-          case Right(_) => WLImageStatus.Passed
-          case Left(s)  => s
+        def edgeStatus(e: Either[WLImageStatus.Value, Double]): WLImageStatus.Value = {
+          e match {
+            case Right(_) => WLImageStatus.Passed
+            case Left(s)  => s
+          }
         }
+
+        val status: WLImageStatus.Value = {
+          val list = Seq(eTop, eBottom, eLeft, eRight).map(edgeStatus).distinct.filterNot(_ == WLImageStatus.Passed)
+          if (list.isEmpty) WLImageStatus.Passed else list.head
+        }
+
+        if (status == WLImageStatus.Passed) {
+          val edgeTop: Double = eTop.right.get
+          val edgeBottom = eBottom.right.get + (height - tol2)
+          val edgeLeft = eLeft.right.get
+          val edgeRight = eRight.right.get + (width - tol2)
+
+          val edges = new Edges(edgeTop, edgeBottom, edgeLeft, edgeRight)
+          //diagnosticMessage(s"\n\nUnscaled box dimensions in pixels\n$edges")
+          //diagnostics.write(edges.toString.getBytes)
+          Right(edges)
+        } else
+          Left(status)
+      } catch {
+        case _: Throwable => Left(WLImageStatus.UnexpectedError)
       }
-
-      val status: WLImageStatus.Value = {
-        val list = Seq(eTop, eBottom, eLeft, eRight).map(edgeStatus).distinct.filterNot(_ == WLImageStatus.Passed)
-        if (list.isEmpty) WLImageStatus.Passed else list.head
-      }
-
-      if (status == WLImageStatus.Passed) {
-        val edgeTop: Double = eTop.right.get
-        val edgeBottom = eBottom.right.get + (height - tol2)
-        val edgeLeft = eLeft.right.get
-        val edgeRight = eRight.right.get + (width - tol2)
-
-        val edges = new Edges(edgeTop, edgeBottom, edgeLeft, edgeRight)
-        //diagnosticMessage(s"\n\nUnscaled box dimensions in pixels\n$edges")
-        //diagnostics.write(edges.toString.getBytes)
-        Right(edges)
-      } else
-        Left(status)
     }
 
     /**
