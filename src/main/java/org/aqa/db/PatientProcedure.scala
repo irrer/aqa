@@ -21,6 +21,7 @@ import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 import org.aqa.web.PatientProcedureXml
 
+import java.sql.Timestamp
 import scala.xml.Elem
 
 /**
@@ -123,7 +124,7 @@ object PatientProcedure extends ProcedureOutput with Logging {
     * @param institution Institution this belongs to.
     * @param procedure Procedure to be used.
     */
-  case class ExtendedData(patientProcedure: PatientProcedure, institution: Institution, procedure: Procedure, dicomAnonymous: DicomAnonymous) {}
+  case class ExtendedData(patientProcedure: PatientProcedure, institution: Institution, procedure: Procedure, dicomAnonymous: DicomAnonymous, mostRecentSeriesDate: Option[Timestamp]) {}
 
   /**
     * Get the listing of PatientProcedure data in web interface.
@@ -131,14 +132,29 @@ object PatientProcedure extends ProcedureOutput with Logging {
     * @return List of rows and their associated data.
     */
   def listExtended(institutionPK: Long): Seq[ExtendedData] = {
-    val action = for {
-      patientPosition <- query.filter(_.institutionPK === institutionPK)
-      dicomAnon <- DicomAnonymous.query.filter(_.dicomAnonymousPK === patientPosition.dicomAnonymousPK)
-      institution <- Institution.query.filter(_.institutionPK === institutionPK)
-      procedure <- Procedure.query.filter(_.procedurePK === patientPosition.procedurePK)
-    } yield (patientPosition, institution, procedure, dicomAnon)
 
-    val list = Db.run(action.result).map(pip => ExtendedData(pip._1, pip._2, pip._3, pip._4))
+    val action = for {
+      patientProcedure <- query.filter(_.institutionPK === institutionPK)
+      dicomAnon <- DicomAnonymous.query.filter(_.dicomAnonymousPK === patientProcedure.dicomAnonymousPK)
+      institution <- Institution.query.filter(_.institutionPK === institutionPK)
+      procedure <- Procedure.query.filter(_.procedurePK === patientProcedure.procedurePK)
+    } yield (patientProcedure, institution, procedure, dicomAnon)
+
+    val listWithoutDates = Db.run(action.result).map(pip => ExtendedData(pip._1, pip._2, pip._3, pip._4, None))
+
+    def addDate(extData: ExtendedData): ExtendedData = {
+      val action = for {
+        ds <- DicomSeries.query.filter(_.patientID === extData.dicomAnonymous.value)
+        inputDate <- Input.query.filter(i => i.inputPK === ds.inputPK).map(_.dataDate)
+      } yield inputDate
+
+      val date = Db.run(action.result).flatten.sortBy(_.getTime).lastOption
+
+      extData.copy(mostRecentSeriesDate = date)
+    }
+
+    val list = listWithoutDates.map(addDate)
+
     list
   }
 
