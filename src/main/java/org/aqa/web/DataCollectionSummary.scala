@@ -17,8 +17,11 @@
 package org.aqa.web
 
 import org.aqa.AnonymizeUtil
+import org.aqa.db.EPID
 import org.aqa.db.Institution
 import org.aqa.db.Machine
+import org.aqa.db.MachineType
+import org.aqa.db.MultileafCollimator
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.web.WebUtil._
@@ -44,7 +47,7 @@ object DataCollectionSummary {
   */
 class DataCollectionSummary extends Restlet with SubUrlAdmin {
 
-  def quote(text: String): String = "'" + text + "'"
+  private def quote(text: String): String = "'" + text + "'"
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
   def fmt(date: Date): String = dateFormat.format(date)
@@ -93,7 +96,7 @@ class DataCollectionSummary extends Restlet with SubUrlAdmin {
     val instSortedByMostRecent = instList.map(inst => (inst, timeOfMostRecent(inst.institutionPK.get))).sortBy(_._2).map(_._1).reverse
 
     <div class="col-md-4 col-md-offset-2">
-      <h3>List of Institutions</h3>
+      <h3>List of Institutions<span style="margin-left:80px">Total of {outputList.size} data sets</span></h3>
       <table class="table table-bordered">
         <thead>
           <tr>
@@ -105,6 +108,80 @@ class DataCollectionSummary extends Restlet with SubUrlAdmin {
         {instSortedByMostRecent.map(inst => instToRow(inst))}
       </table>
     </div>
+  }
+
+  /**
+    * Make a detailed list of Phase2 results by machine.
+    * @param instList List of institutions.
+    * @param machListAll List of all machines.
+    * @param outputList List of all Phase2 results.
+    * @return Table of machine results.
+    */
+  private def makeMachineTable(instList: Seq[Institution], machListAll: Seq[Machine], outputList: Seq[Output]): Elem = {
+
+    // map: (machinePK, list of outputs ordered by data date)
+    val outputMap = outputList.filter(_.machinePK.isDefined).groupBy(_.machinePK.get).map(mo => (mo._1, mo._2.sortBy(_.dataDate.get.getTime))).filter(_._2.nonEmpty)
+
+    // list of machines, ordered by number of outputs
+    val machList = machListAll.filter(m => outputMap.contains(m.machinePK.get)).sortBy(m => outputMap(m.machinePK.get).size).reverse
+
+    val day_ms = 24 * 60 * 60 * 1000.0
+    val year_ms = day_ms * 365.25
+
+    val machineTypeList = MachineType.list
+    val mlcList = MultileafCollimator.list
+    val epidList = EPID.list
+
+    val dateFormat = new SimpleDateFormat("yyyy MMM d")
+
+    def machToRow(machine: Machine): Elem = {
+
+      val elapsed: String = {
+        val list = outputMap(machine.machinePK.get)
+        val ms = list.last.dataDate.get.getTime - list.head.dataDate.get.getTime
+        val days = ms / day_ms
+        val years = ms / year_ms
+
+        0 match {
+          case _ if days < 31 => days.round + " days"
+          case _              => years.formatted("%5.1f").trim + " years"
+        }
+
+      }
+
+      <tr>
+        <td>{machine.id_real.get}</td>
+        <td>{instList.find(_.institutionPK.get == machine.institutionPK).get.name_real.get}</td>
+        <td>{outputMap(machine.machinePK.get).size}</td>
+        <td>{machineTypeList.find(mt => mt.machineTypePK.get == machine.machineTypePK).get.model}</td>
+        <td>{mlcList.find(col => col.multileafCollimatorPK.get == machine.multileafCollimatorPK).get.model}</td>
+        <td>{epidList.find(e => e.epidPK.get == machine.epidPK).get.model}</td>
+        <td>{dateFormat.format(outputMap(machine.machinePK.get).head.dataDate.get)}</td>
+        <td>{dateFormat.format(outputMap(machine.machinePK.get).last.dataDate.get)}</td>
+        <td>{elapsed}</td>
+      </tr>
+
+    }
+
+    <div class="col-md-10 col-md-offset-1">
+      <h3>List of Machines<span style="margin-left:80px">Total of {outputList.size} data sets</span></h3>
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th title="Name of Machine">Machine</th>
+            <th title="Name of Institution">Institution</th>
+            <th title="Number of Phase 2 Data Sets">Phase 2 Count</th>
+            <th title="Type of Machine">Machine Type</th>
+            <th title="Type of MLC">MLC</th>
+            <th title="Type of EPID">EPID</th>
+            <th title="Date of first data set">First</th>
+            <th title="Date of last data set">Last</th>
+            <th title="Elapsed time between first and last data sets">Elapsed</th>
+          </tr>
+        </thead>{machList.map(m => machToRow(m))}
+      </table>
+    </div>
+
   }
 
   private def makeMainChart(instList: Seq[Institution], machList: Seq[Machine], outputList: Seq[Output]): String = {
@@ -136,6 +213,7 @@ class DataCollectionSummary extends Restlet with SubUrlAdmin {
     val ml = machList.groupBy(_.institutionPK).flatMap(im => im._2)
     val rowList = ml.zipWithIndex.map(machIndex => rowInfo(machIndex._1, machIndex._2))
 
+    //noinspection SpellCheckingInspection
     val script =
 
       """
@@ -204,6 +282,11 @@ var SummaryChart = c3.generate({
         <div class="row">
           <div>
             {makeCountTable(instList, machList, outputList)}
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            {makeMachineTable(instList, machList, outputList)}
           </div>
         </div>
         <div class="row">
