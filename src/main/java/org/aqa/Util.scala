@@ -294,7 +294,7 @@ object Util extends Logging {
 
     val dateTimeTagPairList = List(
       (TagFromName.ContentDate, TagFromName.ContentTime),
-      (TagFromName.InstanceCreationDate, TagFromName.InstanceCreationTime),
+      // (TagFromName.InstanceCreationDate, TagFromName.InstanceCreationTime), // This date is often when the file was C-MOVE'ed, not when it was created. This makes it irrelevant.
       (TagFromName.AcquisitionDate, TagFromName.AcquisitionTime),
       (TagByName.CreationDate, TagByName.CreationTime),
       (TagFromName.SeriesDate, TagFromName.SeriesTime)
