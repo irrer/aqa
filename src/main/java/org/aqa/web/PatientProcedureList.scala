@@ -22,6 +22,8 @@ import org.aqa.db.Procedure
 import org.aqa.web.WebUtil._
 import org.restlet.Response
 
+import scala.xml.Elem
+
 object PatientProcedureList {
   private val path = new String((new PatientProcedureList).pathOf)
 
@@ -30,11 +32,11 @@ object PatientProcedureList {
 
 class PatientProcedureList extends GenericList[ExtendedData] with WebUtil.SubUrlAdmin {
 
-  type PIP = ExtendedData
+  private type PIP = ExtendedData
 
   override val listName = "Patient Procedure"
 
-  def compareForSorting(a: PIP, b: PIP): Boolean = {
+  private def compareForSorting(a: PIP, b: PIP): Boolean = {
     val aa = a.dicomAnonymous.originalValue
     val bb = b.dicomAnonymous.originalValue
 
@@ -71,6 +73,7 @@ class PatientProcedureList extends GenericList[ExtendedData] with WebUtil.SubUrl
 
   /**
     * Get the procedure name to show to the user in the list.
+    *
     * @param pip PatientProcedure and associated data.
     * @return A simple name.
     */
@@ -85,11 +88,29 @@ class PatientProcedureList extends GenericList[ExtendedData] with WebUtil.SubUrl
 
   private def showActive(pip: PIP): String = if (pip.patientProcedure.active) "Active" else "-"
 
+  private def mostRecent(pip: PIP): Elem = {
+    if (pip.mostRecentSeriesDate.isDefined) {
+      timeAgo(pip.mostRecentSeriesDate.get)
+    } else <span>-</span>
+  }
+
+  private def mostRecentCompare(a: PIP, b: PIP): Boolean = {
+    (a.mostRecentSeriesDate, b.mostRecentSeriesDate) match {
+      case (Some(aDate), Some(bDate)) => aDate.getTime > bDate.getTime
+      case (_, Some(_))               => true
+      case (Some(_), _)               => false
+      case (_, _)                     => false
+    }
+
+  }
+
   private val procedureCol = new Column[PIP]("Procedure", pip => procedureName(pip))
 
   private val activeCol = new Column[PIP]("Active", showActive)
 
-  override val columnList = Seq(idCol, procedureCol, activeCol)
+  private val dateCol = new Column[PIP]("Most Recent Data", compare = mostRecentCompare _, mostRecent)
+
+  override val columnList: Seq[Column[PIP]] = Seq(idCol, procedureCol, activeCol, dateCol)
 
   override def getData(valueMap: ValueMapT, response: Response): Seq[PIP] = {
     val user = getUser(valueMap)
