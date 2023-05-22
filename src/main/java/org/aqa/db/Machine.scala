@@ -187,7 +187,7 @@ case class Machine(
         else
           Some("The insertOrUpdate method returned " + count + " instead of 1.")
       } else
-        Some("Multiple machine names defined in attribute lists: " + machineNameList.mkString("  ")) // more than one machine name in attribute lists
+        Some("Multiple or zero machine names defined in attribute lists: " + machineNameList.mkString("  ")) // more than one machine name in attribute lists
     } else
       Some("Machine name is already defined or machinePK is not defined.")
   }
