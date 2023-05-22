@@ -231,11 +231,11 @@ object RunProcedure extends Logging {
   /**
     * If the serial number for the machine is not already set, then set it by using the DeviceSerialNumber in the RTIMAGE.
     */
-  private def setMachineSerialNumber(machine: Machine, DeviceSerialNumber: String) = {
-    if (machine.serialNumber.isEmpty) {
+  private def setMachineSerialNumber(machine: Machine, DeviceSerialNumber: Seq[String]) = {
+    if (machine.serialNumber.isEmpty && (DeviceSerialNumber.size == 1)) {
       try {
-        logger.info("Establishing machine " + machine.id + "'s DeviceSerialNumber as " + DeviceSerialNumber)
-        Machine.setSerialNumber(machine.machinePK.get, DeviceSerialNumber)
+        logger.info("Establishing machine " + machine.id + "'s DeviceSerialNumber as " + DeviceSerialNumber.head)
+        Machine.setSerialNumber(machine.machinePK.get, DeviceSerialNumber.head)
       } catch {
         case t: Throwable => logger.warn("Unable to update machine serial number " + machine + " : " + t)
       }
@@ -504,7 +504,7 @@ object RunProcedure extends Logging {
     val user = getUser(valueMap)
     val dataDate = runTrait.getDataDate(valueMap, alList, xmlList)
 
-    setMachineSerialNumber(machine, runTrait.getMachineDeviceSerialNumberList(alList, xmlList).head)
+    setMachineSerialNumber(machine, runTrait.getMachineDeviceSerialNumberList(alList, xmlList))
     machine.setTpsIdIfNeeded(alList)
 
     val userPK = if (user.isDefined) user.get.userPK else None
