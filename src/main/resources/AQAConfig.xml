@@ -140,7 +140,7 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- If this value (floating point in seconds) is greater than zero, then periodically log the number of active
     threads.  This number is the interval between messages. -->
-    <MonitorThreadCountInterval_sec>300.0</MonitorThreadCountInterval_sec>
+    <MonitorThreadCountInterval_sec>0.0</MonitorThreadCountInterval_sec>
 
     <!-- Name of institution with LDAP. -->
     <LdapInstitutionName>U Mich</LdapInstitutionName>
