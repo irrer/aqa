@@ -17,8 +17,11 @@ class WLCsv(resultList: Seq[WLImageResult], extendedData: ExtendedData) extends 
 
     def noc(text: String): String = text.replace(',', ' ') // no commas
 
-    class Dp(val v: String, val n: String) {
-      val value: String = noc(v)
+    case class Dp(v: String, n: String, ok: Boolean = true) {
+
+      def this(v: Double, n: String, ok: Boolean) = this(v.toString, n, ok)
+
+      val value: String = if (ok) noc(v) else "NA"
       val name: String = noc(n)
 
       def this(v: Double, n: String) = this(v.formatted("%16.12f").trim, n)
@@ -47,32 +50,34 @@ class WLCsv(resultList: Seq[WLImageResult], extendedData: ExtendedData) extends 
           "NA"
       }
 
+      val ok = ir.offXY >= 0
+
       Seq(
-        new Dp(extendedData.machine.getRealId, "machine id"),
-        new Dp(fieldName, "field name"),
-        new Dp(ir.imageStatus.toString, "status"),
-        new Dp(ir.attr(TagByName.PatientSupportAngle), "table yaw"),
-        new Dp(ir.attr(TagByName.GantryAngle), "gantry angle"),
-        new Dp(ir.attr(TagByName.BeamLimitingDeviceAngle), "coll angle"),
-        new Dp(ir.offX, "X offset corrected box-ball"),
-        new Dp(ir.offY, "Y offset corrected box-ball"),
-        new Dp(ir.offXY, "XY offset corrected"),
-        new Dp(ir.box.x, "X box center corrected"),
-        new Dp(ir.box.y, "Y box center corrected"),
+        Dp(extendedData.machine.getRealId, "machine id"),
+        Dp(fieldName, "field name"),
+        Dp(ir.imageStatus.toString, "status"),
+        Dp(ir.attr(TagByName.PatientSupportAngle), "table yaw"),
+        Dp(ir.attr(TagByName.GantryAngle), "gantry angle"),
+        Dp(ir.attr(TagByName.BeamLimitingDeviceAngle), "coll angle"),
+        new Dp(ir.offX, "X offset corrected box-ball", ok),
+        new Dp(ir.offY, "Y offset corrected box-ball", ok),
+        new Dp(ir.offXY, "XY offset corrected", ok),
+        new Dp(ir.box.x, "X box center corrected", ok),
+        new Dp(ir.box.y, "Y box center corrected", ok),
         new Dp(tongueAndGrooveOffset.x, "X tongue and groove correction"),
         new Dp(tongueAndGrooveOffset.y, "Y tongue and groove correction"),
-        new Dp(ir.ball.x, "X ball center"),
-        new Dp(ir.ball.y, "Y ball center"),
-        new Dp(ir.boxEdges.left, "box left uncorrected"),
-        new Dp(ir.boxEdges.right, "box right uncorrected"),
-        new Dp(ir.boxEdges.top, "box top uncorrected"),
-        new Dp(ir.boxEdges.bottom, "box bottom uncorrected"),
-        new Dp((ir.boxEdges.right + ir.boxEdges.left) / 2, "X box center uncorrected"),
-        new Dp((ir.boxEdges.bottom + ir.boxEdges.top) / 2, "Y box center uncorrected"),
-        new Dp(deAnon(TagByName.PatientID), "Patient ID"),
-        new Dp(deAnon(TagByName.PatientName), "Patient Name"),
-        new Dp(deAnon(TagByName.SOPInstanceUID), "Instance (slice) UID"),
-        new Dp(deAnon(TagByName.SeriesInstanceUID), "Series UID")
+        new Dp(ir.ball.x, "X ball center", ok),
+        new Dp(ir.ball.y, "Y ball center", ok),
+        new Dp(ir.boxEdges.left, "box left uncorrected", ok),
+        new Dp(ir.boxEdges.right, "box right uncorrected", ok),
+        new Dp(ir.boxEdges.top, "box top uncorrected", ok),
+        new Dp(ir.boxEdges.bottom, "box bottom uncorrected", ok),
+        new Dp((ir.boxEdges.right + ir.boxEdges.left) / 2, "X box center uncorrected", ok),
+        new Dp((ir.boxEdges.bottom + ir.boxEdges.top) / 2, "Y box center uncorrected", ok),
+        Dp(deAnon(TagByName.PatientID), "Patient ID"),
+        Dp(deAnon(TagByName.PatientName), "Patient Name"),
+        Dp(deAnon(TagByName.SOPInstanceUID), "Instance (slice) UID"),
+        Dp(deAnon(TagByName.SeriesInstanceUID), "Series UID")
       )
     }
 
