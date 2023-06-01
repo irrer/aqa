@@ -73,6 +73,7 @@ class WLImageResult(
     list.head
   }
 
+  /** Elapsed time in ms of this slice since the first slice in the series was captured. */
   val elapsedTime_ms: Long = {
     val ms = contentTime.getTime
     val elapsed_ms = ms - extendedData.output.dataDate.get.getTime
