@@ -13,6 +13,7 @@ object WLImageStatus extends Enumeration {
   val EdgeExtentsNotFound: wl.WLImageStatus.Value = Value("Failed: Extents of edges not found")
   val UnknownTreatmentMachine: wl.WLImageStatus.Value = Value("Failed: Unknown treatment machine")
   val UnexpectedError: wl.WLImageStatus.Value = Value("Failed: Unexpected Error")
+  val BoxTooSmall: wl.WLImageStatus.Value = Value("Failed: Box too small")
 
   // List of statuses that indicate there was a result.
   private val passTextSet = Set(Passed, OffsetLimitExceeded).map(_.toString)
