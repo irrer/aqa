@@ -1074,7 +1074,12 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       val height: Int = rtimage.get(TagByName.Rows).getIntegerValues()(0)
       val width: Int = rtimage.get(TagByName.Columns).getIntegerValues()(0)
       val shorts: Array[Short] = rtimage.get(TagByName.PixelData).getShortValues
-      JavaUtil.pixelDataToArray(height, width, shorts)
+      // JavaUtil.pixelDataToArray(height, width, shorts)
+      val flip = {
+        val attr = rtimage.get(TagByName.PixelIntensityRelationshipSign)
+        (attr != null) && attr.getIntegerValues.head > 0
+      }
+      JavaUtil.pixelDataToArray(height, width, shorts, flip)
     }
 
     // ----------------------------------------------------------------------------------------
@@ -1198,8 +1203,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
         val imageResult =
           makeFailedWLImageStatus(WLImageStatus.UnexpectedError)
-
-        val j = subDir
 
         diagnosticMessage(imageResult.toString)
 
