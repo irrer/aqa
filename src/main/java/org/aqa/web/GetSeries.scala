@@ -315,7 +315,7 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
           val text = Util.prettyPrint(xml)
           GetSeries.put(institutionPK, realPatientId, text)
           val elapsed = System.currentTimeMillis - start
-          logger.info("Generated series list for " + realPatientId + "    text length: " + text.length + "    Elapsed ms: " + elapsed + "\n" + text)
+          logger.info(s"Generated series list for $realPatientId    text length: ${text.length}    Elapsed ms: $elapsed\n${text.take(500)}\n ... \n${text.takeRight(500)}")
           text
         }
     }
