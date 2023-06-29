@@ -34,6 +34,8 @@ import scala.xml.Elem
   * This was written to support the automatic uploading of machine logs.  It allows the
   * client to see what has already been uploaded so that it can just upload new entries.
   *
+  * Note that 'machineId' and 'NumberOfMachineLogs' are not strictly necessary, but are convenient for debugging.
+  *
   * Example of output:
   *
   *
