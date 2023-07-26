@@ -17,6 +17,7 @@ object AnUtil {
   val TagAcquisition = "Acquisition"
   val TagAnalysis = "Analysis"
   val TagProcedure = "Procedure"
+  val TagUrl = "URL"
 
   val ignoreMachSet: Set[String] = Set(
     "MACH_67",
@@ -24,7 +25,7 @@ object AnUtil {
     "MACH_69"
   )
 
-  val ignoreColumnNameSet: Set[String] = Set(
+  val ignoreColumnNameSetOrig: Set[String] = Set(
     "inputPK",
     "outputPK",
     "Analysis",
@@ -82,19 +83,51 @@ object AnUtil {
     "URL"
   )
 
-  // Function to give
-  // index of the median
-  def median(l: Int, r: Int): Int = {
-    val n: Int = r - l + 1
-    val n2 = (n + 1) / 2 - 1
-    n2 + l
+  val ignoreColumnNameSet: Set[String] = ignoreColumnNameSetOrig.toSeq.map(_.replace(' ', '_')).toSet ++ ignoreColumnNameSetOrig
+
+  /**
+    * Calculate the median ('middle') value of a list.
+    *
+    * Interactive page: https://www.w3schools.com/python/trypython.asp?filename=demo_ref_stat_median
+    *
+    * @param list Unordered list of values.
+    * @return Median value.
+    */
+  def median(list: Seq[Double]): Double = {
+    val sorted = list.sorted
+    val size = sorted.size
+    val m = size match {
+      case 0 => Double.NaN
+      case _ if (size % 2) == 0 =>
+        val s2 = size / 2
+        (sorted(s2 - 1) + sorted(s2)) / 2
+      case _ => sorted(size / 2)
+    }
+    m
   }
 
+  /**
+    * Calculate the interquartile range of list of numbers.
+    * This function interpolates between consecutive values as necessary.
+    *
+    * The interquartile range (IQR) is the difference between the 75th and 25th percentile of
+    * the data. It is a measure of the dispersion similar to standard deviation or variance
+    * but is much more robust against outliers.
+    *
+    * Interactive page for calculating interquartile range:
+    *     https://www.w3schools.com/statistics/trypython.asp?filename=demo_stat_python_iqr
+    *
+    * Python source reference that this was modeled on:
+    *     https://github.com/scipy/scipy/blob/main/scipy/stats/_stats_py.py#L3442
+    *
+    * @param list Unordered list of values.
+    * @return Interquartile range.
+    */
   def iqr(list: Seq[Double]): Double = {
     val sorted = list.sorted
     val size = list.size
 
-    val q1: Double = {
+    def q1: Double = {
       val i = size / 4
       size % 4 match {
         case 0 =>
@@ -108,7 +141,7 @@ object AnUtil {
       }
     }
 
-    val q3: Double = {
+    def q3: Double = {
       val i = (size * 3) / 4
       size % 4 match {
         case 0 =>
@@ -122,7 +155,11 @@ object AnUtil {
       }
     }
 
-    val iqr = q3 - q1
+    val iqr = size match {
+      case 0 => Double.NaN // handle special case of empty list
+      case 1 => 0.0 // handle special case of list with size 1
+      case _ => q3 - q1
+    }
     // println(s"q1: $q1    q3: $q3   iqr: $iqr")
     iqr
   }
@@ -131,26 +168,45 @@ object AnUtil {
 
     println("from scipy import stats")
 
-    def show(seq: Seq[Int]): Unit = {
+    def show(seq: Seq[Double]): Unit = {
       println
-      val r = iqr(seq.map(_.toDouble))
+      val r = iqr(seq)
       println(s"size: ${seq.size} : ${seq.sorted.mkString(", ")}  -->  $r")
       println(s"print(stats.iqr([${seq.mkString(", ")}]))")
       println
     }
 
-    if (true) {
-      show(Seq(1, 2, 3, 4, 7, 10, 12, 14, 17, 19, 20))
-      show(Seq(1, 2, 3, 4, 7, 10, 12, 14, 17, 19, 20, 25))
-      show(Seq(1, 2, 3, 4, 7, 10, 12, 14, 17, 19, 20, 25, 27))
-      show(Seq(1, 2, 3, 4, 7, 10, 12, 14, 17, 19, 20, 25, 27, 33))
+    if (false) {
+      show(Seq())
+      show(Seq(0.0))
+      show(Seq(13.0))
+      show(Seq(13.0, 21.0))
+      show(Seq(13.0, 21.0, 85.0))
+    }
+    if (false) {
+      show(Seq(1.0, 2.0, 3.0, 4.0, 7.0, 10.0, 12.0, 14.0, 17.0, 19.0, 20.0))
+      show(Seq(1.0, 2.0, 3.0, 4.0, 7.0, 10.0, 12.0, 14.0, 17.0, 19.0, 20.0, 25.0))
+      show(Seq(1.0, 2.0, 3.0, 4.0, 7.0, 10.0, 12.0, 14.0, 17.0, 19.0, 20.0, 25.0, 27.0))
+      show(Seq(1.0, 2.0, 3.0, 4.0, 7.0, 10.0, 12.0, 14.0, 17.0, 19.0, 20.0, 25.0, 27.0, 33.0))
+    }
+
+    if (false) {
+      for (i <- 0 until 10) {
+        val seq = (0 to i + 8).map(_ => Random.nextDouble() * 100)
+        show(seq)
+      }
     }
 
     if (true) {
-      for (i <- 0 until 10) {
-        val seq = (0 to i + 8).map(_ => Random.nextInt(100))
-        show(seq)
+      def showMed(list: Seq[Double]): Unit = {
+        println(s"size: ${list.size}  ::  ${list.sorted.mkString(", ")}  -->  ${median(list)}")
       }
+
+      showMed(Seq())
+      showMed(Seq(5))
+      showMed(Seq(1, 3, 5, 7, 9, 11, 13))
+      showMed(Seq(1, 3, 5, 7, 9, 11))
+      showMed(Seq(-11, 5.5, -3.4, 7.1, -9, 22))
     }
   }
 

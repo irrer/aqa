@@ -7,6 +7,8 @@ case class BeamData(header: Header, rowList: Seq[Row]) {
   //val procedure: String = ???
   //val beam: String = ???
 
+  val urlColumn = header.columns.indexWhere(_.equals(AnUtil.TagUrl))
+
   private def makeColumn(index: Int): Option[Column] = {
 
     def colToNumeric(col: Int): Seq[Double] = {
@@ -21,7 +23,7 @@ case class BeamData(header: Header, rowList: Seq[Row]) {
     if (list.isEmpty)
       None
     else
-      Some(Column(index = index, header.columns(index), list))
+      Some(Column(index = index, header.columns(index), list, this))
 
   }
 
@@ -31,8 +33,15 @@ case class BeamData(header: Header, rowList: Seq[Row]) {
   }
 
   def stats: String = {
-    Column.header + "\n" +
-      numericColumnList.map(_.toString).mkString("\n")
+    val colList = rowList.head.columnList
+    val procedure = colList(header.columns.indexWhere(_.equals(AnUtil.TagProcedure)))
+    val mach = "%-7s".format(colList(AnUtil.IndexMachine))
+    val beamName = rowList.head.beamName(header)
+    val count = rowList.size
+
+    s"\n$procedure    $mach    $beamName   Count: $count\n" +
+      Column.header + "\n" +
+      numericColumnList.filter(_.isAbnormal).map(_.toString).mkString("\n")
   }
 
 }
