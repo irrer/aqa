@@ -2,6 +2,10 @@ package org.aqa.stats
 
 case class BeamData(header: Header, rowList: Seq[Row]) {
 
+  def beamName = rowList.head.beamName(header).replace(' ', '_')
+
+  def beamNameNoBlanks = beamName.replace(' ', '_')
+
   //val institution: String = ???
   //val machine: String = ???
   //val procedure: String = ???
@@ -32,16 +36,22 @@ case class BeamData(header: Header, rowList: Seq[Row]) {
     candidates.flatMap(makeColumn).toSeq
   }
 
+  private def colList = rowList.head.columnList
+  private def procedure = colList(header.columns.indexWhere(_.equals(AnUtil.TagProcedure)))
+  def mach = colList(AnUtil.IndexMachine)
+  val machText = "%-7s".format(mach)
+
+  private def prefix = {
+    val width = 30
+    machText + "    " + s"%${width}s".format(beamNameNoBlanks.take(width)) + "    "
+  }
+
   def stats: String = {
-    val colList = rowList.head.columnList
-    val procedure = colList(header.columns.indexWhere(_.equals(AnUtil.TagProcedure)))
-    val mach = "%-7s".format(colList(AnUtil.IndexMachine))
-    val beamName = rowList.head.beamName(header)
     val count = rowList.size
 
-    s"\n$procedure    $mach    $beamName   Count: $count\n" +
-      Column.header + "\n" +
-      numericColumnList.filter(_.isAbnormal).map(_.toString).mkString("\n")
+    s"\n$procedure    $machText    $beamName   Count: $count\n" +
+      s"%${prefix.length}s".format(" ") + Column.header + "\n" +
+      numericColumnList.filter(_.isOfInterest).map(c => prefix + c.toString).mkString("\n")
   }
 
 }

@@ -16,7 +16,7 @@ object Column {
 
   private def ft(s: String) = (s + AnUtil.spaces).take(Column.width)
   val header: String = fmtName("") + shift +
-    Seq("min", "max", "mean", "range", "stdDev", "cofOfVar", "q1", "q3", "maxOtl", "otlLevel", "URL", "Slice UID", "sorted data").map(ft).mkString(Column.separator)
+    Seq("min", "max", "mean", "range", "stdDev", "cofOfVar", "median", "q1", "q3", "iqr", "maxOtl", "otlLevel", "URL", "Series UID", "Slice UID", "sorted data").map(ft).mkString(Column.separator)
 }
 
 case class Column(index: Int, name: String, data: Seq[Double], beamData: BeamData) {
@@ -28,8 +28,9 @@ case class Column(index: Int, name: String, data: Seq[Double], beamData: BeamDat
 
   val range: Double = data.max - data.min
   private val stdDev: Double = ImageUtil.stdDev(data.map(_.toFloat))
-  val cofOfVar: Double = stdDev / mean
+  private val cofOfVar: Double = stdDev / mean
 
+  private val median = Stats.median(data)
   private val q1 = Stats.quartile1(data)
   private val q3 = Stats.quartile3(data)
 
@@ -48,7 +49,7 @@ case class Column(index: Int, name: String, data: Seq[Double], beamData: BeamDat
     * @param d Value to assess.
     * @return outlier-ness
     */
-  def outlierLevel(d: Double): Double = {
+  private def outlierLevel(d: Double): Double = {
     0 match {
       case _ if d < q1 => (q1 - d) / iqr
       case _ if d > q3 => (d - q3) / iqr
@@ -56,17 +57,22 @@ case class Column(index: Int, name: String, data: Seq[Double], beamData: BeamDat
     }
   }
 
-  val maxOutlier: Double = data.maxBy(outlierLevel)
+  private val maxOutlier: Double = data.maxBy(outlierLevel)
 
-  val maxOutlierRow: Row = {
+  private val maxOutlierRow: Row = {
     beamData.rowList.maxBy(row => outlierLevel(row.columnList(index).toDouble))
   }
 
-  val maxOutlierUrl: String = maxOutlierRow.columnList(beamData.urlColumn)
+  private val maxOutlierUrl: String = maxOutlierRow.columnList(beamData.urlColumn)
 
-  val maxOutletSopUidList: String = {
+  private val maxOutletSopUidList: String = {
     val sopIndexList = beamData.header.columns.indices.filter(i => beamData.header.columns(i).contains("SOPInstanceUID")).filter(i => (i >= 0) && (i < maxOutlierRow.columnList.size))
     sopIndexList.map(i => maxOutlierRow.columnList(i)).mkString("  ")
+  }
+
+  private val seriesUid: String = {
+    val index = beamData.header.columns.indexWhere(_.equals("SeriesInstanceUID"))
+    if (index >= 0) maxOutlierRow.columnList(index) else "NA"
   }
 
   val maxOutlierLevel: Double = outlierLevel(maxOutlier)
@@ -76,19 +82,16 @@ case class Column(index: Int, name: String, data: Seq[Double], beamData: BeamDat
     if (maxOutlier > mean) s.reverse else s
   }
 
-  if (maxOutlierLevel > 100) // TODO rm
-    if (System.currentTimeMillis() < 1000000) // TODO rm
-      println(s"$maxOutlier $maxOutlierLevel $sorted")
-
-  val isAbnormal: Boolean = (range > 0.01) && (outlierLevel(maxOutlier) > 1.5)
+  val isOfInterest: Boolean = true // (range > 0.01) && (outlierLevel(maxOutlier) > 1.5)
   private def fmt(d: Double) = d.formatted(s"%$width.${precision}f")
 
   override def toString: String = {
     fmtName(name) +
-      Seq(min, max, mean, range, stdDev, cofOfVar, q1, q3, maxOutlier, outlierLevel(maxOutlier)).map(fmt).mkString(Column.separator) +
-      " " + maxOutlierUrl +
-      " " + maxOutletSopUidList +
-      " :: " + sorted.map(d => ("%10.5f".format(d))).mkString("  ")
+      Seq(min, max, mean, range, stdDev, cofOfVar, median, q1, q3, iqr, maxOutlier, outlierLevel(maxOutlier)).map(fmt).mkString(Column.separator) +
+      "    " + maxOutlierUrl +
+      "    " + seriesUid +
+      "    " + maxOutletSopUidList +
+      " :: " + sorted.map(d => "%10.5f".format(d)).mkString("  ")
   }
 
 }
