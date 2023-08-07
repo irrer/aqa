@@ -44,9 +44,9 @@ import scala.xml.Elem
   */
 
 object OutputList {
-  val deleteTag = "delete"
+  private val deleteTag = "delete"
   val redoTag = "redo"
-  val confirmTag = "confirm"
+  private val confirmTag = "confirm"
 
   val path = new String((new OutputList).pathOf)
 
@@ -111,7 +111,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     <div title="List of outputPK's that no longer exist or never existed">{doneText}</div>
   }
 
-  def bulkRedoInstructions: WebPlainText = {
+  private def bulkRedoInstructions: WebPlainText = {
     val title =
       "To perform a bulk redo, enter a list of outputPKs in the 'Request List' box." + titleNewline +
         "Clicking the Refresh button will refresh the list containing just the 'Request List' entries." + titleNewline +
@@ -143,13 +143,13 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     new WebPlainText("Bulk Redo Instructions", false, 3, 0, (valueMap: ValueMapT) => elem(valueMap))
   }
 
-  val requestList = new WebInputTextArea("Request List", 4, 0, "List of Output public keys to Redo")
-  val todoList = new WebPlainText("To Do", true, 4, 0, getToDoHtml)
+  private val requestList = new WebInputTextArea("Request List", 4, 0, "List of Output public keys to Redo")
+  private val todoList = new WebPlainText("To Do", true, 4, 0, getToDoHtml)
   val doneList = new WebPlainText("Done", true, 4, 0, getDoneHtml)
-  val redoAll: FormButton = makeButton("Redo All", ButtonType.BtnDefault)
-  val stopButton: FormButton = makeButton("Stop", ButtonType.BtnDefault)
-  val resumeButton: FormButton = makeButton("Resume", ButtonType.BtnDefault)
-  val runningState = new WebPlainText("Running", true, 1, 0, getRunningHtml)
+  private val redoAll: FormButton = makeButton("Redo All", ButtonType.BtnDefault)
+  private val stopButton: FormButton = makeButton("Stop", ButtonType.BtnDefault)
+  private val resumeButton: FormButton = makeButton("Resume", ButtonType.BtnDefault)
+  private val runningState = new WebPlainText("Running", true, 1, 0, getRunningHtml)
 
   override def htmlFieldList(valueMap: ValueMapT): List[WebRow] = {
     val webRow = List(checkbox, refresh)
@@ -190,7 +190,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     OutputList.redoUrl(extendedValues.output_outputPK)
   }
 
-  type ColT = Output.ExtendedValues // Column Type
+  private type ColT = Output.ExtendedValues // Column Type
 
   private val institutionCol = new Column[ColT]("Institution", _.institution_name, colT => wrapAlias(colT.institution_name))
 
@@ -209,9 +209,9 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   private val machineCol = new Column[ColT]("Machine", _.machine_id, colT => wrapAlias(colT.machine_id))
 
-  override val columnList = Seq(startTimeCol, inputFileCol, redoCol, procedureCol, machineCol, institutionCol, userCol, deleteCol)
+  override val columnList: Seq[Column[ColT]] = Seq(startTimeCol, inputFileCol, redoCol, procedureCol, machineCol, institutionCol, userCol, deleteCol)
 
-  val entriesPerPage = 600 // TODO should support pagination
+  private val entriesPerPage = 600 // TODO should support pagination
 
   /**
     * Get the set of outputs that user wants to redo.  Return empty set if none.  This
@@ -289,7 +289,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   /**
     * Tell the user that the redo is forbidden and why.  Also give them a redirect back to the list of results.
     */
-  private def showNotAuthorizedToDelete(response: Response, outputPK: Long) {
+  private def showNotAuthorizedToDelete(response: Response, outputPK: Long): Unit = {
     val msg = "Only users who are from the same institution may delete."
     val content = {
       <div class="row">
@@ -309,7 +309,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   /**
     * Allow user to confirm delete.
     */
-  private def showConfirmDelete(response: Response, outputPK: Long) {
+  private def showConfirmDelete(response: Response, outputPK: Long): Unit = {
     val content = {
       <div class="row">
         <div class="col-md-4 col-md-offset-2">
