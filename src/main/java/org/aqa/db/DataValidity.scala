@@ -21,11 +21,22 @@ package org.aqa.db
   */
 object DataValidity extends Enumeration {
 
-  val valid = Value // good value
-  val invalid = Value // bad value.  Possible error in setup or calculation.
+  val valid: DataValidity.Value = Value // good value
+  val invalid: DataValidity.Value = Value // bad value.  Possible error in setup or calculation.
 
   /**
     * Convert text to a Validity.  Is case insensitive.
     */
   def stringToDataValidity(text: String): Option[DataValidity.Value] = DataValidity.values.find(ur => ur.toString.equalsIgnoreCase(text))
+
+  /**
+    * Convert text to a Validity.  If the string from the database does not match any
+    * known state, then assume the default state.  Is case insensitive.
+    */
+  def stringToDataValidityWithDefault(text: String, defaultState: DataValidity.Value = valid): DataValidity.Value = {
+    DataValidity.values.find(ur => ur.toString.equalsIgnoreCase(text)) match {
+      case Some(state) => state
+      case _           => defaultState
+    }
+  }
 }

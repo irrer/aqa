@@ -80,6 +80,8 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
     */
   protected def getData(valueMap: ValueMapT, response: Response): Seq[VL]; // must be overridden
 
+  protected def makeRunScript(): Option[String] = None
+
   def columnToHeader(index: Int, column: Column[VL]): Elem = {
     <th class={"col" + index + " header"}>
       <a href={listPath + "?sort=" + index}>{column.columnName}</a>
@@ -169,7 +171,7 @@ abstract class GenericList[VL] extends Restlet with SubUrlTrait {
     */
   protected def get(valueMap: ValueMapT, response: Response) = {
     val webRowList: List[WebRow] = titleRow(valueMap) ++ htmlFieldList(valueMap) ++ tableRow(valueMap, response)
-    val form = new WebForm(listPath, webRowList)
+    val form = new WebForm(action = listPath, title = None, rowList = webRowList, fileUpload = 0, runScript = makeRunScript())
     form.setFormResponse(valueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
   }
 

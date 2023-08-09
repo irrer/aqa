@@ -676,7 +676,8 @@ object RunProcedure extends Logging {
           analysisDate = Some(now),
           machinePK,
           status = ProcedureStatus.running.toString,
-          dataValidity = DataValidity.valid.toString
+          // Keep the validity state of the old data.  This is most likely what the user wants, especially in the case of bulk re-do's.
+          dataValidity = oldOutput.get.dataValidity
         )
         val out = tempOutput.insert
         out

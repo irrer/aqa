@@ -18,6 +18,7 @@ package org.aqa.web
 
 import org.aqa.Util
 import org.aqa.db.CachedUser
+import org.aqa.db.DataValidity
 import org.aqa.db.Input
 import org.aqa.db.Machine
 import org.aqa.db.Output
@@ -182,8 +183,45 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     <a title="Data analysis time" href={getUrl(extendedValues.output_outputPK)}> {startTimeFormat.format(extendedValues.output_startDate)}</a>
   }
 
-  private def deleteUrl(extendedValues: Output.ExtendedValues): Elem = {
-    <a title="Click to delete.  Can NOT be undone" href={OutputList.path + "?" + OutputList.deleteTag + "=" + extendedValues.output_outputPK}>Delete</a>
+  private val validityList = DataValidity.values.toSeq.zipWithIndex.map(si => ((si._2 + 1).toString, si._1.toString))
+
+  private def setState(extendedValues: Output.ExtendedValues): Elem = {
+
+    val id = "DataValidity" + extendedValues.output_outputPK
+
+    val current =
+      validityList.find(v => v._2.equals(extendedValues.dataValidity.toString)) match {
+        case Some(x) => x._1
+        case _       => 1.toString
+      }
+
+    val deleteSelection = {
+      <option value={(DataValidity.values.size + 1).toString}>
+        <a title="Click to delete.  Can NOT be undone" href={OutputList.path + "?" + OutputList.deleteTag + "=" + extendedValues.output_outputPK}>Delete</a>
+      </option>
+    }
+
+    val choiceList = {
+      def opt(dv: DataValidity.Value): Elem = {
+        val dvs = dv.toString
+        val value = validityList.find(vl => vl._2.equalsIgnoreCase(dvs)).get._1
+        if (dv.toString.equalsIgnoreCase(extendedValues.dataValidity.toString)) {
+          <option selected="selected" value={value}>{dvs}</option>
+        } else {
+          <option value={value}>{dvs}</option>
+        }
+      }
+
+      val list = DataValidity.values.map(opt) + { deleteSelection }
+      list
+    }
+
+    val html = {
+      <select value={current} name={id} id={id} class="form-control">
+        {choiceList}
+      </select>
+    }
+    html
   }
 
   private def redoUrl(extendedValues: Output.ExtendedValues): Elem = {
@@ -203,7 +241,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   private val redoCol = new Column[ColT]("Redo", _ => "Redo", redoUrl)
 
-  private val deleteCol = new Column[ColT]("Delete", _ => "Delete", deleteUrl)
+  private val deleteCol = new Column[ColT]("Delete/State", _.dataValidity.toString, setState)
 
   private val procedureCol = new Column[ColT]("Procedure", d => d.procedure_name + " " + d.procedure_version)
 
@@ -259,6 +297,8 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   override def getPK(extendedValues: Output.ExtendedValues): Long = extendedValues.output_outputPK
 
   override val canCreate: Boolean = false
+
+  override def makeRunScript(): Option[String] = Some("""var foo = 1;""") // TODO replace with real script
 
   /**
     * Determine if user is authorized to perform delete.  To be authorized, the user must be from the
