@@ -55,7 +55,7 @@ case class BBbyCBCT(
     result
   }
 
-  def insertOrUpdate = Db.run(BBbyCBCT.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(BBbyCBCT.query.insertOrUpdate(this))
 
   override def toString: String =
     "bbByCBCTPK : " + bbByCBCTPK +
@@ -75,7 +75,7 @@ case class BBbyCBCT(
   /** CBCT - PLAN */
   val err_mm = new Point3d(cbctX_mm - rtplanX_mm, cbctY_mm - rtplanY_mm, cbctZ_mm - rtplanZ_mm)
 
-  val attributeList = {
+  val attributeList: AttributeList = {
     if (metadata_dcm_zip.isEmpty || metadata_dcm_zip.get.isEmpty)
       new AttributeList
     else
@@ -99,11 +99,11 @@ object BBbyCBCT extends ProcedureOutput {
 
     def status = column[String]("status")
 
-    def planX_mm = column[Double]("planX_mm")
+    private def planX_mm = column[Double]("planX_mm")
 
-    def planY_mm = column[Double]("planY_mm")
+    private def planY_mm = column[Double]("planY_mm")
 
-    def planZ_mm = column[Double]("planZ_mm")
+    private def planZ_mm = column[Double]("planZ_mm")
 
     def cbctX_mm = column[Double]("cbctX_mm")
 
@@ -137,7 +137,7 @@ object BBbyCBCT extends ProcedureOutput {
         tableYvertical_mm,
         tableZlongitudinal_mm,
         metadata_dcm_zip
-      ) <> ((BBbyCBCT.apply _) tupled, BBbyCBCT.unapply _)
+      ) <> (BBbyCBCT.apply _ tupled, BBbyCBCT.unapply)
 
     def outputFK = foreignKey("BBbyCBCT_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -149,9 +149,9 @@ object BBbyCBCT extends ProcedureOutput {
   def get(bbByCBCTPK: Long): Option[BBbyCBCT] = {
     val action = for {
       inst <- BBbyCBCT.query if inst.bbByCBCTPK === bbByCBCTPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   /**
@@ -160,7 +160,7 @@ object BBbyCBCT extends ProcedureOutput {
   def getByOutput(outputPK: Long): Seq[BBbyCBCT] = {
     val action = for {
       inst <- BBbyCBCT.query if inst.outputPK === outputPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
     list
   }
@@ -177,8 +177,9 @@ object BBbyCBCT extends ProcedureOutput {
     Db.run(action)
   }
 
+  //noinspection ScalaUnusedSymbol
   def xmlToList(elem: Elem, outputPK: Long): Seq[BBbyCBCT] = {
-    ???
+    Seq()
   }
 
   override def insert(elem: Elem, outputPK: Long): Int = {
@@ -193,7 +194,7 @@ object BBbyCBCT extends ProcedureOutput {
   }
 
   case class BBbyCBCTHistory(date: Date, bbByCBCT: BBbyCBCT) {
-    override def toString = {
+    override def toString: String = {
       "date: " + date + "    " + bbByCBCT
     }
   }
@@ -205,36 +206,16 @@ object BBbyCBCT extends ProcedureOutput {
     * @param procedurePK : For this procedure
     *
     */
-  def history(machinePK: Long, procedurePK: Long) = {
+  def history(machinePK: Long, procedurePK: Long): Seq[BBbyCBCTHistory] = {
     val search = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
       bbByCBCT <- BBbyCBCT.query.filter(c => c.outputPK === output._1)
-    } yield ((output._2, bbByCBCT))
+    } yield (output._2, bbByCBCT)
     //println(sorted.result.statements.mkString("\n    "))
 
-    val result = Db.run(search.result).map(h => new BBbyCBCTHistory(h._1.get, h._2)).sortBy(_.date.getTime)
+    val result = Db.run(search.result).map(h => BBbyCBCTHistory(h._1.get, h._2)).sortBy(_.date.getTime)
     result
   }
-
-  /**
-    * Get the procedure PK for the BBbyCBCT procedure.
-    */
-  /*
-  def getProcedurePK: Option[Long] = {
-
-    Db.run(query.result.headOption) match {
-      case Some(cbct) => {
-        Output.get(cbct.outputPK) match {
-          case Some(output) => Some(output.procedurePK)
-          case _ => None
-        }
-      }
-      case _ => None
-    }
-
-    Db.run(Procedure.query.result).filter(p => p.isBBbyCBCT).map(p => p.procedurePK.get).headOption
-  }
-   */
 
   /** CBCT data and related results. */
   case class DailyDataSetCBCT(output: Output, machine: Machine, dicomSeries: DicomSeries, cbct: Option[BBbyCBCT] = None) {
@@ -265,7 +246,7 @@ object BBbyCBCT extends ProcedureOutput {
       dicomSeries <- DicomSeries.query.filter(ds => (ds.inputPK === input.inputPK) && (ds.modality === "CT"))
     } yield (output, machine, dicomSeries)
 
-    val oneDay = Db.run(searchOutput.result).map(od => new DailyDataSetCBCT(od._1, od._2, od._3))
+    val oneDay = Db.run(searchOutput.result).map(od => DailyDataSetCBCT(od._1, od._2, od._3))
 
     // - - - - - - - - - - - - - - - - - - - - - -
 
