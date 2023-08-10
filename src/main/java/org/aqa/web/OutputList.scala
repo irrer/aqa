@@ -16,7 +16,6 @@
 
 package org.aqa.web
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 import org.aqa.db.CachedUser
 import org.aqa.db.DataValidity
@@ -505,7 +504,6 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     */
   private def isStatusChange(valueMap: WebUtil.ValueMapT): Boolean = {
     val is = valueMap.contains(statusTag) && valueMap.contains(outputPKTag)
-    Trace.trace(s"is: $is")
     is
   }
 
@@ -550,7 +548,6 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
           OutputList.bulkRedoIsRunning.set(true)
           Filter.CONTINUE
         case _ if isStatusChange(valueMap) =>
-          Trace.trace("Got a status change.")
           changeStatus(valueMap, response)
         case _ =>
           if (buttonIs(valueMap, redoAll)) {
