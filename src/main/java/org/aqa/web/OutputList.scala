@@ -16,6 +16,7 @@
 
 package org.aqa.web
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 import org.aqa.db.CachedUser
 import org.aqa.db.DataValidity
@@ -26,6 +27,9 @@ import org.aqa.db.Procedure
 import org.aqa.run.RunProcedure
 import org.aqa.run.RunReqClass
 import org.aqa.run.RunTrait
+import org.aqa.web.OutputList.deleteTag
+import org.aqa.web.OutputList.outputPKTag
+import org.aqa.web.OutputList.statusTag
 import org.aqa.web.WebUtil._
 import org.aqa.webrun.WebRun
 import org.restlet.Request
@@ -48,6 +52,8 @@ object OutputList {
   private val deleteTag = "delete"
   val redoTag = "redo"
   private val confirmTag = "confirm"
+  private val statusTag = "status"
+  private val outputPKTag = "outputPK"
 
   val path = new String((new OutputList).pathOf)
 
@@ -183,41 +189,39 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     <a title="Data analysis time" href={getUrl(extendedValues.output_outputPK)}> {startTimeFormat.format(extendedValues.output_startDate)}</a>
   }
 
-  private val validityList = DataValidity.values.toSeq.zipWithIndex.map(si => ((si._2 + 1).toString, si._1.toString))
+  private val validityList = DataValidity.values.toSeq.map(_.toString)
 
   private def setState(extendedValues: Output.ExtendedValues): Elem = {
 
-    val id = "DataValidity" + extendedValues.output_outputPK
+    val outputPK = extendedValues.output_outputPK
+    val id = "DataValidity" + outputPK
 
-    val current =
-      validityList.find(v => v._2.equals(extendedValues.dataValidity.toString)) match {
-        case Some(x) => x._1
-        case _       => 1.toString
-      }
+    val current = extendedValues.dataValidity.toString
 
+    /*
     val deleteSelection = {
       <option value={(DataValidity.values.size + 1).toString}>
-        <a title="Click to delete.  Can NOT be undone" href={OutputList.path + "?" + OutputList.deleteTag + "=" + extendedValues.output_outputPK}>Delete</a>
+        <a title="Click to delete.  Can NOT be undone" href={OutputList.path + "?" + OutputList.deleteTag + "=" + outputPK}>Delete</a>
       </option>
     }
+     */
 
     val choiceList = {
       def opt(dv: DataValidity.Value): Elem = {
         val dvs = dv.toString
-        val value = validityList.find(vl => vl._2.equalsIgnoreCase(dvs)).get._1
-        if (dv.toString.equalsIgnoreCase(extendedValues.dataValidity.toString)) {
-          <option selected="selected" value={value}>{dvs}</option>
+        if (dv.toString.equals(current)) {
+          <option selected="selected" value={dvs}>{dvs}</option>
         } else {
-          <option value={value}>{dvs}</option>
+          <option value={dvs}>{dvs}</option>
         }
       }
 
-      val list = DataValidity.values.map(opt) + { deleteSelection }
+      val list = DataValidity.values.map(opt) + { <option title="be undone" value={deleteTag}>delete</option> }
       list
     }
 
     val html = {
-      <select value={current} name={id} id={id} class="form-control">
+      <select value={current} name={id} id={id} class="form-control" onchange={s"StatusChange($id.value, $outputPK)"}>
         {choiceList}
       </select>
     }
@@ -249,7 +253,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   override val columnList: Seq[Column[ColT]] = Seq(startTimeCol, inputFileCol, redoCol, procedureCol, machineCol, institutionCol, userCol, deleteCol)
 
-  private val entriesPerPage = 600 // TODO should support pagination
+  private val entriesPerPage = 600 // should support pagination
 
   /**
     * Get the set of outputs that user wants to redo.  Return empty set if none.  This
@@ -298,7 +302,30 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   override val canCreate: Boolean = false
 
-  override def makeRunScript(): Option[String] = Some("""var foo = 1;""") // TODO replace with real script
+  //noinspection SpellCheckingInspection
+  override def makeRunScript(): Option[String] = Some(s"""
+      |
+      |function StatusChange(newValue, outputPK) {
+      |
+      |  var xhttp = new XMLHttpRequest();
+      |
+      |    xhttp.onreadystatechange = function() {
+      |    if (this.readyState == 4 && this.status == 200) {
+      |      alert(this.responseText);
+      |    }
+      |  };
+      |
+      |  if (newValue == "delete") {
+      |    var url = "/view/OutputList?delete=" + outputPK;
+      |    location.replace("/view/OutputList?delete=" + outputPK);
+      |  }
+      |  else {
+      |    xhttp.open("POST", "/view/OutputList?$statusTag=" + newValue + "&$outputPKTag=" + outputPK, true);
+      |    xhttp.send();
+      |   }
+      | }
+      |
+      |""".stripMargin)
 
   /**
     * Determine if user is authorized to perform delete.  To be authorized, the user must be from the
@@ -391,26 +418,32 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   }
 
   private def noSuchOutput(response: Response): Unit = {
-    response.setEntity("No such output.  Most likely it has been deleted or redone.  Refresh the page for the latest list of outputs.", MediaType.TEXT_PLAIN) // TODO
+    response.setEntity("No such output.  Most likely it has been deleted or redone.  Refresh the page for the latest list of outputs.", MediaType.TEXT_PLAIN)
     val content = {
       <div>No such output.  Possibly it has been deleted or redone.  Refresh the page for the latest list of outputs.</div>
     }
     simpleWebPage(content, Status.CLIENT_ERROR_BAD_REQUEST, "No such output", response)
   }
 
-  private def handleDelete(valueMap: ValueMapT, response: Response): Unit = {
-
-    val outputPK = valueMap(OutputList.deleteTag).toLong
+  private def handleDelete(valueMap: ValueMapT, response: Response): Int = {
+    val outputPK = valueMap(deleteTag).toLong
     Output.get(outputPK) match {
-      case None => noSuchOutput(response)
+      case None =>
+        noSuchOutput(response)
+        Filter.SKIP
       case Some(output) =>
         if (userAuthorizedToDelete(response.getRequest, output)) {
           if (valueMap.contains(OutputList.confirmTag)) {
             deleteOutput(outputPK, response)
-          } else
+            Filter.SKIP
+          } else {
             showConfirmDelete(response, outputPK)
-        } else
+            Filter.STOP
+          }
+        } else {
           showNotAuthorizedToDelete(response, outputPK)
+          Filter.SKIP
+        }
     }
   }
 
@@ -465,6 +498,39 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
       outputPkList.flatMap(Output.get).map(redoOne)
     }
 
+  /**
+    * Examine the valueMap and determine if this is a status change of an output.
+    * @param valueMap Parameters from URL.
+    * @return True if it is a status change.
+    */
+  private def isStatusChange(valueMap: WebUtil.ValueMapT): Boolean = {
+    val is = valueMap.contains(statusTag) && valueMap.contains(outputPKTag)
+    Trace.trace(s"is: $is")
+    is
+  }
+
+  private def changeStatus(valueMap: WebUtil.ValueMapT, response: Response): Int = {
+
+    val status = valueMap(statusTag)
+    val outputPK = valueMap(outputPKTag).toLong
+    logger.info(s"Changing status of outputPK $outputPK to $status ...")
+
+    if (status.equals(deleteTag)) {
+      handleDelete(valueMap, response)
+    } else {
+      val output = Output.get(outputPK).get
+
+      val newDataValidity = validityList.find(_.equals(status)).get // Make sure that the new status is supported.
+      val newOutput = output.copy(dataValidity = newDataValidity)
+      newOutput.insertOrUpdate()
+      logger.info(s"Changed status of outputPK $outputPK to $status ...")
+
+      response.setStatus(Status.SUCCESS_OK)
+      response.setEntity(s"Status changed to $newDataValidity", MediaType.TEXT_PLAIN)
+      Filter.STOP
+    }
+  }
+
   override def beforeHandle(valueMap: ValueMapT, request: Request, response: Response): Int = {
     try {
       val delete = valueMap.get(OutputList.deleteTag)
@@ -483,6 +549,9 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         case _ if buttonIs(valueMap, resumeButton) =>
           OutputList.bulkRedoIsRunning.set(true)
           Filter.CONTINUE
+        case _ if isStatusChange(valueMap) =>
+          Trace.trace("Got a status change.")
+          changeStatus(valueMap, response)
         case _ =>
           if (buttonIs(valueMap, redoAll)) {
             Future { startBulkRedo(valueMap, response) }
