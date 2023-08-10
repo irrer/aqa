@@ -92,7 +92,7 @@ object WedgePoint extends ProcedureOutput {
 
     def percentOfBackground_pct = column[Double]("percentOfBackground_pct")
 
-    def baselinePercentOfBackground_pct = column[Double]("baselinePercentOfBackground_pct")
+    private def baselinePercentOfBackground_pct = column[Double]("baselinePercentOfBackground_pct")
 
     def * =
       (
@@ -239,7 +239,7 @@ object WedgePoint extends ProcedureOutput {
         Seq()
       else {
         val groupList = pairList.groupBy(h => h.wedgePoint.wedgeBeamName + h.wedgePoint.backgroundBeamName).values
-        val hist = groupList.map(g => g.sortBy(_.output.dataDate.get.getTime)).map(g => associateWithBaseline(g, g.head)).flatten.toSeq
+        val hist = groupList.map(g => g.sortBy(_.output.dataDate.get.getTime)).flatMap(g => associateWithBaseline(g, g.head)).toSeq
         hist.sortBy(_.output.dataDate.get.getTime)
       }
     hist

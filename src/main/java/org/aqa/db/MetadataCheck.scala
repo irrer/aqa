@@ -193,7 +193,7 @@ object MetadataCheck extends ProcedureOutput with Logging {
       "date: " + output.dataDate.get + "    " + metadataCheck
     }
 
-    val ordering = output.dataDate.get.getTime + "  " + metadataCheck.beamName
+    val ordering: String = output.dataDate.get.getTime + "  " + metadataCheck.beamName
   }
 
   /**

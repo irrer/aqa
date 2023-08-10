@@ -24,14 +24,14 @@ import org.aqa.procedures.ProcedureOutput
 import scala.xml.Elem
 
 /**
-  * Store the analysis results for a single gap skew image.
-  *
-  * Data is associated with a "bank", which indicates a pair of X1 and X2 MLCs or Jaws, or
-  * a pair of Y1 and Y2 MLCs or Jaws.  If only one edge is measured, then only one set of
-  * values will be valid (non-null).
-  */
+ * Store the analysis results for a single gap skew image.
+ *
+ * Data is associated with a "bank", which indicates a pair of X1 and X2 MLCs or Jaws, or
+ * a pair of Y1 and Y2 MLCs or Jaws.  If only one edge is measured, then only one set of
+ * values will be valid (non-null).
+ */
 case class GapSkew(
-    // @formatter:off
+                    // @formatter:off
     gapSkewPK: Option[Long],                  // primary key
     outputPK: Long,                           // output primary key
     rtimageUID: String,                       // SOP series instance UID of EPID image
@@ -57,7 +57,7 @@ case class GapSkew(
     bottomRightValue_mm: Option[Double],      // isoplane coordinate of end of leaf or jaw position at higher numbered leaves.
     bottomRightPlanned_mm: Option[Double],    // planned isoplane position (expected value of bank1Low_mm and bank1High_mm)
     // @formatter:on
-) {
+                  ) {
 
   def insert: GapSkew = {
     val insertQuery = GapSkew.query returning GapSkew.query.map(_.gapSkewPK) into ((gapSkew, gapSkewPK) => gapSkew.copy(gapSkewPK = Some(gapSkewPK)))
@@ -74,12 +74,12 @@ case class GapSkew(
   def hasTwoEdges: Boolean = edgeTypeNameList.size == 4
 
   /** True if at least one of the edges was defined by an MLC. */
-  def hasMlc: Boolean = {
+  private def hasMlc: Boolean = {
     val edgeTypeList = edgeTypeNameList.map(GapSkew.EdgeType.toEdgeType)
     edgeTypeList.exists(et => !et.isJaw)
   }
 
-  /** Collimator angle rounded to nearest 90 degrees.  */
+  /** Collimator angle rounded to nearest 90 degrees. */
   def angleRounded: Int = Util.angleRoundedTo90(collimatorAngle_deg)
 
   /** True if one of the edges is the MLC and the collimator is at 270 degrees. */
@@ -109,8 +109,11 @@ case class GapSkew(
    */
 
   def topLeftEdgeType: GapSkew.EdgeType = GapSkew.EdgeType.toEdgeType(topLeftEdgeTypeName.get)
-  def topRightEdgeType: GapSkew.EdgeType = GapSkew.EdgeType.toEdgeType(topRightEdgeTypeName.get)
+
+  private def topRightEdgeType: GapSkew.EdgeType = GapSkew.EdgeType.toEdgeType(topRightEdgeTypeName.get)
+
   def bottomLeftEdgeType: GapSkew.EdgeType = GapSkew.EdgeType.toEdgeType(bottomLeftEdgeTypeName.get)
+
   def bottomRightEdgeType: GapSkew.EdgeType = GapSkew.EdgeType.toEdgeType(bottomRightEdgeTypeName.get)
 
   def edgeList: Seq[GapSkew.EdgeType] = Seq(topLeftEdgeType, topRightEdgeType, bottomLeftEdgeType, bottomRightEdgeType)
@@ -118,17 +121,18 @@ case class GapSkew(
   private def math(a: OD, b: OD, func: (Double, Double) => Double): Option[Double] = {
     (a, b) match {
       case (Some(aa), Some(bb)) => Some(func(aa, bb))
-      case _                    => None
+      case _ => None
     }
   }
 
   private def minus(a: OD, b: OD): Option[Double] = math(a, b, (aa, bb) => aa - bb)
+
   private def minusAbs(a: OD, b: OD): Option[Double] = math(a, b, (aa, bb) => (aa - bb).abs)
 
   private def negate(a: OD): Option[Double] = {
     a match {
       case Some(aa) => Some(-aa)
-      case _        => None
+      case _ => None
     }
   }
 
@@ -211,9 +215,10 @@ case class GapSkew(
   }
 
   /**
-    * Controls what order the beams are shown to the user.
-    * @return Number that can be used to sort them.
-    */
+   * Controls what order the beams are shown to the user.
+   *
+   * @return Number that can be used to sort them.
+   */
   def viewOrdering: Int = {
 
     val topIs0 = topLeftPlanned_mm.isDefined && (topLeftPlanned_mm.get.round == 0)
@@ -222,12 +227,12 @@ case class GapSkew(
     val bottomIsMlc = bottomIs0 && bottomLeftEdgeTypeName.isDefined && bottomLeftEdgeType.isMlc
 
     val ordering = 0 match {
-      case _ if (angleRounded == 90) && topIsMlc                        => 1 // ABank C90
-      case _ if (angleRounded == 90) && bottomIsMlc                     => 2 // BBank C90
-      case _ if (angleRounded == 270) && bottomIsMlc                    => 3 // ABank C270
-      case _ if (angleRounded == 270) && topIsMlc                       => 4 // BBank C270
+      case _ if (angleRounded == 90) && topIsMlc => 1 // ABank C90
+      case _ if (angleRounded == 90) && bottomIsMlc => 2 // BBank C90
+      case _ if (angleRounded == 270) && bottomIsMlc => 3 // ABank C270
+      case _ if (angleRounded == 270) && topIsMlc => 4 // BBank C270
       case _ if (angleRounded == 270) && (edgeList.count(_.isJaw) == 4) => 5 // 270 Jaw-Jaw
-      case _                                                            => 6 // Don't know what this is.  Put it last.
+      case _ => 6 // Don't know what this is.  Put it last.
     }
     ordering
   }
@@ -238,28 +243,46 @@ object GapSkew extends ProcedureOutput with Logging {
   class GapSkewTable(tag: Tag) extends Table[GapSkew](tag, "gapSkew") {
 
     def gapSkewPK = column[Long]("gapSkewPK", O.PrimaryKey, O.AutoInc)
+
     def outputPK = column[Long]("outputPK")
+
     def rtimageUID = column[String]("rtimageUID")
+
     def beamName = column[String]("beamName")
+
     def collimatorAngle_deg = column[Double]("collimatorAngle_deg")
+
     //
     def measurementWidth_mm = column[Double]("measurementWidth_mm")
+
     def measurementSeparation_mm = column[Double]("measurementSeparation_mm")
+
     //
     def topLeftEdgeTypeName = column[Option[String]]("topLeftEdgeTypeName")
+
     def topLeftValue_mm = column[Option[Double]]("topLeftValue_mm")
+
     def topLeftPlanned_mm = column[Option[Double]]("topLeftPlanned_mm")
+
     //
     def topRightEdgeTypeName = column[Option[String]]("topRightEdgeTypeName")
+
     def topRightValue_mm = column[Option[Double]]("topRightValue_mm")
+
     def topRightPlanned_mm = column[Option[Double]]("topRightPlanned_mm")
+
     //
     def bottomLeftEdgeTypeName = column[Option[String]]("bottomLeftEdgeTypeName")
+
     def bottomLeftValue_mm = column[Option[Double]]("bottomLeftValue_mm")
+
     def bottomLeftPlanned_mm = column[Option[Double]]("bottomLeftPlanned_mm")
+
     //
     def bottomRightEdgeTypeName = column[Option[String]]("bottomRightEdgeTypeName")
+
     def bottomRightValue_mm = column[Option[Double]]("bottomRightValue_mm")
+
     def bottomRightPlanned_mm = column[Option[Double]]("bottomRightPlanned_mm")
 
     def * =
@@ -326,12 +349,14 @@ object GapSkew extends ProcedureOutput with Logging {
     }
 
     val isMlc: Boolean = !isJaw
+
     override def toString: String = name + "    isX: " + isX + "    is1: " + bank + "    isJaw: " + isJaw
   }
 
   /**
-    * All possible types of edges.
-    */
+   * All possible types of edges.
+   */
+  //noinspection ScalaWeakerAccess
   object EdgeType {
     // @formatter:off
     val X1_Jaw_Horz: EdgeType = EdgeType( isX =  true, bank = 1, isJaw =  true, isHorz =  true)
@@ -359,22 +384,24 @@ object GapSkew extends ProcedureOutput with Logging {
     // @formatter:on
 
     /**
-      * Find the EdgeType with the given characteristics.
-      * @param isX True if X, false if Y.
-      * @param bank Bank number.  Can only be 1 or 2, as in X1 or Y2.
-      * @param isJaw True if is jaw, false if MLC.
-      * @return The corresponding EdgeType.
-      */
+     * Find the EdgeType with the given characteristics.
+     *
+     * @param isX   True if X, false if Y.
+     * @param bank  Bank number.  Can only be 1 or 2, as in X1 or Y2.
+     * @param isJaw True if is jaw, false if MLC.
+     * @return The corresponding EdgeType.
+     */
     def find(isX: Boolean, bank: Int, isJaw: Boolean, isHorz: Boolean): EdgeType = {
       val t = EdgeType(isX, bank, isJaw, isHorz)
       list.find(et => et.name.equals(t.name)).get
     }
 
     /**
-      * Convert text to an EdgeType.  EdgeTypes are stored as text in the database.
-      * @param text Text version of EdgeType.
-      * @return The corresponding EdgeType.
-      */
+     * Convert text to an EdgeType.  EdgeTypes are stored as text in the database.
+     *
+     * @param text Text version of EdgeType.
+     * @return The corresponding EdgeType.
+     */
     def toEdgeType(text: String): EdgeType = list.find(_.name.equals(text)).get
   }
 
@@ -395,8 +422,8 @@ object GapSkew extends ProcedureOutput with Logging {
   }
 
   /**
-    * Get a list of all GapSkew for the given output
-    */
+   * Get a list of all GapSkew for the given output
+   */
   def getByOutput(outputPK: Long): Seq[GapSkew] = {
     val action = for {
       inst <- GapSkew.query if inst.outputPK === outputPK
@@ -437,13 +464,13 @@ object GapSkew extends ProcedureOutput with Logging {
   case class GapSkewHistory(output: Output, gapSkew: GapSkew) {}
 
   /**
-    * Get the history of GapSkew results.
-    *
-    * @param machinePK : For this machine
-    * @param beamName  : For this beam
-    * @return Complete history with baselines sorted by date.
-    *
-    */
+   * Get the history of GapSkew results.
+   *
+   * @param machinePK : For this machine
+   * @param beamName  : For this beam
+   * @return Complete history with baselines sorted by date.
+   *
+   */
   def historyByBeam(machinePK: Long, beamName: String): Seq[GapSkewHistory] = {
 
     val search = for {
@@ -463,12 +490,12 @@ object GapSkew extends ProcedureOutput with Logging {
   }
 
   /**
-    * Get the history of GapSkew results.
-    *
-    * @param machinePK : For this machine
-    * @return Complete history sorted by date.
-    *
-    */
+   * Get the history of GapSkew results.
+   *
+   * @param machinePK : For this machine
+   * @return Complete history sorted by date.
+   *
+   */
   def historyByMachine(machinePK: Long): Seq[GapSkewHistory] = {
 
     val search = for {
@@ -488,12 +515,12 @@ object GapSkew extends ProcedureOutput with Logging {
   }
 
   /**
-    * Get all GapSkew results.
-    *
-    * @param outputSet  : List of output PKs.  Each GapSkew must point to one of the items in this set.
-    * @return List of GapSkew that point to the output set.
-    *
-    */
+   * Get all GapSkew results.
+   *
+   * @param outputSet : List of output PKs.  Each GapSkew must point to one of the items in this set.
+   * @return List of GapSkew that point to the output set.
+   *
+   */
   def listByOutputSet(outputSet: Set[Long]): Seq[GapSkew] = {
 
     val search = for {
