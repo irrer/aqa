@@ -229,7 +229,7 @@ object BBbyEPID extends ProcedureOutput with Logging {
     */
   def history(machinePK: Long, procedurePK: Long): Seq[BBbyEPIDHistory] = {
     val search = for {
-      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
+      output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
       bbByEPID <- BBbyEPID.query.filter(c => c.outputPK === output._1)
     } yield (output._2, bbByEPID)
     //println(sorted.result.statements.mkString("\n    "))

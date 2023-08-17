@@ -86,10 +86,7 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
 
   private val chart = {
     val index = history.indexWhere(sh => sh.bbByEPIDComposite.outputPK == output.outputPK.get)
-    if (index == -1)
-      None
-    else
-      Some(chartOf(index))
+    Some(chartOf(index))
   }
 
   val chartScript: String = {

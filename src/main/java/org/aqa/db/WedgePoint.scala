@@ -172,7 +172,7 @@ object WedgePoint extends ProcedureOutput {
   def recentHistory(machinePK: Long, procedurePK: Long): Seq[WedgePointHistory1] = {
 
     val search = for {
-      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
+      output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
       wedgePoint <- WedgePoint.query.filter(w => w.outputPK === output._1).map(c => (c.wedgeBeamName, c.backgroundBeamName, c.percentOfBackground_pct))
     } yield (output._2, wedgePoint._1, wedgePoint._2, wedgePoint._3, output._1)
 
@@ -227,7 +227,7 @@ object WedgePoint extends ProcedureOutput {
   def history(machinePK: Long, procedurePK: Long): Seq[WedgePointHistory] = {
 
     val search = for {
-      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
+      output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       wedgePoint <- WedgePoint.query.filter(w => w.outputPK === output.outputPK)
     } yield (output, wedgePoint)
 
@@ -262,7 +262,7 @@ object WedgePoint extends ProcedureOutput {
 
     val result = {
       val search = for {
-        output <- Output.query.filter(o => (o.dataDate <= ts) && (o.machinePK === machinePK)).map(o => o)
+        output <- Output.valid.filter(o => (o.dataDate <= ts) && (o.machinePK === machinePK)).map(o => o)
         symAndFlat <- WedgePoint.query.filter(saf =>
           (saf.outputPK === output.outputPK) &&
             (saf.wedgeBeamName === beamName) // &&

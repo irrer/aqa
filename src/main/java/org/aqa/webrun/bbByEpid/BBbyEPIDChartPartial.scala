@@ -47,10 +47,10 @@ class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
     val date: Date = epidList.head.date
     val outputPK: Long = epidList.head.bbByEPID.outputPK
     // to balance the number of vertical and horizontal readings, use the same number of each
-    val matchingSize: Int = Math.min(epidList.count(h => h.bbByEPID.isHorz), epidList.count(h => h.bbByEPID.isVert))
+    private val matchingSize: Int = Math.min(epidList.count(h => h.bbByEPID.isHorz), epidList.count(h => h.bbByEPID.isVert))
 
-    val horzList: Seq[BBbyEPIDHistory] = epidList.filter(h => h.bbByEPID.isHorz).take(matchingSize)
-    val vertList: Seq[BBbyEPIDHistory] = epidList.filter(h => h.bbByEPID.isVert).take(matchingSize)
+    private val horzList: Seq[BBbyEPIDHistory] = epidList.filter(h => h.bbByEPID.isHorz).take(matchingSize)
+    private val vertList: Seq[BBbyEPIDHistory] = epidList.filter(h => h.bbByEPID.isVert).take(matchingSize)
 
     val epid3DXVert_mm: Double = vertList.map(_.bbByEPID.epid3DX_mm).sum / matchingSize
     val epid3DYHorz_mm: Double = horzList.map(_.bbByEPID.epid3DY_mm).sum / matchingSize
@@ -187,13 +187,9 @@ class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
   // ----------------------------------------------------------------------------------------
 
   val chartScript: String = {
-    if (index == -1)
-      ""
-    else {
-      val chartList = Seq(chartOf(), chartOfPixelCoefficientOfVariation(), chartOfBBStdDevMultiple(), chartOfPixelMean())
-      val js = chartList.map(c => c.javascript).mkString("\n\n")
-      js
-    }
+    val chartList = Seq(chartOf(), chartOfPixelCoefficientOfVariation(), chartOfBBStdDevMultiple(), chartOfPixelMean())
+    val js = chartList.map(c => c.javascript).mkString("\n\n")
+    js
   }
 
 }

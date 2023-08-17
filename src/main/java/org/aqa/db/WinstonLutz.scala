@@ -21,17 +21,19 @@ import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 import org.aqa.Util
 
+import java.sql.Timestamp
+import java.util.Date
 import scala.xml.Elem
 
 /**
-  * Store the analysis results for a single gap skew image.
-  *
-  * Data is associated with a "bank", which indicates a pair of X1 and X2 MLCs or Jaws, or
-  * a pair of Y1 and Y2 MLCs or Jaws.  If only one edge is measured, then only one set of
-  * values will be valid (non-null).
-  */
+ * Store the analysis results for a single gap skew image.
+ *
+ * Data is associated with a "bank", which indicates a pair of X1 and X2 MLCs or Jaws, or
+ * a pair of Y1 and Y2 MLCs or Jaws.  If only one edge is measured, then only one set of
+ * values will be valid (non-null).
+ */
 case class WinstonLutz(
-    // @formatter:off
+                        // @formatter:off
     winstonLutzPK        : Option[Long]       , // primary key
     outputPK             : Long               , // output primary key
     rtimageUID           : String             , // SOP series instance UID of EPID image
@@ -54,7 +56,7 @@ case class WinstonLutz(
     leftEdgePlanned_mm   : Option[Double]     , // planned left edge of rectangle
     rightEdgePlanned_mm  : Option[Double]       // planned right edge of rectangle
   // @formatter:on
-) {
+                      ) {
 
   def insert: WinstonLutz = {
     val insertQuery = WinstonLutz.query returning WinstonLutz.query.map(_.winstonLutzPK) into ((winstonLutz, winstonLutzPK) => winstonLutz.copy(winstonLutzPK = Some(winstonLutzPK)))
@@ -64,9 +66,10 @@ case class WinstonLutz(
   }
 
   /**
-    * Get a beam name.  Use the one in the RTPLAN, but if that is not available, construct one based on the gantry and collimator angles.
-    * @return The name of the beam.
-    */
+   * Get a beam name.  Use the one in the RTPLAN, but if that is not available, construct one based on the gantry and collimator angles.
+   *
+   * @return The name of the beam.
+   */
   def beamNameOf: String = {
     if (beamName.isDefined)
       beamName.get.replaceFirst("^[0-9] ", "").trim
@@ -80,12 +83,16 @@ case class WinstonLutz(
 
   //noinspection ScalaWeakerAccess
   def boxCenterX_mm: Double = (leftEdge_mm + rightEdge_mm) / 2
+
   //noinspection ScalaWeakerAccess
   def boxCenterY_mm: Double = (topEdge_mm + bottomEdge_mm) / 2
+
   //noinspection ScalaWeakerAccess
   def errorX_mm: Double = boxCenterX_mm - ballX_mm
+
   //noinspection ScalaWeakerAccess
   def errorY_mm: Double = boxCenterY_mm - ballY_mm
+
   def errorXY_mm: Double = Math.sqrt((errorX_mm * errorX_mm) + (errorY_mm * errorY_mm))
 
   /** top edge measured - planned */
@@ -176,6 +183,7 @@ object WinstonLutz extends ProcedureOutput with Logging {
     }
 
     val isMlc: Boolean = !isJaw
+
     override def toString: String = name + "    isX: " + isX + "    is1: " + bank + "    isJaw: " + isJaw
   }
 
@@ -190,8 +198,8 @@ object WinstonLutz extends ProcedureOutput with Logging {
   }
 
   /**
-    * Get a list of all WinstonLutz for the given output
-    */
+   * Get a list of all WinstonLutz for the given output
+   */
   def getByOutput(outputPK: Long): Seq[WinstonLutz] = {
     val action = for {
       inst <- WinstonLutz.query if inst.outputPK === outputPK
@@ -231,18 +239,52 @@ object WinstonLutz extends ProcedureOutput with Logging {
 
   case class WinstonLutzHistory(output: Output, winstonLutz: WinstonLutz) {}
 
+
   /**
-    * Get the history of WinstonLutz results.
-    *
-    * @param machinePK : For this machine
-    * @param beamName  : For this beam
-    * @return Complete history with baselines sorted by date.
-    *
-    */
+   * Get a given number of history of WinstonLutz results that are on or earlier than the given date.
+   *
+   * @param date          : At or earlier than this date
+   * @param count         : Return up to this many results
+   * @param institutionPK : Restrict to this institution.
+   * @return Chunk of history sorted by date.
+   *
+   */
+  def historyByDate(date: Date, count: Int, institutionPK: Long): Seq[WinstonLutzHistory] = {
+
+    val timeStamp = new Timestamp(date.getTime)
+
+    val search = for {
+      machine <- Machine.query.filter(m => m.institutionPK === institutionPK)
+      output <- Output.valid.filter(o => (o.dataDate <= timeStamp) && (o.machinePK === machine.machinePK))
+      winstonLutz <- WinstonLutz.query.filter(c => c.outputPK === output.outputPK)
+    } yield {
+      (output, winstonLutz)
+    }
+
+    val sortedSearch = search.sortBy(_._1.dataDate.desc).take(count)
+
+    // Fetch entire history from the database.  Also sort by dataDate.  This sorting also has the
+    // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
+    // throw an exception.
+    val sr = sortedSearch.result
+    val tsList = Db.run(sr).map(os => WinstonLutzHistory(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
+
+    tsList
+  }
+
+
+  /**
+   * Get the history of WinstonLutz results.
+   *
+   * @param machinePK : For this machine
+   * @param beamName  : For this beam
+   * @return Complete history with baselines sorted by date.
+   *
+   */
   def historyByBeam(machinePK: Long, beamName: String): Seq[WinstonLutzHistory] = {
 
     val search = for {
-      output <- Output.query.filter(o => o.machinePK === machinePK)
+      output <- Output.valid.filter(o => o.machinePK === machinePK)
       winstonLutz <- WinstonLutz.query.filter(c => c.outputPK === output.outputPK && c.beamName === beamName)
     } yield {
       (output, winstonLutz)
@@ -258,16 +300,16 @@ object WinstonLutz extends ProcedureOutput with Logging {
   }
 
   /**
-    * Get the history of WinstonLutz results.
-    *
-    * @param machinePK : For this machine
-    * @return Complete history sorted by date.
-    *
-    */
+   * Get the history of WinstonLutz results.
+   *
+   * @param machinePK : For this machine
+   * @return Complete history sorted by date.
+   *
+   */
   def historyByMachine(machinePK: Long): Seq[WinstonLutzHistory] = {
 
     val search = for {
-      output <- Output.query.filter(o => o.machinePK === machinePK)
+      output <- Output.valid.filter(o => o.machinePK === machinePK)
       winstonLutz <- WinstonLutz.query.filter(c => c.outputPK === output.outputPK)
     } yield {
       (output, winstonLutz)
@@ -283,12 +325,12 @@ object WinstonLutz extends ProcedureOutput with Logging {
   }
 
   /**
-    * Get all WinstonLutz results.
-    *
-    * @param outputSet  : List of output PKs.  Each WinstonLutz must point to one of the items in this set.
-    * @return List of WinstonLutz that point to the output set.
-    *
-    */
+   * Get all WinstonLutz results.
+   *
+   * @param outputSet : List of output PKs.  Each WinstonLutz must point to one of the items in this set.
+   * @return List of WinstonLutz that point to the output set.
+   *
+   */
   def listByOutputSet(outputSet: Set[Long]): Seq[WinstonLutz] = {
 
     val search = for {

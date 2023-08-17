@@ -177,7 +177,7 @@ object LeafPosition extends ProcedureOutput with Logging {
     logger.info("LeafPosition history starting for machine: " + machinePK + " : " + Machine.get(machinePK).get.id)
     val outputList = {
       val search = for {
-        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
+        output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       } yield output
       val result = Db.run(search.result)
       result

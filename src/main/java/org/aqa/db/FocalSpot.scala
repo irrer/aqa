@@ -241,7 +241,7 @@ object FocalSpot extends ProcedureOutput {
   def history(machinePK: Long, procedurePK: Long): Seq[FocalSpotHistory] = {
 
     val search = for {
-      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
+      output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       colCent <- FocalSpot.query.filter(w => w.outputPK === output.outputPK)
     } yield (output, colCent)
 
@@ -261,7 +261,7 @@ object FocalSpot extends ProcedureOutput {
   def history(machinePK: Long, procedurePK: Long, kvp_kv: Double, isFFF: Boolean): Seq[FocalSpotHistory] = {
 
     val search = for {
-      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
+      output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       colCent <- FocalSpot.query.filter(fs => (fs.outputPK === output.outputPK) && (fs.KVP_kv === kvp_kv) && (fs.isFFF === isFFF))
     } yield (output, colCent)
 

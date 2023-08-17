@@ -20,7 +20,6 @@ import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Db.driver.api._
-import org.aqa.db.WinstonLutz.WinstonLutzHistory
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.GetSeries
 import org.aqa.web.WebServer
@@ -94,6 +93,9 @@ case class Output(
     outputPK.isDefined && other.outputPK.isDefined && (outputPK.get == other.outputPK.get)
   }
 
+  /** True if the data is valid. */
+  val isValid: Boolean = dataValidity.equals(DataValidity.valid.toString)
+
   def makeZipOfFiles: Array[Byte] = {
     FileUtil.readFileTreeToZipByteArray(Seq(dir), Seq[String](), Seq[File]())
   }
@@ -154,6 +156,9 @@ object Output extends Logging {
 
   val query = TableQuery[OutputTable]
 
+  /** Query the Output table, restricting results to those whose dataValidity is valid. */
+  val valid = Output.query.filter(o => o.dataValidity === DataValidity.valid.toString)
+
   def get(outputPK: Long): Option[Output] = {
     val action = for { output <- Output.query if output.outputPK === outputPK } yield output
     val list = Db.run(action.result)
@@ -189,10 +194,10 @@ object Output extends Logging {
   ) {}
 
   /**
-   * Convert text to a DataValidity state.  Default to 'valid' if the database contains an unknown value.
-   * @param text Text in datavase.
-   * @return
-   */
+    * Convert text to a DataValidity state.  Default to 'valid' if the database contains an unknown value.
+    * @param text Text in database.
+    * @return
+    */
   private def toDV(text: String): DataValidity.Value = DataValidity.stringToDataValidityWithDefault(text, DataValidity.valid)
 
   /**
@@ -489,38 +494,6 @@ object Output extends Logging {
   }
 
   /**
-    * Get a given number of history of WinstonLutz results that are on or earlier than the given date.
-    *
-    * @param date          : At or earlier than this date
-    * @param count         : Return up to this many results
-    * @param institutionPK : Restrict to this institution.
-    * @return Chunk of history sorted by date.
-    *
-    */
-  def historyByDate(date: Date, count: Int, institutionPK: Long): Seq[WinstonLutzHistory] = {
-
-    val timeStamp = new Timestamp(date.getTime)
-
-    val search = for {
-      machine <- Machine.query.filter(m => m.institutionPK === institutionPK)
-      output <- Output.query.filter(o => (o.dataDate <= timeStamp) && (o.machinePK === machine.machinePK))
-      winstonLutz <- WinstonLutz.query.filter(c => c.outputPK === output.outputPK)
-    } yield {
-      (output, winstonLutz)
-    }
-
-    val sortedSearch = search.sortBy(_._1.dataDate.desc).take(count)
-
-    // Fetch entire history from the database.  Also sort by dataDate.  This sorting also has the
-    // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
-    // throw an exception.
-    val sr = sortedSearch.result
-    val tsList = Db.run(sr).map(os => WinstonLutzHistory(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
-
-    tsList
-  }
-
-  /**
     * Get a list outputs for the given machine.  The outputs should be distinct by their procedurePK.  For example,
     * if there were outputs for the given machine for Phase2 and LOC, then one of each would be returned.
     * @param machinePK Match this machine PK.
@@ -534,72 +507,4 @@ object Output extends Logging {
     logger.info(s"""machineProcedureList   machinePK: $machinePK  procedurePK list: ${list.map(_.procedurePK).sorted.mkString("  ")}""")
     list
   }
-
-  /*
-  def main(args: Array[String]): Unit = {
-    println("Starting Output.main")
-    DbSetup.init
-    (0 to 5).foreach(_ => println("---------------------------------------------------------------------------------"))
-
-    val outputList = {
-      val search = for {
-        outPK <- Output.query.map(_.outputPK)
-      } yield outPK
-
-      val list = Db.run(search.result).sorted.reverse
-      list
-    }
-
-    println("Number of outputs: " + outputList.size)
-
-    val start = System.currentTimeMillis()
-
-    val count = outputList.size.toDouble / 100
-
-    def showContent(outputPK: Long, index: Int): Unit = {
-      def doIt(output: Output, fileSystem: Array[Byte], db: OutputFiles): Unit = {
-        val fsg = if (fileSystem.length > db.zippedContent.length) " gt" else ""
-        val elapsed_ms = System.currentTimeMillis() - start
-        val elapsed = Util.elapsedTimeHumanFriendly(elapsed_ms)
-        val remain = {
-          val avg = elapsed_ms / (index + 1.0)
-          val r = ((outputList.size - index) * avg).toLong
-          Util.elapsedTimeHumanFriendly(r)
-        }
-        println(
-          (index + 1).formatted("%5d") + ((index + 1) / count).formatted("%7.3f") +
-            "    outputPK: " + outputPK +
-            "    " + elapsed.format("%10s") +
-            "    " + remain.format("%10s") +
-            "  " + output.dir.getAbsolutePath +
-            "    fileSystem size: " + fileSystem.length.formatted("%10d") +
-            "    db size: " + db.zippedContent.length.formatted("%10d") + fsg
-        )
-      }
-
-      try {
-        val output = {
-          val o = get(outputPK)
-          if (o.isEmpty)
-            println("Failed.  outputPK: " + outputPK + "  no such output")
-          o.get
-        }
-        if (output.dir.isDirectory) {
-          val fileSystem = output.makeZipOfFiles
-          val outFilesOpt = OutputFiles.getByOutput(output.outputPK.get)
-          if (outFilesOpt.nonEmpty)
-            doIt(output, fileSystem, outFilesOpt.get)
-          else
-            println("Failed.  outputPK: " + outputPK + "  no such OutputFile")
-        } else
-          println("Failed.  outputPK: " + outputPK + "  no such dir:  " + output.dir.getAbsolutePath)
-      } catch {
-        case t: Throwable => println("Failed.  outputPK: " + outputPK + " : " + fmtEx(t))
-      }
-    }
-
-    outputList.zipWithIndex.foreach(oi => showContent(oi._1, oi._2))
-
-  }
-   */
 }

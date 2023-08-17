@@ -211,7 +211,7 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
     */
   def history(machinePK: Long, procedurePK: Long): Seq[BBbyEPIDCompositeHistory] = {
     val search = for {
-      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
+      output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK)).map(o => (o.outputPK, o.dataDate))
       bbByEPIDComposite <- BBbyEPIDComposite.query.filter(c => (c.outputPK === output._1) && c.bbByCBCTPK.isDefined)
     } yield (output._2, bbByEPIDComposite)
     val result = Db.run(search.result).map(h => BBbyEPIDCompositeHistory(h._1.get, h._2)).sortWith((a, b) => a.date.getTime < b.date.getTime)

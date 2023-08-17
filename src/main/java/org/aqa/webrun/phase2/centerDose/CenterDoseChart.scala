@@ -77,7 +77,7 @@ class CenterDoseChart(outputPK: Long) extends Logging {
   private def chartOfBeam(beamName: String): C3ChartHistory = {
     val sortedHistory = sortedHistoryForBeam(beamName)
     val index = sortedHistory.indexWhere(sh => sh.centerDose.outputPK == output.outputPK.get)
-    val units = sortedHistory(index).centerDose.units
+    val units = sortedHistory.head.centerDose.units
 
     new C3ChartHistory(
       Some(chartIdOfBeam(beamName)),
@@ -98,7 +98,16 @@ class CenterDoseChart(outputPK: Long) extends Logging {
     )
   }
 
-  private val beamList = history.filter(h => h.centerDose.outputPK == outputPK).map(_.centerDose.beamName).distinct
+  private val beamList = {
+    val list = history.filter(h => h.centerDose.outputPK == outputPK).map(_.centerDose.beamName).distinct
+    if (list.nonEmpty) // If this is a valid output, then the list will be nonEmpty.
+      list
+    else { // If this was not a valid output, then go to the database to get the list of beams it used, then only display charts for those beams.
+      val beamsOfOutput = CenterDose.getByOutput(outputPK).map(_.beamName).distinct
+      val beamsOfHistory = history.map(_.centerDose.beamName).distinct
+      beamsOfOutput.intersect(beamsOfHistory)
+    }
+  }
   private val chartList = beamList.map(beamName => chartOfBeam(beamName))
 
   val chartScript: String = chartList.map(c => c.javascript).mkString("\n")

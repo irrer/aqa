@@ -296,7 +296,7 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     */
   def history(machinePK: Long, beamName: String, procedurePK: Long): Seq[SymmetryAndFlatnessHistory] = {
     val search = for {
-      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
+      output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       symmetryAndFlatness <- SymmetryAndFlatness.query.filter(c => c.outputPK === output.outputPK && c.beamName === beamName)
     } yield {
       (output, symmetryAndFlatness)
@@ -321,7 +321,7 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
   def history(machinePK: Long, procedurePK: Long): Seq[SymmetryAndFlatnessHistory] = {
 
     val search = for {
-      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
+      output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       symmetryAndFlatness <- SymmetryAndFlatness.query.filter(c => c.outputPK === output.outputPK)
     } yield {
       (output, symmetryAndFlatness)
@@ -349,8 +349,12 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     */
   def getBaseline(machinePK: Long, beamName: String, dataDate: Timestamp, procedurePK: Long): Option[SymmetryAndFlatnessHistory] = {
     //noinspection ReverseFind
-    val baseline = history(machinePK, beamName, procedurePK).reverse.find(h => h.output.dataDate.get.getTime <= dataDate.getTime)
-    baseline
+    val reverseHistory = history(machinePK, beamName, procedurePK).reverse
+    val baseline = reverseHistory.find(h => h.output.dataDate.get.getTime <= dataDate.getTime)
+    if (baseline.isDefined)
+      baseline
+    else
+      reverseHistory.lastOption
   }
 
   /**

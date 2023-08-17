@@ -49,8 +49,7 @@ class WedgeChartHistory(outputPK: Long) {
     * @return Zero relative index.
     */
   private def indexOfThis(beamHistory: Seq[WedgePoint.WedgePointHistory]): Int = {
-    val index = beamHistory.indexWhere(h => h.output.outputPK.get == output.outputPK.get)
-    Math.max(0, index) // Cover case where index is not in the list.
+    beamHistory.indexWhere(h => h.output.outputPK.get == output.outputPK.get)
   }
 
   /**
@@ -113,10 +112,21 @@ class WedgeChartHistory(outputPK: Long) {
   private def historyChart(wedgePoint: WedgePoint): String = {
     val chartId = C3Chart.idTagPrefix + Util.textToId(wedgePoint.wedgeBeamName)
     val beamHistory = allHistory.filter(w => w.wedgePoint.wedgeBeamName.equals(wedgePoint.wedgeBeamName) && w.wedgePoint.backgroundBeamName.equals(wedgePoint.backgroundBeamName))
+
     val maintenanceRecordList = getBeamMaintenanceRecordList(beamHistory)
 
     val xDateList = beamHistory.map(_.output.dataDate.get)
-    val historyPair = beamHistory.find(_.wedgePoint.wedgePointPK.get == wedgePoint.wedgePointPK.get).get
+    val historyPair = {
+      beamHistory.find(_.wedgePoint.wedgePointPK.get == wedgePoint.wedgePointPK.get) match {
+        case Some(pair) => pair
+        case _ =>
+          val wp = WedgePoint.getByOutput(wedgePoint.outputPK).head
+          beamHistory.find(_.wedgePoint.wedgePointPK.get == wp.wedgePointPK.get) match {
+            case Some(pair) => pair
+            case _ => beamHistory.head
+          }
+      }
+    }
     val baseline = getBaseline(historyPair)
     val tolerance = getTolerance(baseline)
 

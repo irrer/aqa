@@ -50,7 +50,7 @@ case class FocalSpotSet(
     result
   }
 
-  val fluenceName = if (isFFF) "FFF" else "STD"
+  val fluenceName: String = if (isFFF) "FFF" else "STD"
 
   def insertOrUpdate(): Int = Db.run(FocalSpotSet.query.insertOrUpdate(this))
 
@@ -175,8 +175,8 @@ object FocalSpotSet extends ProcedureOutput {
   def history(machinePK: Long, procedurePK: Long): Seq[FocalSpotSetHistory] = {
 
     val search = for {
-      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
-      focalSpotSet <- FocalSpotSet.query.filter(w => (w.outputPK === output.outputPK))
+      output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
+      focalSpotSet <- FocalSpotSet.query.filter(w => w.outputPK === output.outputPK)
     } yield (output, focalSpotSet)
 
     val focalSpotSetList = Db.run(search.result).map(outFocal => FocalSpotSetHistory(outFocal._1, outFocal._2)).sortBy(_.output.dataDate.get.getTime)
@@ -196,7 +196,7 @@ object FocalSpotSet extends ProcedureOutput {
   def history(machinePK: Long, procedurePK: Long, kvp_kv: Double, isFFF: Boolean): Seq[FocalSpotSetHistory] = {
 
     val search = for {
-      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
+      output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       focalSpotSet <- FocalSpotSet.query.filter(fs => (fs.outputPK === output.outputPK) && (fs.KVP_kv === kvp_kv) && (fs.isFFF === isFFF))
     } yield (output, focalSpotSet)
 

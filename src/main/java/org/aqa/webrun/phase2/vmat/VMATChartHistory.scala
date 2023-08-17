@@ -55,10 +55,10 @@ class VMATChartHistory(outputPK: Long, beamNameMLC: String) extends Logging {
   /**
     * Get index of this output in the list of output.  Used to mark the orange dot in the chart.
     */
-  private def getBeamIndex = {
+  private def index = {
     val outputTime = output.dataDate.get.getTime
-    val index = history.map(h => h.getTime).distinct.sorted.indexWhere(d => d == outputTime)
-    if (index == -1) None else Some(index)
+    val ind = history.map(h => h.getTime).distinct.sorted.indexWhere(d => d == outputTime)
+    ind
   }
 
   /**
@@ -139,14 +139,7 @@ class VMATChartHistory(outputPK: Long, beamNameMLC: String) extends Logging {
     }
   }
 
-  private val chart = {
-    getBeamIndex match {
-      case Some(index) =>
-        Some(chartOf(index))
-
-      case _ => None
-    }
-  }
+  private val chart = Some(chartOf(index))
 
   val chartScript: String = {
     if (chart.isDefined) chart.get.javascript

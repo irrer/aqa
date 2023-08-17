@@ -36,7 +36,7 @@ object Db extends Logging {
   /** Ensure that the the configuration has been read. */
   Config.validate
 
-  def isSqlServer: Boolean = Config.SlickDb.getString("db.default.driver").toLowerCase.contains("sqlserver")
+  private def isSqlServer: Boolean = Config.SlickDb.getString("db.default.driver").toLowerCase.contains("sqlserver")
 
   /**
     * Look at the DB configuration to determine which driver to load.
@@ -56,6 +56,7 @@ object Db extends Logging {
       // case _ if name.toLowerCase.contains("h2")        => slick.jdbc.H2Profile // not tested
       // case _ if name.toLowerCase.contains("sqlite")    => slick.jdbc.SQLiteProfile // not tested
       // case _ if name.toLowerCase.contains("derby")     => slick.jdbc.DerbyProfile // not tested
+      //noinspection SpellCheckingInspection
       // case _ if name.toLowerCase.contains("hsqld")     => slick.jdbc.HsqldbProfile // not tested
       case _ => throw new RuntimeException("Unable to recognize database driver: " + name)
     }
@@ -148,7 +149,7 @@ object Db extends Logging {
           logger.info("Database operation took the very long time of " + Util.elapsedTimeHumanFriendly(elapsed_ms) + " when called from\n" + stackText)
         }
 
-        if (elapsed_ms >= 100)
+        if (elapsed_ms >= 1000)
           logger.info("Database elapsed time: " + Util.elapsedTimeHumanFriendly(elapsed_ms) + "    op: " + op.toString)
 
         dbAction.onComplete {
@@ -189,7 +190,7 @@ object Db extends Logging {
     /**
       * Get the latest version of the list of tables.
       */
-    def getTableList: Seq[String] = {
+    private def getTableList: Seq[String] = {
       if (tableList.isEmpty) {
         val tableListMixed = if (isSqlServer) {
           val action = sql"select TABLE_NAME from INFORMATION_SCHEMA.TABLES".as[String]

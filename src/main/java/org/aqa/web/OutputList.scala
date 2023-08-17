@@ -42,6 +42,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.xml.Elem
+import scala.xml.Null
+import scala.xml.UnprefixedAttribute
 
 /**
   * List the outputs to let users re-visit results.
@@ -197,25 +199,20 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
     val current = extendedValues.dataValidity.toString
 
-    /*
-    val deleteSelection = {
-      <option value={(DataValidity.values.size + 1).toString}>
-        <a title="Click to delete.  Can NOT be undone" href={OutputList.path + "?" + OutputList.deleteTag + "=" + outputPK}>Delete</a>
-      </option>
-    }
-     */
+    val selectedAttr = new UnprefixedAttribute("selected", "selected", Null)
 
     val choiceList = {
       def opt(dv: DataValidity.Value): Elem = {
         val dvs = dv.toString
-        if (dv.toString.equals(current)) {
-          <option selected="selected" value={dvs}>{dvs}</option>
-        } else {
-          <option value={dvs}>{dvs}</option>
-        }
+        val isCurrent = dvs.equals(current)
+
+        val oo = Seq(<option value={dvs} style="background-color: white;">{dvs}</option>)
+          .map(o1 => if (isCurrent) o1.copy(attributes = o1.attributes.append(selectedAttr)) else o1)
+
+        oo.head
       }
 
-      val list = DataValidity.values.map(opt) + { <option title="be undone" value={deleteTag}>delete</option> }
+      val list = DataValidity.values.map(opt) + { <option title="Can not be undone" value={deleteTag} style="background-color: white;">delete</option> }
       list
     }
 
@@ -224,6 +221,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         {choiceList}
       </select>
     }
+
     html
   }
 
@@ -302,15 +300,59 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   override val canCreate: Boolean = false
 
   //noinspection SpellCheckingInspection
+
+  /**
+   * Create a javascript program for responding to the change of dataValidity state, and also set the color appropriately.
+   * @return a javascript program
+   */
   override def makeRunScript(): Option[String] = Some(s"""
+      |
+      |  console.log("hey");
+      |
+      |function SetBackgroundColor(elem, newValue) {
+      |  var name = elem.getAttribute("name");
+      |  // console.log("name: " + name + "    newValue: " + newValue);
+      |
+      |  if (newValue.localeCompare("invalid") == 0) {
+      |    // elem.setAttribute("style", "background-color:#F5F500;");
+      |    elem.setAttribute("style", "background-color:#CCCCCC;");
+      |    }
+      |  else {
+      |    elem.setAttribute("style", "background-color: white;");
+      |  }
+      |}
+      |
+      |function SetBackgroundColorAll() {
+      |  var publicList = document.getElementsByTagName("select");
+      |
+      |  for (elem of publicList) {
+      |    if (elem.hasAttribute("name") && (elem.getAttribute("name").startsWith("DataValidity"))) {
+      |      var j = elem.getAttribute("value");
+      |      console.log("elem: " + elem + "    value: " + j);
+      |      SetBackgroundColor(elem, elem.getAttribute("value"));
+      |    }
+      |  }
+      |
+      |  // setTimeout(SetBackgroundColorAll, 5000);
+      |}
+      |
+      |SetBackgroundColorAll();
+      |
+      | // ------------------------------------------------------------------------------------------
       |
       |function StatusChange(newValue, outputPK) {
       |
       |  var xhttp = new XMLHttpRequest();
       |
-      |    xhttp.onreadystatechange = function() {
-      |    if (this.readyState == 4 && this.status == 200) {
-      |      alert(this.responseText);
+      |  xhttp.onreadystatechange = function() {
+      |    if (this.readyState == 4) {
+      |      if (this.status == 200) {
+      |        alert(this.responseText);
+      |      }
+      |      if (this.status == 401) {
+      |        alert(this.responseText);
+      |        location.href = "/view/OutputList";
+      |      }
       |    }
       |  };
       |
@@ -321,8 +363,19 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
       |  else {
       |    xhttp.open("POST", "/view/OutputList?$statusTag=" + newValue + "&$outputPKTag=" + outputPK, true);
       |    xhttp.send();
-      |   }
-      | }
+      |  }
+      |
+      |  var elemId = "DataValidity" + outputPK;
+      |  console.log("StatusChange:  elemId: " + elemId);
+      |
+      |  var publicList = document.getElementsByTagName("select");
+      |  for (elem of publicList) {
+      |    if (elem.hasAttribute("name") && (elem.getAttribute("name").localeCompare(elemId) == 0)) {
+      |      SetBackgroundColor(elem, newValue);
+      |    }
+      |  }
+      |
+      |}
       |
       |""".stripMargin)
 
@@ -330,7 +383,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     * Determine if user is authorized to perform delete.  To be authorized, the user must be from the
     * same institution as the original user or be whitelisted.
     */
-  private def userAuthorizedToDelete(request: Request, output: Output): Boolean = {
+  private def userAuthorizedToChange(request: Request, output: Output): Boolean = {
 
     def sameInstitution: Boolean = {
       val user = CachedUser.get(request).get
@@ -339,18 +392,13 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
       val dataInstitution = mach.institutionPK
       val requestersInstitution = user.institutionPK
       val same = dataInstitution == requestersInstitution
-      logger.info("user requesting delete.  Authorized: " + same)
+      logger.info("user requesting to delete or change validity status.  Authorized: " + same)
       same
     }
 
     val isAuth = userIsWhitelisted(request) || sameInstitution
     isAuth
   }
-
-  //  override def get(valueMap: ValueMapT, response: Response) = {
-  //    val form = new WebForm(listPath, List(new WebRow(titleRow(valueMap)) ++ htmlFieldList(valueMap) ++ new WebRow(tableRow(valueMap, response))))
-  //    form.setFormResponse(valueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
-  //  }
 
   /**
     * Tell the user that the redo is forbidden and why.  Also give them a redirect back to the list of results.
@@ -431,7 +479,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
         noSuchOutput(response)
         Filter.SKIP
       case Some(output) =>
-        if (userAuthorizedToDelete(response.getRequest, output)) {
+        if (userAuthorizedToChange(response.getRequest, output)) {
           if (valueMap.contains(OutputList.confirmTag)) {
             deleteOutput(outputPK, response)
             Filter.SKIP
@@ -507,24 +555,48 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     is
   }
 
-  private def changeStatus(valueMap: WebUtil.ValueMapT, response: Response): Int = {
+  /**
+    * Change the dataValidity state of an output.
+    * @param valueMap Passed parameters.
+    * @param response Web response.
+    * @return Filter action (STOP or SKIP)
+    */
+  private def changeDataValidity(valueMap: WebUtil.ValueMapT, response: Response): Int = {
 
-    val status = valueMap(statusTag)
-    val outputPK = valueMap(outputPKTag).toLong
-    logger.info(s"Changing status of outputPK $outputPK to $status ...")
-
-    if (status.equals(deleteTag)) {
-      handleDelete(valueMap, response)
-    } else {
-      val output = Output.get(outputPK).get
-
+    def changeDataValidity(status: String, output: Output): Int = {
       val newDataValidity = validityList.find(_.equals(status)).get // Make sure that the new status is supported.
       val newOutput = output.copy(dataValidity = newDataValidity)
       newOutput.insertOrUpdate()
-      logger.info(s"Changed status of outputPK $outputPK to $status ...")
+      logger.info(s"Changed status of outputPK ${output.outputPK.get} to $status ...")
 
       response.setStatus(Status.SUCCESS_OK)
       response.setEntity(s"Status changed to $newDataValidity", MediaType.TEXT_PLAIN)
+      Filter.STOP
+    }
+
+    def showNotAuthorizedToChangeStatus(status: String, response: Response): Int = {
+      val newDataValidity = validityList.find(_.equals(status)).get // Make sure that the new status is supported.
+      response.setStatus(Status.CLIENT_ERROR_UNAUTHORIZED)
+      response.setEntity(s"This machine is not in your institution.  You are not authorized to change the status to $newDataValidity.", MediaType.TEXT_PLAIN)
+      Filter.STOP
+    }
+
+    val status = valueMap(statusTag)
+    val outputPK = valueMap(outputPKTag).toLong
+    val output = Output.get(outputPK)
+    if (output.isDefined) {
+      logger.info(s"Changing status of outputPK $outputPK to $status ...")
+
+      if (status.equals(deleteTag)) {
+        handleDelete(valueMap, response)
+      } else {
+        if (userAuthorizedToChange(response.getRequest, output.get))
+          changeDataValidity(status, output.get)
+        else
+          showNotAuthorizedToChangeStatus(status, response)
+      }
+    } else {
+      logger.info(s"no such output with outputPK $outputPK.")
       Filter.STOP
     }
   }
@@ -548,7 +620,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
           OutputList.bulkRedoIsRunning.set(true)
           Filter.CONTINUE
         case _ if isStatusChange(valueMap) =>
-          changeStatus(valueMap, response)
+          changeDataValidity(valueMap, response)
         case _ =>
           if (buttonIs(valueMap, redoAll)) {
             Future { startBulkRedo(valueMap, response) }

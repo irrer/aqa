@@ -474,7 +474,7 @@ object GapSkew extends ProcedureOutput with Logging {
   def historyByBeam(machinePK: Long, beamName: String): Seq[GapSkewHistory] = {
 
     val search = for {
-      output <- Output.query.filter(o => o.machinePK === machinePK)
+      output <- Output.valid.filter(o => o.machinePK === machinePK)
       gapSkew <- GapSkew.query.filter(c => c.outputPK === output.outputPK && c.beamName === beamName)
     } yield {
       (output, gapSkew)
@@ -499,7 +499,7 @@ object GapSkew extends ProcedureOutput with Logging {
   def historyByMachine(machinePK: Long): Seq[GapSkewHistory] = {
 
     val search = for {
-      output <- Output.query.filter(o => o.machinePK === machinePK)
+      output <- Output.valid.filter(o => o.machinePK === machinePK)
       gapSkew <- GapSkew.query.filter(c => c.outputPK === output.outputPK)
     } yield {
       (output, gapSkew)
