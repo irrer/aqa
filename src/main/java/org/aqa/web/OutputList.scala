@@ -31,6 +31,7 @@ import org.aqa.web.OutputList.outputPKTag
 import org.aqa.web.OutputList.statusTag
 import org.aqa.web.WebUtil._
 import org.aqa.webrun.WebRun
+import org.aqa.Config
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.data.MediaType
@@ -175,9 +176,18 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   //noinspection SameParameterValue
   private def compareByStartTime(a: Output.ExtendedValues, b: Output.ExtendedValues): Boolean = a.output_startDate.compareTo(b.output_startDate) > 0
 
-  private def inputTime(extendedValues: Output.ExtendedValues): String = {
+  //noinspection SameParameterValue
+  private def compareByAcquisitionTime(a: Output.ExtendedValues, b: Output.ExtendedValues): Boolean = {
+    a.input_dataDate.isDefined &&
+    b.input_dataDate.isDefined &&
+    (a.input_dataDate.get.compareTo(b.input_dataDate.get) > 0)
+  }
+
+  //noinspection SameParameterValue
+  private def inputTime(extendedValues: Output.ExtendedValues): Elem = {
     val date = extendedValues.input_dataDate
-    if (date.isDefined) startTimeFormat.format(date.get) else "unknown date"
+    val text = if (date.isDefined) startTimeFormat.format(date.get) else "unknown date"
+    <span>{text}</span>
   }
 
   private def getUrl(outputPK: Long): String = {
@@ -238,7 +248,8 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   //noinspection ConvertibleToMethodValue
   private val startTimeCol = new Column[ColT]("Analysis", compareByStartTime _, startTimeUrl _)
 
-  private val inputFileCol = new Column[ColT]("Acquisition", inputTime)
+  //noinspection ConvertibleToMethodValue
+  private val inputFileCol = new Column[ColT]("Acquisition", compareByAcquisitionTime _, inputTime _)
 
   private val redoCol = new Column[ColT]("Redo", _ => "Redo", redoUrl)
 
@@ -249,8 +260,6 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   private val machineCol = new Column[ColT]("Machine", _.machine_id, colT => wrapAlias(colT.machine_id))
 
   override val columnList: Seq[Column[ColT]] = Seq(startTimeCol, inputFileCol, redoCol, procedureCol, machineCol, institutionCol, userCol, deleteCol)
-
-  private val entriesPerPage = 600 // should support pagination
 
   /**
     * Get the set of outputs that user wants to redo.  Return empty set if none.  This
@@ -292,19 +301,18 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
     if (requestSeq.nonEmpty) {
       Output.extendedList(requestSeq.toSet)
     } else
-      Output.extendedList(instPK, entriesPerPage)
+      Output.extendedList(instPK, Config.ResultsMaxEntries, None)
   }
 
   override def getPK(extendedValues: Output.ExtendedValues): Long = extendedValues.output_outputPK
 
   override val canCreate: Boolean = false
 
-  //noinspection SpellCheckingInspection
-
   /**
-   * Create a javascript program for responding to the change of dataValidity state, and also set the color appropriately.
-   * @return a javascript program
-   */
+    * Create a javascript program for responding to the change of dataValidity state, and also set the color appropriately.
+    * @return a javascript program
+    */
+  //noinspection SpellCheckingInspection
   override def makeRunScript(): Option[String] = Some(s"""
       |
       |  console.log("hey");

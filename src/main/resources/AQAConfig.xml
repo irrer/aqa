@@ -327,6 +327,9 @@ Note that when building a package for release, the Maven build process uses the 
     generate a simple RTPLAN will not be supported. -->
     <SimpleRtplanTemplateDir>simpleRtplan</SimpleRtplanTemplateDir>
 
+    <!-- Maximum number of entries to be displayed in the Results page.  Integer value greater than 0.  Default: 1000.-->
+    <ResultsMaxEntries>10000</ResultsMaxEntries>
+
     <!-- List of categories of maintenance, as referenced in the PMI database table.  If a category is in
         the database whose name does not match one of these, then the first category is used as a default.
         

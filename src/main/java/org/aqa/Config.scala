@@ -943,6 +943,8 @@ object Config extends Logging {
 
   val SimpleRtplanTemplateDir: Option[File] = getSimpleRtplanTemplateDir
 
+  val ResultsMaxEntries: Int = logMainText("ResultsMaxEntries", "1000").toInt
+
   // =================================================================================
 
   // Winston Lutz values
