@@ -1,0 +1,75 @@
+<div title="Results">
+    <!--
+    Copyright 2023 Regents of the University of Michigan
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    -->
+
+    <h2>@@title@@</h2>
+
+    <p>
+        The Results page provides a list of all test results. This is the primary mechanism for accessing reports.
+    </p>
+    <p>
+        By default, data is sorted by processing date, but clicking on the column headers will sort by that column.
+    </p>
+
+    <div style="margin-top:40px;"></div>
+
+    <!--suppress CheckImageSize -->
+    <img src="ResultsPage.png" alt="Results screen shot." width="800"
+         style="margin:30px;margin:10px; border: 1px solid lightgrey;"/>
+
+    <h3>Field Definitions</h3>
+
+    <ul>
+        <li style="margin-top:20px;"><b>Refresh: </b>Clicking this will refresh the page with the latest results.</li>
+
+        <li style="margin-top:20px;"><b>All Institutions: </b>Checking this, followed by clicking <b>Refresh</b>, will
+            show results from all institutions. Data from other institutions will be displayed anonymously.
+        </li>
+        <li style="margin-top:20px;"><b>Analysis: </b>When the analysis was performed.</li>
+        <li style="margin-top:20px;"><b>Acquisition: </b>When the data was acquired at the machine.</li>
+        <li style="margin-top:20px;"><b>Redo: </b>Clicking this link will redo the analysis. This can be useful in cases
+            where there was a problem during analysis (such as the server shutting down), or when the analysis software
+            has changed.
+        </li>
+        <li style="margin-top:20px;"><b>Procedure: </b>The name of the test.</li>
+        <li style="margin-top:20px;"><b>Machine: </b>The machine from which the data originated.</li>
+        <li style="margin-top:20px;"><b>Institution: </b>The Institution from which the data originated.</li>
+        <li style="margin-top:20px;"><b>User: </b>The user that uploaded the data. This may be different from the user
+            that delivered the test at the machine.
+        </li>
+        <li style="margin-top:20px;"><b>Delete/State: </b>This selector shows the validity state of the data, and also
+            allows the user to change the state or delete the data.
+            <p>By default, data is marked as valid. In some cases, data is later found to be invalid, due to errors in
+                delivery or other causes. Invalid data can visually skew charts and subsequent analysis. Marking a
+                result as invalid means that its data will not show up in historical (data over time) charts elsewhere
+                in AQA, and it will not be included in <!--suppress HtmlUnknownTarget --> <a href="/Phase2CsvRestlet">CSV
+                    downloads</a>.</p>
+
+            <p>After marking a result as valid or invalid, the change will be reflected immediately in history charts
+                upon the next web page refresh. For <!--suppress HtmlUnknownTarget --> <a href="/Phase2CsvRestlet">CSV
+                    downloads</a>, the change will not be reflected until after the CSV files are regenerated.</p>
+
+            <p>Marking results as valid or invalid can be un-done by changing the status again.</p>
+
+            <p>The user also has the option of deleting data. Clicking <b>delete</b> will first ask for a confirmation.
+                If confirmed, the data will be removed from the system. This operation can not be un-done, however the
+                uer may re-upload the data at a future date.</p>
+        </li>
+    </ul>
+
+    <p style="margin-bottom:100px;"></p>
+
+</div>
