@@ -186,7 +186,7 @@ object CollimatorCentering extends ProcedureOutput {
     val ga = if (gantryAngle.isDefined) gantryAngle.get else 0
 
     val search = for {
-      output <- Output.valid.filter(o => o.procedurePK === procedurePK)
+      output <- Output.valid.filter(o => (o.procedurePK === procedurePK) && (o.machinePK === machinePK))
       colCent <- CollimatorCentering.query.filter(w => (w.outputPK === output.outputPK) && (w.gantryAngleRounded_deg === ga))
     } yield (output, colCent)
 
