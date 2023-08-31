@@ -51,9 +51,10 @@ case class Column(index: Int, name: String, data: Seq[Double], beamData: BeamDat
     */
   private def outlierLevel(d: Double): Double = {
     0 match {
-      case _ if d < q1 => (q1 - d) / iqr
-      case _ if d > q3 => (d - q3) / iqr
-      case _           => 0
+      case _ if iqr == 0 => 100000
+      case _ if d < q1   => (q1 - d) / iqr
+      case _ if d > q3   => (d - q3) / iqr
+      case _             => 0
     }
   }
 

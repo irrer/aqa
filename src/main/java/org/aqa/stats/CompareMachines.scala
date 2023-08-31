@@ -33,7 +33,11 @@ object CompareMachines {
     // (cgl.size > 1) && // must have more than one machine for comparison
     val dst = cgl.map(_.range).distinct
 
-    !((dst.size == 1) && (dst.head == 0)) // if all the values are the same, then ... BORING!
+    val rangesDifferent = dst.size > 1 // if all the values are the same, then ... BORING!
+
+    val hasDiversity = cgl.map(_.range).max > 0.2
+
+    rangesDifferent && hasDiversity // && notAllCloseToOne && notAllSimilar
   }
 
   def analyze(file: File): String = {
