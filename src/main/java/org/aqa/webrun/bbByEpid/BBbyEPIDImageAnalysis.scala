@@ -31,13 +31,19 @@ import org.aqa.db.BBbyEPID
 import org.aqa.db.DicomSeries
 import org.aqa.run.ProcedureStatus
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.DicomFile
+import org.aqa.db.Output
+import org.aqa.web.WebUtil
 
 import java.awt.Rectangle
 import java.awt.geom.Point2D
+import java.awt.Color
+import java.io.File
 import javax.vecmath.Point2d
 import javax.vecmath.Point2i
 import javax.vecmath.Point3d
 import scala.annotation.tailrec
+import scala.xml.Elem
 
 /**
   * Locate the BB in the EPID image.  The following steps are taken:
@@ -140,6 +146,160 @@ object BBbyEPIDImageAnalysis extends Logging {
           processedSearchAreaText
 
       fullText
+    }
+
+    def makeHtmlDiagnostics: Elem = {
+      def errorElem = {
+        if (ok) {
+          <div>
+            <b> Image Status: </b>  Image noise was sufficiently low to find BB.
+          </div>
+        } else
+          <div>
+            <b> Error: </b> {error}
+          </div>
+      }
+
+      def bbPointListElem: Elem = {
+        if (bbPointList.isDefined) {
+          <div style="margin-top:30px;">
+            <b> Number of BB pixels found: </b> {bbPointList.get.size} <div></div>
+            <b> BB pixel coordinate list (search area relative): </b> {bbPointList.get.mkString("  ")}
+          </div>
+        } else
+          <span> </span>
+      }
+
+      def aoiElem: Elem = {
+
+        val outputDir = Output.get(bbByEpid.outputPK).get.dir
+
+        def makeImage(id: String, image: DicomImage): Elem = {
+          val fileName = id + ".png"
+          val bufImg = ImageUtil.magnify(image.toBufferedImage(Color.white), 20)
+          val file = new File(outputDir, fileName)
+          Util.writePng(bufImg, file)
+          <img src={fileName}/>
+        }
+
+        def makeElem(title: String, id: String, image: Option[DicomImage]): Elem = {
+          <div class="col-md-4">
+            <center>
+            <div><b> {title} </b></div>
+            {
+            if (image.isDefined)
+              makeImage(id, image.get)
+            else
+              <span>No Image Available</span>
+          }
+            </center>
+          </div>
+        }
+
+        if (rawSearchArea.isDefined || processedSearchArea.isDefined) {
+          <div class="row" style="margin-top:30px;">
+              {makeElem("Raw Image Area of Interest", "raw" + Util.sopOfAl(al), rawSearchArea)}
+              {makeElem("Processed Image Area of Interest", "processed" + Util.sopOfAl(al), processedSearchArea)}
+          </div>
+        } else <span> </span>
+
+      }
+
+      def rawSearchAreaElem = {
+        val text = WebUtil.nl + "    " + rawSearchArea.get.pixelsToText
+        if (rawSearchArea.isDefined) {
+          <div style="margin-top:30px;">
+            <b>Raw search area pixels:</b> <br></br>
+            <pre>
+              {text}
+            </pre>
+          </div>
+        } else
+          <span></span>
+      }
+
+      def processedSearchAreaElem = {
+        if (processedSearchArea.isDefined) {
+          val text = { WebUtil.nl + "    " + processedSearchArea.get.pixelsToText }
+          <div style="margin-top:30px;">
+            <b> Processed search area pixels: </b>
+            <br> </br>
+            <pre> {text} </pre>
+          </div>
+        } else
+          <span> </span>
+      }
+
+      def rawSearchAreaElemMinimized = {
+        if (rawSearchArea.isDefined) {
+          val min = rawSearchArea.get.minPixelValue
+          val image = new DicomImage(rawSearchArea.get.pixelData.map(row => row.map(c => c - min)))
+
+          val text = WebUtil.nl + "    " + image.pixelsToText
+          <div style="margin-top:30px;" title="Values have been shifted so that the minimim value is zero.">
+            <b>Raw search area pixels with values minimized:</b> <br></br>
+            <pre>
+              {text}
+            </pre>
+          </div>
+        } else
+          <span></span>
+      }
+
+      def processedSearchAreaElemMinimized = {
+        if (processedSearchArea.isDefined) {
+          val min = processedSearchArea.get.minPixelValue
+          val image = new DicomImage(processedSearchArea.get.pixelData.map(row => row.map(c => c - min)))
+          val text = {
+            WebUtil.nl + "    " + image.pixelsToText
+          }
+          <div style="margin-top:30px;" title="Values have been shifted so that the minimim value is zero.">
+            <b>Processed search area pixels with values minimized:</b>
+            <br></br>
+            <pre>
+              {text}
+            </pre>
+          </div>
+        } else
+          <span></span>
+      }
+
+      def minMaxColumnRatioElem: Elem = {
+        if (minMaxColumnRatio.isDefined)
+          <div>
+            <b> max background column sum / min background column sum\n  (near 1 if amplifiers are calibrated consistently): </b>  {minMaxColumnRatio.get}
+          </div>
+        else
+          <span> </span>
+      }
+
+      def databaseElem: Elem = {
+        <div style="margin-top:30px;">
+          <b> Database Values: </b>
+          <div style="margin-left: 50px;">
+            {bbByEpid.toString.split("\n").map(line => <div>{line}</div>)}
+          </div>
+        </div>
+      }
+
+      val html = {
+        <div>
+          {errorElem}
+          <div> <b> Precise pixel coordinates (pix): </b> {pix.toString} </div>
+          <div> <b> Precise isoplane coordinates (mm): </b>  {iso.toString} </div>
+          <div> <b> bbMean_cu: </b> {bbMean_cu.formatted("%20.10f").trim} </div>
+          {databaseElem}
+          {minMaxColumnRatioElem}
+          {aoiElem}
+          {bbPointListElem}
+          {rawSearchAreaElemMinimized}
+          {processedSearchAreaElemMinimized}
+          {rawSearchAreaElem}
+          {processedSearchAreaElem}
+      </div>
+      }
+
+      html
     }
   }
 
@@ -487,7 +647,7 @@ object BBbyEPIDImageAnalysis extends Logging {
     pointList.filter(isBackground)
   }
 
-  case class PreciseLocation(precise_pix: Point2d, bbMean_cu: Double, backgroundMean_cu: Double, backgroundStdDev_cu: Double, bbPixelList: Seq[Point2i]) {}
+  private case class PreciseLocation(precise_pix: Point2d, bbMean_cu: Double, backgroundMean_cu: Double, backgroundStdDev_cu: Double, bbPixelList: Seq[Point2i]) {}
 
   private def preciseLocationUsingBBGrowth(coarseCenter: Point2i, searchImage: DicomImage, trans: IsoImagePlaneTranslator, searchRect: Rectangle): PreciseLocation = {
 
@@ -524,6 +684,131 @@ object BBbyEPIDImageAnalysis extends Logging {
     val bbMean_cu = sumMass / inValue.size
 
     PreciseLocation(new Point2d(xPos_pix, yPos_pix), bbMean_cu, backgroundMean_cu, backgroundStdDev_cu, bbPixelList = inPixXY)
+  }
+
+  /**
+    * Get the maximum pixel value of the area bordering the AOI (area of interest).  The AOI is
+    * where the ball is required to be found, and the area just outside that is used to
+    * determine the attenuation factor required so that the dark field can be subtracted from
+    * the image field being analyzed.
+    *
+    * @param wholeImage Image to be measured.
+    * @param trans Translates between ISO and pixel coordinates.
+    * @return
+    */
+  private def getBoundaryAreaMaxPixelValue(wholeImage: DicomImage, trans: IsoImagePlaneTranslator) = {
+    val BBbyEPIDDarkFieldMargin_mm = 4.0
+
+    val rec = searchArea(trans, new Point2d(0, 0), BBbyEPIDDarkFieldMargin_mm + Config.BBbyEPIDSearchDistance_mm)
+    val image = wholeImage.getSubimage(rec)
+
+    val xBoundary = {
+      val pixelDifferenceX = trans.iso2PixDistX(BBbyEPIDDarkFieldMargin_mm).round.toInt
+      val lo = 0 until pixelDifferenceX
+      val hi = (image.width - pixelDifferenceX) until image.width
+      lo ++ hi
+    }
+
+    val yBoundary = {
+      val pixelDifferenceY = trans.iso2PixDistY(BBbyEPIDDarkFieldMargin_mm).round.toInt
+      val lo = 0 until pixelDifferenceY
+      val hi = (image.width - pixelDifferenceY) until image.width
+      lo ++ hi
+    }
+
+    val xRange = 0 until image.width
+    val yRange = 0 until image.height
+
+    val maxPixel = {
+      val list =
+        for (x <- xRange; y <- yRange; if xBoundary.contains(x) || yBoundary.contains(y))
+          yield image.get(x, y)
+
+      list.max
+    }
+
+    maxPixel
+  }
+
+  /**
+    * Find the BB using a dark field to reduce image noise.
+    *
+    * @param al Image to be analyzed.
+    * @param darkFieldAl Dark field image to be used to reduce image noise.
+    * @param outputPK For creating statistics.
+    * @return
+    */
+  private def findBBUsingDarkField(al: AttributeList, darkFieldAl: AttributeList, outputPK: Long): Result = {
+
+    val wholeImage = new DicomImage(al)
+    val trans = new IsoImagePlaneTranslator(al)
+
+    // Using a sub-area eliminates the need for having to deal with other objects, such as the couch rails.
+    val searchAreaRec = searchArea(trans, new Point2d(0, 0), Config.BBbyEPIDSearchDistance_mm)
+
+    val attenuatedDarkField = {
+      val darkField = new DicomImage(darkFieldAl)
+
+      val maxPixel = getBoundaryAreaMaxPixelValue(darkField, trans) // max value of image pixels
+      val maxPixelDarkField = getBoundaryAreaMaxPixelValue(darkField, trans) // max value of dark field image pixels
+      val ratio = maxPixel / maxPixelDarkField // attenuation factor
+      val aoi = darkField.getSubArray(searchAreaRec)
+      new DicomImage(aoi.map(row => row.map(col => col * ratio)))
+    }
+
+    val searchImageAttenuated = {
+      val image = wholeImage.getSubimage(searchAreaRec)
+      val pixelData = image.pixelData.zip(attenuatedDarkField.pixelData).map(rowPair => rowPair._1.zip(rowPair._2).map(colPair => colPair._1 - colPair._2))
+      new DicomImage(pixelData)
+    }
+
+    val coarseColumnarPixelList = locateBbCoarsely(trans, searchImageAttenuated)
+    val coarseCenter = pointListCenter(coarseColumnarPixelList)
+    val preciseStats = preciseLocationUsingBBGrowth(coarseCenter, searchImageAttenuated, trans, searchAreaRec)
+    val backgroundCoOfVar = preciseStats.backgroundStdDev_cu / preciseStats.backgroundMean_cu
+    println("Background coefficient of variation: " + backgroundCoOfVar)
+    val bbStdDevMultiple = (preciseStats.bbMean_cu - preciseStats.backgroundMean_cu) / preciseStats.backgroundStdDev_cu
+
+    val bbCenter_mm = {
+      val p = trans.pix2Iso(preciseStats.precise_pix.getX, preciseStats.precise_pix.getY)
+      new Point2d(p.getX, -p.getY)
+    }
+
+    val error = {
+      0 match {
+        case _ if backgroundCoOfVar > Config.EPIDBBMaxBackgroundCoefficientOfVariation => Some("Image after dark field correction is too noisy.  Possibly the table is mis-positioned.")
+        case _ if bbStdDevMultiple < Config.EPIDBBMinimumStandardDeviation             => Some("The image after dark field correction is too noisy to confidently locate the BB.")
+        case _                                                                         => None
+      }
+    }
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    // Statistics of raw (not dark field corrected) image. These are put in the database and are a
+    // more realistic view of EPID health.
+    val preciseStatsRaw = preciseLocationUsingBBGrowth(coarseCenter, wholeImage.getSubimage(searchAreaRec), trans, searchAreaRec)
+    val backgroundCoOfVarRaw = preciseStatsRaw.backgroundStdDev_cu / preciseStatsRaw.backgroundMean_cu
+    println("Background coefficient without dark field correction of variation raw: " + backgroundCoOfVarRaw)
+
+    val bbStdDevMultipleRaw = (preciseStatsRaw.bbMean_cu - preciseStatsRaw.backgroundMean_cu) / preciseStatsRaw.backgroundStdDev_cu
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    val result =
+      Result(
+        error,
+        pix = preciseStats.precise_pix,
+        al = al,
+        iso = bbCenter_mm,
+        toBBbyEPID(al, bbCenter_mm, outputPK, bbStdDevMultipleRaw, preciseStatsRaw.backgroundStdDev_cu, preciseStatsRaw.backgroundMean_cu),
+        rawSearchArea = Some(wholeImage.getSubimage(searchAreaRec)),
+        processedSearchArea = Some(searchImageAttenuated),
+        bbPointList = Some(preciseStats.bbPixelList),
+        bbMean_cu = preciseStats.bbMean_cu,
+        minMaxColumnRatio = None
+      )
+
+    result
   }
 
   /**
@@ -719,6 +1004,9 @@ object BBbyEPIDImageAnalysis extends Logging {
   }
 
   // define the official function
-  def findBB(al: AttributeList, outputPK: Long): Result = findBB_columnCorrectedGrowBB(al, outputPK)
+  // def findBB(al: AttributeList, outputPK: Long): Result = findBB_columnCorrectedGrowBB(al, outputPK)
+
+  private val darkFieldAl = new DicomFile(new File("""D:\aqa\darkField\DICOM\darkField.dcm""")).attributeList.get // TODO
+  def findBB(al: AttributeList, outputPK: Long): Result = findBBUsingDarkField(al, darkFieldAl, outputPK)
 
 }

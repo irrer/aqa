@@ -208,9 +208,7 @@ object BBbyEPIDHTML {
                 {WebUtil.nl + DicomUtil.attributeListToString(al)}
               </pre>
               <h4 style="margin-top: 24px">Diagnostics of Image Analysis</h4>
-              <pre>
-                {WebUtil.nl + result.diagnostics}
-              </pre>
+              {result.makeHtmlDiagnostics}
               {WebUtil.nl}
               <p> </p>
             </div>
