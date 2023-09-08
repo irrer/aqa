@@ -296,7 +296,8 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
     try {
       logger.info("Starting analysis of EPID Alignment for machine " + extendedData.machine.id)
 
-      val bbLocList = runReq.epidList.par.map(epid => BBbyEPIDImageAnalysis.findBB(epid, extendedData.output.outputPK.get)).toList
+  //  val bbLocList = runReq.epidList.par.map(epid => BBbyEPIDImageAnalysis.findBB(epid, extendedData.output.outputPK.get)).toList // TODO put back
+      val bbLocList = runReq.epidList.    map(epid => BBbyEPIDImageAnalysis.findBB(epid, extendedData.output.outputPK.get)).toList // TODO rm  NO PAR!
 
       val successList = bbLocList.filter(_.error.isEmpty) // list of bb's that were successfully found.
       logger.info("Inserting " + successList.size + " BBbyEPID records into database")

@@ -246,12 +246,12 @@ class TestBBbyEPIDImageAnalysisColumnar extends FlatSpec with Matchers {
       println("outDir: " + outDir.getAbsolutePath)
       println("rawResult.ok: " + oldResult.ok + "     colResult.ok: " + newResult.ok)
 
-      if (newResult.ok && newResult.rawSearchArea.isDefined) {
-        val enlarged = ImageUtil.magnify(newResult.rawSearchArea.get.toDeepColorBufferedImage(0.01), magnification)
+      if (newResult.ok && newResult.originalSearchArea.isDefined) {
+        val enlarged = ImageUtil.magnify(newResult.originalSearchArea.get.toDeepColorBufferedImage(0.01), magnification)
         val file = new File(outDir, "rawSearchArea.png")
         Util.writePng(enlarged, file)
 
-        val enlargedBw = ImageUtil.magnify(newResult.rawSearchArea.get.toBufferedImage(Color.white), magnification)
+        val enlargedBw = ImageUtil.magnify(newResult.originalSearchArea.get.toBufferedImage(Color.white), magnification)
         val fileBw = new File(outDir, "rawSearchAreaBlackAndWhite.png")
         Util.writePng(enlargedBw, fileBw)
       }
@@ -266,7 +266,7 @@ class TestBBbyEPIDImageAnalysisColumnar extends FlatSpec with Matchers {
         Util.writePng(enlargedBw, fileBw)
       }
 
-      if (newResult.ok && newResult.rawSearchArea.isDefined && newResult.bbPointList.isDefined) {
+      if (newResult.ok && newResult.originalSearchArea.isDefined && newResult.bbPointList.isDefined) {
         val image = newResult.processedSearchArea.get.toDeepColorBufferedImage(0.01)
 
         println("image size: " + image.getWidth + " x " + image.getHeight())
@@ -294,8 +294,8 @@ class TestBBbyEPIDImageAnalysisColumnar extends FlatSpec with Matchers {
       }
 
       if (newResult.ok)
-        if (oldResult.ok && oldResult.rawSearchArea.isDefined && oldResult.bbPointList.isDefined) {
-          val image = oldResult.rawSearchArea.get.toDeepColorBufferedImage(0.01)
+        if (oldResult.ok && oldResult.originalSearchArea.isDefined && oldResult.bbPointList.isDefined) {
+          val image = oldResult.originalSearchArea.get.toDeepColorBufferedImage(0.01)
 
           println("image size: " + image.getWidth + " x " + image.getHeight())
           println("coordinates: " + oldResult.bbPointList.get.mkString("  "))
