@@ -1058,7 +1058,7 @@ object BBbyEPIDImageAnalysis extends Logging {
     val coarseColumnarPixelList = locateBbCoarsely(trans, searchImageAttenuated)
     val coarseCenter = pointListCenter(coarseColumnarPixelList)
     val preciseStats = preciseLocationUsingBBGrowth(coarseCenter, searchImageAttenuated, trans, searchAreaRec)
-    val backgroundCoOfVar = preciseStats.backgroundStdDev_cu / preciseStats.backgroundMean_cu
+    val backgroundCoOfVar = (preciseStats.backgroundStdDev_cu / preciseStats.backgroundMean_cu).abs
     println(s"Background coefficient of variation: $backgroundCoOfVar")
     Trace.trace(
       s"|| processed AOI.  BB mean: ${preciseStats.bbMean_cu}    background mean: ${preciseStats.backgroundMean_cu}    ratio bb/back: ${preciseStats.bbMean_cu / preciseStats.backgroundMean_cu}"
