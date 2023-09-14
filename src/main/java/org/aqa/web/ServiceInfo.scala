@@ -36,7 +36,7 @@ import scala.xml.Elem
 object ServiceInfo {
   private val path = new String((new ServiceInfo).pathOf)
 
-  def redirect(response: Response) = response.redirectSeeOther(path)
+  def redirect(response: Response): Unit = response.redirectSeeOther(path)
 }
 
 class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
@@ -46,8 +46,8 @@ class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
   private lazy val logDir: File = {
     val logFileName: String = {
       Util.buildProperties.getProperty("wrapper.logfile") match {
-        case name: String if (name != null) => name
-        case _                              => """C:\Program Files\AQA\logging""" // Assume a reasonable default
+        case name: String if name != null => name
+        case _                            => """C:\Program Files\AQA\logging""" // Assume a reasonable default
       }
     }
     new File(logFileName).getParentFile
@@ -55,9 +55,9 @@ class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
 
   private def allFiles: Seq[File] = {
     try {
-      Util.listDirFiles(logDir).filter(f => !f.getName.contains("lck")).sortBy(_.lastModified).toSeq
+      Util.listDirFiles(logDir).filter(f => !f.getName.contains("lck")).sortBy(_.lastModified)
     } catch {
-      case t: Throwable => Seq[File]()
+      case _: Throwable => Seq[File]()
     }
   }
 
@@ -92,11 +92,11 @@ class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
       logger.info("Showing contents of log file " + file.getAbsolutePath)
       true
     } catch {
-      case t: Throwable => false
+      case _: Throwable => false
     }
   }
 
-  val confirmRestartLabel = "confirmRestart"
+  private val confirmRestartLabel = "confirmRestart"
 
   private def confirmRestart: Elem = {
     val href = pathOf + "?" + confirmRestartLabel + "=" + confirmRestartLabel
@@ -104,14 +104,14 @@ class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
 Jobs in progress will be aborted.">Confirm Restart</a>
   }
 
-  val cancelRestartLabel = "cancelRestart"
+  private val cancelRestartLabel = "cancelRestart"
 
   private def cancelRestart: Elem = {
     val href = pathOf + "?" + cancelRestartLabel + "=" + cancelRestartLabel
     <a class="btn btn-default" href={href} role="button">Cancel</a>
   }
 
-  val requestRestartLabel = "requestRestart"
+  private val requestRestartLabel = "requestRestart"
 
   private def requestRestart: Elem = {
     // TODO require user to confirm
@@ -121,16 +121,11 @@ Jobs in progress will be aborted.">Confirm Restart</a>
 
   private def basicInfo: Elem = {
 
-    val mac = {
-      val text = OpSys.getMACAddress.formatted("%012x")
-      (0 until 12 by 2).map(octet => text.substring(octet, octet + 2)).mkString("-")
-    }
-
     val props = edu.umro.ScalaUtil.Util.getJarPropertyFile(ServiceInfo.getClass)
 
     if (props.isDefined) {
       val p = props.get
-      val date = (new SimpleDateFormat(p.getProperty("build.date.format")).parse(p.getProperty("build.date")))
+      val date = new SimpleDateFormat(p.getProperty("build.date.format")).parse(p.getProperty("build.date"))
 
       <div class="row">
         <h5>Package and Version:
@@ -175,7 +170,7 @@ Jobs in progress will be aborted.">Confirm Restart</a>
   /**
     * Show a page that lets the user do a confirmation to really really restart the service.
     */
-  private def doConfirm(response: Response) = {
+  private def doConfirm(response: Response): Unit = {
     val content = {
       <div class="row">
         <div class="col-md-8 col-sm-offset-1">
@@ -201,17 +196,17 @@ Jobs in progress will be aborted.">Confirm Restart</a>
 
   private def restartService(response: Response): Unit = {
     logger.info("Performing service restart as per user request.")
-    AQA.initiateServiceRestart
+    AQA.initiateServiceRestart()
     logger.info("Service restart as per user request is underway.")
     response.redirectSeeOther(pathOf + "/?" + waitForRestartLabel + "=" + waitForRestartLabel)
   }
 
-  val waitForRestartLabel = "waitForRestart"
+  private val waitForRestartLabel = "waitForRestart"
 
   /**
     * Show a page that waits until the service has restarted and then redirects them to the home page.
     */
-  private def waitForRestart(response: Response) = {
+  private def waitForRestart(response: Response): Unit = {
     val content = {
       <div class="row">
         <div class="col-md-8 col-sm-offset-1">
@@ -253,7 +248,7 @@ setTimeout(watchStatus, WebRefreshTime);
 </script>
 """
 
-    setResponse(wrapBody(content, pageTitle, None, true, Some(javascript)), response, Status.SUCCESS_OK)
+    setResponse(wrapBody(content, pageTitle, None, c3 = true, Some(javascript)), response, Status.SUCCESS_OK)
   }
 
   private def showServiceInfo(response: Response): Unit = {
@@ -292,13 +287,12 @@ setTimeout(watchStatus, WebRefreshTime);
         case _ if valueMap.contains(requestRestartLabel) => doConfirm(response)
         case _ if valueMap.contains(confirmRestartLabel) => restartService(response)
         case _ if valueMap.contains(waitForRestartLabel) => waitForRestart(response)
-        case _ if showFileContents(valueMap, response)   => {}
+        case _ if showFileContents(valueMap, response)   =>
         case _                                           => showServiceInfo(response)
       }
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         WebUtil.internalFailure(response, t)
-      }
     }
   }
 }
