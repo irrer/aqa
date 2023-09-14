@@ -474,7 +474,8 @@ object Util extends Logging {
     try {
       if (propFile.isDefined) {
         prop.load(new FileInputStream(propFile.get))
-        println("Loaded property file " + propFile.get)
+        val propText = prop.keySet().toArray().map(key => s"$key: ${prop.get(key)}").mkString("\n    ")
+        logger.info(s"Loaded property file ${propFile.get.getAbsolutePath}\n    $propText")
       }
     } catch {
       // Do not use logging to print an error message because when getting
