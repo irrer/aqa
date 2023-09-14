@@ -47,10 +47,12 @@ class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
     val logFileName: String = {
       Util.buildProperties.getProperty("wrapper.logfile") match {
         case name: String if name != null => name
-        case _                            => """C:\Program Files\AQA\logging""" // Assume a reasonable default
+        case _                            => """C:\Program Files\AQA\logging\\AQA.log""" // Assume a reasonable default
       }
     }
-    new File(logFileName).getParentFile
+    val dir = new File(logFileName).getParentFile
+    logger.info(s"Using log directory: ${dir.getAbsolutePath}")
+    dir
   }
 
   private def allFiles: Seq[File] = {
