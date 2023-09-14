@@ -47,7 +47,7 @@ class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
     val logFileName: String = {
       Util.buildProperties.getProperty("wrapper.logfile") match {
         case name: String if name != null => name
-        case _                            => """C:\Program Files\AQA\logging\\AQA.log""" // Assume a reasonable default
+        case _                            => """C:\Program Files\AQA\logging\AQA.log""" // Assume a reasonable default
       }
     }
     val dir = new File(logFileName).getParentFile
@@ -57,7 +57,7 @@ class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
 
   private def allFiles: Seq[File] = {
     try {
-      Util.listDirFiles(logDir).filter(f => !f.getName.contains("lck")).sortBy(_.lastModified)
+      Util.listDirFiles(logDir).filter(f => !f.getName.contains("lck")).sortBy(_.lastModified).reverse
     } catch {
       case _: Throwable => Seq[File]()
     }
@@ -65,22 +65,39 @@ class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
 
   private def fileRef(file: File): Elem = {
     val href = pathOf + "/?" + logFileTag + "=" + file.getName
-    val ago = WebUtil.timeAgo(new Date(file.lastModified))
+    def fileName: Elem = { <span>{file.getName + ":"}</span> }
+    def ago: Elem = {
+      val caveatText = if (file.getName.endsWith(".log")) "(Time may be stale due to caching.)" else ""
+      <span style="margin-left: 20px;">{WebUtil.timeAgo(new Date(file.lastModified))} {caveatText} </span>
+    }
+    val kilo = 1000.0
+    val meg = kilo * 1000
+    val gig = meg * 1000
+    def sizeElem: Elem = {
+      val fileLength = file.length()
+      val text = fileLength match {
+        case _ if fileLength > gig  => Util.fmtDbl(fileLength / gig) + " gb"
+        case _ if fileLength > meg  => Util.fmtDbl(fileLength / meg) + " mb"
+        case _ if fileLength > kilo => Util.fmtDbl(fileLength / kilo) + " kb"
+        case _                      => fileLength + " bytes"
+      }
+      <span style="margin-left: 20px;" title={fileLength + " bytes"}>{text}</span>
+    }
     <a href={href}>
-      {file.getName + ":"}{ago}
+      {fileName}  {sizeElem}  {ago}
     </a>
   }
 
   private def showList = {
     if (allFiles.isEmpty) {
       <div class="row">
-        <div class="col-sm-11 col-sm-offset-1" style="margin-top:10px">No log files</div>
+        <div class="col-sm-11 col-sm-offset-1" style="margin-top:7px">No log files</div>
       </div>
     } else
       allFiles.map(f => {
         <div class="row">
           <div class="col-sm-11 col-sm-offset-1" style="margin-top:10px">
-            {fileRef(f)}
+              {fileRef(f)}
           </div>
         </div>
       })
@@ -116,7 +133,6 @@ Jobs in progress will be aborted.">Confirm Restart</a>
   private val requestRestartLabel = "requestRestart"
 
   private def requestRestart: Elem = {
-    // TODO require user to confirm
     val href = pathOf + "?" + requestRestartLabel + "=" + requestRestartLabel
     <a class="btn btn-default" href={href} role="button" title="Shut down and restart. Jobs in progress will be aborted.">Restart Service</a>
   }
@@ -165,7 +181,9 @@ Jobs in progress will be aborted.">Confirm Restart</a>
 
   private def showLogFileList: Elem = {
     <div class="row">
-      <h4 style="margin-top:40px;">Log Files</h4>{showList}
+      <div style="width:400px;height:300px;overflow:auto;border:1px solid lightgrey;">
+        <h4 style="margin-top:40px;margin-left:8px;"> Log Files</h4>{showList}
+      </div>
     </div>
   }
 
