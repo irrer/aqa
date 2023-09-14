@@ -67,6 +67,7 @@ class ServiceInfo extends Restlet with SubUrlAdmin with Logging {
     val href = pathOf + "/?" + logFileTag + "=" + file.getName
     def fileName: Elem = { <span>{file.getName + ":"}</span> }
     def ago: Elem = {
+      // Note:  Under Java 8, the JVM may cache the lastModified time, so even if the file changes, the lastModified time will not appear as updated.
       val caveatText = if (file.getName.endsWith(".log")) "(Time may be stale due to caching.)" else ""
       <span style="margin-left: 20px;">{WebUtil.timeAgo(new Date(file.lastModified))} {caveatText} </span>
     }
