@@ -35,7 +35,7 @@ import org.restlet.data.Status
 import java.io.File
 import scala.xml.Elem
 
-object LOCUploadBaseFiles_1 extends Logging {
+object LOCUploadBaseFiles_1X extends Logging {
   val parametersFileName = "parameters.xml"
   val LOCUploadBaseFiles_1PKTag = "LOCUploadBaseFiles_1PK"
 
@@ -109,7 +109,7 @@ object LOCUploadBaseFiles_1 extends Logging {
 /**
   * Runs procedures that only need the user to upload files and choose a treatment machine.
   */
-class LOCUploadBaseFiles_1(procedure: Procedure) extends WebRunProcedure(procedure) with Logging {
+class LOCUploadBaseFiles_1X(procedure: Procedure) extends WebRunProcedure(procedure) with Logging {
 
   private def getInstructions(valueMap: ValueMapT): Elem = {
     <div>Drag and drop the two DICOM baseline files for open  and trans.</div>

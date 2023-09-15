@@ -31,6 +31,7 @@ import org.aqa.db.Output
 import org.aqa.Util
 import org.aqa.db.Input
 import org.aqa.web.ViewOutput
+import org.aqa.webrun.LOC.LOCMakeSpreadsheet
 import org.restlet.Response
 
 import java.io.File
@@ -296,7 +297,7 @@ class LOCSpreadsheet(dir: File, locXml: LOCXml, response: Response) {
 
   /** Write the spreadsheet to the standard location.  If it already exists, the old copy will first be deleted. */
   def write: Unit = {
-    write(new File(dir, LOCRun_1.spreadsheetFileName))
+    write(new File(dir, LOCMakeSpreadsheet.spreadsheetFileName))
   }
 
 }

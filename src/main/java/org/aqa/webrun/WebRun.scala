@@ -59,16 +59,13 @@ object WebRun {
   type ConstructInterfaceT = Procedure => WebRunProcedure
 
   private val interfaceList: Map[String, ConstructInterfaceT] = Map(
-    ("LOCRun_1", procedure => new LOCRun_1(procedure)), // old LOC delivery
     ("Phase2", procedure => new Phase2(procedure)),
     ("Phase3", procedure => new Phase3(procedure)),
     ("BBbyCBCT", procedure => new BBbyCBCTRun(procedure)),
     ("BBbyEPID", procedure => new BBbyEPIDRun(procedure)),
-    ("LOCUploadBaseFiles_1", procedure => new LOCUploadBaseFiles_1(procedure)), // old LOC baseline
     ("GapSkewRun", procedure => new GapSkewRun(procedure)),
     ("WinstonLutz", procedure => new WLRun(procedure)),
     ("FocalSpot", procedure => new FSRun(procedure)),
-    ("UploadAndChooseMachine_1", procedure => new UploadAndChooseMachine_1(procedure)),
     ("WinstonLutz_1", procedure => new WinstonLutz_1(procedure)),
     ("MachineLog", procedure => new MachLogRun(procedure)),
     ("LOC", procedure => new LOCRun(procedure)),

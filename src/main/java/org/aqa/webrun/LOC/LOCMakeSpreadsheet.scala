@@ -31,7 +31,6 @@ import org.aqa.db.Machine
 import org.aqa.db.MultileafCollimator
 import org.aqa.db.Output
 import org.aqa.web.ViewOutput
-import org.aqa.webrun.LOCRun_1
 import org.aqa.webrun.LOCSpreadsheet
 import org.aqa.webrun.LOCXml
 import org.restlet.Response
@@ -302,12 +301,15 @@ case class LOCMakeSpreadsheet(outputDir: File, locXml: LOCToXml, response: Respo
 
   /** Write the spreadsheet to the standard location.  If it already exists, the old copy will first be deleted. */
   def write(): Unit = {
-    write(new File(outputDir, LOCRun_1.spreadsheetFileName))
+    write(new File(outputDir, LOCMakeSpreadsheet.spreadsheetFileName))
   }
 
 }
 
 object LOCMakeSpreadsheet {
+
+  val spreadsheetFileName = "spreadsheet.xlsx"
+
   def main(args: Array[String]): Unit = {
     println("starting")
     val dir = new File("""D:\AQA_Data\results\TBD_2\CHIC1_11\Leaf_Offset_and_Transmission_1.0.0_2\2017-05-16T18-01-19-140_126\output_2017-05-16T18-01-19-195""")

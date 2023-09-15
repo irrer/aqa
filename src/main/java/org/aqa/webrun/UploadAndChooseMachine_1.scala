@@ -38,7 +38,7 @@ object UploadAndChooseMachine_1 {
 /**
   * Runs procedures that only need the user to upload files and choose a treatment machine.
   */
-class UploadAndChooseMachine_1(procedure: Procedure) extends WebRunProcedure(procedure) {
+class UploadAndChooseMachine_1X(procedure: Procedure) extends WebRunProcedure(procedure) {
 
   /** Maximum tongue and groove offset in mm.  Exceeding this value probably indicates a user error. */
   private val maxTongueAndGrooveOffset = 10.0

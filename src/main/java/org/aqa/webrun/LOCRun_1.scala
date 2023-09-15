@@ -40,6 +40,7 @@ import org.aqa.db.EPIDCenterCorrection
 import org.aqa.procedures.ProcedureOutputUtil
 import org.aqa.run.StdLogger
 import org.aqa.web.ViewOutput
+import org.aqa.webrun.LOCBaseline.LOCBaselineUtil
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.data.Status
@@ -49,7 +50,7 @@ import java.util.Date
 import scala.xml.Elem
 import scala.xml.XML
 
-object LOCRun_1 {
+object LOCRun_1X {
   val parametersFileName = "parameters.xml"
   val LOCRun_1PKTag = "LOCRun_1PK"
   val spreadsheetHtmlFileName = "spreadsheet.html"
@@ -79,7 +80,7 @@ object LOCRun_1 {
     DbSetup.init
     val procedure = Procedure.get(2).get
 
-    val lr = new LOCRun_1(procedure)
+    val lr = new LOCRun_1X(procedure)
     val output = Output.get(111).get
 
     val request = new Request
@@ -97,7 +98,7 @@ object LOCRun_1 {
 /**
   * Run LOC code.
   */
-class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with PostProcess with Logging {
+class LOCRun_1X(procedure: Procedure) extends WebRunProcedure(procedure) with PostProcess with Logging {
 
   /** Defines precision - Format to use when showing numbers. */
   val outputFormat = "%7.5e"
@@ -142,7 +143,7 @@ class LOCRun_1(procedure: Procedure) extends WebRunProcedure(procedure) with Pos
         logger.info("machList.isEmpty: " + machList.isEmpty) // TODO rm
         formErr("These files do not have a serial number of a known machine.  Click Cancel and use the baseline LOC upload procedure.")
       }
-      case _ if (!LOCUploadBaseFiles_1.ensureBaseline(mach.get.machinePK.get)) =>
+      case _ if (!LOCBaselineUtil.ensureBaseline(mach.get.machinePK.get)) =>
         formErr("There are no baseline files for machine " + mach.get.id + ".  Click Cancel and use the baseline LOC upload procedure.")
       case Some(dir) => Right(new RunRequirementsLOC(mach.get, dir, alList))
     }
