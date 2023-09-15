@@ -50,7 +50,7 @@ import scala.xml.Elem
 /**
   * Run BBbyCBCT code.
   */
-class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[BBbyCBCTRunReq] {
+class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure with RunTrait[BBbyCBCTRunReq] {
 
   override def getPatientID(valueMap: org.aqa.web.WebUtil.ValueMapT, alList: Seq[com.pixelmed.dicom.AttributeList], xmlList: Seq[Elem]): Option[String] = {
     alList.filter(al => Util.isCt(al)).map(al => Util.patientIdOfAl(al)).headOption

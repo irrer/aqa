@@ -45,7 +45,7 @@ import java.sql.Timestamp
 import scala.annotation.tailrec
 import scala.xml.Elem
 
-class GapSkewRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[GapSkewRunReq] {
+class GapSkewRun(procedure: Procedure) extends WebRunProcedure with RunTrait[GapSkewRunReq] {
 
   /**
     * Get the map of images to be used.  If there is more than one image that reference the same beam number, then

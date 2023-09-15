@@ -43,9 +43,9 @@ case class LeafOffsetCorrection(
     result
   }
 
-  def insertOrUpdate = Db.run(LeafOffsetCorrection.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(LeafOffsetCorrection.query.insertOrUpdate(this))
 
-  override def toString: String = "leaf: " + leafIndex.formatted("%2d") + "    section: " + section + "    correction_mm: " + (correction_mm.toString).trim
+  override def toString: String = "leaf: " + leafIndex.formatted("%2d") + "    section: " + section + "    correction_mm: " + correction_mm.toString.trim
 }
 
 object LeafOffsetCorrection extends ProcedureOutput {
@@ -57,7 +57,7 @@ object LeafOffsetCorrection extends ProcedureOutput {
     def leafIndex = column[Int]("leafIndex")
     def correction_mm = column[Double]("correction_mm")
 
-    def * = (leafOffsetCorrectionPK.?, outputPK, section, leafIndex, correction_mm) <> ((LeafOffsetCorrection.apply _) tupled, LeafOffsetCorrection.unapply _)
+    def * = (leafOffsetCorrectionPK.?, outputPK, section, leafIndex, correction_mm) <> (LeafOffsetCorrection.apply _ tupled, LeafOffsetCorrection.unapply)
 
     def outputFK = foreignKey("LeafOffsetCorrection_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -69,9 +69,9 @@ object LeafOffsetCorrection extends ProcedureOutput {
   def get(leafOffsetCorrectionPK: Long): Option[LeafOffsetCorrection] = {
     val action = for {
       inst <- LeafOffsetCorrection.query if inst.leafOffsetCorrectionPK === leafOffsetCorrectionPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   /**
@@ -80,7 +80,7 @@ object LeafOffsetCorrection extends ProcedureOutput {
   def getByOutput(outputPK: Long): Seq[LeafOffsetCorrection] = {
     val action = for {
       inst <- LeafOffsetCorrection.query if inst.outputPK === outputPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
     list
   }
@@ -104,7 +104,7 @@ object LeafOffsetCorrection extends ProcedureOutput {
     }
 
     (elem \ topXmlLabel).headOption match {
-      case Some(node) => (node \ "LeafList" \ "Leaf").map(leaf => leafNodeToLocList(leaf)).flatten
+      case Some(node) => (node \ "LeafList" \ "Leaf").flatMap(leaf => leafNodeToLocList(leaf))
       case None       => Seq[LeafOffsetCorrection]()
     }
   }
@@ -122,14 +122,13 @@ object LeafOffsetCorrection extends ProcedureOutput {
 
   /** For testing only. */
   def main(args: Array[String]): Unit = {
-    val valid = Config.validate
+    Config.validate
     DbSetup.init
     System.exit(99)
-    //val elem = XML.loadFile(new File("""D:\AQA_Data\data\Chicago_33\TB5x_1\WinstonLutz_1.0_1\2016-12-09T09-50-54-361_134\output_2016-12-09T09-50-54-490\output.xml"""))
     val elem = XML.loadFile(new File("""D:\tmp\aqa\tmp\output.xml"""))
     val xmlList = xmlToList(elem, 134)
-    xmlList.map(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     correction_mm: " + loc.correction_mm))
-    xmlList.map(loc => loc.insertOrUpdate)
+    xmlList.foreach(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     correction_mm: " + loc.correction_mm))
+    xmlList.map(loc => loc.insertOrUpdate())
     println("LeafOffsetCorrection.main done")
     //println("======== inst: " + get(5))
     //println("======== inst delete: " + delete(5))

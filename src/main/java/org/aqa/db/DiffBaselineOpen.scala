@@ -57,7 +57,7 @@ object DiffBaselineOpen extends ProcedureOutput {
     def leafIndex = column[Int]("leafIndex")
     def diffBaselineOpen_mm = column[Double]("diffBaselineOpen_mm")
 
-    def * = (diffBaselineOpenPK.?, outputPK, section, leafIndex, diffBaselineOpen_mm) <> (DiffBaselineOpen.apply _ tupled, DiffBaselineOpen.unapply _)
+    def * = (diffBaselineOpenPK.?, outputPK, section, leafIndex, diffBaselineOpen_mm) <> (DiffBaselineOpen.apply _ tupled, DiffBaselineOpen.unapply)
 
     def outputFK = foreignKey("DiffBaselineOpen_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -125,7 +125,6 @@ object DiffBaselineOpen extends ProcedureOutput {
     Config.validate
     DbSetup.init
     System.exit(99)
-    //val elem = XML.loadFile(new File("""D:\AQA_Data\data\Chicago_33\TB5x_1\WinstonLutz_1.0_1\2016-12-09T09-50-54-361_134\output_2016-12-09T09-50-54-490\output.xml"""))
     val elem = XML.loadFile(new File("""D:\tmp\aqa\tmp\output.xml"""))
     val xmlList = xmlToList(elem, 134)
     xmlList.foreach(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     diffBaselineOpen_mm: " + loc.diffBaselineOpen_mm))

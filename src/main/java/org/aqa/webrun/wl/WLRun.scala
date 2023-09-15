@@ -24,7 +24,7 @@ import java.io.File
 import java.sql.Timestamp
 import scala.xml.Elem
 
-class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[WLRunReq] {
+class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq] {
 
   private def dateTime(al: AttributeList) = {
     val dt = Seq(
@@ -63,11 +63,6 @@ class WLRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
   override def validate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Either[StyleMapT, RunReqClass] = {
 
     val epidList = getRtimageList(alList)
-
-    // val epidSeriesList = epidList.map(Util.serInstOfAl).distinct
-
-    val gantryAngleList = epidList.map(Util.gantryAngle).map(Util.angleRoundedTo90).distinct.sorted
-    val orthogonalAngleList = gantryAngleList.map(_ % 180).distinct
 
     logger.info("Number of RTIMAGE files uploaded: " + epidList.size)
 

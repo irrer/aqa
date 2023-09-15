@@ -51,7 +51,7 @@ import scala.xml.XML
 /**
   * Run LOC code.
   */
-class LOCRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[LOCRunReq] {
+class LOCRun(procedure: Procedure) extends WebRunProcedure with RunTrait[LOCRunReq] {
 
   /** Name of file that Matlab program creates and puts data in. */
   private val outputXmlFileName = "output.xml"

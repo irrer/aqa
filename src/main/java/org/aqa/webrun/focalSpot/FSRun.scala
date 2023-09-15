@@ -44,7 +44,7 @@ import scala.xml.Elem
   * This is a temporary class to allow running of just the focal spot test by a user.
   * @param procedure Procedure identifier.
   */
-class FSRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[FSRunReq] {
+class FSRun(procedure: Procedure) extends WebRunProcedure with RunTrait[FSRunReq] {
 
   /**
     * Get the map of images to be used.  If there is more than one image that reference the same beam number, then
@@ -90,6 +90,7 @@ class FSRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTra
   }
 
   /** Run the actual analysis.  This must create a display.html file in the output directory. */
+  //noinspection SpellCheckingInspection
   override def run(extendedData: ExtendedData, fsRunReq: FSRunReq, response: Response): ProcedureStatus.Value = {
     FSAnalysis.runProcedure(extendedData, fsRunReq)
 

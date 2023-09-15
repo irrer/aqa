@@ -39,7 +39,7 @@ import scala.xml.Elem
 /**
   * Add maintenance records based on machine log XML files.
   */
-class MachLogRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[MachLogRunReq] {
+class MachLogRun(procedure: Procedure) extends WebRunProcedure with RunTrait[MachLogRunReq] {
 
   override def getProcedure: Procedure = procedure
 
@@ -144,7 +144,7 @@ class MachLogRun(procedure: Procedure) extends WebRunProcedure(procedure) with R
       val uploadedMachLogMaintenanceRecordList = (oldMachLogList ++ newMachLogList).flatMap(ml => MachLogMakeMaintenanceRecord.makeMaintenanceRecordList(ml, userPK = userPK, outputPK = outputPK))
       def isOld(old: MaintenanceRecord, mr: MaintenanceRecord): Boolean = {
         (old.creationTime == mr.creationTime) &&
-        (old.machineLogNodeIndex.isDefined) &&
+        old.machineLogNodeIndex.isDefined &&
         (old.machineLogNodeIndex.get == mr.machineLogNodeIndex.get)
       }
       val newList = uploadedMachLogMaintenanceRecordList.filterNot(mr => oldMaintenanceRecordList.exists(old => isOld(old, mr)))

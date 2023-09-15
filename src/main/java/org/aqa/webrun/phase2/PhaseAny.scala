@@ -56,7 +56,7 @@ import scala.xml.Elem
 /**
   * Run PhaseAny code.
   */
-class PhaseAny(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[RunReq] {
+class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunReq] {
 
   /** Defines precision - Format to use when showing numbers. */
   //private val outputFormat = "%7.5e"
@@ -135,6 +135,7 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure(procedure) with Run
       }
     }
 
+    //noinspection SpellCheckingInspection
     // look in the RTPLANs referenced in the database, and if there is one that is for a
     // different procedure than what the user requested, flag an error.
     val dbRefWrongProcedure: Option[String] = {
@@ -152,10 +153,12 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure(procedure) with Run
     0 match {
       case _ if planUIDReferences.size > 1    => formErr("The RTIMAGES reference more than one RTPLAN.")
       case _ if referencedRtplanList.isEmpty  => formErr("Can not find the referenced RTPLAN.  Retry and upload the RTPLAN with the images. ")
+      //noinspection SpellCheckingInspection
       case _ if rtimageList.isEmpty           => formErr("No RTIMAGEs given")
       case _ if dbRefWrongProcedure.isDefined => formErr(dbRefWrongProcedure.get)
 
       case _ if machineSerialNumberList.isEmpty =>
+        //noinspection SpellCheckingInspection
         formErr(
           "None of the " + rtimageList.size +
             " RTIMAGEs have a device serial number (0018,1000) tag.\\n" +
@@ -164,6 +167,7 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure(procedure) with Run
         )
 
       case _ if machineSerialNumberList.size != rtimageList.size =>
+        //noinspection SpellCheckingInspection
         formErr(
           "Only " + machineSerialNumberList.size + " of the " + rtimageList.size +
             " RTIMAGEs have a device serial number (0018,1000) tag.\\n" +

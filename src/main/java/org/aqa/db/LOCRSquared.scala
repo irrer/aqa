@@ -16,16 +16,13 @@
 
 package org.aqa.db
 
-import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 import org.aqa.webrun.LOCXml
 
-import java.io.File
 import scala.xml.Elem
 import scala.xml.Node
-import scala.xml.XML
 
 case class LOCRSquared(
     rSquaredPK: Option[Long], // primary key
@@ -59,7 +56,7 @@ object LOCRSquared extends ProcedureOutput with Logging {
     def leafIndex = column[Int]("leafIndex")
     def rSquared_mmsq = column[Double]("rSquared_mmsq")
 
-    def * = (rSquaredPK.?, outputPK, section, leafIndex, rSquared_mmsq) <> (LOCRSquared.apply _ tupled, LOCRSquared.unapply _)
+    def * = (rSquaredPK.?, outputPK, section, leafIndex, rSquared_mmsq) <> (LOCRSquared.apply _ tupled, LOCRSquared.unapply )
 
     def outputFK = foreignKey("LOCRSquared_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -126,18 +123,4 @@ object LOCRSquared extends ProcedureOutput with Logging {
     logger.info("Number of rows inserted: " + list.size)
   }
 
-  /** For testing only. */
-  def main(args: Array[String]): Unit = {
-    Config.validate
-    DbSetup.init
-    System.exit(99)
-    //val elem = XML.loadFile(new File("""D:\AQA_Data\data\Chicago_33\TB5x_1\WinstonLutz_1.0_1\2016-12-09T09-50-54-361_134\output_2016-12-09T09-50-54-490\output.xml"""))
-    val elem = XML.loadFile(new File("""D:\tmp\aqa\tmp\output.xml"""))
-    val xmlList = xmlToList(elem, 134)
-    xmlList.foreach(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     rSquared_mmsq: " + loc.rSquared_mmsq))
-    xmlList.map(loc => loc.insertOrUpdate())
-    println("LOCRSquared.main done")
-    //println("======== inst: " + get(5))
-    //println("======== inst delete: " + delete(5))
-  }
 }

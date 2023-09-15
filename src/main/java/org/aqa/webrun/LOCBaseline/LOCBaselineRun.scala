@@ -42,7 +42,7 @@ import scala.xml.Elem
 /**
   * Establish baseline files for LOC.
   */
-class LOCBaselineRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[LOCBaselineRunReq] {
+class LOCBaselineRun(procedure: Procedure) extends WebRunProcedure with RunTrait[LOCBaselineRunReq] {
 
   private def getRtimageList(alList: Seq[AttributeList]) = alList.filter(Util.isRtimage)
 

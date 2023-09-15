@@ -52,11 +52,11 @@ class WebRun extends Restlet {
   }
 }
 
-abstract class WebRunProcedure(procedure: Procedure) extends Restlet {}
+abstract class WebRunProcedure extends Restlet {}
 
 object WebRun {
 
-  type ConstructInterfaceT = Procedure => WebRunProcedure
+  private type ConstructInterfaceT = Procedure => WebRunProcedure
 
   private val interfaceList: Map[String, ConstructInterfaceT] = Map(
     ("Phase2", procedure => new Phase2(procedure)),
@@ -66,7 +66,6 @@ object WebRun {
     ("GapSkewRun", procedure => new GapSkewRun(procedure)),
     ("WinstonLutz", procedure => new WLRun(procedure)),
     ("FocalSpot", procedure => new FSRun(procedure)),
-    ("WinstonLutz_1", procedure => new WinstonLutz_1(procedure)),
     ("MachineLog", procedure => new MachLogRun(procedure)),
     ("LOC", procedure => new LOCRun(procedure)),
     ("LOCBaseline", procedure => new LOCBaselineRun(procedure))

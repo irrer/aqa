@@ -197,7 +197,7 @@ object DbSetup extends Logging {
       */
     def retroactivelyFixLOCBaseline = {
 
-      // PK of LOCUploadBaseFiles_1 procedure
+      // PK of LOCUploadBaseFiles procedure
       val baselineProcPK: Long = Db.run(Procedure.query.result).filter(p => p.webInterface.toLowerCase.contains("base")).head.procedurePK.get
 
       val outList = {

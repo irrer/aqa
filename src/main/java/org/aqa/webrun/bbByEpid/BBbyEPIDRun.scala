@@ -41,7 +41,7 @@ import scala.xml.Elem
 /**
   * Run BBbyEPID code.
   */
-class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure(procedure) with RunTrait[BBbyEPIDRunReq] {
+class BBbyEPIDRun(procedure: Procedure) extends WebRunProcedure with RunTrait[BBbyEPIDRunReq] {
 
   private def getEpidList(alList: Seq[AttributeList]) = alList.filter(al => Util.modalityOfAl(al).trim.equalsIgnoreCase("RTIMAGE"))
 

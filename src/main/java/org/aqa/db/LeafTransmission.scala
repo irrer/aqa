@@ -16,16 +16,13 @@
 
 package org.aqa.db
 
-import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.procedures.ProcedureOutput
 import org.aqa.webrun.LOCXml
 
-import java.io.File
 import scala.xml.Elem
 import scala.xml.Node
-import scala.xml.XML
 
 case class LeafTransmission(
     leafTransmissionPK: Option[Long], // primary key
@@ -57,9 +54,9 @@ object LeafTransmission extends ProcedureOutput with Logging {
     def outputPK = column[Long]("outputPK")
     def section = column[String]("section")
     def leafIndex = column[Int]("leafIndex")
-    def transmission_fract = column[Double]("transmission_fract")
+    private def transmission_fract = column[Double]("transmission_fract")
 
-    def * = (leafTransmissionPK.?, outputPK, section, leafIndex, transmission_fract) <> (LeafTransmission.apply _ tupled, LeafTransmission.unapply _)
+    def * = (leafTransmissionPK.?, outputPK, section, leafIndex, transmission_fract) <> (LeafTransmission.apply _ tupled, LeafTransmission.unapply)
 
     def outputFK = foreignKey("LeafTransmission_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -128,19 +125,4 @@ object LeafTransmission extends ProcedureOutput with Logging {
     Db.perform(ops)
   }
 
-  /** For testing only. */
-  def main(args: Array[String]): Unit = {
-    Config.validate
-    DbSetup.init
-
-    val lt = get(1000000.toLong)
-    println("lt: " + lt)
-    System.exit(99)
-
-    val elem = XML.loadFile(new File("""D:\AQA_Data\data\Chicago_33\TB5x_1\WinstonLutz_1.0_1\2016-12-09T09-50-54-361_134\output_2016-12-09T09-50-54-490\output.xml"""))
-    val xmlList = xmlToList(elem, 134)
-    xmlList.foreach(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     transmission_fract: " + loc.transmission_fract))
-    xmlList.map(loc => loc.insertOrUpdate())
-    println("LeafTransmission.main done")
-  }
 }
