@@ -49,7 +49,7 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
     DicomUtil.findAllSingle(rtplan, TagByName.LeafPositionBoundaries).head.getDoubleValues.sorted
   }
 
-  val edgesFromPlan: EdgesFromPlan.OrientedEdgePair = EdgesFromPlan.edgesFromPlan(rtimage, rtplan)
+  private val edgesFromPlan: EdgesFromPlan.OrientedEdgePair = EdgesFromPlan.edgesFromPlan(rtimage, rtplan)
 
   /**
     * Given a bounding box that contains the leaf end and is between the sides of the leaf (roughly containing the
@@ -69,14 +69,9 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
         val leafEndY = LocateEdge.locateEdge(profile, (profile.min + profile.max) / 2)
 
         val endPosition_pix = box_pix.getY + leafEndY
-        val endPosition_mm = {
-          val y = -translator.pix2IsoCoordY(endPosition_pix)
-          y // if (collimatorAngleRounded_deg == 270) y else -y
-        }
+        val endPosition_mm = -translator.pix2IsoCoordY(endPosition_pix)
 
-        val transY = translator.caxCenter_iso.getY //  if (XRayImageReceptorTranslation == null) 0.0 else XRayImageReceptorTranslation.getDoubleValues()(1)
-
-        val leaf = Leaf(endPosition_mm, translator.pix2IsoCoordX(box_pix.getX) + transY, translator.pix2IsoDistX(box_pix.getWidth) + transY)
+        val leaf = Leaf(endPosition_mm, translator.pix2IsoCoordX(box_pix.getX), translator.pix2IsoDistY(box_pix.getWidth))
         Some(leaf)
       } else
         None
