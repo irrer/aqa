@@ -19,7 +19,7 @@ package org.aqa.webrun.bbByCBCT
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.SOPClass
-import com.pixelmed.dicom.TagFromName
+import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.ImageRegistration
 import org.aqa.Util
@@ -58,14 +58,14 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure with RunTrait[BB
 
   override def makeRunReqForRedo(alList: Seq[AttributeList], xmlList: Seq[Elem], output: Option[Output]): org.aqa.run.RunReqClass = {
     //validate(emptyValueMap, alList.filter(al => Util.isCt(al))).right.get
-    val cbctList = alList.filter(al => Util.isCt(al)).sortBy(al => al.get(TagFromName.ImagePositionPatient).getDoubleValues()(2))
+    val cbctList = alList.filter(al => Util.isCt(al)).sortBy(al => al.get(TagByName.ImagePositionPatient).getDoubleValues()(2))
     val reg = alList.find(al => Util.isReg(al))
-    val ctFrameUID = cbctList.head.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
+    val ctFrameUID = cbctList.head.get(TagByName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
     val rtplan: AttributeList = {
       val ds = DicomSeries.getByFrameUIDAndSOPClass(Set(ctFrameUID), SOPClass.RTPlanStorage)
       if (ds.nonEmpty) ds.head.attributeListList.head
       else {
-        val planFrameUID = reg.get.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
+        val planFrameUID = reg.get.get(TagByName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
         val plan = DicomSeries.getByFrameUIDAndSOPClass(Set(planFrameUID), SOPClass.RTPlanStorage)
         if (plan.isEmpty)
           throw new RuntimeException("Unable to find RTPLAN for Redo of Daily QA CBCT")
@@ -87,11 +87,11 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure with RunTrait[BB
         Some(new Timestamp(msList.min))
     }
 
-    val contentTime = getTimestamp(TagFromName.ContentDate, TagFromName.ContentTime)
+    val contentTime = getTimestamp(TagByName.ContentDate, TagByName.ContentTime)
     if (contentTime.isDefined)
       contentTime
     else
-      getTimestamp(TagFromName.AcquisitionDate, TagFromName.AcquisitionTime)
+      getTimestamp(TagByName.AcquisitionDate, TagByName.AcquisitionTime)
   }
 
   override def getProcedure: Procedure = procedure
@@ -213,8 +213,10 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure with RunTrait[BB
 
       def dateOf(al: AttributeList): Long = {
         val date = Seq(
-          DicomUtil.getTimeAndDate(al, TagFromName.ContentDate, TagFromName.ContentTime),
-          DicomUtil.getTimeAndDate(al, TagFromName.InstanceCreationDate, TagFromName.InstanceCreationTime)
+          DicomUtil.getTimeAndDate(al, TagByName.ContentDate, TagByName.ContentTime),
+          DicomUtil.getTimeAndDate(al, TagByName.AcquisitionDate, TagByName.AcquisitionTime),
+          DicomUtil.getTimeAndDate(al, TagByName.CreationDate, TagByName.CreationTime),
+          DicomUtil.getTimeAndDate(al, TagByName.SeriesDate, TagByName.SeriesTime)
         ).flatten.head.getTime
         date
       }
