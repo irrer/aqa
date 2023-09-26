@@ -14,15 +14,20 @@
  * limitations under the License.
  */
 
-package org.aqa
+package learn
 
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.DicomFileUtilities
 import com.pixelmed.dicom.TagFromName
+import edu.umro.ScalaUtil.DicomUtil
+import org.aqa.DicomFile
+import org.aqa.Logging
+import org.aqa.Util
 
 import java.io.File
+import java.text.SimpleDateFormat
 
-object ShowSerialNumber { // TODO should this be in production?
+object ShowSerialNumber extends Logging {
 
   private def showSerialNumber(file: File): Unit = {
 
@@ -43,30 +48,30 @@ object ShowSerialNumber { // TODO should this be in production?
           val SOPInstanceUID = valOf(TagFromName.SOPInstanceUID)
           val SeriesInstanceUID = valOf(TagFromName.SeriesInstanceUID)
 
-          val AcquisitionDate = valOf(TagFromName.AcquisitionDate)
-          val AcquisitionTime = valOf(TagFromName.AcquisitionTime)
+          val dateTime = {
+            val acq = DicomUtil.getTimeAndDate(al, TagFromName.AcquisitionDate, TagFromName.AcquisitionTime)
+            val con = DicomUtil.getTimeAndDate(al, TagFromName.ContentDate, TagFromName.ContentTime)
+            val plan = DicomUtil.getTimeAndDate(al, TagFromName.RTPlanDate, TagFromName.RTPlanTime)
+            Seq(acq, con, plan).flatten.head
+          }
 
-          val ContentDate = valOf(TagFromName.ContentDate)
-          val ContentTime = valOf(TagFromName.ContentTime)
-
-          val InstanceCreationDate = valOf(TagFromName.InstanceCreationDate)
-          val InstanceCreationTime = valOf(TagFromName.InstanceCreationTime)
-
-          val date = if (InstanceCreationDate.nonEmpty) InstanceCreationDate else if (AcquisitionDate.nonEmpty) AcquisitionDate else ContentDate
-          val time = if (InstanceCreationTime.nonEmpty) InstanceCreationTime else if (AcquisitionTime.nonEmpty) AcquisitionTime else ContentTime
+          val dateTimeText = {
+            val dateFormat = new SimpleDateFormat("yyyy-MM-dd  HH:mm:ss.SSS")
+            Util.formatDate(dateFormat, dateTime)
+          }
 
           println(
             DeviceSerialNumber + " : " +
               StationName + " : " + Modality +
               "  SeriesInstanceUID: " + SeriesInstanceUID +
               " : " + "  SOPInstanceUID: " + SOPInstanceUID +
-              " : " + "  : " + date + "::" + time +
+              " : " + "  : " + dateTimeText +
               " : " + file.getAbsolutePath
           )
         }
       }
     } catch {
-      case t: Throwable => ;
+      case t: Throwable => println(file.getAbsolutePath + " :: " + fmtEx(t));
     }
 
     if (file.isDirectory) file.listFiles.map(f => showSerialNumber(f))
@@ -76,7 +81,7 @@ object ShowSerialNumber { // TODO should this be in production?
     val start = System.currentTimeMillis
     println("Starting...")
     val fileList = args.map(a => new File(a))
-    fileList.map(file => showSerialNumber(file))
+    fileList.foreach(file => showSerialNumber(file))
     println("Elapsed ms: " + (System.currentTimeMillis - start))
   }
 
