@@ -19,8 +19,6 @@ package org.aqa
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.DateTimeAttribute
-import com.pixelmed.dicom.DicomFileUtilities
-import com.pixelmed.dicom.TagFromName
 import com.pixelmed.dicom.TransferSyntax
 import com.pixelmed.dicom.ValueRepresentation
 import edu.umro.DicomDict.TagByName
@@ -198,22 +196,22 @@ object Util extends Logging {
   }
 
   def isRtplan(al: AttributeList): Boolean = {
-    val a = al.get(TagFromName.Modality)
+    val a = al.get(TagByName.Modality)
     (a != null) && a.getSingleStringValueOrEmptyString.trim.equalsIgnoreCase("RTPLAN")
   }
 
   def isRtimage(al: AttributeList): Boolean = {
-    val a = al.get(TagFromName.Modality)
+    val a = al.get(TagByName.Modality)
     (a != null) && a.getSingleStringValueOrEmptyString.trim.equalsIgnoreCase("RTIMAGE")
   }
 
   def isCt(al: AttributeList): Boolean = {
-    val a = al.get(TagFromName.Modality)
+    val a = al.get(TagByName.Modality)
     (a != null) && a.getSingleStringValueOrEmptyString.trim.equalsIgnoreCase("CT")
   }
 
   def isReg(al: AttributeList): Boolean = {
-    val a = al.get(TagFromName.Modality)
+    val a = al.get(TagByName.Modality)
     (a != null) && a.getSingleStringValueOrEmptyString.trim.equalsIgnoreCase("REG")
   }
 
@@ -221,40 +219,40 @@ object Util extends Logging {
    * Get the SOPInstanceUID of an attribute list.
    */
   def sopOfAl(al: AttributeList): String = {
-    val at = al.get(TagFromName.SOPInstanceUID)
-    if (at == null) "" else al.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
+    val at = al.get(TagByName.SOPInstanceUID)
+    if (at == null) "" else al.get(TagByName.SOPInstanceUID).getSingleStringValueOrEmptyString
   }
 
   /**
    * Get the SeriesInstanceUID of an attribute list.
    */
   def serInstOfAl(al: AttributeList): String = {
-    val at = al.get(TagFromName.SeriesInstanceUID)
-    if (at == null) "" else al.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString
+    val at = al.get(TagByName.SeriesInstanceUID)
+    if (at == null) "" else al.get(TagByName.SeriesInstanceUID).getSingleStringValueOrEmptyString
   }
 
   /**
    * Get the StudyInstanceUID of an attribute list.
    */
   def studyInstOfAl(al: AttributeList): String = {
-    val at = al.get(TagFromName.StudyInstanceUID)
-    if (at == null) "" else al.get(TagFromName.StudyInstanceUID).getSingleStringValueOrEmptyString
+    val at = al.get(TagByName.StudyInstanceUID)
+    if (at == null) "" else al.get(TagByName.StudyInstanceUID).getSingleStringValueOrEmptyString
   }
 
   /**
    * Get the PatientID of an attribute list.
    */
   def patientIdOfAl(al: AttributeList): String = {
-    val at = al.get(TagFromName.PatientID)
-    if (at == null) "" else al.get(TagFromName.PatientID).getSingleStringValueOrEmptyString
+    val at = al.get(TagByName.PatientID)
+    if (at == null) "" else al.get(TagByName.PatientID).getSingleStringValueOrEmptyString
   }
 
   /**
    * Get the Modality of an attribute list.
    */
   def modalityOfAl(al: AttributeList): String = {
-    val at = al.get(TagFromName.Modality)
-    if (at == null) "" else al.get(TagFromName.Modality).getSingleStringValueOrEmptyString
+    val at = al.get(TagByName.Modality)
+    if (at == null) "" else al.get(TagByName.Modality).getSingleStringValueOrEmptyString
   }
 
   def collimatorAngle(al: AttributeList): Double = {
@@ -279,7 +277,7 @@ object Util extends Logging {
 
   private def getTimeAndDate(al: AttributeList): Option[Date] = {
     try {
-      Some(DateTimeAttribute.getDateFromFormattedString(al.get(TagFromName.AcquisitionDateTime).getSingleStringValueOrNull))
+      Some(DateTimeAttribute.getDateFromFormattedString(al.get(TagByName.AcquisitionDateTime).getSingleStringValueOrNull))
     } catch {
       case _: Throwable => None
     }
@@ -290,14 +288,13 @@ object Util extends Logging {
    */
   def extractDateTimeAndPatientIdFromDicomAl(attributeList: AttributeList): (Seq[Date], Option[String]) = {
 
-    val PatientID = getAttrValue(attributeList, TagFromName.PatientID)
+    val PatientID = getAttrValue(attributeList, TagByName.PatientID)
 
     val dateTimeTagPairList = List(
-      (TagFromName.ContentDate, TagFromName.ContentTime),
-      // (TagFromName.InstanceCreationDate, TagFromName.InstanceCreationTime), // This date is often when the file was C-MOVE'ed, not when it was created. This makes it irrelevant.
-      (TagFromName.AcquisitionDate, TagFromName.AcquisitionTime),
+      (TagByName.ContentDate, TagByName.ContentTime),
+      (TagByName.AcquisitionDate, TagByName.AcquisitionTime),
       (TagByName.CreationDate, TagByName.CreationTime),
-      (TagFromName.SeriesDate, TagFromName.SeriesTime)
+      (TagByName.SeriesDate, TagByName.SeriesTime)
     )
 
     val AcquisitionDateTime = getTimeAndDate(attributeList)
@@ -324,51 +321,14 @@ object Util extends Logging {
   }
 
   /**
-   * Get dates and patient ID from DICOM file.
-   */
-  private def extractDateTimeAndPatientIdFromDicom(file: File): (Seq[Date], Option[String]) = {
-    val al = new AttributeList
-    al.read(file)
-    extractDateTimeAndPatientIdFromDicomAl(al)
-  }
-
-  private def dateTimeAndPatientIdFromDicom(file: File, dateList: Seq[Date], patientIdList: Seq[String]): (Seq[Date], Seq[String]) = {
-    if (file.isDirectory) {
-      val listPair = file.listFiles.map(f => dateTimeAndPatientIdFromDicom(f, List[Date](), List[String]())).toList.unzip
-      (dateList ++ listPair._1.flatten, patientIdList ++ listPair._2.flatten)
-    } else if (file.canRead && DicomFileUtilities.isDicomOrAcrNemaFile(file)) {
-      val dtp = extractDateTimeAndPatientIdFromDicom(file)
-      val p = if (dtp._2.isDefined) patientIdList :+ dtp._2.get else patientIdList
-      (dtp._1, p)
-    } else (dateList, patientIdList)
-  }
-
-  def dateTimeAndPatientIdFromDicom(file: File): DateTimeAndPatientId = {
-    val pdt = dateTimeAndPatientIdFromDicom(file, List[Date](), List[String]())
-
-    def bestPatId(p1: String, p2: String): Boolean = {
-      if (p1.length == p2.length) p1.toLowerCase.compareTo(p2.toLowerCase()) < 0
-      else p1.length > p2.length
-    }
-
-    val dateTime = if (pdt._1.isEmpty) None else Some(pdt._1.min.getTime)
-
-    val patientId = {
-      pdt._2.distinct.sortWith(bestPatId)
-      if (pdt._2.isEmpty) None
-      else Some(pdt._2.distinct.sortWith(bestPatId).head)
-    }
-    DateTimeAndPatientId(dateTime, patientId)
-  }
-
-  /**
    * Get the date and time for building an Output.
    */
   def getOutputDateTime(alList: Seq[AttributeList]): Option[Long] = {
     val dateTimeTags = Seq(
-      (TagFromName.AcquisitionDate, TagFromName.AcquisitionTime),
-      (TagFromName.ContentDate, TagFromName.ContentTime),
-      (TagFromName.InstanceCreationDate, TagFromName.InstanceCreationTime)
+      (TagByName.AcquisitionDate, TagByName.AcquisitionTime),
+      (TagByName.ContentDate, TagByName.ContentTime),
+      (TagByName.CreationDate, TagByName.CreationTime),
+      (TagByName.SeriesDate, TagByName.SeriesTime)
     )
 
     def earliest(dateTag: AttributeTag, timeTag: AttributeTag): Option[Long] = {
@@ -384,7 +344,7 @@ object Util extends Logging {
    * Get the patient ID for building an Output.
    */
   def getOutputPatientId(al: AttributeList): Option[String] = {
-    val at = al.get(TagFromName.PatientID)
+    val at = al.get(TagByName.PatientID)
     if ((at != null) && (at.getSingleStringValueOrNull != null))
       Some(at.getSingleStringValueOrNull)
     else
@@ -866,7 +826,7 @@ object Util extends Logging {
       // val j = Util.DEFAULT_TRANSFER_SYNTAX
       val transferSyntax: String = {
         val deflt = TransferSyntax.ImplicitVRLittleEndian
-        val a = attributeList.get(TagFromName.TransferSyntaxUID)
+        val a = attributeList.get(TagByName.TransferSyntaxUID)
         if (a != null) {
           val ts = a.getStringValues
           if (ts.nonEmpty) ts.head else deflt
@@ -1053,7 +1013,7 @@ object Util extends Logging {
   }
 
   /** Get the Z position of a slice. */
-  def slicePosition(attributeList: AttributeList): Double = attributeList.get(TagFromName.ImagePositionPatient).getDoubleValues()(2)
+  def slicePosition(attributeList: AttributeList): Double = attributeList.get(TagByName.ImagePositionPatient).getDoubleValues()(2)
 
   /**
    * Find the slice spacing by looking at the distance between consecutive slices.  Use a few of
@@ -1079,17 +1039,17 @@ object Util extends Logging {
    */
   def getVoxSize_mm(attrListList: Seq[AttributeList]): Point3d = {
     val sorted = sortByZ(attrListList)
-    val xSize = sorted.head.get(TagFromName.PixelSpacing).getDoubleValues()(0)
-    val ySize = sorted.head.get(TagFromName.PixelSpacing).getDoubleValues()(1)
+    val xSize = sorted.head.get(TagByName.PixelSpacing).getDoubleValues()(0)
+    val ySize = sorted.head.get(TagByName.PixelSpacing).getDoubleValues()(1)
     val zSize = getSliceSpacing(sorted)
     new Point3d(xSize, ySize, zSize)
   }
 
   case class RegInfo(attrList: AttributeList) {
-    val frameOfRefUID: String = attrList.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
+    val frameOfRefUID: String = attrList.get(TagByName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
     val otherFrameOfRefUID: Seq[String] = {
       val regSeq = DicomUtil.seqToAttr(attrList, TagByName.RegistrationSequence)
-      val frmUid = regSeq.map(rs => rs.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString).filterNot(fu => fu.equalsIgnoreCase(frameOfRefUID))
+      val frmUid = regSeq.map(rs => rs.get(TagByName.FrameOfReferenceUID).getSingleStringValueOrEmptyString).filterNot(fu => fu.equalsIgnoreCase(frameOfRefUID))
       frmUid
     }
   }
@@ -1137,10 +1097,11 @@ object Util extends Logging {
   /**
    * Given arbitrary text, replace all special characters with underscore so it can be used as a JavaScript or XML identifier.
    */
+  //noinspection RegExpSimplifiable
   def textToId(text: String): String = text.replaceAll("[^0-9a-zA-Z]", "_").replaceAll("__*", "_")
 
   def attributeListToDeviceSerialNumber(al: AttributeList): Option[String] = {
-    val at = al.get(TagFromName.DeviceSerialNumber)
+    val at = al.get(TagByName.DeviceSerialNumber)
     if (at == null) None
     else {
       val ser = at.getSingleStringValueOrNull
@@ -1173,7 +1134,7 @@ object Util extends Logging {
     val million = 1000.0 * 1000
     val maxBadPixels = ((Config.MaxEstimatedBadPixelPerMillion / million) * numPixels).round.toInt
     val badPixels = dicomImage.identifyBadPixels(maxBadPixels, Config.BadPixelStdDev, Config.BadPixelMaximumPercentChange, Util.badPixelRadius(al), Config.BadPixelMinimumDeviation_CU)
-    badPixels.filter(bp => bp.rating > 100) // TODO filter?
+    badPixels.filter(bp => bp.rating > 100)
   }
 
   /**
@@ -1202,7 +1163,7 @@ object Util extends Logging {
     logger.info("Freed memory in " + elapsed + " ms garbage collection.  Available before: " + fmt(before) + "    after: " + fmt(after) + "    amount freed: " + fmt(after - before))
   }
 
-  def getFrameOfRef(al: AttributeList): String = al.get(TagFromName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
+  def getFrameOfRef(al: AttributeList): String = al.get(TagByName.FrameOfReferenceUID).getSingleStringValueOrEmptyString
 
   def getFrameOfRef(dicomFile: DicomFile): String = getFrameOfRef(dicomFile.attributeList.get)
 
@@ -1261,6 +1222,7 @@ object Util extends Logging {
    */
   def formatMatrix(matrix: Matrix4d): String = {
     def fmt(d: Double) = {
+      //noinspection RegExpSimplifiable
       d.toString.replaceAll("00* ", "0 ").trim.replaceAll("\\.$", ".0")
     }
 
@@ -1591,73 +1553,6 @@ object Util extends Logging {
   }
 
   def main(args: Array[String]): Unit = {
-
-    if (true) {
-      val matrix = new Matrix4d(
-        0,
-        1.0 / 3,
-        667876.9879879876875776747575757,
-        -47687.00000032,
-        28.5,
-        4444.987e-30,
-        1.0 / 3,
-        -176.0,
-        0,
-        -2768768765.0,
-        1.0 / 3,
-        6686.9879879876875776747575757,
-        5,
-        1.0 / 3,
-        -56,
-        24
-      )
-
-      println(matrix.toString)
-      println(formatMatrix(matrix))
-    }
-
-    if (false) {
-      val fileList = new File("""D:\tmp\aqa\CBCT\MQATX1OBIQA2019Q3\ri_20190620""").listFiles
-
-      def doit(file: File): Unit = {
-        val al = new AttributeList
-        al.read(file)
-
-        val dtp = extractDateTimeAndPatientIdFromDicom(file)
-
-        println(dtp)
-
-      }
-
-      fileList.foreach(al => doit(al))
-
-      System.exit(99)
-    }
-
-    if (false) {
-      for (i <- -800 until 800) println(i.formatted("%5d") + " --> " + angleRoundedTo90(i).formatted("%5d"))
-      System.exit(0)
-    }
-
-    if (false) {
-      val list: Seq[Double] = Seq(234.29847234, 0.00000023424, 2398472742.12341234)
-      list.foreach(d => println("    " + d.toString + " --> " + d.formatted("%7.5f") + " ==> " + d.formatted("%7.5e")))
-
-      println("thisJarFile: " + thisJarFile.getAbsolutePath)
-
-      val fileNameList = List(
-        """D:\pf\Conquest\dicomserver1417\data\ISOCAL""",
-        """D:\pf\Conquest\dicomserver1417\data\Phantom""",
-        """D:\pf\Conquest\dicomserver1417\data\txdlite_mr4""",
-        """D:\pf\Conquest\dicomserver1417\data\28291735""",
-        """D:\pf\Conquest\dicomserver1417\data\junk"""
-      )
-
-      fileNameList.map(fn => {
-        val f = new File(fn)
-        val dtp = dateTimeAndPatientIdFromDicom(f)
-        println("file: " + f.getName.format("%-20s") + "    " + dtp.dateTime + "    " + dtp.PatientID)
-      })
-    }
+    //
   }
 }

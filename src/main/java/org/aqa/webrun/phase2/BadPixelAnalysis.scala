@@ -18,7 +18,6 @@ package org.aqa.webrun.phase2
 
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
-import com.pixelmed.dicom.TagFromName
 import com.pixelmed.dicom.TimeAttribute
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
@@ -74,12 +73,12 @@ object BadPixelAnalysis extends Logging {
 
     val beamList = runReq.rtimageMap.keys.par
       .flatMap(beamName => {
-        val SOPInstanceUID = runReq.rtimageMap(beamName).get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull
+        val SOPInstanceUID = runReq.rtimageMap(beamName).get(TagByName.SOPInstanceUID).getSingleStringValueOrNull
         beamToBadPixels(beamName, SOPInstanceUID, runReq.derivedMap(beamName).badPixels, runReq.derivedMap(beamName).originalImage)
       })
       .toList
 
-    val floodSOPInstanceUID = runReq.flood.get(TagFromName.SOPInstanceUID).getSingleStringValueOrNull
+    val floodSOPInstanceUID = runReq.flood.get(TagByName.SOPInstanceUID).getSingleStringValueOrNull
     val floodBadPixelList = beamToBadPixels(Config.FloodFieldBeamName, floodSOPInstanceUID, runReq.floodBadPixelList, runReq.floodOriginalImage)
 
     val list = beamList ++ floodBadPixelList
@@ -152,7 +151,7 @@ object BadPixelAnalysis extends Logging {
       runReq.rtimageMap.keys.par.map(beamName => (beamName, dicomView(beamName).get)).toList.toMap
 
       def timeOf(al: AttributeList): Option[Long] = {
-        val timeAttr = Seq(TagFromName.ContentTime, TagFromName.AcquisitionTime, TagFromName.InstanceCreationTime)
+        val timeAttr = Seq(TagByName.ContentTime, TagByName.AcquisitionTime, TagByName.CreationTime, TagByName.SeriesTime)
           .map(tag => al.get(tag))
           .filter(at => (at != null) && at.isInstanceOf[TimeAttribute] && at.asInstanceOf[TimeAttribute].getDoubleValues.nonEmpty)
           .map(at => at.asInstanceOf[TimeAttribute])

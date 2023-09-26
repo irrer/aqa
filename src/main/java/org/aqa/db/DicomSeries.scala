@@ -19,7 +19,6 @@ package org.aqa.db
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.SOPClass
-import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
@@ -48,7 +47,7 @@ case class DicomSeries(
     modality: String, // DICOM Modality
     sopClassUID: String, // DICOM SOPClassUID of first file.  A more rigorous definition of modality.
     deviceSerialNumber: Option[String], // DICOM DeviceSerialNumber found in top-level attribute list, if present.
-    date: Timestamp, // when data was acquired at the treatment machine.  Value from first file found by checking for (in this order): ContentDate, InstanceCreationDate, AcquisitionDate, CreationDate, SeriesDate
+    date: Timestamp, // when data was acquired at the treatment machine.  Value from first file found by checking for (in this order): ContentDate, AcquisitionDate, CreationDate, SeriesDate
     patientID: Option[String], // Patient ID, if available
     size: Int, // Number of files in series
     referencedRtplanUID: Option[String], // referenced RTPLAN UID if one is referenced
@@ -394,7 +393,7 @@ object DicomSeries extends Logging {
       def getReferencedRtplanUID: Option[String] = {
         val seqList = alList.filter(al => al.get(TagByName.ReferencedRTPlanSequence) != null)
         val refList = seqList.flatMap(seq => DicomUtil.seqToAttr(seq, TagByName.ReferencedRTPlanSequence))
-        val uidList = refList.filter(ref => ref.get(TagFromName.ReferencedSOPInstanceUID) != null).map(ref => ref.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrNull)
+        val uidList = refList.filter(ref => ref.get(TagByName.ReferencedSOPInstanceUID) != null).map(ref => ref.get(TagByName.ReferencedSOPInstanceUID).getSingleStringValueOrNull)
         val rtplanUid = uidList.find(uid => uid != null)
         rtplanUid
       }
@@ -415,15 +414,15 @@ object DicomSeries extends Logging {
 
       def getSopInstanceUIDList = alList.map(al => Util.sopOfAl(al)).mkString(" ", " ", " ")
 
-      def getSeriesInstanceUID = byTag(TagFromName.SeriesInstanceUID).get
+      def getSeriesInstanceUID = byTag(TagByName.SeriesInstanceUID).get
 
-      def getFrameOfReferenceUID = byTag(TagFromName.FrameOfReferenceUID)
+      def getFrameOfReferenceUID = byTag(TagByName.FrameOfReferenceUID)
 
-      def getModality = byTag(TagFromName.Modality).get
+      def getModality = byTag(TagByName.Modality).get
 
-      def getSopClassUID = byTag(TagFromName.SOPClassUID).get
+      def getSopClassUID = byTag(TagByName.SOPClassUID).get
 
-      def deviceSerialNumber = byTag(TagFromName.DeviceSerialNumber)
+      def deviceSerialNumber = byTag(TagByName.DeviceSerialNumber)
 
       def getDate = new Timestamp(sorted.head.date.getTime)
 
@@ -440,7 +439,7 @@ object DicomSeries extends Logging {
       def getMappedFrameOfReferenceUID: Option[String] = {
         if (getFrameOfReferenceUID.isDefined) {
           val mainFrmOfRef = getFrameOfReferenceUID.get
-          val allFrmOfRef = alList.flatMap(al => DicomUtil.findAllSingle(al, TagFromName.FrameOfReferenceUID)).map(a => a.getSingleStringValueOrNull).filterNot(uid => uid == null).distinct
+          val allFrmOfRef = alList.flatMap(al => DicomUtil.findAllSingle(al, TagByName.FrameOfReferenceUID)).map(a => a.getSingleStringValueOrNull).filterNot(uid => uid == null).distinct
           val mapped = allFrmOfRef.filterNot(frmOfRef => frmOfRef.equals(mainFrmOfRef)).headOption
           mapped
         } else
