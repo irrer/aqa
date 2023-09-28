@@ -961,6 +961,7 @@ object Config extends Logging {
   val WLBoxSizePercent: Double = logMainText("WLBoxSizePercent", "30.0").toDouble
   val WLBoxPositionFactor: Double = logMainText("WLBoxPositionFactor", "2.0").toDouble
   val WLLaserCorrectionLimit: Double = logMainText("WLLaserCorrectionLimit", "0.5").toDouble
+  val WLRowsPerPageDefault: Int = logMainText("WLRowsPerPageDefault", "50").toInt
 
   val WLMaxAllowedBrightnessRangePercentDifference: Double = logMainText("WLMaxAllowedBrightnessRangePercentDifference", "20.0").toDouble
   val WLBoxEdgeTolerance_mm: Double = logMainText("WLBoxEdgeTolerance_mm", "5.5").toDouble

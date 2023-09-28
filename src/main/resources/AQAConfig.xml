@@ -937,6 +937,9 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Maximum allowable offset in mm for laser correction values. -->
     <LaserCorrectionLimit>0.5</LaserCorrectionLimit>
 
+    <!-- Number of rows of WL results shown on the page by default.  Must be an integer value greater than zero. -->
+    <WLRowsPerPageDefault>50</WLRowsPerPageDefault>
+
     <!-- Treatment machine parameters.
 
     Name : Name of treatment machine.  Names are case insensitive.

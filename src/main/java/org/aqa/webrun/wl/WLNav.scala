@@ -9,6 +9,7 @@ import org.aqa.web.ViewOutput
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
 import org.aqa.web.WebUtil.SubUrlRoot
+import org.aqa.Config
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -20,8 +21,6 @@ import java.util.Date
 import scala.xml.Elem
 
 class WLNav extends Restlet with SubUrlRoot with Logging {
-
-  private val rowsPerPageDefault = 10
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
     val action: String = pathOf + "?" + name + "=" + name
@@ -35,7 +34,7 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
   private val oldestButton = makeButton(" Oldest >> ", primary = true, ButtonType.BtnDefault)
 
   // class WebInputText(override val label: String, showLabel: Boolean, col: Int, offset: Int, placeholder: String, aqaAlias: Boolean) extends IsInput(label) with ToHtml {
-  private val rowsPerPageField = new WebInputText(label = "Rows/Page", showLabel = true, col = 1, offset = 0, placeholder = rowsPerPageDefault.toString, aqaAlias = false)
+  private val rowsPerPageField = new WebInputText(label = "Rows/Page", showLabel = true, col = 1, offset = 0, placeholder = Config.WLRowsPerPageDefault.toString, aqaAlias = false)
 
   private val datePicker = new WebInputDatePicker(label = "Date", col = 6, offset = 0, showLabel = false, submitOnChange = true)
 
@@ -65,7 +64,7 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
       val rpp = valueMap(rowsPerPageField.label).toInt
       rpp
     } catch {
-      case _: Throwable => rowsPerPageDefault
+      case _: Throwable => Config.WLRowsPerPageDefault
     }
   }
 
