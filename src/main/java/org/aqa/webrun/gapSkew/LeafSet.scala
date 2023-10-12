@@ -37,4 +37,11 @@ case class LeafSet(
     rtplan: AttributeList,
     measurementSpan_mm: Double,
     gapSkew: Either[String, GapSkew] // Left: processing error, Right: Results of GapSkew
-) {}
+) {
+
+  /**
+    * Only show the gapSkew field.  This is the only one that makes sense to show in the log.
+    * @return Text description.
+    */
+  override def toString: String = s"measurementSpan_mm: $measurementSpan_mm     $gapSkew"
+}
