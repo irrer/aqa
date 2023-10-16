@@ -55,6 +55,9 @@ Note that when building a package for release, the Maven build process uses the 
         <AllowedHttpIp>10.20.230.*</AllowedHttpIp>
     </AllowedHttpIpList>
 
+    <!-- Minimum password length.  This is only checked when the password is created.  Must be an integer > 0,  Default: 8 -->
+    <MinPasswordSize>8</MinPasswordSize>
+
     <!-- Location of file that contains Java Key Store for HTTPS.  If multiple names are given, then they are
     each tried in the order given until a readable file is found. -->
     <JavaKeyStoreFileList>

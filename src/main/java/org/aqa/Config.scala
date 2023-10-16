@@ -367,6 +367,8 @@ object Config extends Logging {
     */
   val AllowedHttpIpList: List[String] = getAllowedHttpIpList
 
+  val MinPasswordSize: Int = logMainText("MinPasswordSize", "8").toInt
+
   val JavaKeyStorePasswordList: List[String] = getJavaKeyStorePasswordList
   val JavaKeyStoreFileList: List[File] = getJavaKeyStoreFileList
 

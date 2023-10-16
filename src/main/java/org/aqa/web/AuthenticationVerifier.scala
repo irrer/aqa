@@ -19,6 +19,7 @@ package org.aqa.web
 import org.aqa.Logging
 import org.aqa.db.CachedUser
 import org.aqa.db.UserRole
+import org.aqa.Config
 import org.restlet.security.Verifier
 import org.restlet.Request
 import org.restlet.Response
@@ -50,8 +51,6 @@ class AuthenticationVerifier(getRequestedRole: (Request, Response) => UserRole.V
 
 object AuthenticationVerifier {
 
-  private val minPasswordSize = 8
-
   private def containsNonAlpha(passwordText: String): Boolean = passwordText.toLowerCase.replaceAll("[a-z]", "").nonEmpty
 
   /**
@@ -59,9 +58,9 @@ object AuthenticationVerifier {
     */
   def judgePassword(password: String): Option[String] = {
     0 match {
-      case _ if password.length < minPasswordSize => Some("Password must be at least " + minPasswordSize + " characters long.")
-      case _ if !containsNonAlpha(password)       => Some("Password must contain at least one non-alpha character.")
-      case _                                      => None // good enough
+      case _ if password.length < Config.MinPasswordSize => Some("Password must be at least " + Config.MinPasswordSize + " characters long.")
+      case _ if !containsNonAlpha(password)              => Some("Password must contain at least one non-alpha character.")
+      case _                                             => None // good enough
     }
   }
 
