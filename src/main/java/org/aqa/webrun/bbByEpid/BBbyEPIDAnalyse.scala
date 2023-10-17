@@ -186,6 +186,8 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
       response: Response
   ): Either[String, (BBbyEPIDComposite, Option[String])] = {
 
+    val epidResultListSorted = epidResultList.sortBy(_.dateTime)
+
     // val bbByEPIDList = epidResultList.map(er => er._1)
 
     def getByAngleType(angleType: AngleType.Value) = {
@@ -196,18 +198,20 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
         angTyp.isDefined && angTyp.get.toString.equals(at)
       }
 
-      epidResultList.filter(r => sameType(r.bbByEpid))
+      epidResultListSorted.filter(r => sameType(r.bbByEpid))
     }
 
-    val vert = getByAngleType(AngleType.vertical)
-    val horz = getByAngleType(AngleType.horizontal)
+    val vert = getByAngleType(AngleType.vertical).takeRight(1)
+    val horz = getByAngleType(AngleType.horizontal).takeRight(1)
+
+    vert.head.bbByEpid.attributeList
 
     if (vert.nonEmpty && horz.nonEmpty) {
       // Use the same number of vertical and horizontal beams to get the averages.  Handles cases where are there are many of one and few of the others.
       val max = Math.min(vert.size, horz.size) // maximum number of images to use in each of the vertical and horizontal directions.
       val x_mm = vert.take(max).map(r => r.bbByEpid.epid3DX_mm).sum / max
       val y_mm = horz.take(max).map(r => r.bbByEpid.epid3DY_mm).sum / max
-      val z_mm = epidResultList.map(r => r.bbByEpid.epid3DZ_mm).sum / epidResultList.size
+      val z_mm = epidResultListSorted.map(r => r.bbByEpid.epid3DZ_mm).sum / epidResultListSorted.size
       val offset_mm = new Point3d(x_mm, y_mm, z_mm).distance(new Point3d(0, 0, 0))
 
       val SeriesInstanceUID = runReq.epidList.head.get(TagFromName.SeriesInstanceUID).getSingleStringValueOrEmptyString

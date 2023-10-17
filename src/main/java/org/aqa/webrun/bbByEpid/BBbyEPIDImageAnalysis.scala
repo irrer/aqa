@@ -34,6 +34,7 @@ import org.aqa.webrun.phase2.Phase2Util
 
 import java.awt.Rectangle
 import java.awt.geom.Point2D
+import java.util.Date
 import javax.vecmath.Point2d
 import javax.vecmath.Point2i
 import javax.vecmath.Point3d
@@ -140,6 +141,13 @@ object BBbyEPIDImageAnalysis extends Logging {
           processedSearchAreaText
 
       fullText
+    }
+
+    /** Date and time of attribute list. */
+    val dateTime: Date = {
+      val c = DicomUtil.getTimeAndDate(al, TagFromName.ContentDate, TagFromName.ContentTime)
+      val a = DicomUtil.getTimeAndDate(al, TagFromName.AcquisitionDate, TagFromName.AcquisitionTime)
+      Seq(c, a).flatten.head
     }
   }
 
