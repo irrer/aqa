@@ -32,27 +32,51 @@ import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Db.driver.api._
 import org.aqa.web.AnonymousTranslate
+import org.aqa.web.MachineXml
 
 import java.io.File
 
+/**
+  * Representation of a treatment machine in the database with utilities.
+  *
+  * @param machinePK primary key
+  * @param id alias identifying name
+  * @param id_real real name uniquely identifying name within hosting institution
+  * @param machineTypePK type of machine foreign key
+  * @param configurationDirectory directory containing configuration files unique to this machine
+  * @param multileafCollimatorPK collimator
+  * @param epidPK EPID reference
+  * @param institutionPK institution that this machine belongs to
+  * @param serialNumber encrypted version of the machine's serial number.  Becomes defined when a user associates data with it via the web interface.
+  * @param imagingBeam2_5_mv True if this is supported.  Defaults to false.
+  * @param onboardImager True if this is supported.  Defaults to false.
+  * @param table6DOF True if (six degrees of freedom table) is supported.  Defaults to false.
+  * @param respiratoryManagement True if this is supported.  Defaults to false.
+  * @param developerMode True if this is supported.  Defaults to false.
+  * @param active True if the machine is actively being used.  Defaults to true.  Setting to false may exclude this machine's data from some reports.
+  * @param tpsID_real Equivalent DICOM: 3002,0020 RadiationMachineName.  ID of the machine in its associated treatment planning system.  Stored as encrypted.
+  * @param notes optional further information as free text
+  *
+  * @author Jim Irrer irrer@med.umich.edu
+  */
 case class Machine(
-    machinePK: Option[Long], // primary key
-    id: String, // alias identifying name
-    id_real: Option[String], // real name uniquely identifying name within hosting institution
-    machineTypePK: Long, // type of machine foreign key
-    configurationDirectory: Option[String], // directory containing configuration files unique to this machine
-    multileafCollimatorPK: Long, // collimator
-    epidPK: Long, // EPID
-    institutionPK: Long, // institution that this machine belongs to
-    serialNumber: Option[String], // encrypted version of the machine's serial number.  Becomes defined when a user associates data with it via the web interface.
-    imagingBeam2_5_mv: Boolean, // True if this is supported.  Defaults to false.
-    onboardImager: Boolean, // True if this is supported.  Defaults to false.
-    table6DOF: Boolean, // True if (six degrees of freedom table) is supported.  Defaults to false.
-    respiratoryManagement: Boolean, // True if this is supported.  Defaults to false.
-    developerMode: Boolean, // True if this is supported.  Defaults to false.
-    active: Boolean, // True if the machine is actively being used.  Defaults to true.  Setting to false may exclude this machine's data from some reports.
-    tpsID_real: Option[String], // Equivalent DICOM: 3002,0020 RadiationMachineName.  ID of the machine in its associated treatment planning system.  Stored as encrypted.
-    notes: String // optional further information
+    machinePK: Option[Long],
+    id: String,
+    id_real: Option[String],
+    machineTypePK: Long,
+    configurationDirectory: Option[String],
+    multileafCollimatorPK: Long,
+    epidPK: Long,
+    institutionPK: Long,
+    serialNumber: Option[String],
+    imagingBeam2_5_mv: Boolean,
+    onboardImager: Boolean,
+    table6DOF: Boolean,
+    respiratoryManagement: Boolean,
+    developerMode: Boolean,
+    active: Boolean,
+    tpsID_real: Option[String],
+    notes: String // optional further information as free text
 ) extends Logging {
 
   def insert: Machine = {
@@ -60,12 +84,15 @@ case class Machine(
     val action = insertQuery += this
     val result = Db.run(action)
     AnonymousTranslate.clearCache(institutionPK)
+    MachineXml.clearCache(Some(institutionPK))
+
     result
   }
 
   def insertOrUpdate(): Int = {
     val count = Db.run(Machine.query.insertOrUpdate(this))
     AnonymousTranslate.clearCache(institutionPK)
+    MachineXml.clearCache(Some(institutionPK))
     count
   }
 
@@ -130,6 +157,13 @@ case class Machine(
       case _       => None
     }
   }
+
+  /**
+    * Get the real (de-anonymized) notes for this machine.
+    *
+    * @return The decrypted notes for this machine.
+    */
+  def getRealNotes: String = AnonymizeUtil.decryptWithNonce(institutionPK, notes)
 
   def distinctBy[T, C](list: Iterable[T], func: T => C): Iterable[T] = {
     list.groupBy(func).map(_._2.head)
@@ -299,10 +333,26 @@ object Machine extends Logging {
 
   val query = TableQuery[MachineTable]
 
+  /**
+    * Get the machine with the given PK.  If it does not exist, return None.
+    * @param machinePK Machine's machinePK.
+    * @return machine if it exists.
+    */
   def get(machinePK: Long): Option[Machine] = {
     val action = query.filter(m => m.machinePK === machinePK)
     val list = Db.run(action.result)
     list.headOption
+  }
+
+  /**
+    * Get the list of machines for the given institution.
+    * @param institutionPK institutionPK
+    * @return List of machines.
+    */
+  def getForInstitution(institutionPK: Long): Seq[Machine] = {
+    val action = query.filter(m => m.institutionPK === institutionPK)
+    val list = Db.run(action.result)
+    list
   }
 
   /**
@@ -371,6 +421,7 @@ object Machine extends Logging {
       val count = Db.run(action)
       deleteConfigDir(machine.get)
       AnonymousTranslate.clearCache(machine.get.institutionPK)
+      MachineXml.clearCache(Some(machine.get.institutionPK))
       count
     } else 0
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Regents of the University of Michigan
+ * Copyright 2023 Regents of the University of Michigan
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,20 +63,25 @@ import org.restlet.security.ChallengeAuthenticator
 
 import java.io.File
 
+/**
+  * Provide support for serving web pages.  Check incoming requests for proper authentication and authorization and route them to the proper web page.
+  *
+  * @author Jim Irrer irrer@med.umich.edu
+  */
 object WebServer {
   val challengeScheme: ChallengeScheme = ChallengeScheme.HTTP_BASIC
 
-  val staticDirBaseUrl: String = "/" + Config.staticDirName
+  private val staticDirBaseUrl: String = "/" + Config.staticDirName
 
-  val resultsDirBaseUrl: String = "/" + Config.resultsDirName
+  private val resultsDirBaseUrl: String = "/" + Config.resultsDirName
   val tmpDirBaseUrl: String = "/" + Config.tmpDirName
-  val machineConfigurationDirBaseUrl: String = "/" + Config.machineConfigurationDirName
+  private val machineConfigurationDirBaseUrl: String = "/" + Config.machineConfigurationDirName
 
-  def urlOfPath(baseUrl: String, filePath: String): String = (baseUrl + "/" + filePath.replace('\\', '/')).replaceAll("///*", "/")
+  private def urlOfPath(baseUrl: String, filePath: String): String = (baseUrl + "/" + filePath.replace('\\', '/')).replaceAll("///*", "/")
 
   def urlOfResultsPath(filePath: String): String = urlOfPath(resultsDirBaseUrl, filePath)
 
-  def urlOfTmpPath(filePath: String): String = urlOfPath(tmpDirBaseUrl, filePath)
+  private def urlOfTmpPath(filePath: String): String = urlOfPath(tmpDirBaseUrl, filePath)
 
   def urlOfMachineConfigurationPath(filePath: String): String = urlOfPath(machineConfigurationDirBaseUrl, filePath)
 
@@ -90,9 +95,9 @@ object WebServer {
 
   def fileToResultsPath(file: File): String = file.getAbsolutePath.substring(Config.resultsDirFile.getAbsolutePath.length)
 
-  def fileToTmpPath(file: File): String = file.getAbsolutePath.substring(Config.tmpDirFile.getAbsolutePath.length)
+  private def fileToTmpPath(file: File): String = file.getAbsolutePath.substring(Config.tmpDirFile.getAbsolutePath.length)
 
-  def fileToMachineConfigurationPath(file: File): String = file.getAbsolutePath.substring(Config.machineConfigurationDir.getAbsolutePath.length)
+  private def fileToMachineConfigurationPath(file: File): String = file.getAbsolutePath.substring(Config.machineConfigurationDir.getAbsolutePath.length)
 
 }
 
@@ -529,6 +534,7 @@ class WebServer extends Application with Logging {
         new PatientProcedureList,
         new PatientProcedureUpdate,
         new PatientProcedureXml,
+        new MachineXml,
         new ProcedureUpdate,
         new ProcedureList,
         new ServiceInfo,

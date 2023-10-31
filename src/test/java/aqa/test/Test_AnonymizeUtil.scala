@@ -34,6 +34,7 @@ import java.io.File
 /**
   * Test AnonymizeUtil.
   *
+  * @author Jim Irrer irrer@med.umich.edu
   */
 
 class Test_AnonymizeUtil extends FlatSpec with Matchers {
@@ -57,7 +58,7 @@ class Test_AnonymizeUtil extends FlatSpec with Matchers {
               "  machInst: " + mach.institutionPK +
               " with inst " + inst.name +
               " to " + id +
-              "    mach notes " + AnonymizeUtil.decryptWithNonce(inst.institutionPK.get, mach.notes)
+              "    mach notes " + mach.getRealNotes
           )
         }
       }
@@ -71,7 +72,7 @@ class Test_AnonymizeUtil extends FlatSpec with Matchers {
       val id_enc = AnonymizeUtil.encryptWithNonce(machine.institutionPK, id_r)
       val note_enc = AnonymizeUtil.encryptWithNonce(machine.institutionPK, "")
       val mach2 = machine.copy(id_real = Some(id_enc), notes = note_enc)
-      mach2.insertOrUpdate
+      mach2.insertOrUpdate()
     }
 
     System.exit(99)
