@@ -77,7 +77,7 @@ object WebServer {
   val tmpDirBaseUrl: String = "/" + Config.tmpDirName
   private val machineConfigurationDirBaseUrl: String = "/" + Config.machineConfigurationDirName
 
-  private def urlOfPath(baseUrl: String, filePath: String): String = (baseUrl + "/" + filePath.replace('\\', '/')).replaceAll("///*", "/")
+  private def urlOfPath(baseUrl: String, filePath: String): String = (baseUrl + "/" + filePath.replace('\\', '/')).replaceAll("//+", "/")
 
   def urlOfResultsPath(filePath: String): String = urlOfPath(resultsDirBaseUrl, filePath)
 
@@ -324,12 +324,12 @@ class WebServer extends Application with Logging {
     challengeAuthentication.setVerifier(new AuthenticationVerifier(getRequestedRole))
     challengeAuthentication.setNext(restlet)
 
-    def checkAuthorization(request: Request, response: Response, challResp: ChallengeResponse): Unit = {
+    def checkAuthorization(request: Request, response: Response, challengeResp: ChallengeResponse): Unit = {
       try {
         val requestedRole = getRequestedRole(request, response)
 
         if (requestedRole.id != UserRole.publik.id) { // let anyone into public areas
-          val userOpt = CachedUser.get(challResp.getIdentifier, new String(challResp.getSecret))
+          val userOpt = CachedUser.get(challengeResp.getIdentifier, new String(challengeResp.getSecret))
           userOpt match {
             case Some(user) =>
               if (user.getRole.get.id < requestedRole.id) {
@@ -366,9 +366,11 @@ class WebServer extends Application with Logging {
           logger.info("Starting HTTP operation.   inUseCount: " + inUseCount + "    Maximum number of simultaneous HTTP connections since server was started: " + maxAttainedHttpActiveCount)
         }
 
-        // If there are no credentials, then let the authenticator decide whether to
-        // accept or reject the request.  If rejected (not publik), then it will
-        // send a challenge request to the client.
+        //noinspection SpellCheckingInspection
+        /* If there are no credentials, then let the authenticator decide whether to
+         * accept or reject the request.  If rejected (not publik), then it will
+         * send a challenge request to the client.
+         */
         request.getChallengeResponse match {
           case null => Filter.CONTINUE
           case cr =>
@@ -439,22 +441,24 @@ class WebServer extends Application with Logging {
               "\n    " + path
           )
         }
-        // TODO Problem : If css and js is served from Cloudflare, they work, but if served from AQA, they don't.
-        // The problem shows up for tabs in the online spreadsheet viewer and timedatepicker.
-        //                if (request.toString.contains("css")) {
-        //                    val headers = response.getHeaders.toArray.toSeq
-        //                    val entity = response.getEntity
-        //                    val mediaType = if (entity == null) null else entity.getMediaType
-        //                    val charSet = if (entity == null) null else entity.getCharacterSet
-        //                    if (entity != null) {
-        //                        entity.setCharacterSet(null)
-        //                    }
-        //                    println("request: " + request)
-        //                    println("    media type: " + mediaType)
-        //                    println("    charSet: " + charSet)
-        //                    println("    num headers: " + headers.size)
-        //                    headers.map(h => println("    " + h))
-        //                }
+        //noinspection SpellCheckingInspection
+        /* TODO Problem : If css and js is served from Cloudflare, they work, but if served from AQA, they don't.
+         * The problem shows up for tabs in the online spreadsheet viewer and timedatepicker.
+         *                if (request.toString.contains("css")) {
+         *                    val headers = response.getHeaders.toArray.toSeq
+         *                    val entity = response.getEntity
+         *                    val mediaType = if (entity == null) null else entity.getMediaType
+         *                    val charSet = if (entity == null) null else entity.getCharacterSet
+         *                    if (entity != null) {
+         *                        entity.setCharacterSet(null)
+         *                    }
+         *                    println("request: " + request)
+         *                    println("    media type: " + mediaType)
+         *                    println("    charSet: " + charSet)
+         *                    println("    num headers: " + headers.size)
+         *                    headers.map(h => println("    " + h))
+         *                 }
+         */
       }
     }
 

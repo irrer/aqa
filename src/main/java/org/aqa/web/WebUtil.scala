@@ -1702,7 +1702,7 @@ object WebUtil extends Logging {
     }
   }
 
-  def attributeListsInSession(valueMap: ValueMapT): Seq[AttributeList] = {
+  private def attributeListsInSession(valueMap: ValueMapT): Seq[AttributeList] = {
     dicomFilesInSession(valueMap).flatMap(df => df.attributeList)
   }
 
