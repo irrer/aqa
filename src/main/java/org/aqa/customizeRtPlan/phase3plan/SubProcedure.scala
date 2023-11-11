@@ -1,4 +1,4 @@
-package org.aqa.phase3plan
+package org.aqa.customizeRtPlan.phase3plan
 
 import com.pixelmed.dicom.AttributeList
 import org.aqa.Logging
@@ -10,7 +10,7 @@ import scala.xml.Elem
 /**
   * Abstraction layer that defines common interface for sub-procedures.
   */
-abstract class SubProcedure(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], allBeamsList: Seq[Beam]) extends Logging {
+abstract class SubProcedure(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy]) extends Logging {
 
   /**
     * Name of this sub procedure.
@@ -36,6 +36,16 @@ abstract class SubProcedure(machine: Machine, beamEnergyList: Seq[MachineBeamEne
     * @return List of beams.
     */
   def update(checkboxIdList: Seq[String]): Seq[Beam]
+
+
+  /**
+   * Given the beams from the original plans, return a list of beams that the user can choose from.
+   * @param prototypeBeamList All beams from configured rtplans.
+   * @return List of beams applicable to this sub-procedure.
+   */
+  def getBeamList(prototypeBeamList: Seq[Beam]): Seq[Beam]
+
+
 
   /**
     * Generate the list of beams to be put in the plan.

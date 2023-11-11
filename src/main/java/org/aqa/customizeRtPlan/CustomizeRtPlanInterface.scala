@@ -42,6 +42,12 @@ object CustomizeRtPlanInterface {
 
   val interface = new CustomizeRtPlanInterface
 
+  val machineIdTag = "MachineId"
+  val patientIdTag = "Patient ID"
+  val patientNameTag = "Patient Name"
+  val machineNameTag = "Machine Name"
+  val planNameTag = "Plan Name"
+  val toleranceTableNameTag = "Tolerance Table Name"
 }
 
 /**
@@ -50,8 +56,6 @@ object CustomizeRtPlanInterface {
 class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
 
   private val pageTitleSelect = "Select Plan Parameters"
-
-  private val machineIdTag = "MachineId"
 
   private val defaultPlanName = "AQA Plan"
 
@@ -73,11 +77,11 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     </h3>
   }
 
-  val machineId = new WebPlainText(machineIdTag, false, 6, 0, machineIdHtml)
+  val machineId = new WebPlainText(CustomizeRtPlanInterface.machineIdTag, false, 6, 0, machineIdHtml)
 
-  private def toleranceTable = new WebInputText("Tolerance Table Name", true, 2, 0, "Should match name in planning system", false)
+  private def toleranceTable = new WebInputText(CustomizeRtPlanInterface.toleranceTableNameTag, true, 2, 0, "Should match name in planning system", false)
 
-  private def planName = new WebInputText("Plan Name", true, 2, 0, "Name to distinguish this plan from others", false)
+  private def planName = new WebInputText(CustomizeRtPlanInterface.planNameTag, true, 2, 0, "Name to distinguish this plan from others", false)
 
   /**
     * Name by which machine is referenced in DICOM files.  Often different than the common reference to the machine.
@@ -85,12 +89,12 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     * @return Machine name.
     */
   private def machineName = {
-    new WebInputText("Machine Name", true, 2, 0, "To match planning system", false)
+    new WebInputText(CustomizeRtPlanInterface.machineNameTag, true, 2, 0, "To match planning system", false)
   }
 
-  private def patientID = new WebInputText("Patient ID", true, 3, 0, "")
+  private def patientID = new WebInputText(CustomizeRtPlanInterface.patientIdTag, true, 3, 0, "")
 
-  private def patientName = new WebInputText("Patient Name", true, 3, 0, "")
+  private def patientName = new WebInputText(CustomizeRtPlanInterface.patientNameTag, true, 3, 0, "")
 
   private val row0: WebRow = List(machineId)
   private val row2: WebRow = List(toleranceTable, planName, machineName)

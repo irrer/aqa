@@ -1552,6 +1552,22 @@ object Util extends Logging {
     }
   }
 
+  /**
+   * Determine if the beam is an FFF beam.
+   * Throw an exception if more than one beam (e.g. an entire rtplan) is specified.
+   *
+   * @param beam Attribute list for just one beam.
+   * @return True if it is an FFF beam.
+   */
+  def isFFF(beam: AttributeList): Boolean = {
+    val fluenceList = DicomUtil.findAllSingle(beam, TagByName.FluenceModeID)
+    fluenceList.size match {
+      case 0 => false
+      case 1 => fluenceList.head.getSingleStringValueOrEmptyString.trim.toUpperCase().equals("FFF")
+      case _ => throw new RuntimeException("More than one beam specified in call to isFFF.")
+    }
+  }
+
   def main(args: Array[String]): Unit = {
     //
   }
