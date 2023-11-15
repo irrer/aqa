@@ -395,19 +395,70 @@ object CustomizeRtPlanUtil extends Logging {
 
     for (i <- beamList.indices) {
       seq.addItem(beamList(i))
-      if (i == index) seq.addItem(beamAl)
+      if (i == index)
+        seq.addItem(beamAl)
     }
 
     rtplan.put(seq)
   }
 
   /**
+    * Given a prototype beam, rake a copy with the given characteristics.
+    *
+    * @param machineEnergy Use these parameters.
+    * @param prototypeBeam Start with this beam.
+    * @param BeamName New name of beam.
+    * @param BeamNumber New number of beam.
+    * @return Modified copy of prototype.
+    */
+  def makeBeam(machineEnergy: MachineBeamEnergy, prototypeBeam: AttributeList, BeamName: String, BeamNumber: Int): AttributeList = {
+    val beamAl = DicomUtil.clone(prototypeBeam)
+
+    def setBeamNumber(tag: AttributeTag): Unit = {
+      val beamNum = beamAl.get(tag)
+      beamNum.removeValues()
+      beamNum.addValue(BeamNumber)
+    }
+
+    setBeamNumber(TagByName.BeamNumber)
+    setBeamNumber(TagByName.ReferencedPatientSetupNumber)
+
+    val BeamNameAttr = beamAl.get(TagByName.BeamName)
+    BeamNameAttr.removeValues()
+    BeamNameAttr.addValue(BeamName)
+
+    setFluence(beamAl, machineEnergy.isFFF)
+    changeNominalBeamEnergy(beamAl, machineEnergy.photonEnergy_MeV.get)
+    val maxDoseRate: Double =
+      machineEnergy.maxDoseRate_MUperMin match {
+        case Some(mdr) => mdr
+        case _         => 6.0
+      }
+    changeDoseRate(beamAl, maxDoseRate)
+
+    beamAl
+  }
+
+  /**
     * Add a beam that supports the given machine energy.  Do it by copying and modifying both prototypes.  The original prototypes are
     * not changed, but rtplan is changed.
+    *
+    * @param rtplan Add to this RTPLAN.
+    * @param machineEnergy Make beam with these values.
+    * @param prototypeBeam Made from a copy of this beam.
+    * @param prototypeFractionReference fraction item.
+    *
+    * @return Cloned beam with new values.
     */
-  def addBeam(rtplan: AttributeList, machineEnergy: MachineBeamEnergy, prototypeBeam: AttributeList, prototypeFractionReference: AttributeList): Unit = {
+  def addBeam(
+      rtplan: AttributeList,
+      machineEnergy: MachineBeamEnergy,
+      prototypeBeam: AttributeList,
+      prototypeFractionReference: AttributeList,
+      BeamNameOpt: Option[String] = None
+  ): AttributeList = {
     val BeamNumber = getAvailableBeamNumber(rtplan)
-    val beamAl = DicomUtil.clone(prototypeBeam)
+    // val beamAl = DicomUtil.clone(prototypeBeam)
     val fraction = DicomUtil.clone(prototypeFractionReference)
 
     // modify the fraction
@@ -415,30 +466,17 @@ object CustomizeRtPlanUtil extends Logging {
     ReferencedBeamNumber.removeValues()
     ReferencedBeamNumber.addValue(BeamNumber)
 
-    // modify the beam
+    val BeamName =
+      if (BeamNameOpt.isDefined)
+        BeamNameOpt.get
+      else {
+        val energy = machineEnergy.photonEnergy_MeV.get
+        val numText = if (energy.round == energy) energy.round.toString else Util.fmtDbl(energy)
+        val fffText = if (machineEnergy.isFFF) "F" else "X"
+        Config.PrefixForMachineDependentBeamName + numText + fffText
+      }
 
-    val beamNum = beamAl.get(TagByName.BeamNumber)
-    beamNum.removeValues()
-    beamNum.addValue(BeamNumber)
-
-    val refPatSetupNumber = beamAl.get(TagByName.ReferencedPatientSetupNumber)
-    refPatSetupNumber.removeValues()
-    refPatSetupNumber.addValue(BeamNumber)
-
-    val beamNameText = {
-      val energy = machineEnergy.photonEnergy_MeV.get
-      val numText = if (energy.round == energy) energy.round.toString else Util.fmtDbl(energy)
-      val fffText = if (machineEnergy.isFFF) "F" else "X"
-      Config.PrefixForMachineDependentBeamName + numText + fffText
-    }
-
-    val BeamNameAttr = beamAl.get(TagByName.BeamName)
-    BeamNameAttr.removeValues()
-    BeamNameAttr.addValue(beamNameText)
-
-    setFluence(beamAl, machineEnergy.isFFF)
-    changeNominalBeamEnergy(beamAl, machineEnergy.photonEnergy_MeV.get)
-    changeDoseRate(beamAl, machineEnergy.maxDoseRate_MUperMin.get)
+    val beamAl = makeBeam(machineEnergy, prototypeBeam, BeamName: String, BeamNumber)
 
     insertBeam(rtplan, beamAl)
 
@@ -446,6 +484,8 @@ object CustomizeRtPlanUtil extends Logging {
     val ReferencedBeamSequence = FractionGroupSequence.get(TagByName.ReferencedBeamSequence).asInstanceOf[SequenceAttribute]
     ReferencedBeamSequence.addItem(fraction)
     addPatientSetup(rtplan, BeamNumber)
+
+    beamAl
   }
 
   private def showBeamList(rtplan: AttributeList): String = {
