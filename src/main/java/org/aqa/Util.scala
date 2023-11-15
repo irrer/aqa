@@ -294,7 +294,8 @@ object Util extends Logging {
       (TagByName.ContentDate, TagByName.ContentTime),
       (TagByName.AcquisitionDate, TagByName.AcquisitionTime),
       (TagByName.CreationDate, TagByName.CreationTime),
-      (TagByName.SeriesDate, TagByName.SeriesTime)
+      (TagByName.SeriesDate, TagByName.SeriesTime),
+      (TagByName.RTPlanDate, TagByName.RTPlanTime)
     )
 
     val AcquisitionDateTime = getTimeAndDate(attributeList)
