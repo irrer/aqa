@@ -75,8 +75,8 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
     beamList
   }
 
-  private def subProcedureList(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy]): Seq[SubProcedure] = {
-    Seq(new SPFocalSpot(machine, beamEnergyList))
+  private def subProcedureList(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator): Seq[SubProcedure] = {
+    Seq(new SPFocalSpot(machine, beamEnergyList, multileafCollimator))
   }
 
   /*
@@ -94,7 +94,8 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
    */
   private def makeBeamList(machine: Machine): Seq[Beam] = {
     val beamEnergyList = CustomizeRtPlanUtil.getMachineEnergyList(machine.machinePK.get)
-    val subProcList = subProcedureList(machine, beamEnergyList)
+    val multileafCollimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
+    val subProcList = subProcedureList(machine, beamEnergyList, multileafCollimator )
     val beamList = subProcList.flatMap(subProc => subProc.getBeamList(prototypeBeams(machine)))
     beamList
   }

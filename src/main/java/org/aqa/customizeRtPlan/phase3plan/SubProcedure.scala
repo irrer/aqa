@@ -4,13 +4,14 @@ import com.pixelmed.dicom.AttributeList
 import org.aqa.Logging
 import org.aqa.db.Machine
 import org.aqa.db.MachineBeamEnergy
+import org.aqa.db.MultileafCollimator
 
 import scala.xml.Elem
 
 /**
   * Abstraction layer that defines common interface for sub-procedures.
   */
-abstract class SubProcedure(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy]) extends Logging {
+abstract class SubProcedure(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator) extends Logging {
 
   /**
     * Name of this sub procedure.

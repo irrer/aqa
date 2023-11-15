@@ -3,14 +3,16 @@ package org.aqa.customizeRtPlan.phase3plan
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Machine
 import org.aqa.db.MachineBeamEnergy
 import org.aqa.Config
+import org.aqa.customizeRtPlan.CustomizeRtPlanUtil
+import org.aqa.db.MultileafCollimator
+import org.aqa.Util
 
 import scala.xml.Elem
 
-class SPFocalSpot(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy]) extends SubProcedure(machine, beamEnergyList) {
+class SPFocalSpot(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator) extends SubProcedure(machine, beamEnergyList, multileafCollimator) {
 
   override val name = "FocalSpot"
 
@@ -49,44 +51,41 @@ class SPFocalSpot(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy]) exte
   override def getBeamList(prototypeBeamList: Seq[Beam]): Seq[Beam] = {
     val list = prototypeBeamList.filter(beam => Config.FocalSpotBeamNameList.contains(beam.beamName)).sortBy(_.beamName)
 
-    Trace.trace(list.mkString("\n")) // TODO rm
-    val fffPrototype = list.filter(_.isFFF).groupBy(_.energy_MeV).values.head
-    val normalProtoType = list.filterNot(_.isFFF).groupBy(_.energy_MeV).values.head
+    val prototypeSet = list.filterNot(_.isFFF).groupBy(beam => s"${beam.isFFF} ${beam.energy_MeV}").values.head
 
-    def setEnergy(beam: Beam, energy: MachineBeamEnergy, beamType: String): Beam = {
-      val isMLC = DicomUtil.findAllSingle(beam.al, TagByName.LeafJawPositions).map(_.getDoubleValues).exists(ljp => ljp.length > 2)
-      val limitName = if (isMLC) "MLC" else "JAW"
+    def setEnergyOfSet(machineBeamEnergy: MachineBeamEnergy): Seq[Beam] = {
 
-      val beamName = s"${energy.fffEnergy_MeV.get.round.toString}$beamType-10-$limitName-${beam.colAngle_roundedDeg}"
+      def makeBeam(prototypeBeam: AttributeList): Beam = {
 
-      val newAl = DicomUtil.clone(beam.al)
-
-      def setBeamName: Unit = {
-        val at = newAl.get(TagByName.BeamName)
-        at.removeValues()
-        at.addValue(beamName)
+        val BeamName = {
+          val beamType = if (machineBeamEnergy.isFFF) "fff" else "x"
+          val isMLC = DicomUtil.findAllSingle(prototypeBeam, TagByName.LeafJawPositions).map(_.getDoubleValues).exists(ljp => ljp.length > 2)
+          val limitName = if (isMLC) "MLC" else "Jaw"
+          val colAngle = Util.angleRoundedTo90(Util.collimatorAngle(prototypeBeam))
+          s"${machineBeamEnergy.photonEnergy_MeV.get.round.toString}$beamType-10-$limitName-$colAngle"
+        }
+        val beamAl = CustomizeRtPlanUtil.makeBeam(
+          machineEnergy = machineBeamEnergy,
+          prototypeBeam,
+          BeamName,
+          1 // This gets overwritten when the rtplan is created.
+        )
+        new Beam(beamAl)
       }
 
-      def setNominalBeamEnergy: Unit = {
-        val at = newAl.get(TagByName.NominalBeamEnergy)
-        at.removeValues()
-        at.addValue(energy.fffEnergy_MeV.get)
-      }
-
-      setBeamName
-      setNominalBeamEnergy
-
-      Beam(newAl)
+      prototypeSet.map(beam => makeBeam(beam.al))
     }
 
-    def setEnergyOfSet(energy: MachineBeamEnergy, beamList: Seq[Beam], beamType: String): Seq[Beam] = {
-      beamList.map(beam => setEnergy(beam, energy, beamType))
-    }
+    /**
+      * Determine if this beam energy has the necessary data to be used to make beams.
+      * @param beamEnergy machine beam energy.
+      * @return True if ok
+      *         TODO Maybe instead this should assume a default.  Waiting on Justin's input.
+      */
+    def ok(beamEnergy: MachineBeamEnergy): Boolean = beamEnergy.photonEnergy_MeV.isDefined && beamEnergy.maxDoseRate_MUperMin.isDefined
 
-    val fff = beamEnergyList.filter(_.isFFF).map(energy => setEnergyOfSet(energy, fffPrototype, "fff"))
-    val normal = beamEnergyList.filterNot(_.isFFF).map(energy => setEnergyOfSet(energy, normalProtoType, "X"))
-    val both = (fff ++ normal).flatten
-    both
+    val beamList = beamEnergyList.filter(ok).flatMap(energy => setEnergyOfSet(energy))
+    beamList
   }
 
   override def generatePlan(checkboxIdList: Seq[String]): Seq[AttributeList] = {
