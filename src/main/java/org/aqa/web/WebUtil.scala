@@ -515,6 +515,8 @@ object WebUtil extends Logging {
   def internalFailure(response: Response, message: String): Unit = {
     val status = Status.SERVER_ERROR_INTERNAL
 
+    logger.error(s"Unexpected internal failure/exception: $message")
+
     val content = {
       <div>
         {status.toString}<p>
