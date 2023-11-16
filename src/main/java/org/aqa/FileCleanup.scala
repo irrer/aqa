@@ -37,7 +37,7 @@ object FileCleanup extends Logging {
         val old = System.currentTimeMillis() - Config.MinimumDataSetRetentionAge_ms
         val deleteList = {
           val all = Util.listDirFiles(dir.get).sortBy(_.lastModified())
-          Trace.trace("FileCleanup dir: " + dir.get.getAbsolutePath + " : " + all.size)
+          // Trace.trace("FileCleanup dir: " + dir.get.getAbsolutePath + " : " + all.size)
           all.dropRight(Config.MaximumDataSetRetentionCount).filter(_.lastModified() < old)
         }
 
