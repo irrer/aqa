@@ -12,22 +12,58 @@ import org.aqa.Util
 
 import scala.xml.Elem
 
-class SPFocalSpot(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator) extends SubProcedure(machine, beamEnergyList, multileafCollimator) {
+class SPFocalSpot(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator, prototypeBeamList: Seq[Beam])
+    extends SubProcedure(machine, beamEnergyList, multileafCollimator, prototypeBeamList) {
 
-  override val name = "FocalSpot"
+  override val name = "Focal Spot"
 
-  private case class FSBeam(energy: Double, fff: Boolean, isJaw: Boolean, colAngle: Int) {}
+  private val fsPrototypeList = prototypeBeamList.filter(beam => Config.FocalSpotBeamNameList.contains(beam.beamName)).sortBy(_.beamName)
+
+  private val prototypeSet = fsPrototypeList.filterNot(_.isFFF).groupBy(beam => s"${beam.isFFF} ${beam.beamEnergy.photonEnergy_MeV.get}").values.head
 
   /**
-    * Construct a unique checkbox ID from a beam energy.  They are constructed using the beam energy and the FFF flag.
+    * Make a name for a beam.
     * @param machineBeamEnergy For this energy.
-    * @return HTML ID
+    * @param prototypeBeam Based on this beam.
+    * @return Name of beam.
     */
-  private def toCheckboxId(machineBeamEnergy: MachineBeamEnergy): String = {
-    def energy = machineBeamEnergy.photonEnergy_MeV.get.toString.replaceAll("0$", "").replaceAll("\\.$", "")
-    def kind = if (machineBeamEnergy.fffEnergy_MeV.isDefined && (machineBeamEnergy.fffEnergy_MeV.get != 0)) "X" else "FFF"
-    s"$name-$energy-$kind"
+  private def makeBeamName(machineBeamEnergy: MachineBeamEnergy, prototypeBeam: AttributeList) = {
+    val beamType = if (machineBeamEnergy.isFFF) "fff" else "x"
+    val isMLC = DicomUtil.findAllSingle(prototypeBeam, TagByName.LeafJawPositions).map(_.getDoubleValues).exists(ljp => ljp.length > 2)
+    val limitName = if (isMLC) "MLC" else "Jaw"
+    val colAngle = Util.angleRoundedTo90(Util.collimatorAngle(prototypeBeam))
+    s"${machineBeamEnergy.photonEnergy_MeV.get.round.toString}$beamType-10-$limitName-$colAngle"
   }
+
+  private def setEnergyOfSet(prototypeSet: Seq[Beam], machineBeamEnergy: MachineBeamEnergy): Selection = {
+
+    def makeBeam(prototypeBeam: AttributeList): Beam = {
+
+      val beamName = makeBeamName(machineBeamEnergy, prototypeBeam)
+
+      val beamAl = CustomizeRtPlanUtil.makeBeam(
+        machineEnergy = machineBeamEnergy,
+        prototypeBeam,
+        beamName,
+        1 // This gets overwritten when the rtplan is created.
+      )
+      new Beam(prototypeBeam, beamName, machineBeamEnergy)
+    }
+
+    val beamList = prototypeSet.map(beam => makeBeam(beam.prototypeBeam))
+    val energyType = if (machineBeamEnergy.isFFF) "FFF" else "X"
+    val energyText = {
+      val e = machineBeamEnergy.photonEnergy_MeV.get
+      if (e.round == e)
+        e.round.toString
+      else
+        Util.fmtDbl(e)
+    }
+    val selectionName = s" $energyText $energyType"
+    Selection(this, selectionName, beamList)
+  }
+
+  private val sfSelectionList = beamEnergyList.map(energy => setEnergyOfSet(prototypeSet, energy))
 
   def toFsBeam(beam: Beam): Elem = ???
 
@@ -36,9 +72,7 @@ class SPFocalSpot(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], mult
     pair
   }
 
-  override def checkboxIdList: Seq[String] = {
-    beamEnergyList.map(toCheckboxId)
-  }
+  override def selectionList: Seq[Selection] = sfSelectionList
 
   override def setBeamList(beamList: Seq[Beam]): Elem = {
     beamList.map(toFsBeam)
@@ -48,45 +82,8 @@ class SPFocalSpot(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], mult
   override def update(checkboxIdList: Seq[String]): Seq[Beam] = {
     ???
   }
-  override def getBeamList(prototypeBeamList: Seq[Beam]): Seq[Beam] = {
-    val list = prototypeBeamList.filter(beam => Config.FocalSpotBeamNameList.contains(beam.beamName)).sortBy(_.beamName)
 
-    val prototypeSet = list.filterNot(_.isFFF).groupBy(beam => s"${beam.isFFF} ${beam.energy_MeV}").values.head
-
-    def setEnergyOfSet(machineBeamEnergy: MachineBeamEnergy): Seq[Beam] = {
-
-      def makeBeam(prototypeBeam: AttributeList): Beam = {
-
-        val BeamName = {
-          val beamType = if (machineBeamEnergy.isFFF) "fff" else "x"
-          val isMLC = DicomUtil.findAllSingle(prototypeBeam, TagByName.LeafJawPositions).map(_.getDoubleValues).exists(ljp => ljp.length > 2)
-          val limitName = if (isMLC) "MLC" else "Jaw"
-          val colAngle = Util.angleRoundedTo90(Util.collimatorAngle(prototypeBeam))
-          s"${machineBeamEnergy.photonEnergy_MeV.get.round.toString}$beamType-10-$limitName-$colAngle"
-        }
-        val beamAl = CustomizeRtPlanUtil.makeBeam(
-          machineEnergy = machineBeamEnergy,
-          prototypeBeam,
-          BeamName,
-          1 // This gets overwritten when the rtplan is created.
-        )
-        new Beam(beamAl)
-      }
-
-      prototypeSet.map(beam => makeBeam(beam.al))
-    }
-
-    /**
-      * Determine if this beam energy has the necessary data to be used to make beams.
-      * @param beamEnergy machine beam energy.
-      * @return True if ok
-      *         TODO Maybe instead this should assume a default.  Waiting on Justin's input.
-      */
-    def ok(beamEnergy: MachineBeamEnergy): Boolean = beamEnergy.photonEnergy_MeV.isDefined && beamEnergy.maxDoseRate_MUperMin.isDefined
-
-    val beamList = beamEnergyList.filter(ok).flatMap(energy => setEnergyOfSet(energy))
-    beamList
-  }
+  override def getBeamList: Seq[Beam] = selectionList.flatMap(_.beamList)
 
   override def generatePlan(checkboxIdList: Seq[String]): Seq[AttributeList] = {
     ???

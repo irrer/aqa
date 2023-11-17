@@ -17,10 +17,13 @@ import org.aqa.web.WebUtil._
 import org.aqa.Config
 import org.aqa.DicomFile
 import org.aqa.customizeRtPlan.CustomizeRtPlanUtil
-import org.restlet.Request
-import org.restlet.Response
+import org.aqa.db.MachineType
 import org.restlet.Restlet
 import org.restlet.data.Status
+import org.restlet.Request
+import org.restlet.Response
+
+import scala.xml.Elem
 
 class Phase3HTML extends Restlet with SubUrlRoot with Logging {
 
@@ -55,9 +58,8 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
    */
   private def prototypeBeams(machine: Machine): Seq[Beam] = {
 
-    def beamsFromPlan(plan: AttributeList): Seq[Beam] = {
-      DicomUtil.seqToAttr(plan, TagByName.BeamSequence).map(Beam)
-    }
+    def beamsFromPlan(plan: AttributeList): Seq[Beam] = DicomUtil.seqToAttr(plan, TagByName.BeamSequence).map(al => Beam.makeBeamFromAl(machine, al))
+
 
     val collimatorModel = MultileafCollimator.get(machine.multileafCollimatorPK).get.model
 
@@ -76,7 +78,7 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
   }
 
   private def subProcedureList(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator): Seq[SubProcedure] = {
-    Seq(new SPFocalSpot(machine, beamEnergyList, multileafCollimator))
+    Seq(new SPFocalSpot(machine, beamEnergyList, multileafCollimator, prototypeBeams(machine)))
   }
 
   /*
@@ -92,39 +94,82 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
    * @param machine For this machine.
    * @return List of all possible Phase3 beams.
    */
-  private def makeBeamList(machine: Machine): Seq[Beam] = {
-    val beamEnergyList = CustomizeRtPlanUtil.getMachineEnergyList(machine.machinePK.get)
-    val multileafCollimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
-    val subProcList = subProcedureList(machine, beamEnergyList, multileafCollimator )
-    val beamList = subProcList.flatMap(subProc => subProc.getBeamList(prototypeBeams(machine)))
+  private def makeBeamList(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator): Seq[Beam] = {
+    Trace.trace(s"""Machine beam energy list:\n${beamEnergyList.mkString("\n")}""")
+
+    /**
+     * Determine if the machine supports this energy.
+     *
+     * Must match all of: FFF, photonEnergy, and doseRate.
+     *
+     * @param beam For this beam.
+     * @return True if the machine can deliver it.
+     */
+    def beamEnergyIsSupported(beam: Beam): Boolean = {
+      val matching = beamEnergyList.find(e => {
+        (e.isFFF == beam.beamEnergy.isFFF) &&
+          // e.isFFF.toString.equals(beam.beamEnergy.isFFF.toString) &&
+          (e.photonEnergy_MeV.get == beam.beamEnergy.photonEnergy_MeV.get) &&
+          (e.machineBeamEnergyPK.get == beam.beamEnergy.machineBeamEnergyPK.get)
+      })
+      matching.isDefined
+    }
+
+    val subProcList = subProcedureList(machine, beamEnergyList, multileafCollimator)
+    val beamList = {
+      val list = subProcList.flatMap(subProc => subProc.getBeamList)
+      list.filter(beamEnergyIsSupported)
+    }
     beamList
   }
 
   // @formatter:off
-  private def selectedBeamsField(machine: Machine) = {
-    val list = makeBeamList(machine).map(_.beamName)
+  private def selectedBeamsField(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator) = {
+    val list = makeBeamList(machine, beamEnergyList, multileafCollimator).map(_.beamName)
     new WebPlainText(
       label = "Selected Beams", showLabel = false,
       col = 0, offset = 0,
-      valueMap => <span> {list.mkString("  ")} </span>)
+      // valueMap => <span> {list.map(beamName => {<br>{beamName}</br>})} </span>)
+    valueMap => <span> {list.map(beamName => {<span style="margin-left: 32px;">{beamName}</span>})} </span>)
   }
   // @formatter:on
 
+  private def makeSubProcedureSelector(subProcList: Seq[SubProcedure], machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator): List[WebRow] = {
+    def makeSelectorHtml(subProc: SubProcedure): WebRow = {
+      val list = subProc.selectionList.map(s => new WebInputCheckbox(label = s.selectionName, showLabel = true, col = 2, offset = 0))
+      // @formatter:off
+      val empty: Elem = { <span></span>}
+      // @formatter:on
+      val name = new WebPlainText(label = s"${subProc.name}:", showLabel = true, col = 1, offset = 0, _ => empty)
+      (name +: list).toList
+    }
 
+    val checkBoxIdList: List[WebRow] = subProcList.map(makeSelectorHtml).toList
+    checkBoxIdList
+  }
+
+  /** A list of beam energies that the machine supports. If any have an undefined dose rate, then fill it in. */
   private def rowList(machine: Machine): List[WebRow] = {
+    val beamEnergyList = {
+      val machineType = MachineType.get(machine.machineTypePK).get
+      CustomizeRtPlanUtil.getMachineEnergyList(machine.machinePK.get).map(energy => CustomizeRtPlanUtil.resolveEnergy(energy, machineType))
+    }
+
+    val multileafCollimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
+
+    val subProcList = subProcedureList(machine, beamEnergyList, multileafCollimator)
 
     // all hidden fields inherited from and specified in the custom plan interface.
     val rowCommonParameters: WebRow = List(machinePK, patientID, patientName, machineName, planName, toleranceTableName)
 
-    def rowSelectedBeams: WebRow = List(selectedBeamsField(machine))
+    def rowSelectedBeams: WebRow = List(selectedBeamsField(machine, beamEnergyList, multileafCollimator))
+
+    def rowSelectSubProcedures: List[WebRow] = makeSubProcedureSelector(subProcList, machine, beamEnergyList, multileafCollimator)
 
     val rowButton: WebRow = List(cancelButton, createPlanButton)
 
-    List(
-      rowCommonParameters,
-      rowSelectedBeams,
-      rowButton
-    )
+    val rowList: List[WebRow] = List(rowCommonParameters, rowSelectedBeams) ++ rowSelectSubProcedures ++ List(rowButton)
+    rowList
   }
 
   private def formSelect(valueMap: ValueMapT, response: Response, machine: Machine): Unit = {
@@ -175,6 +220,5 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
       case t: Throwable =>
         WebUtil.internalFailure(response, t)
     }
-
   }
 }

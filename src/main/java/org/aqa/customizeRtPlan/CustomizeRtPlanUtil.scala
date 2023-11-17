@@ -35,6 +35,7 @@ import org.aqa.db.DicomAnonymous
 import org.aqa.db.DicomSeries
 import org.aqa.db.Machine
 import org.aqa.db.MachineBeamEnergy
+import org.aqa.db.MachineType
 import org.aqa.db.PatientProcedure
 import org.aqa.db.Procedure
 
@@ -90,7 +91,7 @@ object CustomizeRtPlanUtil extends Logging {
     * @param beamAl Represents one member of 300a,00b0 BeamSequence list.
     * @return True if this is an FFF beam.
     */
-  private def isFFFBeam(beamAl: AttributeList): Boolean = {
+  def isFFFBeam(beamAl: AttributeList): Boolean = {
     val PrimaryFluenceModeSequence = DicomUtil.seqToAttr(beamAl, TagByName.PrimaryFluenceModeSequence)
 
     def isFFF(pfmSeq: AttributeList): Boolean = {
@@ -641,6 +642,69 @@ object CustomizeRtPlanUtil extends Logging {
       val newPatProc = pp.insert
       logger.info("Added patient procedure: " + newPatProc)
     }
+  }
+
+  /**
+    * If the maxDoseRate is defined, then the energy is fine.  Otherwise, make a copy
+    * of the energy with a reasonable value inserted.
+    *
+    * The value is based on the machine type.
+    *
+    * If the machine type is not recognized then an exception is thrown.
+    *
+    * The following is an email from Justin Mikell regarding how to handle missing dose rate:
+    *
+    * >  From: Mikell, Justin <mikell@wustl.edu>
+    * >  Sent: Tuesday, November 14, 2023 12:21 PM
+    * >  To: Irrer, Jim <irrer@med.umich.edu>
+    * >  Subject: RE: AQA machine configuration
+    * >
+    * >  Good question,  The maximum allowable dose rate is defined by the machine class and energy.
+    * >  I think it should be driven by the TYPE or machine class AND energy.
+    * >  Varian only allows certain dose rates – they create so many pulses and then drop pulses to lower the dose rate from the max.
+    * >  I think the maxes listed below should be sufficient for your plans.
+    * >
+    * >  For Varian Truebeam and C-Series: 600 MU/min for 6X, 10X, 15X, 18X: 600,500,400,300,200,100 MU/min. Some go lower, but I think for AQA testing purposes this range should be sufficient.
+    * >
+    * >
+    * >  For the FFF beams on Truebeam:
+    * >  6FFF: 1400,1200,1000,800,600,400 MU/min
+    * >  10FFF: 2400, 2000, 1600, 1200, 800, 400 MU/min
+    * >
+    * >  For Halycon/Ethos:6FFF: 800Mu/min
+    * >
+    * >  Clinically we would typically plan with the maximum dose rate to decrease beam on time.
+    * >  There are some games you can play with changing dose rate to make gantry go faster or slower (limited by dose rate or limited by max gantry speed).
+    *
+    * @param beamEnergy Check for this energy.
+    * @param machineType Type of machine.  Note: This function could look this up in the database, but because
+    *                    this operation may be performed multiple times with the same machine type, it is more
+    *                    efficient to have the caller get it once and pass it as a parameter.
+    *
+    * @return Beam energy with dose rate defined.
+    */
+  def resolveEnergy(beamEnergy: MachineBeamEnergy, machineType: MachineType): MachineBeamEnergy = {
+    val fff = beamEnergy.isFFF
+    val trueBeam = machineType.isTrueBeam
+    val cSeries = machineType.isCSeries
+
+    val mbe = 0 match {
+      case _ if beamEnergy.maxDoseRate_MUperMin.isDefined                  => beamEnergy
+      case _ if (!fff) && (trueBeam || cSeries)                            => beamEnergy.copy(maxDoseRate_MUperMin = Some(600))
+      case _ if fff && trueBeam && (beamEnergy.photonEnergy_MeV.get == 6)  => beamEnergy.copy(maxDoseRate_MUperMin = Some(1400))
+      case _ if fff && trueBeam && (beamEnergy.photonEnergy_MeV.get == 10) => beamEnergy.copy(maxDoseRate_MUperMin = Some(2400))
+      case _ if fff && trueBeam                                            => beamEnergy.copy(maxDoseRate_MUperMin = Some(1200)) // this accommodates other FFF photon energies
+      case _ => // We can not make a good decision, so punt.
+        val machine = Machine.get(beamEnergy.machinePK).get
+        //noinspection SpellCheckingInspection
+        val msg =
+          s"Unexpected exception: Machine $machine has undefined maxDoseRate_MUperMin for machine beam energy $beamEnergy ." +
+            s" Machine type: $machineType  .  This can be resolved by changing the machine's configuration via the web" +
+            s" interface (see Administration --> Machines) to define (currently undefined) max dose rate."
+        logger.error(msg)
+        throw new RuntimeException(msg)
+    }
+    mbe
   }
 
   /**

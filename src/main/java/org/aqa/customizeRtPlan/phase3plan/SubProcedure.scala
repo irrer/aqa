@@ -11,7 +11,7 @@ import scala.xml.Elem
 /**
   * Abstraction layer that defines common interface for sub-procedures.
   */
-abstract class SubProcedure(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator) extends Logging {
+abstract class SubProcedure(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator, prototypeBeamList: Seq[Beam]) extends Logging {
 
   /**
     * Name of this sub procedure.
@@ -20,9 +20,9 @@ abstract class SubProcedure(machine: Machine, beamEnergyList: Seq[MachineBeamEne
 
   /**
     * Given a machine, return the list of all checkboxes.
-    * @return List of HTML id tags for all checkboxes.
+    * @return List of all selections.
     */
-  def checkboxIdList: Seq[String]
+  def selectionList: Seq[Selection]
 
   /**
     * Given a list of beam names, return the HTML that reflects them.
@@ -41,10 +41,10 @@ abstract class SubProcedure(machine: Machine, beamEnergyList: Seq[MachineBeamEne
 
   /**
    * Given the beams from the original plans, return a list of beams that the user can choose from.
-   * @param prototypeBeamList All beams from configured rtplans.
+   *
    * @return List of beams applicable to this sub-procedure.
    */
-  def getBeamList(prototypeBeamList: Seq[Beam]): Seq[Beam]
+  def getBeamList: Seq[Beam]
 
 
 
