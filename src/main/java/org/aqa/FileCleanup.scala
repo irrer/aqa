@@ -1,6 +1,5 @@
 package org.aqa
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.db.DbSetup
 import org.aqa.db.Machine
 import org.aqa.db.Output
