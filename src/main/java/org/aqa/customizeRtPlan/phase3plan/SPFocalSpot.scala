@@ -17,6 +17,8 @@ class SPFocalSpot(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], mult
 
   override val name = "Focal Spot"
 
+  override val abbreviation = "FS"
+
   private val fsPrototypeList = prototypeBeamList.filter(beam => Config.FocalSpotBeamNameList.contains(beam.beamName)).sortBy(_.beamName)
 
   private val prototypeSet = fsPrototypeList.filterNot(_.isFFF).groupBy(beam => s"${beam.isFFF} ${beam.beamEnergy.photonEnergy_MeV.get}").values.head

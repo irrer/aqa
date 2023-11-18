@@ -14,9 +14,14 @@ import scala.xml.Elem
 abstract class SubProcedure(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator, prototypeBeamList: Seq[Beam]) extends Logging {
 
   /**
-    * Name of this sub procedure.
-    */
+   * Name of this sub procedure.
+   */
   val name: String
+
+  /**
+    * Very short name of this sub procedure.  As default, use the capital letters from the name.
+    */
+  val abbreviation: String
 
   /**
     * Given a machine, return the list of all checkboxes.

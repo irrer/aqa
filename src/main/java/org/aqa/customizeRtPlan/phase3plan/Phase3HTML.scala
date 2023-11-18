@@ -58,6 +58,7 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
    */
   private def prototypeBeams(machine: Machine): Seq[Beam] = {
 
+
     def beamsFromPlan(plan: AttributeList): Seq[Beam] = DicomUtil.seqToAttr(plan, TagByName.BeamSequence).map(al => Beam.makeBeamFromAl(machine, al))
 
 
@@ -69,7 +70,8 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
         Some(DicomFile(plan.file).attributeList.get)
       }
       catch {
-        case _: Throwable => None
+        case _: Throwable =>
+          None
       }
     }
 
@@ -77,9 +79,10 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
     beamList
   }
 
-  private def subProcedureList(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator): Seq[SubProcedure] = {
+  private def makeSubProcedureList(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator): Seq[SubProcedure] = {
     Seq(new SPFocalSpot(machine, beamEnergyList, multileafCollimator, prototypeBeams(machine)))
   }
+
 
   /*
   private def allBeams(machine:Machine): Seq[Beam] = {
@@ -95,7 +98,6 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
    * @return List of all possible Phase3 beams.
    */
   private def makeBeamList(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator): Seq[Beam] = {
-    Trace.trace(s"""Machine beam energy list:\n${beamEnergyList.mkString("\n")}""")
 
     /**
      * Determine if the machine supports this energy.
@@ -115,7 +117,7 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
       matching.isDefined
     }
 
-    val subProcList = subProcedureList(machine, beamEnergyList, multileafCollimator)
+    val subProcList = makeSubProcedureList(machine, beamEnergyList, multileafCollimator)
     val beamList = {
       val list = subProcList.flatMap(subProc => subProc.getBeamList)
       list.filter(beamEnergyIsSupported)
@@ -123,14 +125,67 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
     beamList
   }
 
+  private def beamToHtml(beam: Beam, valueMap: ValueMapT, subProcedureList: Seq[SubProcedure]): Elem = {
+
+    case class UsedBySubProc(subProc: SubProcedure, used: Boolean) {
+      def toHtml: Elem = {
+        if (used)
+          <span style="border: 5px solid lightgreen;">
+            {subProc.abbreviation}
+          </span>
+        else
+          <span style="border: 5px solid white;">
+            {subProc.abbreviation}
+          </span>
+      }
+    }
+
+    /** Return an indicator as to whether the sub procedure uses the beam. */
+    def subProcUseOfBeam(subProc: SubProcedure): UsedBySubProc = {
+      // val isUsed = subProc.selectionList.find(sel => valueMap.contains(sel.selectionName) && sel.beamList.exists(b => b.beamName.equals(beam.beamName))) // TODO put back
+      val isUsed = if (beam.isFFF) Some(1) else None // TODO rm
+      UsedBySubProc(subProc, isUsed.isDefined)
+    }
+
+    val beamSetUse = subProcedureList.map(subProcUseOfBeam)
+
+    val subProcedureUses: Elem = {
+      val usedBy = <div style="margin: 10px;">
+        {beamSetUse.map(_.toHtml)}
+      </div>
+      usedBy
+    }
+
+    val image: Elem = {
+      <span>
+        {beam.beamName}
+      </span>
+
+    }
+
+    <div>
+      <table>
+        <tr>
+          <td>
+            {subProcedureUses}
+          </td>
+          <td>
+            {image}
+          </td>
+        </tr>
+      </table>
+    </div>
+  }
+
   // @formatter:off
-  private def selectedBeamsField(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator) = {
-    val list = makeBeamList(machine, beamEnergyList, multileafCollimator).map(_.beamName)
+  private def selectedBeamsField(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator, subProcList: Seq[SubProcedure]) = {
+    val beamList = makeBeamList(machine, beamEnergyList, multileafCollimator)
     new WebPlainText(
       label = "Selected Beams", showLabel = false,
       col = 0, offset = 0,
       // valueMap => <span> {list.map(beamName => {<br>{beamName}</br>})} </span>)
-    valueMap => <span> {list.map(beamName => {<span style="margin-left: 32px;">{beamName}</span>})} </span>)
+      // _ => <span> {list.map(beamName => {<span style="margin-left: 32px;">{beamName}</span>})} </span>)
+    valueMap => <span> {beamList.map(beam => {<span> {beamToHtml(beam, valueMap, subProcList)} </span>})} </span>)
   }
   // @formatter:on
 
@@ -157,12 +212,12 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
 
     val multileafCollimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
 
-    val subProcList = subProcedureList(machine, beamEnergyList, multileafCollimator)
+    val subProcList = makeSubProcedureList(machine, beamEnergyList, multileafCollimator)
 
     // all hidden fields inherited from and specified in the custom plan interface.
     val rowCommonParameters: WebRow = List(machinePK, patientID, patientName, machineName, planName, toleranceTableName)
 
-    def rowSelectedBeams: WebRow = List(selectedBeamsField(machine, beamEnergyList, multileafCollimator))
+    def rowSelectedBeams: WebRow = List(selectedBeamsField(machine, beamEnergyList, multileafCollimator, subProcList))
 
     def rowSelectSubProcedures: List[WebRow] = makeSubProcedureSelector(subProcList, machine, beamEnergyList, multileafCollimator)
 
