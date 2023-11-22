@@ -10,10 +10,11 @@ import org.aqa.customizeRtPlan.CustomizeRtPlanUtil
 import org.aqa.db.MultileafCollimator
 import org.aqa.Util
 
+import java.io.File
 import scala.xml.Elem
 
-class SPFocalSpot(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator, prototypeBeamList: Seq[Beam])
-    extends SubProcedure(machine, beamEnergyList, multileafCollimator, prototypeBeamList) {
+class SPFocalSpot(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator,  exampleImageFileList: Seq[File]   , prototypeBeamList: Seq[Beam])
+    extends SubProcedure(machine, beamEnergyList, multileafCollimator, exampleImageFileList, prototypeBeamList) {
 
   override val name = "Focal Spot"
 

@@ -6,12 +6,13 @@ import org.aqa.db.Machine
 import org.aqa.db.MachineBeamEnergy
 import org.aqa.db.MultileafCollimator
 
+import java.io.File
 import scala.xml.Elem
 
 /**
   * Abstraction layer that defines common interface for sub-procedures.
   */
-abstract class SubProcedure(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator, prototypeBeamList: Seq[Beam]) extends Logging {
+abstract class SubProcedure(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator, val exampleImageFileList: Seq[File],  prototypeBeamList: Seq[Beam]) extends Logging {
 
   /**
    * Name of this sub procedure.
