@@ -1,17 +1,12 @@
 package org.aqa.customizeRtPlan.phase3plan
 
 import com.pixelmed.dicom.AttributeList
-import org.aqa.db.Machine
-import org.aqa.db.MachineBeamEnergy
 import org.aqa.Config
-import org.aqa.db.MultileafCollimator
 import org.aqa.Util
 
-import java.io.File
 import scala.xml.Elem
 
-class SPCenterDose(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator, exampleImageFileList: Seq[File],  prototypeBeamList: Seq[Beam])
-    extends SubProcedure(machine, beamEnergyList, multileafCollimator, exampleImageFileList, prototypeBeamList) {
+class SPCenterDose(metaData: SPMetaData) extends SubProcedure(metaData) {
 
   override val name = "Center Dose"
 
@@ -22,7 +17,7 @@ class SPCenterDose(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], mul
   override def selectionList: Seq[Selection] = {
     def toSelection(beam: Beam): Selection = Selection(this, beam.beamName, Seq(beam))
     def ok(beam: Beam) = Util.minCenteredFieldBeam(beam.prototypeBeam, Config.CenterDoseRadius_mm * 2)
-    val list = prototypeBeamList.filter(ok).map(toSelection)
+    val list = metaData.prototypeBeamList.filter(ok).map(toSelection)
     list
   }
 

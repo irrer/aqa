@@ -3,24 +3,21 @@ package org.aqa.customizeRtPlan.phase3plan
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import org.aqa.db.Machine
 import org.aqa.db.MachineBeamEnergy
 import org.aqa.Config
 import org.aqa.customizeRtPlan.CustomizeRtPlanUtil
-import org.aqa.db.MultileafCollimator
 import org.aqa.Util
 
-import java.io.File
 import scala.xml.Elem
 
-class SPFocalSpot(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], multileafCollimator: MultileafCollimator,  exampleImageFileList: Seq[File]   , prototypeBeamList: Seq[Beam])
-    extends SubProcedure(machine, beamEnergyList, multileafCollimator, exampleImageFileList, prototypeBeamList) {
+class SPFocalSpot(metaData: SPMetaData) extends SubProcedure(metaData) {
 
   override val name = "Focal Spot"
 
   override val abbreviation = "FS"
 
-  private val fsPrototypeList = prototypeBeamList.filter(beam => Config.FocalSpotBeamNameList.contains(beam.beamName)).sortBy(_.beamName)
+  private val fsPrototypeList =
+    metaData.prototypeBeamList.filter(beam => Config.FocalSpotBeamNameList.contains(beam.beamName)).sortBy(_.beamName)
 
   private val prototypeSet = fsPrototypeList.filterNot(_.isFFF).groupBy(beam => s"${beam.isFFF} ${beam.beamEnergy.photonEnergy_MeV.get}").values.head
 
@@ -66,7 +63,7 @@ class SPFocalSpot(machine: Machine, beamEnergyList: Seq[MachineBeamEnergy], mult
     Selection(this, selectionName, beamList)
   }
 
-  private val sfSelectionList = beamEnergyList.map(energy => setEnergyOfSet(prototypeSet, energy))
+  private val sfSelectionList = metaData.beamEnergyList.map(energy => setEnergyOfSet(prototypeSet, energy))
 
   def toFsBeam(beam: Beam): Elem = ???
 
