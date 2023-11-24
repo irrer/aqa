@@ -1,25 +1,22 @@
 package org.aqa.customizeRtPlan.phase3plan
 
-import com.pixelmed.dicom.AttributeList
-import edu.umro.DicomDict.TagByName
-import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.web.WebUtil.SubUrlRoot
 import org.aqa.Logging
 import org.aqa.customizeRtPlan.CustomizeRtPlanInterface
 import org.aqa.db.Machine
-import org.aqa.db.MultileafCollimator
 import org.aqa.web.MachineUpdate
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
-import org.aqa.Config
-import org.aqa.DicomFile
 import org.restlet.Restlet
 import org.restlet.data.Status
 import org.restlet.Request
 import org.restlet.Response
+import org.restlet.data.Method
 
 import scala.xml.Elem
+import scala.xml.Node
+import scala.xml.XML
 
 class Phase3HTML extends Restlet with SubUrlRoot with Logging {
 
@@ -46,48 +43,62 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
 
   private def toleranceTableName = new WebInputHidden(CustomizeRtPlanInterface.toleranceTableNameTag)
 
-
-  /**
-   * Get all beams from Phase3 rtplans that are defined in the configured plans.
-   *
-   * @param machine For this machine.
-   * @return List of beams from multiple plans.
-   */
-  private def prototypeBeams(machine: Machine): Seq[Beam] = {
-
-
-    def beamsFromPlan(plan: AttributeList): Seq[Beam] = DicomUtil.seqToAttr(plan, TagByName.BeamSequence).map(al => Beam.makeBeamFromAl(machine, al))
-
-
-    val collimatorModel = MultileafCollimator.get(machine.multileafCollimatorPK).get.model
-
-    def getPlan(name: String): Option[AttributeList] = {
-      try {
-        val plan = Config.PlanFileList.find(pf => pf.collimatorModel.equals(collimatorModel) && pf.procedure.equals(name)).get
-        Some(DicomFile(plan.file).attributeList.get)
-      }
-      catch {
-        case _: Throwable =>
-          None
-      }
-    }
-
-    val beamList = Seq("Phase3", "FocalSpot").flatMap(getPlan).flatMap(beamsFromPlan)
-    beamList
-  }
-
-
-  private case class UsedBySubProc(subProc: SubProcedure, used: Boolean) {
-    def toHtml: Elem = {
-      if (used)
-        <span style="border: 5px solid lightgreen;" title={subProc.name}>
-          {subProc.abbreviation}
-        </span>
-      else
-        <span style="border: 5px solid white;" title={subProc.name}>
-          {subProc.abbreviation}
-        </span>
-    }
+  private val javaScript: String = {
+    val machTag = MachineUpdate.machinePKTag
+    s"""
+       |
+       |// handle Phase3 custom plan checkboxes and beam status indications.
+       |
+       |var checkboxList = [];
+       |
+       |function populateCheckboxList() {
+       |  checkboxList.length = 0;  // make sure list is empty
+       |  var publicList = $$( "[type]" );
+       |  for (p = 0; p < publicList.length; p++) {
+       |    var attr = publicList[p];
+       |    // is this a checkbox?
+       |    if (
+       |      (attr.tagName.toLowerCase().localeCompare("input") == 0)                 &&
+       |      attr.hasAttribute("type")                                                &&
+       |      (attr.getAttribute("type").toLowerCase().localeCompare("checkbox") == 0)
+       |      ) {
+       |        checkboxList.push(attr);
+       |    }
+       |  }
+       |}
+       |
+       |console.log("list of checkboxes:\\n" + checkboxList);
+       |
+       |var machinePK = 27; // document.getElementById("$machTag").getAttribute("value");
+       |var phase3Url = "/Phase3HTML?$machTag=" + machinePK;
+       |
+       |function phase3ClickHandler(checkBox) {
+       |  var text = "<?xml version='1.0' encoding='utf-8'?>\\n<CheckboxList>";
+       |  for (c = 0; c < checkboxList.length; c++) {
+       |    attr = checkboxList[c];
+       |    var id = attr.getAttribute("id");
+       |    var checked = attr.checked.toString();
+       |    text = text + "\\n  <Checkbox><id>" + id + "</id><checked>" + checked + "</checked></Checkbox>";
+       |  }
+       |  text = text + "\\n</CheckboxList>";
+       |  var https = new XMLHttpRequest();
+       |  https.open("POST", phase3Url, true);
+       |  https.setRequestHeader('Content-type', '${org.restlet.data.MediaType.TEXT_PLAIN.getName}');
+       |
+       |  https.onreadystatechange = function() {
+       |    if (this.readyState == 4 && this.status == 200) {
+       |      console.log("from server:\\n" + this.responseText);
+       |    }
+       |  }
+       |
+       |  console.log("Sending text\\n" + text);
+       |  https.send(text);
+       |  return text;
+       |}
+       |
+       |populateCheckboxList()
+       |
+       |""".stripMargin
   }
 
 
@@ -96,6 +107,7 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
     val color =
     //if (subProc.metaData.subProcedureUsesBeam(beam, subProc, valueMap)) // TODO put back
       if (beam.isFFF) // TODO rm
+      //noinspection SpellCheckingInspection
         "lightgreen"
       else
         "white"
@@ -156,7 +168,8 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
 
   private def makeSubProcedureSelector(metaData: SPMetaData): List[WebRow] = {
     def makeSelectorHtml(subProc: SubProcedure): WebRow = {
-      val list = subProc.selectionList.map(s => new WebInputCheckbox(label = s.selectionName, showLabel = true, col = 2, offset = 0))
+      val attrMap = Map("onClick" -> "phase3ClickHandler(this)")
+      val list = subProc.selectionList.map(s => new WebInputCheckbox(label = s.selectionName, showLabel = true, title = None, col = 2, offset = 0, attrMap))
       // @formatter:off
       val empty: Elem = { <span></span>}
       // @formatter:on
@@ -170,31 +183,29 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
 
   /** A list of beam energies that the machine supports. If any have an undefined dose rate, then fill it in. */
   private def rowList(metaData: SPMetaData): List[WebRow] = {
-    /*
-    val beamEnergyList = {
-      val machineType = MachineType.get(machine.machineTypePK).get
-      CustomizeRtPlanUtil.getMachineEnergyList(machine.machinePK.get).map(energy => CustomizeRtPlanUtil.resolveEnergy(energy, machineType))
+
+    val pageTitle = {
+      val html =
+        <div>
+          <h2>Phase3 Custom Plan for Machine
+            {WebUtil.wrapAlias(metaData.machine.id)}
+          </h2>
+        </div>
+      new WebPlainText(label = "Phase3 Plan", showLabel = false, col = 12, offset = 0, _ => html)
     }
 
-    val multileafCollimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
+    val rowTitle: WebRow = List(pageTitle)
 
-    val epid = EPID.get(machine.epidPK).get
-    val exampleImageFileList = Util.listDirFiles(exampleBeamImagesDir(epid))
-
-    val subProcList = makeSubProcedureList(metaData)
-
-    */
+    // all hidden fields inherited from and specified in the custom plan interface.
+    val rowCommonParameters: WebRow = List(machinePK, patientID, patientName, machineName, planName, toleranceTableName)
 
     def rowSelectSubProcedures: List[WebRow] = makeSubProcedureSelector(metaData)
 
     def rowSelectedBeams: WebRow = List(selectedBeamsField(metaData))
 
-    // all hidden fields inherited from and specified in the custom plan interface.
-    val rowCommonParameters: WebRow = List(machinePK, patientID, patientName, machineName, planName, toleranceTableName)
-
     val rowButton: WebRow = List(cancelButton, createPlanButton)
 
-    val rowList: List[WebRow] = List(rowCommonParameters) ++ rowSelectSubProcedures ++ List(rowSelectedBeams) ++ List(rowButton)
+    val rowList: List[WebRow] = List(rowTitle) ++ List(rowCommonParameters) ++ rowSelectSubProcedures ++ List(rowSelectedBeams) ++ List(rowButton)
     rowList
   }
 
@@ -206,14 +217,7 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
    * @param metaData Related information.
    */
   private def formSelect(valueMap: ValueMapT, response: Response, metaData: SPMetaData): Unit = {
-    val form = new WebForm(pathOf, rowList(metaData))
-
-    def getRealMachineId = {
-      metaData.machine.getRealTpsId match {
-        case Some(text) if text.trim.nonEmpty => text.trim
-        case _ => ""
-      }
-    }
+    val form = new WebForm(action = pathOf, title = None, rowList = rowList(metaData), fileUpload = 0, runScript = Some(javaScript)) // , runScript = Some(javaScript))
 
     form.setFormResponse(valueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
   }
@@ -223,6 +227,28 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
     ???
   }
 
+  private def updateBeamStatus(valueMap: WebUtil.ValueMapT, uploadText: Option[String], response: Response): Unit = {
+
+    val doc = XML.loadString(uploadText.get.trim)
+
+    val checkboxList = {
+
+      def toCheckbox(node: Node): (String, Boolean) = {
+        val id = (node \ "id").text
+        val value = (node \ "checked").text.toBoolean
+        (id, value)
+      }
+
+      val map = (doc \ "Checkbox").map(toCheckbox).toMap
+      map
+    }
+
+    Trace.trace(checkboxList)
+
+    val text = "hello " + new java.util.Date() // TODO
+    WebUtil.setResponse(text, response, Status.SUCCESS_OK)
+  }
+
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
     val value = valueMap.get(button.label)
     value.isDefined && value.get.equals(button.label)
@@ -230,6 +256,11 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
 
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
+
+    val uploadText = {
+      val t = request.getEntityAsText
+      Option(t)
+    }
 
     val valueMap = getValueMap(request)
 
@@ -244,6 +275,8 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
         // case _ if machine.isEmpty => updateMach()
         // case _ if (user.get.institutionPK != machine.get.institutionPK) && (!WebUtil.userIsWhitelisted(request)) => updateMach()
         case _ if buttonIs(valueMap, cancelButton) => updateMach()
+        case _ if request.getMethod == Method.POST =>
+          updateBeamStatus(valueMap, uploadText, response)
         case _ if buttonIs(valueMap, createPlanButton) =>
           val metaData = SPMetaData(machine.get)
           createPlan(valueMap, response, metaData)
