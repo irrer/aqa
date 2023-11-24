@@ -177,6 +177,24 @@ object WebUtil extends Logging {
   }
 
   /**
+   * Add a list of attributes to an element and return the new element.
+   *
+   * @param elem Original element.
+   * @param map  List of attributes to add.
+   * @return New element.
+   */
+  @tailrec
+  def addAttributeMap(elem: Elem, map: Map[String, String]): Elem = {
+    if (map.isEmpty)
+      elem
+    else {
+      val attr = new scala.xml.UnprefixedAttribute(map.head._1, map.head._2, scala.xml.Null)
+      val newElem = elem % attr
+      addAttributeMap(newElem, map - map.head._1)
+    }
+  }
+
+  /**
    * Number of digits to use when constructing anonymized file names.
    */
   private val writeUploadedFileDigits = 4
@@ -1178,7 +1196,7 @@ object WebUtil extends Logging {
     }
   }
 
-  class WebInputCheckbox(override val label: String, val showLabel: Boolean, title: Option[String], col: Int, offset: Int) extends IsInput(label) with ToHtml {
+  class WebInputCheckbox(override val label: String, val showLabel: Boolean, title: Option[String], col: Int, offset: Int, htmlAttrList: Map[String, String] = Map()) extends IsInput(label) with ToHtml {
 
     def this(label: String, showLabel: Boolean, col: Int, offset: Int) = this(label, showLabel, None, col, offset)
 
@@ -1187,19 +1205,25 @@ object WebUtil extends Logging {
     override def toString: String = "class: " + this.getClass.getName + " label: " + label
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response]): Elem = {
-      val input = <input type="checkbox"/> % idNameClassValueAsAttr(label, valueMap)
-      val inputWithValue: Elem = {
-        if (valueMap.contains(label) && (valueMap(label).equals("true") || valueMap(label).equals("on")))
-          input % <input checked="true"/>.attributes
-        else
-          input
+      val input = {
+        val i1 = <input type="checkbox"/> % idNameClassValueAsAttr(label, valueMap)
+
+        val i2 = {
+          if (valueMap.contains(label) && (valueMap(label).equals("true") || valueMap(label).equals("on")))
+            i1 % <input checked="true"/>.attributes
+          else
+            i1
+        }
+
+        val i3 = addAttributeMap(i2, htmlAttrList)
+        i3
       }
 
       val html = {
         val tr = {
           <tr>
             <td>
-              {inputWithValue}
+              {input}
             </td>
             <td>
               <label style="vertical-align:middle; margin: 5px;">
@@ -1391,7 +1415,7 @@ object WebUtil extends Logging {
       }
 
       /*
-.on('changeDate', function (){ openCurly }
+  .on('changeDate', function (){ openCurly }
               $('#Refresh').submit();
               { closeCurly }
               )
