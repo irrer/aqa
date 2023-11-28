@@ -74,6 +74,7 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
        |
        |function phase3ClickHandler(checkBox) {
        |  var text = "<?xml version='1.0' encoding='utf-8'?>\\n<CheckboxList>";
+       |  text = text + "\\n  <ClickedCheckbox><id>" + checkBox.getAttribute("id") + "</id><checked>" + checkBox.checked.toString() + "</checked></ClickedCheckbox>";
        |  for (c = 0; c < checkboxList.length; c++) {
        |    attr = checkboxList[c];
        |    var id = attr.getAttribute("id");
@@ -169,7 +170,8 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
   private def makeSubProcedureSelector(metaData: SPMetaData): List[WebRow] = {
     def makeSelectorHtml(subProc: SubProcedure): WebRow = {
       val attrMap = Map("onClick" -> "phase3ClickHandler(this)")
-      val list = subProc.selectionList.map(s => new WebInputCheckbox(label = s.selectionName, showLabel = true, title = None, col = 2, offset = 0, attrMap))
+
+      val list = subProc.selectionList.map(s => new WebInputCheckbox(label = s.selectionName, showLabel = true, title = None, col = 2, offset = 0, attrMap, id = Some(s.htmlId)))
       // @formatter:off
       val empty: Elem = { <span></span>}
       // @formatter:on
@@ -227,26 +229,83 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
     ???
   }
 
-  private def updateBeamStatus(valueMap: WebUtil.ValueMapT, uploadText: Option[String], response: Response): Unit = {
+  private def toJson(selectionList: Seq[Selection], metaData: SPMetaData): String = {
+
+    val falseList = metaData.subProcedureList.flatMap(_.selectionList).filterNot(sel => selectionList.exists(_.selectionName.equals(sel.selectionName)))
+
+    def selectionToJson(sel: Selection, checked: Boolean): String = {
+      s"""{ "id": "${sel.htmlId}", "attr": "checked", "value": ${checked.toString} }"""
+    }
+
+    val selectionText = (selectionList.map(sel => selectionToJson(sel, true)) ++ falseList.map(sel => selectionToJson(sel, false))).mkString(",\n")
+    selectionText
+  }
+
+
+  /**
+   * Given a node, return the selection ID and whether it is checked or not.
+   *
+   * @param node
+   * @return
+   */
+  private def toCheckbox(node: Node, metaData: SPMetaData): (Selection, Boolean) = {
+    val id = (node \ "id").text
+    val value = (node \ "checked").text.toBoolean
+    (metaData.findByHtmlId(id).get, value)
+  }
+
+  /**
+   * Make a list of all the checked selections.
+   *
+   * @return List of checked selections.
+   */
+  private def makeCheckedList(doc: Elem, metaData: SPMetaData): Seq[Selection] = {
+
+    def toSel(node: Node): Option[Selection] = {
+      if ((node \ "checked").text.toBoolean)
+        metaData.findByHtmlId((node \ "id").text)
+      else
+        None
+    }
+
+    (doc \ "Checkbox").flatMap(toSel)
+  }
+
+
+  // true if the use clicked a checkbox
+  private def updateBeamStatus(valueMap: WebUtil.ValueMapT, uploadText: Option[String], response: Response, metaData: SPMetaData): Unit = {
 
     val doc = XML.loadString(uploadText.get.trim)
 
-    val checkboxList = {
+    // if the user clicked a checkbox, then this is it with the new state
+    val clicked = (doc \ "ClickedCheckbox").map(node => toCheckbox(node, metaData)).headOption
 
-      def toCheckbox(node: Node): (String, Boolean) = {
-        val id = (node \ "id").text
-        val value = (node \ "checked").text.toBoolean
-        (id, value)
+    val init = makeCheckedList(doc, metaData)
+
+    val checkedList = if (clicked.isDefined) {
+      // make list of beams that are selected due to checkboxes
+      val beamList = init.flatMap(_.beamList).groupBy(_.beamName).map(_._2.head)
+
+      if (clicked.get._2) { // changed from unchecked to checked
+        // make a new list of selection based on the beams
+        val selList = metaData.getSelectionsFromBeams(beamList)
+        selList
       }
-
-      val map = (doc \ "Checkbox").map(toCheckbox).toMap
-      map
+      else { // changed from checked to unchecked
+        // make a list of beam without the ones specified by newly unchecked one
+        val beamList2 = beamList.filterNot(beam => clicked.get._1.beamList.exists(b => b.beamName.equals(beam.beamName)))
+        val selList = metaData.getSelectionsFromBeams(beamList2)
+        selList
+      }
     }
+    else
+      init
 
-    Trace.trace(checkboxList)
+    val json = toJson(checkedList, metaData)
+    // Trace.trace(checkboxList.mkString("\n"))
+    Trace.trace(json)
 
-    val text = "hello " + new java.util.Date() // TODO
-    WebUtil.setResponse(text, response, Status.SUCCESS_OK)
+    WebUtil.setResponse(json, response, Status.SUCCESS_OK)
   }
 
   private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
@@ -276,7 +335,8 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
         // case _ if (user.get.institutionPK != machine.get.institutionPK) && (!WebUtil.userIsWhitelisted(request)) => updateMach()
         case _ if buttonIs(valueMap, cancelButton) => updateMach()
         case _ if request.getMethod == Method.POST =>
-          updateBeamStatus(valueMap, uploadText, response)
+          val metaData = SPMetaData(machine.get)
+          updateBeamStatus(valueMap, uploadText, response, metaData)
         case _ if buttonIs(valueMap, createPlanButton) =>
           val metaData = SPMetaData(machine.get)
           createPlan(valueMap, response, metaData)

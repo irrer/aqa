@@ -150,4 +150,30 @@ case class SPMetaData(machine: Machine) {
   def subProcedureUsesBeam(beam: Beam, subProcedure: SubProcedure, valueMap: ValueMapT): Boolean = {
     beamUseList(beam, valueMap).exists(_.name.equals(subProcedure.name))
   }
+
+  /**
+    * Find the selection that matches the given HTML id.
+    * @param htmlId Look for this id.
+    * @return matching one.
+    */
+  def findByHtmlId(htmlId: String): Option[Selection] = {
+    subProcedureList.flatMap(_.selectionList).find(s => s.htmlIdMatches(htmlId))
+  }
+
+  /**
+   * Return the list of selections that have all of their beams on the list.
+   * @param beamList List of beams to be put in plan.
+   * @return List of selections.
+   */
+  def getSelectionsFromBeams(beamList: Iterable[Beam]): Seq[Selection] = {
+
+    def isSelected(beam: Beam) = beamList.exists(b => b.beamName.equals(beam.beamName))
+
+    def allBeamsSelected(sel: Selection): Boolean = {
+      sel.beamList.map(isSelected).reduce(_ && _)
+    }
+
+    subProcedureList.flatMap(_.selectionList).filter(allBeamsSelected)
+
+  }
 }

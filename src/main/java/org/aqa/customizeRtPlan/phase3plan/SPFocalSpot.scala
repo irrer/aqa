@@ -59,7 +59,7 @@ class SPFocalSpot(metaData: SPMetaData) extends SubProcedure(metaData) {
       else
         Util.fmtDbl(e)
     }
-    val selectionName = s" $energyText $energyType"
+    val selectionName = s"$energyText $energyType"
     Selection(this, selectionName, beamList)
   }
 
