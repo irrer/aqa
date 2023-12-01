@@ -22,6 +22,10 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
 
   private val pageTitle = "Select Tests for RTPLAN"
 
+  /* HTML id of hidden input indicating which selection changed. */
+  private val changedSelectionTag = "changedSelection"
+
+  private val selectedBeamCountTag = "selectedBeamCount "
 
   private def makeButton(name: String, buttonType: ButtonType.Value): FormButton = {
     new FormButton(name, 2, 0, subUrl, pathOf, buttonType)
@@ -43,8 +47,13 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
 
   private def toleranceTableName = new WebInputHidden(CustomizeRtPlanInterface.toleranceTableNameTag)
 
+  private def changedSelection = new WebInputHidden(changedSelectionTag)
+
   private val javaScript: String = {
     val machTag = MachineUpdate.machinePKTag
+
+    //noinspection SpellCheckingInspection
+
     s"""
        |
        |// handle Phase3 custom plan checkboxes and beam status indications.
@@ -74,7 +83,9 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
        |
        |function phase3ClickHandler(checkBox) {
        |  var text = "<?xml version='1.0' encoding='utf-8'?>\\n<CheckboxList>";
-       |  text = text + "\\n  <ClickedCheckbox><id>" + checkBox.getAttribute("id") + "</id><checked>" + checkBox.checked.toString() + "</checked></ClickedCheckbox>";
+       |  if (checkBox != null) {
+       |    text = text + "\\n  <ClickedCheckbox><id>" + checkBox.getAttribute("id") + "</id><checked>" + checkBox.checked.toString() + "</checked></ClickedCheckbox>";
+       |  }
        |  for (c = 0; c < checkboxList.length; c++) {
        |    attr = checkboxList[c];
        |    var id = attr.getAttribute("id");
@@ -99,39 +110,62 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
        |  return text;
        |}
        |
-       |populateCheckboxList()
+       |populateCheckboxList();
+       |
+       |phase3ClickHandler(null);
        |
        |""".stripMargin
   }
 
+  /**
+   * Generate the HTML id for the given sub procedure's use of the given beam.
+   *
+   * @param subProc Sub-procedure.
+   * @param beam    Beam.
+   * @return HTML id.
+   */
+  private def beamProcId(subProc: SubProcedure, beam: Beam) = s"${subProc.name} :: ${beam.beamName}"
 
-  /** Return an indicator as to whether the sub procedure uses the beam. */
-  private def subProcUseOfBeam(subProc: SubProcedure, beam: Beam, valueMap: ValueMapT): Elem = {
+  /* Return true if the user has made any selections of the given sub procedure that use the given beam. */
+  /*
+  private def subProcIsUsingBeam(subProc: SubProcedure, beam: Beam, checkedSelectionList: Seq[Selection]): Boolean = {
+    subProc.selectionList.exists(sel => checkedSelectionList.exists(s => s.htmlId.equals(sel.htmlId)))
+  }
+  */
+
+  /* Return the HTML attribute style for the given beam's use by a sub-procedure. */
+  private def subProcBeamStyle(checked: Boolean): String = {
     val color =
-    //if (subProc.metaData.subProcedureUsesBeam(beam, subProc, valueMap)) // TODO put back
-      if (beam.isFFF) // TODO rm
+      if (checked)
       //noinspection SpellCheckingInspection
         "lightgreen"
       else
         "white"
-
-    val id = s"${subProc.name} :: ${beam.beamName}"
-    <span id={id} style={s"border: 5px solid $color;border-radius:40px; margin:5px;"} title={subProc.name}>
-      <span style="margin:6px;">
-        {subProc.abbreviation}
-      </span>
-    </span>
-
+    val style = s"border-left: 16px solid $color; margin:5px;"
+    style
   }
 
 
+  /** Return an indicator as to whether the sub procedure uses the beam. */
+  private def subProcUseOfBeam(subProc: SubProcedure, beam: Beam): Elem = {
+    val id = s"${subProc.name} :: ${beam.beamName}"
+    <span id={id} style={subProcBeamStyle(false)} title={subProc.name}>
+      <span style="margin:6px;">
+        {subProc.name}
+      </span>
+    </span>
+  }
+
   private def beamToHtml(beam: Beam, valueMap: ValueMapT, subProcedureList: SubProcedureList): Elem = {
 
-    val beamSetUse = subProcedureList.subProcedureList.map(sub => subProcUseOfBeam(sub, beam, valueMap))
+    val beamSetUse = subProcedureList.subProcedureList.map(sub => subProcUseOfBeam(sub, beam))
 
     val subProcedureUses: Elem = {
       val usedBy = <td style="margin: 5px;">
-        {beamSetUse}
+        {beamSetUse.map(elem =>
+          <div>
+            {elem}
+          </div>)}
       </td>
       usedBy
     }
@@ -160,12 +194,26 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
 
   // @formatter:off
   private def selectedBeamsField(subProcedureList: SubProcedureList) = {
+    def toBeamHtml(valueMap :ValueMapT): Elem = {
+      <div>
+        <div class="row">
+          <div class="col-md-2">
+            <h3>Beam List</h3>
+          </div>
+          <div class="col-md-2">
+            <h3>Selected: <span id={selectedBeamCountTag}>0</span></h3>
+          </div>
+        </div>
+        <div class="row">
+          {subProcedureList.beamList.map(beam => {<div class="col-md-3"> {beamToHtml(beam, valueMap, subProcedureList)} </div>})}
+        </div>
+      </div>
+    }
+
     new WebPlainText(
       label = "Selected Beams", showLabel = false,
       col = 0, offset = 0,
-      // valueMap => <span> {list.map(beamName => {<br>{beamName}</br>})} </span>)
-      // _ => <span> {list.map(beamName => {<span style="margin-left: 32px;">{beamName}</span>})} </span>)
-    valueMap => <div> {subProcedureList.beamList.map(beam => {<div class="col-md-3"> {beamToHtml(beam, valueMap, subProcedureList)} </div>})} </div>)
+      toBeamHtml)
   }
   // @formatter:on
 
@@ -201,7 +249,7 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
     val rowTitle: WebRow = List(pageTitle)
 
     // all hidden fields inherited from and specified in the custom plan interface.
-    val rowCommonParameters: WebRow = List(machinePK, patientID, patientName, machineName, planName, toleranceTableName)
+    val rowCommonParameters: WebRow = List(machinePK, patientID, patientName, machineName, planName, toleranceTableName, changedSelection)
 
     def rowSelectSubProcedures: List[WebRow] = makeSubProcedureSelector(subProcedureList)
 
@@ -216,9 +264,9 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
   /**
    * Make a form to present to the user.
    *
-   * @param valueMap List of HTML field values.
-   * @param response HTML response.
-   * @param metaData Related information.
+   * @param valueMap         List of HTML field values.
+   * @param response         HTML response.
+   * @param subProcedureList Related information.
    */
   private def formSelect(valueMap: ValueMapT, response: Response, subProcedureList: SubProcedureList): Unit = {
     val form = new WebForm(action = pathOf, title = None, rowList = rowList(subProcedureList), fileUpload = 0, runScript = Some(javaScript)) // , runScript = Some(javaScript))
@@ -227,20 +275,45 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
   }
 
   private def createPlan(valueMap: ValueMapT, response: Response, subProcedureList: SubProcedureList): Unit = {
-    Trace.trace()
+    Trace.trace("" + valueMap + response + subProcedureList) // gets rid of compiler warnings about unused parameters
     ???
   }
 
-  private def toJs(selectionList: Seq[Selection], subProcedureList: SubProcedureList): String = {
+  private def toJs(checkedSelectionList: Seq[Selection], subProcedureList: SubProcedureList): String = {
 
-    val falseList = subProcedureList.subProcedureList.flatMap(_.selectionList).filterNot(sel => selectionList.exists(_.selectionName.equals(sel.selectionName)))
+    val falseList = subProcedureList.subProcedureList.flatMap(_.selectionList).filterNot(sel => checkedSelectionList.exists(_.selectionName.equals(sel.selectionName)))
 
     def selectionToJs(sel: Selection, checked: Boolean): String = {
       s""" document.getElementById("${sel.htmlId}").checked  = ${checked.toString}; """
     }
 
-    val selectionText = (selectionList.map(sel => selectionToJs(sel, true)) ++ falseList.map(sel => selectionToJs(sel, false))).mkString("\n")
-    selectionText
+    val selectionText = (checkedSelectionList.map(sel => selectionToJs(sel, checked = true)) ++ falseList.map(sel => selectionToJs(sel, checked = false))).mkString("\n")
+
+
+    def beamUseToJs(beam: Beam): String = {
+
+      def beamSubProcToJs(subProc: SubProcedure): String = {
+        val style = {
+          // true if one of the
+          val selForProc = checkedSelectionList.filter(sel => sel.subProcedure.name.equals(subProc.name))
+          val checked = selForProc.flatMap(_.beamList.map(_.beamName)).contains(beam.beamName)
+          subProcBeamStyle(checked)
+        }
+        s""" document.getElementById("${beamProcId(subProc, beam)}").style = "$style"; """
+      }
+
+      subProcedureList.subProcedureList.map(beamSubProcToJs).mkString("\n")
+    }
+
+    val beamText = subProcedureList.beamList.map(beamUseToJs).mkString("\n")
+
+    val selectedBeamCountText = {
+      val count = checkedSelectionList.flatMap(_.beamList).map(_.beamName).distinct.size.toString
+      s""" document.getElementById("$selectedBeamCountTag").innerHTML = "$count"; """
+    }
+
+
+    Seq(selectionText, beamText, selectedBeamCountText).mkString("\n")
   }
 
 
@@ -275,7 +348,7 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
 
 
   // true if the use clicked a checkbox
-  private def updateBeamStatus(valueMap: WebUtil.ValueMapT, uploadText: Option[String], response: Response, subProcedureList: SubProcedureList): Unit = {
+  private def updateBeamStatus(uploadText: Option[String], response: Response, subProcedureList: SubProcedureList): Unit = {
 
     val doc = XML.loadString(uploadText.get.trim)
 
@@ -336,9 +409,12 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
         // case _ if machine.isEmpty => updateMach()
         // case _ if (user.get.institutionPK != machine.get.institutionPK) && (!WebUtil.userIsWhitelisted(request)) => updateMach()
         case _ if buttonIs(valueMap, cancelButton) => updateMach()
+
         case _ if request.getMethod == Method.POST =>
           val subProcedureList = SubProcedureList.makeSubProcedureList(SPMetaData(machine.get))
-          updateBeamStatus(valueMap, uploadText, response, subProcedureList)
+          updateBeamStatus(uploadText, response, subProcedureList)
+
+
         case _ if buttonIs(valueMap, createPlanButton) =>
           val subProcedureList = SubProcedureList.makeSubProcedureList(SPMetaData(machine.get))
           createPlan(valueMap, response, subProcedureList)

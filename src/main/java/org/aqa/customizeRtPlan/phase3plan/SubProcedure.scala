@@ -2,6 +2,7 @@ package org.aqa.customizeRtPlan.phase3plan
 
 import com.pixelmed.dicom.AttributeList
 import org.aqa.Logging
+import org.aqa.web.WebUtil.ValueMapT
 
 import scala.xml.Elem
 
@@ -54,4 +55,13 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
     */
   def generatePlan(checkboxIdList: Seq[String]): Seq[AttributeList]
 
+  /**
+   * Determine if this sub-procedure is selected by the user and uses the given beam.
+   * @param beam Test this beam.
+   * @param valueMap User selections.
+   * @return
+   */
+  final def usesBeam(beam: Beam, valueMap: ValueMapT): Boolean = {
+    selectionList.filter(sel => sel.isSelected(valueMap)).flatMap(_.beamList).exists(b => b.beamName.equals(beam.beamName))
+  }
 }

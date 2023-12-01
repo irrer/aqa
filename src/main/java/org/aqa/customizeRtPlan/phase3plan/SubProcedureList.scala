@@ -10,7 +10,8 @@ case class SubProcedureList(metaData: SPMetaData, beamList: Seq[Beam]) {
 
     Seq(
       new SPFocalSpot(metaData, beamList),
-      new SPCenterDose(metaData, beamList)
+      new SPCenterDose(metaData, beamList),
+      new SPSymFlatConst(metaData, beamList)
     )
   }
 
