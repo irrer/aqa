@@ -12,7 +12,6 @@ import org.aqa.Config
 import org.aqa.DicomFile
 import org.aqa.Util
 import org.aqa.db.EPID
-import org.aqa.web.WebUtil.ValueMapT
 
 import java.io.File
 
@@ -98,16 +97,6 @@ case class SPMetaData(machine: Machine) {
     beamList
   }
 
-  private def makeSubProcedureList: Seq[SubProcedure] = {
-
-    val sp = this // force initialization of this object
-
-    Seq(
-      new SPFocalSpot(sp),
-      new SPCenterDose(sp)
-    )
-  }
-
   /** List of beam energies for this machine. */
   val beamEnergyList: Seq[MachineBeamEnergy] = {
     val machineType = MachineType.get(machine.machineTypePK).get
@@ -126,54 +115,4 @@ case class SPMetaData(machine: Machine) {
   /** List of PNG files representing examples of beams. */
   val exampleImageFileList: Seq[File] = Util.listDirFiles(exampleBeamImagesDir(epid))
 
-  /** List of Phase3 sub-procedures. */
-  val subProcedureList: Seq[SubProcedure] = makeSubProcedureList
-
-  /**
-    * Return the list of sub procedures that are selecting the beam.
-    * @param beam For this beam.
-    * @param valueMap User selections.
-    * @return List of sub procedures that are selecting the beam.
-    */
-  def beamUseList(beam: Beam, valueMap: ValueMapT): Seq[SubProcedure] = {
-    val list = subProcedureList.flatMap(_.selectionList).filter(sel => sel.isSelected(valueMap)).map(_.subProcedure).groupBy(_.name).map(_._2.head)
-    list.toSeq
-  }
-
-  /**
-    * Determine if the beam is used by the sub-procedure.
-    * @param beam For this beam.
-    * @param subProcedure For this sub procedure.
-    * @param valueMap User selections.
-    * @return True if the beam is used by the sub-procedure.
-    */
-  def subProcedureUsesBeam(beam: Beam, subProcedure: SubProcedure, valueMap: ValueMapT): Boolean = {
-    beamUseList(beam, valueMap).exists(_.name.equals(subProcedure.name))
-  }
-
-  /**
-    * Find the selection that matches the given HTML id.
-    * @param htmlId Look for this id.
-    * @return matching one.
-    */
-  def findByHtmlId(htmlId: String): Option[Selection] = {
-    subProcedureList.flatMap(_.selectionList).find(s => s.htmlIdMatches(htmlId))
-  }
-
-  /**
-   * Return the list of selections that have all of their beams on the list.
-   * @param beamList List of beams to be put in plan.
-   * @return List of selections.
-   */
-  def getSelectionsFromBeams(beamList: Iterable[Beam]): Seq[Selection] = {
-
-    def isSelected(beam: Beam) = beamList.exists(b => b.beamName.equals(beam.beamName))
-
-    def allBeamsSelected(sel: Selection): Boolean = {
-      sel.beamList.map(isSelected).reduce(_ && _)
-    }
-
-    subProcedureList.flatMap(_.selectionList).filter(allBeamsSelected)
-
-  }
 }

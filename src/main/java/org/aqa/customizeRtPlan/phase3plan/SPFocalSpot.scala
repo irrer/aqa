@@ -10,14 +10,14 @@ import org.aqa.Util
 
 import scala.xml.Elem
 
-class SPFocalSpot(metaData: SPMetaData) extends SubProcedure(metaData) {
+class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(metaData, beamList: Seq[Beam]) {
 
   override val name = "Focal Spot"
 
   override val abbreviation = "FS"
 
   private val fsPrototypeList =
-    metaData.prototypeBeamList.filter(beam => Config.FocalSpotBeamNameList.contains(beam.beamName)).sortBy(_.beamName)
+    beamList.filter(beam => Config.FocalSpotBeamNameList.contains(beam.beamName)).sortBy(_.beamName)
 
   private val prototypeSet = fsPrototypeList.filterNot(_.isFFF).groupBy(beam => s"${beam.isFFF} ${beam.beamEnergy.photonEnergy_MeV.get}").values.head
 

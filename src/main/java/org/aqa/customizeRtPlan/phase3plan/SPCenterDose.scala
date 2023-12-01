@@ -6,7 +6,7 @@ import org.aqa.Util
 
 import scala.xml.Elem
 
-class SPCenterDose(metaData: SPMetaData) extends SubProcedure(metaData) {
+class SPCenterDose(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(metaData, beamList: Seq[Beam]) {
 
   override val name = "Center Dose"
 
@@ -17,7 +17,7 @@ class SPCenterDose(metaData: SPMetaData) extends SubProcedure(metaData) {
   override def selectionList: Seq[Selection] = {
     def toSelection(beam: Beam): Selection = Selection(this, beam.beamName, Seq(beam))
     def ok(beam: Beam) = Util.minCenteredFieldBeam(beam.prototypeBeam, Config.CenterDoseRadius_mm * 2)
-    val list = metaData.prototypeBeamList.filter(ok).map(toSelection)
+    val list = beamList.filter(ok).map(toSelection)
     list
   }
 

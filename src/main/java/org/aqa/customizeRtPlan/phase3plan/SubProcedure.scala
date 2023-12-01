@@ -8,11 +8,11 @@ import scala.xml.Elem
 /**
   * Abstraction layer that defines common interface for sub-procedures.
   */
-abstract class SubProcedure(val metaData: SPMetaData) extends Logging {
+abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) extends Logging {
 
   /**
-   * Name of this sub procedure.
-   */
+    * Name of this sub procedure.
+    */
   val name: String
 
   /**
@@ -40,15 +40,12 @@ abstract class SubProcedure(val metaData: SPMetaData) extends Logging {
     */
   def update(checkboxIdList: Seq[String]): Seq[Beam]
 
-
   /**
-   * Given the beams from the original plans, return a list of beams that the user can choose from.
-   *
-   * @return List of beams applicable to this sub-procedure.
-   */
+    * Given the beams from the original plans, return a list of beams that the user can choose from.
+    *
+    * @return List of beams applicable to this sub-procedure.
+    */
   def getBeamList: Seq[Beam]
-
-
 
   /**
     * Generate the list of beams to be put in the plan.
