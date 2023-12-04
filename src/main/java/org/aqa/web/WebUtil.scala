@@ -1324,7 +1324,16 @@ object WebUtil extends Logging {
    * @param offset Offset column (0-11)
    */
   //noinspection ScalaUnusedSymbol
-  class FormButton(override val label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: ValueMapT => String, buttonType: ButtonType.Value, value: String, title: Option[String])
+  class FormButton(override val label: String,
+                   col: Int,
+                   offset: Int,
+                   subUrl: SubUrl.Value,
+                   action: ValueMapT => String,
+                   buttonType: ButtonType.Value,
+                   value: String,
+                   title: Option[String],
+                   htmlAttrMapP: Map[String, String] = Map(),
+                   htmlButtonType: String = "submit")
     extends IsInput(label)
       with ToHtml {
     def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: ValueMapT => String, buttonType: ButtonType.Value, value: String) =
@@ -1339,9 +1348,11 @@ object WebUtil extends Logging {
 
     override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response], htmlAttrMap: Map[String, String] = Map()): Elem = {
       val button = {
-        <button type="submit" class={"btn " + buttonType.toString} action={action(valueMap)} value={value} name={label}>
+        val b = <button type={htmlButtonType} class={"btn " + buttonType.toString} action={action(valueMap)} value={value} name={label}>
           {label}
         </button>
+
+        addAttributeMap(b, htmlAttrMap)
       }
       wrapInput(label, showLabel = false, button, col, offset, errorMap)
     }

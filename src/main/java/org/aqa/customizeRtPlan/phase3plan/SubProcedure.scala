@@ -56,11 +56,11 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
   def generatePlan(checkboxIdList: Seq[String]): Seq[AttributeList]
 
   /**
-   * Determine if this sub-procedure is selected by the user and uses the given beam.
-   * @param beam Test this beam.
-   * @param valueMap User selections.
-   * @return
-   */
+    * Determine if this sub-procedure is selected by the user and uses the given beam.
+    * @param beam Test this beam.
+    * @param valueMap User selections.
+    * @return
+    */
   final def usesBeam(beam: Beam, valueMap: ValueMapT): Boolean = {
     selectionList.filter(sel => sel.isSelected(valueMap)).flatMap(_.beamList).exists(b => b.beamName.equals(beam.beamName))
   }
