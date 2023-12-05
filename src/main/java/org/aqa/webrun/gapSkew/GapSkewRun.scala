@@ -298,8 +298,8 @@ class GapSkewRun(procedure: Procedure) extends WebRunProcedure with RunTrait[Gap
     * get the date that the data was acquired.
     */
   override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[Timestamp] = {
-    val min = alList.filter(Util.isRtimage).map(Util.extractDateTimeAndPatientIdFromDicomAl).flatMap(dp => dp._1.map(_.getTime)).min
-    Some(new Timestamp(min))
+    val min = alList.filter(Util.isRtimage).map(Util.extractDateTimeAndPatientIdFromDicomAl).flatMap(_._1.headOption).min
+    Some(new Timestamp(min.getTime))
   }
 
   /**

@@ -510,7 +510,7 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
   }
 
   override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[Timestamp] = {
-    val min = alList.filter(al => Util.isRtimage(al)).map(al => Util.extractDateTimeAndPatientIdFromDicomAl(al)).flatMap(dp => dp._1).minBy(_.getTime)
+    val min = alList.filter(Util.isRtimage).map(Util.extractDateTimeAndPatientIdFromDicomAl).flatMap(_._1.headOption).min
     Some(new Timestamp(min.getTime))
   }
 
