@@ -9,6 +9,7 @@ case class SubProcedureList(metaData: SPMetaData, beamList: Seq[Beam]) {
   private def makeSubProcedureList: Seq[SubProcedure] = {
 
     Seq(
+      new SPCollimatorCentering(metaData, beamList),
       new SPFocalSpot(metaData, beamList),
       new SPSymFlatConst(metaData, beamList),
       new SPLeafPosition(metaData, beamList),

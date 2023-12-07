@@ -9,13 +9,6 @@ class SPWedge(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(me
 
   override val name = "Wedge"
 
-  def toFsBeam(beam: Beam): Elem = ???
-
-  private def beamNameToId(beamName: String): String = {
-    val pair = beamName.split("-").last
-    pair
-  }
-
   private def wedgeSelectionList: Seq[Selection] = {
     def findPair(wedge: Config.WedgeBeam): Option[(Beam, Beam)] = {
       val fg = beamList.find(_.beamName.equals(wedge.wedge))
@@ -34,7 +27,6 @@ class SPWedge(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(me
   override def selectionList: Seq[Selection] = wedgeSelectionList
 
   override def setBeamList(beamList: Seq[Beam]): Elem = {
-    beamList.map(toFsBeam)
     ???
   }
 

@@ -261,8 +261,12 @@ object Util extends Logging {
   }
 
   def gantryAngle(al: AttributeList): Double = {
-    val at = al.get(TagByName.GantryAngle)
-    if (at == null) 0 else at.getDoubleValues.head
+    try {
+      DicomUtil.findAllSingle(al, TagByName.GantryAngle).head.getDoubleValues.head
+    }
+    catch {
+      case _: Throwable => 0.0
+    }
   }
 
   def gantryAngle(df: DicomFile): Double = gantryAngle(df.attributeList.get)

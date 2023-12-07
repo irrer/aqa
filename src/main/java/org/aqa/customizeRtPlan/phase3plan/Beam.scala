@@ -31,10 +31,12 @@ case class Beam(prototypeBeam: AttributeList, beamName: String, beamEnergy: Mach
   def colAngle_deg: Double = Util.collimatorAngle(prototypeBeam)
 
   /** Collimator angle rounded to 90. */
-  def colAngle_roundedDeg: Double = Util.angleRoundedTo90(colAngle_deg)
+  def colAngle_roundedDeg: Int = Util.angleRoundedTo90(colAngle_deg)
 
   /** First gantry angle in fraction sequence. */
   def gantryAngle_deg: Double = Util.gantryAngle(prototypeBeam)
+
+  def gantryAngle_roundedDeg: Int = Util.angleRoundedTo90(gantryAngle_deg)
 
   override def toString: String = {
     val j0 = beamName + ""

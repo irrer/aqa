@@ -79,7 +79,7 @@ object Phase3HtmlBeam extends Logging {
         <h4>
           {beam.beamName}
         </h4> <br/>
-        <img src={imageUrl} height="100" style="margin: 2px;"/>
+        <img src={imageUrl} height="20" style="margin: 2px;"/>
       </div>
     }
 
