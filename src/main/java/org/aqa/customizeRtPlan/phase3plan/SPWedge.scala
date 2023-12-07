@@ -27,7 +27,7 @@ class SPWedge(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(me
         None
     }
 
-    Config.WedgeBeamList.flatMap(findPair).map(pair => new Selection(this, pair._1.beamName, Seq(pair._1, pair._2)))
+    Config.WedgeBeamList.flatMap(findPair).map(pair => Selection(this, pair._1.beamName, Seq(pair._1, pair._2)))
 
   }
 
