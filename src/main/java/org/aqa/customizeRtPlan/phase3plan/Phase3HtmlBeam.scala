@@ -2,6 +2,7 @@ package org.aqa.customizeRtPlan.phase3plan
 
 import org.aqa.Logging
 import org.aqa.web.WebUtil._
+import org.aqa.Util
 
 import scala.xml.Elem
 
@@ -12,13 +13,21 @@ object Phase3HtmlBeam extends Logging {
 
 
   /**
+   * Generate the HTML id for the given beam.
+   *
+   * @param beam For this beam.
+   * @return Used in HTML attribute id=...
+   */
+  def beamHtmlId(beam: Beam): String = "Beam_" + beam.beamName
+
+  /**
    * Generate the HTML id for the given sub procedure's use of the given beam.
    *
    * @param subProc Sub-procedure.
    * @param beam    Beam.
    * @return HTML id.
    */
-  def beamProcId(subProc: SubProcedure, beam: Beam) = s"${subProc.name} :: ${beam.beamName}"
+  def beamProcId(subProc: SubProcedure, beam: Beam) = Util.textToId(s"${subProc.name} :: ${beam.beamName}")
 
   /* Return true if the user has made any selections of the given sub procedure that use the given beam. */
   /*
@@ -42,7 +51,7 @@ object Phase3HtmlBeam extends Logging {
 
   /** Return an indicator as to whether the sub procedure uses the beam. */
   private def subProcUseOfBeam(subProc: SubProcedure, beam: Beam): Elem = {
-    val id = s"${subProc.name} :: ${beam.beamName}"
+    val id = beamProcId(subProc, beam)
     <span id={id} style={subProcBeamStyle(false)} title={subProc.name}>
       <span style="margin:6px;">
         {subProc.name}
@@ -50,7 +59,7 @@ object Phase3HtmlBeam extends Logging {
     </span>
   }
 
-  private def beamToHtml(beam: Beam, valueMap: ValueMapT, subProcedureList: SubProcedureList): Elem = {
+  private def beamToHtml(beam: Beam, subProcedureList: SubProcedureList): Elem = {
 
     val beamSetUse = subProcedureList.subProcedureList.map(sub => subProcUseOfBeam(sub, beam))
 
@@ -79,38 +88,38 @@ object Phase3HtmlBeam extends Logging {
         <tr>
           <td>
             {image}
-          </td>
-          <td>
-            {subProcedureUses}
-          </td>
+          </td>{subProcedureUses}
         </tr>
       </table>
     </div>
   }
 
-  def selectedBeamsField(subProcedureList: SubProcedureList, selectedBeamCountTag: String): WebPlainText = {
+  def selectedBeamsField(subProcedureList: SubProcedureList, selectedBeamCountTag: String): Elem = {
     // @formatter:off
     def toBeamHtml(valueMap :ValueMapT): Elem = {
       <div>
         <div class="row">
-          <div class="col-md-2">
+          <div class="col-md-4">
             <h3>Beam List</h3>
           </div>
-          <div class="col-md-2">
+          <div class="col-md-4">
             <h3>Selected: <span id={selectedBeamCountTag}>0</span></h3>
           </div>
         </div>
         <div class="row">
-          {subProcedureList.beamList.map(beam => {<div class="col-md-3"> {beamToHtml(beam, valueMap, subProcedureList)} </div>})}
+          {subProcedureList.beamList.map(beam => {<div class="col-md-6" id={beamHtmlId(beam)} style="display:none;"> {beamToHtml(beam, subProcedureList)} </div>})}
         </div>
       </div>
     }
     // @formatter:on
 
-    new WebPlainText(
+    val j = new WebPlainText(
       label = "Selected Beams", showLabel = false,
       col = 0, offset = 0,
       toBeamHtml)
+
+    val html = j.toHtml(valueMap = emptyValueMap)
+    html
   }
 
 }

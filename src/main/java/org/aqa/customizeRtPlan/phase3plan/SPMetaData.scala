@@ -54,7 +54,7 @@ case class SPMetaData(machine: Machine) {
     * @return URL of image.
     */
   def urlOfExampleImage(beam: Beam): String = {
-    def normalize(t: String) = t.replaceAll("[^a-z]", "-")
+    def normalize(t: String) = t.replaceAll("[^a-z0-9]", "-")
 
     val imageFile: File = {
       val file = exampleImageFileList.find(f => normalize(f.getName).equalsIgnoreCase(normalize(beam.beamName + ".png")))

@@ -5,11 +5,11 @@ import org.aqa.customizeRtPlan.CustomizeRtPlanInterface
 import org.aqa.web.MachineUpdate
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
+import org.aqa.web.WebUtil.WebPlainText
 import org.restlet.data.Status
 import org.restlet.Response
 
 import scala.xml.Elem
-import scala.xml.Node
 
 object Phase3HtmlForm extends Logging {
 
@@ -42,38 +42,32 @@ object Phase3HtmlForm extends Logging {
   private def toleranceTableName = new WebInputHidden(CustomizeRtPlanInterface.toleranceTableNameTag)
 
 
-  /* Return the HTML attribute style for the given beam's use by a sub-procedure. */
-  private def subProcBeamStyle(checked: Boolean): String = {
-    val color =
-      if (checked)
-      //noinspection SpellCheckingInspection
-        "lightgreen"
-      else
-        "white"
-    val style = s"border-left: 16px solid $color; margin:5px;"
-    style
-  }
+  /** List of pre-defined templates for making selections. */
+  private def templateList: Seq[Phase3Template] = Seq(new Phase3TemplateNone, new Phase3TemplateAll, new Phase3TemplateFocalSpot)
 
-
-  private def makeSubProcedureSelector(subProcedureList: SubProcedureList): List[WebRow] = {
+  private def makeSubProcedureSelector(subProcedureList: SubProcedureList): Seq[Elem] = {
     def makeSelectorHtml(subProc: SubProcedure): WebRow = {
       val attrMap = Map("onClick" -> "phase3ClickHandler(this)")
 
-      val list = subProc.selectionList.map(s => new WebInputCheckbox(label = s.selectionName, showLabel = true, title = None, col = 2, offset = 0, attrMap, id = Some(s.htmlId)))
+      val list = subProc.selectionList.map(s => new WebInputCheckbox(label = s.selectionName, showLabel = true, title = None, col = 3, offset = 0, attrMap, id = Some(s.htmlId)))
       // @formatter:off
       val empty: Elem = { <span></span>}
       // @formatter:on
-      val name = new WebPlainText(label = s"${subProc.name}:", showLabel = true, col = 12, offset = 0, _ => empty)
+      val name = new WebPlainText(label = s"${subProc.name}:", showLabel = false, col = 12, offset = 0, _ => <h3><hr/>{subProc.name}</h3>)
       (name +: list).toList
     }
 
-    val checkBoxIdList: List[WebRow] = subProcedureList.subProcedureList.map(makeSelectorHtml).toList
+    val checkBoxIdList = subProcedureList.subProcedureList.map(makeSelectorHtml).map(_.toHtml(emptyValueMap))
     checkBoxIdList
   }
 
-  /** A list of beam energies that the machine supports. If any have an undefined dose rate, then fill it in. */
-  def rowList(subProcedureList: SubProcedureList): List[WebRow] = {
-
+  /**
+   * HTML shown at top of web page.
+   *
+   * @param subProcedureList provide metadata.
+   * @return HTML.
+   */
+  private def banner(subProcedureList: SubProcedureList): WebRow = {
     val pageTitle = {
       val html =
         <div>
@@ -84,21 +78,38 @@ object Phase3HtmlForm extends Logging {
       new WebPlainText(label = "Phase3 Plan", showLabel = false, col = 12, offset = 0, _ => html)
     }
 
-    val rowTitle: WebRow = List(pageTitle)
+    List(pageTitle)
+  }
 
-    val rowPreDefined: WebRow = List(Phase3HtmlTemplate.uncheckAllButton())
+  /** A list of beam energies that the machine supports. If any have an undefined dose rate, then fill it in. */
+  def rowList(subProcedureList: SubProcedureList): List[WebRow] = {
+
+    val rowTemplate: WebRow = templateList.map(_.button).toList
 
     // all hidden fields inherited from and specified in the custom plan interface.
     val rowCommonParameters: WebRow = List(machinePK, patientID, patientName, machineName, planName, toleranceTableName)
 
-    def rowSelectSubProcedures: List[WebRow] = makeSubProcedureSelector(subProcedureList)
+    def selectSubProceduresList = makeSubProcedureSelector(subProcedureList)
+
+    def selectSubProcedureHtml = new WebPlainText(label = "Procedures", showLabel = false, col = 6, offset = 0, _ => <div>
+      {selectSubProceduresList}
+    </div>)
 
     // @formatter:on
-    def rowSelectedBeams: WebRow = List(Phase3HtmlBeam.selectedBeamsField(subProcedureList, selectedBeamCountTag))
+    val beamHtml: WebPlainText = {
+      val html = Phase3HtmlBeam.selectedBeamsField(subProcedureList, selectedBeamCountTag)
+      val web = new WebPlainText(label = "Beams", showLabel = false, col = 6, offset = 0, _ =>
+        <div>
+          {html}
+        </div>)
+      web
+    }
+
+    val row: WebRow = List(selectSubProcedureHtml, beamHtml)
 
     val rowButton: WebRow = List(Phase3HtmlForm.cancelButton, createPlanButton)
 
-    val rowList: List[WebRow] = List(rowTitle) ++ List(rowPreDefined) ++ List(rowCommonParameters) ++ rowSelectSubProcedures ++ List(rowSelectedBeams) ++ List(rowButton)
+    val rowList: List[WebRow] = List(banner(subProcedureList)) ++ List(rowTemplate) ++ List(rowCommonParameters) ++ List(row) ++ List(rowButton)
     rowList
   }
 
@@ -110,84 +121,12 @@ object Phase3HtmlForm extends Logging {
    * @param subProcedureList Related information.
    */
   def formSelect(valueMap: ValueMapT, response: Response, subProcedureList: SubProcedureList): Unit = {
-    val form = new WebForm(action = Phase3HTML.pathOf, title = None, rowList = rowList(subProcedureList), fileUpload = 0, runScript = Some(Phase3JS.javaScript)) // , runScript = Some(javaScript))
+
+    val templateText = Phase3HtmlForm.templateList.map(_.js).mkString("\n")
+    val js = s"${Phase3JS.javaScript}\n$templateText"
+    val form = new WebForm(action = Phase3HTML.pathOf, title = None, rowList = rowList(subProcedureList), fileUpload = 0, runScript = Some(js)) // , runScript = Some(javaScript))
 
     form.setFormResponse(valueMap, styleNone, pageTitle, response, Status.SUCCESS_OK)
   }
-
-
-  private def toJs(checkedSelectionList: Seq[Selection], subProcedureList: SubProcedureList): String = {
-
-    val falseList = subProcedureList.subProcedureList.flatMap(_.selectionList).filterNot(sel => checkedSelectionList.exists(_.selectionName.equals(sel.selectionName)))
-
-    def selectionToJs(sel: Selection, checked: Boolean): String = {
-      s""" document.getElementById("${sel.htmlId}").checked  = ${checked.toString}; """
-    }
-
-    val selectionText = (checkedSelectionList.map(sel => selectionToJs(sel, checked = true)) ++ falseList.map(sel => selectionToJs(sel, checked = false))).mkString("\n")
-
-
-    def beamUseToJs(beam: Beam): String = {
-
-      def beamSubProcToJs(subProc: SubProcedure): String = {
-        val style = {
-          // true if one of the
-          val selForProc = checkedSelectionList.filter(sel => sel.subProcedure.name.equals(subProc.name))
-          val checked = selForProc.flatMap(_.beamList.map(_.beamName)).contains(beam.beamName)
-          subProcBeamStyle(checked)
-        }
-        s""" document.getElementById("${Phase3HtmlBeam.beamProcId(subProc, beam)}").style = "$style"; """
-      }
-
-      subProcedureList.subProcedureList.map(beamSubProcToJs).mkString("\n")
-    }
-
-    val beamText = subProcedureList.beamList.map(beamUseToJs).mkString("\n")
-
-    val selectedBeamCountText = {
-      val count = checkedSelectionList.flatMap(_.beamList).map(_.beamName).distinct.size.toString
-      s""" document.getElementById("$selectedBeamCountTag").innerHTML = "$count"; """
-    }
-
-
-    Seq(selectionText, beamText, selectedBeamCountText).mkString("\n")
-  }
-
-
-  /**
-   * Given a node, return the selection ID and whether it is checked or not.
-   *
-   * @param node HTML description of checkbox.
-   * @return True if checked.
-   */
-  private def toCheckbox(node: Node, subProcedureList: SubProcedureList): (Selection, Boolean) = {
-    val id = (node \ "id").text
-    val value = (node \ "checked").text.toBoolean
-    (subProcedureList.findByHtmlId(id).get, value)
-  }
-
-  /**
-   * Make a list of all the checked selections.
-   *
-   * @return List of checked selections.
-   */
-  private def makeCheckedList(doc: Elem, subProcedureList: SubProcedureList): Seq[Selection] = {
-
-    def toSel(node: Node): Option[Selection] = {
-      if ((node \ "checked").text.toBoolean)
-        subProcedureList.findByHtmlId((node \ "id").text)
-      else
-        None
-    }
-
-    (doc \ "Checkbox").flatMap(toSel)
-  }
-
-
-  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
-    val value = valueMap.get(button.label)
-    value.isDefined && value.get.equals(button.label)
-  }
-
 
 }

@@ -1346,13 +1346,14 @@ object WebUtil extends Logging {
 
     def this(label: String, col: Int, offset: Int, subUrl: SubUrl.Value, action: String) = this(label, col, offset, subUrl, action: String, ButtonType.BtnDefault, label)
 
-    override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response], htmlAttrMap: Map[String, String] = Map()): Elem = {
+    override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response], htmlAttrMap: Map[String, String] = htmlAttrMapP): Elem = {
       val button = {
         val b = <button type={htmlButtonType} class={"btn " + buttonType.toString} action={action(valueMap)} value={value} name={label}>
           {label}
         </button>
 
-        addAttributeMap(b, htmlAttrMap)
+        val map = if (title.isDefined) htmlAttrMap + ("title" -> title.get) else htmlAttrMap
+        addAttributeMap(b, map)
       }
       wrapInput(label, showLabel = false, button, col, offset, errorMap)
     }

@@ -14,8 +14,6 @@ class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedur
 
   override val name = "Focal Spot"
 
-  override val abbreviation = "FS"
-
   private val fsPrototypeList =
     beamList.filter(beam => Config.FocalSpotBeamNameList.contains(beam.beamName)).sortBy(_.beamName)
 

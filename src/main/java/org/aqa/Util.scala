@@ -1101,6 +1101,15 @@ object Util extends Logging {
   //noinspection RegExpSimplifiable
   def textToId(text: String): String = text.replaceAll("[^0-9a-zA-Z]", "_").replaceAll("__*", "_")
 
+
+  /**
+   * Given arbitrary text, replace all special characters with underscore so it can be used as a HTML5 identifier.
+   *
+   * @param text Original text.
+   * @return Text valid to be used as an HTML5 id tag.
+   */
+  def textToHtmlId(text: String): String = text.replaceAll("[^A-Za-z0-9_\\-:. ]", "_")
+
   def attributeListToDeviceSerialNumber(al: AttributeList): Option[String] = {
     val at = al.get(TagByName.DeviceSerialNumber)
     if (at == null) None
