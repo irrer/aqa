@@ -23,14 +23,19 @@ object PSM {
 
   private def middleOf(image: DicomImage): String = {
 
-    val size = 10
+    //   This is the middle of the image
+    // val size = 10
     // val x = (image.width - size) / 2
     // val y = (image.height - size) / 2
 
-    val x = 95
-    val y = 63
+    //   This is an interesting part of the image
+    // val x = 95
+    // val y = 63
 
-    val rect = new Rectangle(x, y, 15, 10)
+    val x = 0
+    val y = 0
+
+    val rect = new Rectangle(x, y, 5, 5)
 
     val sub = image.getSubimage(rect)
 
@@ -50,7 +55,7 @@ object PSM {
       s"         min: ${image.minPixelValue}    max: ${image.maxPixelValue}    mean: ${image.sum / (image.width * image.height)}    distinct count: ${distinct.size}\n$withoutEnds"
 
     // "\n" + minMaxMean +
-      sub.pixelsToText
+    sub.pixelsToText
   }
 
   private def psmToDicomImage(psmFile: File): DicomImage = {
@@ -62,30 +67,12 @@ object PSM {
 
     def toRow(y: Int): IndexedSeq[Float] = {
       val aa = (0 until width).map(x => {
-        matrix.getDouble(x, y).toFloat
+        matrix.getDouble(y, x).toFloat // Note: The email sent to Michael Barnes on 2023 Dec 14 used y,x
       })
       aa
     }
 
     val pixelData = (0 until height).map(toRow)
-
-    /*
-    def fix(y: Int): IndexedSeq[Float] = {
-      (0 until width).map(x => {
-        if (false) { // fixes 0 pixels
-          if (pixelData(y)(x) <= 0) {
-            val l = pixelData(y - 1)(x)
-            val h = pixelData(y + 1)(x)
-            (pixelData(y - 1)(x) + pixelData(y + 1)(x)) / 2
-          } else
-            pixelData(y)(x)
-        }
-        pixelData(y)(x)
-      })
-    }
-    val fixed = (0 until height).map(fix)
-    new DicomImage(fixed)
-     */
 
     new DicomImage(pixelData)
   }
@@ -276,6 +263,15 @@ object PSM {
     println(s"Wrote file ${psmCsvFile.getAbsolutePath}")
   }
 
+  /**
+    * Fix bad pixels.
+    *
+    * TODO: Instead of fixing bad pixels, they should be identified (by their coordinates) and then ignored in the subsequent processing steps.
+    *
+    * @param image Image to fix.
+    * @param isOk Function that determines whether the given pixel value is ok.
+    * @return A new image with the bad pixels fixed.
+    */
   private def fixPixels(image: DicomImage, isOk: Float => Boolean): DicomImage = {
 
     def fixPixel(x: Int, y: Int): Float = {
@@ -311,6 +307,7 @@ object PSM {
 
   def main(args: Array[String]): Unit = {
     Trace.trace("Starting ----------------------------------------------------------------------------")
+    val start = System.currentTimeMillis()
     val dir = new File("""src\test\resources\learnPSM""")
     FileUtil.deleteFileTree(outDir)
     outDir.mkdirs
@@ -340,7 +337,7 @@ object PSM {
       new DicomImage(pixelData)
     }
 
-    val wdXbeam6x_ffDivPSM = {
+    val wdXBeam6x_ffDivPSM = {
       def div(pair: (Float, Float)): Float = {
         val result = pair._1 / pair._2
         val d1 = pair._1.toDouble
@@ -353,14 +350,14 @@ object PSM {
       }
       val pixelData = wdXBeam6x_FF.pixelData.zip(psmImage.pixelData).map(tw => tw._1.zip(tw._2).map(div))
 
-      val raw = new DicomImage(pixelData) // jjjjjjjjjjj
+      val raw = new DicomImage(pixelData)
       val fixed = fixPixels(raw, x => x < 100)
       fixed
     }
 
-    val wdXbeam6x_ffDivPSMNorm = normalizeImage(wdXbeam6x_ffDivPSM, beam6x_FFImage.minPixelValue, beam6x_FFImage.maxPixelValue)
+    val wdXBeam6x_ffDivPSMNorm = normalizeImage(wdXBeam6x_ffDivPSM, beam6x_FFImage.minPixelValue, beam6x_FFImage.maxPixelValue)
 
-    val finalDicom = makeDicom(wdXbeam6x_ffDivPSMNorm, beam6x_FFDicomFile.attributeList.get)
+    val finalDicom = makeDicom(wdXBeam6x_ffDivPSMNorm, beam6x_FFDicomFile.attributeList.get)
 
     val roundTrip = new DicomImage(finalDicom)
 
@@ -368,23 +365,24 @@ object PSM {
     println("\nwd:     " + middleOf(wdImage))
     println("\nwd x beam6x_FF:     " + middleOf(wdXBeam6x_FF))
     println("\npsm:     " + middleOf(psmImage))
-    println("\n(wd x beam6x_FF) / psm:     " + middleOf(wdXbeam6x_ffDivPSM))
-    println("\n(wd x beam6x_FF) / psm and then normalized:     " + middleOf(wdXbeam6x_ffDivPSMNorm))
+    println("\n(wd x beam6x_FF) / psm:     " + middleOf(wdXBeam6x_ffDivPSM))
+    println("\n(wd x beam6x_FF) / psm and then normalized:     " + middleOf(wdXBeam6x_ffDivPSMNorm))
     println("\nroundTrip:     " + middleOf(roundTrip))
 
     savePng(wdImage, "wd")
     savePng(beam6x_FFImage, "beam6x_FF")
-    savePng(wdXBeam6x_FF, "wdXbeam6x_FF")
+    savePng(wdXBeam6x_FF, "wdXBeam6x_FF")
     savePng(psmImage, "psm")
-    savePng(wdXbeam6x_ffDivPSMNorm, "psmCorrectedAndNormalized")
+    savePng(wdXBeam6x_ffDivPSMNorm, "psmCorrectedAndNormalized")
     savePng(roundTrip, "roundTrip")
 
-    makeCsv(beam6x_FFImage, wdXbeam6x_ffDivPSMNorm)
+    makeCsv(beam6x_FFImage, wdXBeam6x_ffDivPSMNorm)
 
     val finalDicomFile = new File(outDir, "psmCorrectedAndNormalized.dcm")
     DicomUtil.writeAttributeListToFile(finalDicom, finalDicomFile, "PSM")
 
-    Trace.trace("Done.")
+    val elapsed = System.currentTimeMillis() - start
+    Trace.trace(s"Done.  Elapsed ms: $elapsed")
   }
 
 }
