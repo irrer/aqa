@@ -10,6 +10,7 @@ class SPSymFlatConst(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProce
 
   override val name = "Symmetry Flatness"
 
+  override val abbreviation: String = "Sym Flat"
   def toCdBeam(beam: Beam): Elem = ???
 
   override def selectionList: Seq[Selection] = {

@@ -1,6 +1,7 @@
 package org.aqa.customizeRtPlan.phase3plan
 
 import org.aqa.Logging
+import org.aqa.customizeRtPlan.phase3plan.Phase3HtmlForm.selectedBeamCountTag
 import org.aqa.web.MachineUpdate
 
 /**
@@ -77,6 +78,79 @@ object Phase3JS extends Logging {
        |phase3ClickHandler(null);
        |
        |""".stripMargin
+  }
+
+  private def selectionToJs(sel: Selection, checked: Boolean): String = {
+    s""" document.getElementById("${sel.htmlId}").checked = ${checked.toString}; """
+  }
+
+  private def selectionText(checkedSelectionList: Seq[Selection], subProcedureList: SubProcedureList): String = {
+    val falseList = subProcedureList.subProcedureList.flatMap(_.selectionList).filterNot(sel => checkedSelectionList.exists(_.selectionName.equals(sel.selectionName)))
+    (checkedSelectionList.map(sel => selectionToJs(sel, checked = true)) ++ falseList.map(sel => selectionToJs(sel, checked = false))).mkString("\n")
+  }
+
+  private def beamUseToJs(beam: Beam, checkedSelectionList: Seq[Selection], subProcedureList: SubProcedureList): String = {
+
+    def beamSubProcToJs(subProc: SubProcedure): String = {
+      val style = {
+        // true if the sub processes reference the beam.
+        val selForProc = checkedSelectionList.filter(sel => sel.subProcedure.name.equals(subProc.name))
+        val checked = selForProc.flatMap(_.beamList.map(_.beamName)).contains(beam.beamName)
+        Phase3HtmlBeam.subProcBeamStyle(checked)
+      }
+      s""" document.getElementById("${Phase3HtmlBeam.beamProcId(subProc, beam)}").style = "$style"; """
+    }
+
+    val showBeam: String = {
+      val show = checkedSelectionList.exists(sel => sel.beamList.exists(b => b.beamName.equals(beam.beamName)))
+
+      // the 'table-row' display type is the one that seems to work. Both 'block' and 'compact' make
+      // the table row show up, but the columns of content is not aligned with the header columns.
+      // see: https://www.w3schools.com/jsref/prop_style_display.asp
+      val display = if (show) "table-row" else "none"
+      s"""document.getElementById("${Phase3HtmlBeam.beamHtmlId(beam)}").style.display = "$display";"""
+    }
+
+    subProcedureList.subProcedureList.map(beamSubProcToJs).mkString("\n") + "\n" + showBeam
+  }
+
+  private def subProcessHeaderToJs(checkedSelectionList: Seq[Selection], subProcedure: SubProcedure): String = {
+    val selList = checkedSelectionList.filter(sel => subProcedure.selectionList.exists(s => s.selectionName.equals(sel.selectionName)))
+    val numBeam = selList.flatMap(sel => sel.beamList).map(_.beamName).distinct.size
+
+    val js = if (numBeam == 0) {
+      s"""document.getElementById("${subProcedure.headerId}").style.background = "lightgrey";""" +
+        s"""document.getElementById("${subProcedure.headerId}").innerHTML = "${subProcedure.abbreviation}";"""
+    } else {
+      s"""document.getElementById("${subProcedure.headerId}").style.background = "lightgreen";""" +
+        s"""document.getElementById("${subProcedure.headerId}").innerHTML = "${subProcedure.abbreviation + " : " + numBeam}";"""
+    }
+
+    js
+  }
+
+  /**
+    * Write js code that tells the client what to modify in the DOM.
+    *
+    * @param checkedSelectionList List of selections that the user has checked.
+    * @param subProcedureList Sub-procedures and meta data related to this machine.
+    * @return
+    */
+  def toJs(checkedSelectionList: Seq[Selection], subProcedureList: SubProcedureList): String = {
+
+    val beamText = subProcedureList.beamList.map(beam => beamUseToJs(beam, checkedSelectionList, subProcedureList)).mkString("\n")
+
+    val selText = selectionText(checkedSelectionList, subProcedureList)
+
+    val selectedBeamCountText = {
+      val count = checkedSelectionList.flatMap(_.beamList).map(_.beamName).distinct.size.toString
+      s""" document.getElementById("$selectedBeamCountTag").innerHTML = "$count"; """
+    }
+
+    val subHeaderText = subProcedureList.subProcedureList.map(sub => subProcessHeaderToJs(checkedSelectionList, sub)).mkString("\n")
+
+    val js = Seq(selText, beamText, selectedBeamCountText, subHeaderText).mkString("\n")
+    js
   }
 
 }

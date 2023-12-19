@@ -9,6 +9,7 @@ class SPWedge(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(me
 
   override val name = "Wedge"
 
+  override val abbreviation: String = "Wedg"
   private def wedgeSelectionList: Seq[Selection] = {
     def findPair(wedge: Config.WedgeBeam): Option[(Beam, Beam)] = {
       val fg = beamList.find(_.beamName.equals(wedge.wedge))

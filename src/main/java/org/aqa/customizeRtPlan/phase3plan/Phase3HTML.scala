@@ -28,56 +28,6 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
   }
 
   /**
-    * Write js code that tells the client what to modify in the DOM.
-    *
-    * @param checkedSelectionList List of selections that the user has checked.
-    * @param subProcedureList Sub-procedures and meta data related to this machine.
-    * @return
-    */
-  private def toJs(checkedSelectionList: Seq[Selection], subProcedureList: SubProcedureList): String = {
-
-    val falseList = subProcedureList.subProcedureList.flatMap(_.selectionList).filterNot(sel => checkedSelectionList.exists(_.selectionName.equals(sel.selectionName)))
-
-    def selectionToJs(sel: Selection, checked: Boolean): String = {
-      s""" document.getElementById("${sel.htmlId}").checked = ${checked.toString}; """
-    }
-
-    val selectionText = (checkedSelectionList.map(sel => selectionToJs(sel, checked = true)) ++ falseList.map(sel => selectionToJs(sel, checked = false))).mkString("\n")
-
-    def beamUseToJs(beam: Beam): String = {
-
-      def beamSubProcToJs(subProc: SubProcedure): String = {
-        val style = {
-          // true if the sub processes reference the beam.
-          val selForProc = checkedSelectionList.filter(sel => sel.subProcedure.name.equals(subProc.name))
-          val checked = selForProc.flatMap(_.beamList.map(_.beamName)).contains(beam.beamName)
-          Phase3HtmlBeam.subProcBeamStyle(checked)
-        }
-        s""" document.getElementById("${Phase3HtmlBeam.beamProcId(subProc, beam)}").style = "$style"; """
-      }
-
-      val showBeam: String = {
-        val show = checkedSelectionList.exists(sel => sel.beamList.exists(b => b.beamName.equals(beam.beamName)))
-        val display = if (show) "block" else "none"
-        s"""document.getElementById("${Phase3HtmlBeam.beamHtmlId(beam)}").style.display = "$display";"""
-      }
-
-      subProcedureList.subProcedureList.map(beamSubProcToJs).mkString("\n") + "\n" + showBeam
-
-    }
-
-    val beamText = subProcedureList.beamList.map(beamUseToJs).mkString("\n")
-
-    val selectedBeamCountText = {
-      val count = checkedSelectionList.flatMap(_.beamList).map(_.beamName).distinct.size.toString
-      s""" document.getElementById("$selectedBeamCountTag").innerHTML = "$count"; """
-    }
-
-    val js = Seq(selectionText, beamText, selectedBeamCountText).mkString("\n")
-    js
-  }
-
-  /**
     * Given a node, return the selection ID and whether it is checked or not.
     *
     * @param node HTML description of checkbox.
@@ -133,7 +83,7 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
     } else
       init
 
-    val js = toJs(checkedList, subProcedureList)
+    val js = Phase3JS.toJs(checkedList, subProcedureList)
     // Trace.trace(checkboxList.mkString("\n"))
     Trace.trace(js)
 

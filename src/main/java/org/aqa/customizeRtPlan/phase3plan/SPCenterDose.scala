@@ -10,6 +10,8 @@ class SPCenterDose(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedu
 
   override val name = "Center Dose"
 
+  override val abbreviation: String = "Cntr Dose"
+
   def toCdBeam(beam: Beam): Elem = ???
 
   override def selectionList: Seq[Selection] = {

@@ -3,6 +3,7 @@ package org.aqa.customizeRtPlan.phase3plan
 import com.pixelmed.dicom.AttributeList
 import org.aqa.Logging
 import org.aqa.web.WebUtil.ValueMapT
+import org.aqa.Util
 
 import scala.xml.Elem
 
@@ -15,6 +16,11 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
     * Name of this sub procedure.
     */
   val name: String
+
+  /**
+    * Short name of sub procedure.
+    */
+  val abbreviation: String
 
   /**
     * Given a machine, return the list of all checkboxes.
@@ -59,4 +65,10 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
   final def usesBeam(beam: Beam, valueMap: ValueMapT): Boolean = {
     selectionList.filter(sel => sel.isSelected(valueMap)).flatMap(_.beamList).exists(b => b.beamName.equals(beam.beamName))
   }
+
+  /**
+    * Identifier in the HTML for the sub procedure's header.
+    * @return HTML id.
+    */
+  final def headerId: String = Util.textToHtmlId("header_" + name)
 }

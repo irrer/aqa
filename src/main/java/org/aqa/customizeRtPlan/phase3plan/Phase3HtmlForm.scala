@@ -18,7 +18,7 @@ object Phase3HtmlForm extends Logging {
   /* HTML id of hidden input indicating which selection changed. */
   val changedSelectionTag = "changedSelection"
 
-  val selectedBeamCountTag = "selectedBeamCount "
+  val selectedBeamCountTag = "selectedBeamCount"
 
 
   private def makeButton(name: String, buttonType: ButtonType.Value): FormButton = {
