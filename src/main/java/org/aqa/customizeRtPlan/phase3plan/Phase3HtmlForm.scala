@@ -20,7 +20,6 @@ object Phase3HtmlForm extends Logging {
 
   val selectedBeamCountTag = "selectedBeamCount"
 
-
   private def makeButton(name: String, buttonType: ButtonType.Value): FormButton = {
     new FormButton(name, 2, 0, Phase3HTML.subUrl, Phase3HTML.pathOf, buttonType)
   }
@@ -41,7 +40,6 @@ object Phase3HtmlForm extends Logging {
 
   private def toleranceTableName = new WebInputHidden(CustomizeRtPlanInterface.toleranceTableNameTag)
 
-
   /** List of pre-defined templates for making selections. */
   private def templateList: Seq[Phase3Template] = Seq(new Phase3TemplateNone, new Phase3TemplateAll, new Phase3TemplateFocalSpot)
 
@@ -50,9 +48,6 @@ object Phase3HtmlForm extends Logging {
       val attrMap = Map("onClick" -> "phase3ClickHandler(this)")
 
       val list = subProc.selectionList.map(s => new WebInputCheckbox(label = s.selectionName, showLabel = true, title = None, col = 3, offset = 0, attrMap, id = Some(s.htmlId)))
-      // @formatter:off
-      val empty: Elem = { <span></span>}
-      // @formatter:on
       val name = new WebPlainText(label = s"${subProc.name}:", showLabel = false, col = 12, offset = 0, _ => <h3><hr/>{subProc.name}</h3>)
       (name +: list).toList
     }
@@ -62,11 +57,11 @@ object Phase3HtmlForm extends Logging {
   }
 
   /**
-   * HTML shown at top of web page.
-   *
-   * @param subProcedureList provide metadata.
-   * @return HTML.
-   */
+    * HTML shown at top of web page.
+    *
+    * @param subProcedureList provide metadata.
+    * @return HTML.
+    */
   private def banner(subProcedureList: SubProcedureList): WebRow = {
     val pageTitle = {
       val html =
@@ -98,8 +93,7 @@ object Phase3HtmlForm extends Logging {
     // @formatter:on
     val beamHtml: WebPlainText = {
       val html = Phase3HtmlBeam.selectedBeamsField(subProcedureList, selectedBeamCountTag)
-      val web = new WebPlainText(label = "Beams", showLabel = false, col = 6, offset = 0, _ =>
-        <div>
+      val web = new WebPlainText(label = "Beams", showLabel = false, col = 6, offset = 0, _ => <div>
           {html}
         </div>)
       web
@@ -114,12 +108,12 @@ object Phase3HtmlForm extends Logging {
   }
 
   /**
-   * Make a form to present to the user.
-   *
-   * @param valueMap         List of HTML field values.
-   * @param response         HTML response.
-   * @param subProcedureList Related information.
-   */
+    * Make a form to present to the user.
+    *
+    * @param valueMap         List of HTML field values.
+    * @param response         HTML response.
+    * @param subProcedureList Related information.
+    */
   def formSelect(valueMap: ValueMapT, response: Response, subProcedureList: SubProcedureList): Unit = {
 
     val templateText = Phase3HtmlForm.templateList.map(_.js).mkString("\n")

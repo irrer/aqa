@@ -13,6 +13,7 @@ case class SubProcedureList(metaData: SPMetaData, beamList: Seq[Beam]) {
       new SPFocalSpot(metaData, beamList),
       new SPSymFlatConst(metaData, beamList),
       new SPLeafPosition(metaData, beamList),
+      new SPVMAT(metaData, beamList),
       new SPWedge(metaData, beamList),
       new SPCenterDose(metaData, beamList)
     )
