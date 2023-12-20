@@ -80,8 +80,11 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
         val selList = subProcedureList.getSelectionsFromBeams(beamList2)
         selList
       }
-    } else
-      init
+    } else {
+      val beamList = init.flatMap(_.beamList).groupBy(_.beamName).map(_._2.head)
+      val selList = subProcedureList.getSelectionsFromBeams(beamList)
+      selList
+    }
 
     val js = Phase3JS.toJs(checkedList, subProcedureList)
     // Trace.trace(checkboxList.mkString("\n"))
