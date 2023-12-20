@@ -5,6 +5,7 @@ import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.OtherWordAttribute
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
 import edu.umro.ScalaUtil.Trace
@@ -184,56 +185,80 @@ object PSM {
 
   private case class Column(name: String, valueList: Seq[Float]) {}
 
-  private def makeProfiles(image: DicomImage): Seq[Column] = {
+  private def makeProfiles(name: String, image: DicomImage): Seq[Column] = {
 
     val numPix = 10
     val numPixD = numPix.toFloat
 
     val transverse = {
       val v = image.columnSums.map(p => p / image.height)
-      Column("Transverse Full Image", v)
+      Column(s"$name Transverse Full Image", v)
     }
 
     val transverseCenter = {
       val rect = new Rectangle(0, (image.height - numPix) / 2, image.width, numPix)
       val sub = image.getSubimage(rect)
       val v = sub.columnSums.map(p => p / numPixD)
-      Column(s"Transverse Center $numPix Pixels", v)
+      Column(s"$name Transverse Center $numPix Pixels", v)
     }
 
     val axial = {
       val v = image.rowSums.map(p => p / image.width)
-      Column("Axial Full Image", v)
+      Column(s"$name Axial Full Image", v)
     }
 
     val axialCenter = {
       val rect = new Rectangle((image.width - numPix) / 2, 0, numPix, image.height)
       val sub = image.getSubimage(rect)
       val v = sub.rowSums.map(p => p / numPixD)
-      Column(s"Axial Center $numPix Pixels", v)
+      Column(s"$name Axial Center $numPix Pixels", v)
     }
 
     val histogram = image.binnedHistogram(image.width)
 
-    val histogramCount = Column("Histogram Count", histogram.map(_.count.toFloat))
-    val histogramValue = Column("Histogram Value", histogram.map(_.value))
+    val histogramCount = Column(s"$name Histogram Count", histogram.map(_.count.toFloat))
+    val histogramValue = Column(s"$name Histogram Value", histogram.map(_.value))
 
     Seq(transverse, transverseCenter, axial, axialCenter, histogramValue, histogramCount)
   }
 
-  private def makeCsv(beforeImage: DicomImage, afterImage: DicomImage): Unit = {
+  private case class NamedImage(name: String, image: DicomImage) {}
 
-    val before = makeProfiles(beforeImage)
-    val after = makeProfiles(afterImage)
-    val both = before ++ after
+  private def makeCsv(namedImageList: Seq[NamedImage]): Unit = {
 
-    val maxLine = both.map(_.valueList.size).max
+    val all = namedImageList.flatMap(ni => makeProfiles(ni.name, ni.image))
+
+    def showStats(ni: NamedImage): Unit = {
+
+      def fmtD(d: Double) = Util.fmtDbl(d)
+      def fmtF(f: Float) = Util.fmtDbl(f)
+
+      val valueList = ni.image.pixelData.flatten.filter(_ > 0).sorted
+      val mean = valueList.sum / valueList.size
+      val stdDev = ImageUtil.stdDev(valueList)
+      val median = valueList(valueList.size / 2)
+      val q1 = valueList(valueList.size / 4)
+      val q3 = valueList((valueList.size * 3) / 4)
+      val q1_10 = valueList(valueList.size / 10)
+      val q9_10 = valueList((valueList.size * 9) / 10)
+
+      val numEnd = 10
+
+      val text = {
+        s"""Statistics:  ${"%24s".formatted(ni.name)}    mean: ${fmtD(mean)}    stdDev: ${fmtD(stdDev)}    median: ${fmtD(median)}""" +
+          s"""    q1: ${fmtD(q1)}    q3: ${fmtD(q3)}    q1_10: ${fmtD(q1_10)}    q9_10: ${fmtD(q9_10)}""" +
+          s"""    min: ${valueList.take(numEnd).map(fmtF).mkString("  ")}    max: ${valueList.takeRight(numEnd).map(fmtF).mkString("  ")}"""
+      }
+      println(text)
+    }
+
+    namedImageList.foreach(showStats)
+
+    val maxLine = all.map(_.valueList.size).max
 
     val csvText = {
-      val beforeHeader = before.map(b => "Before " + b.name)
-      val afterHeader = after.map(b => "After " + b.name)
 
-      val header: String = (beforeHeader ++ afterHeader).mkString(",")
+      val header: String = all.map(_.name).mkString(",")
 
       val data: String = {
 
@@ -249,7 +274,7 @@ object PSM {
             "" // no value for this line
         }
 
-        def makeRow(line: Int): String = both.map(col => toText(col, line)).mkString(",")
+        def makeRow(line: Int): String = all.map(col => toText(col, line)).mkString(",")
 
         val rowText = (0 until maxLine).map(makeRow).mkString("\n")
         rowText
@@ -305,6 +330,13 @@ object PSM {
     new DicomImage(pixelData)
   }
 
+  private def saveDicomAsText(dicomFile: DicomFile, name: String): Unit = {
+    val text = DicomUtil.attributeListToString(dicomFile.attributeList.get)
+    val outFile = new File(outDir, s"$name.txt")
+    Util.writeFile(outFile, text)
+    println("Wrote file " + outFile.getAbsolutePath)
+  }
+
   def main(args: Array[String]): Unit = {
     Trace.trace("Starting ----------------------------------------------------------------------------")
     val start = System.currentTimeMillis()
@@ -313,31 +345,38 @@ object PSM {
     outDir.mkdirs
 
     val wdDicomFile = new DicomFile(new File(dir, "RI.zzz_EpidPerformanceCheck.WD-0.dcm"))
-    val beam6x_FFDicomFile = new DicomFile(new File(dir, "6x_FF.dcm"))
+    val ffDicomFile = new DicomFile(new File(dir, "6x_FF.dcm"))
+
+    saveDicomAsText(wdDicomFile, "WD")
+    saveDicomAsText(ffDicomFile, "FF")
 
     val psmFile = new File(dir, "PSM_6x_CMN_230520.mat")
 
     println("\n---------------------\n")
 
     val wdImage = new DicomImage(wdDicomFile.attributeList.get)
-    val beam6x_FFImage = {
-      val img = new DicomImage(beam6x_FFDicomFile.attributeList.get)
-      savePng(img, "beam6x_FF_original")
-      fixPixels(img, x => x > 0)
+
+    val ffOriginalImage = new DicomImage(ffDicomFile.attributeList.get)
+
+    val ffImageFixed = {
+      savePng(ffOriginalImage, "FF_original")
+      fixPixels(ffOriginalImage, x => x > 0)
     }
 
+    val psmOriginalImage = psmToDicomImage(psmFile)
+
     val psmImage = {
-      val img = psmToDicomImage(psmFile)
-      savePng(img, "psm_original")
+      val img = psmOriginalImage
+      savePng(img, "PSM_original")
       fixPixels(img, x => x > 0)
     }
 
     val wdXBeam6x_FF = {
-      val pixelData = beam6x_FFImage.pixelData.zip(wdImage.pixelData).map(tw => tw._1.zip(tw._2).map(pair => pair._1 * pair._2))
+      val pixelData = ffImageFixed.pixelData.zip(wdImage.pixelData).map(tw => tw._1.zip(tw._2).map(pair => pair._1 * pair._2))
       new DicomImage(pixelData)
     }
 
-    val wdXBeam6x_ffDivPSM = {
+    val wdXffDivPSM = {
       def div(pair: (Float, Float)): Float = {
         val result = pair._1 / pair._2
         val d1 = pair._1.toDouble
@@ -355,30 +394,39 @@ object PSM {
       fixed
     }
 
-    val wdXBeam6x_ffDivPSMNorm = normalizeImage(wdXBeam6x_ffDivPSM, beam6x_FFImage.minPixelValue, beam6x_FFImage.maxPixelValue)
+    val wdXBeam6x_ffDivPSMNorm = normalizeImage(wdXffDivPSM, ffImageFixed.minPixelValue, ffImageFixed.maxPixelValue)
 
-    val finalDicom = makeDicom(wdXBeam6x_ffDivPSMNorm, beam6x_FFDicomFile.attributeList.get)
+    val finalDicom = makeDicom(wdXBeam6x_ffDivPSMNorm, ffDicomFile.attributeList.get)
 
     val roundTrip = new DicomImage(finalDicom)
 
-    println("\nbeam6x_FF:     " + middleOf(beam6x_FFImage))
-    println("\nwd:     " + middleOf(wdImage))
-    println("\nwd x beam6x_FF:     " + middleOf(wdXBeam6x_FF))
-    println("\npsm:     " + middleOf(psmImage))
-    println("\n(wd x beam6x_FF) / psm:     " + middleOf(wdXBeam6x_ffDivPSM))
-    println("\n(wd x beam6x_FF) / psm and then normalized:     " + middleOf(wdXBeam6x_ffDivPSMNorm))
+    println("\nFF:     " + middleOf(ffImageFixed))
+    println("\nWD:     " + middleOf(wdImage))
+    println("\nWD x FF:     " + middleOf(wdXBeam6x_FF))
+    println("\nPSM:     " + middleOf(psmImage))
+    println("\n(WD x FF) / PSM:     " + middleOf(wdXffDivPSM))
+    println("\n(WD x FF) / PSM and then normalized:     " + middleOf(wdXBeam6x_ffDivPSMNorm))
     println("\nroundTrip:     " + middleOf(roundTrip))
 
-    savePng(wdImage, "wd")
-    savePng(beam6x_FFImage, "beam6x_FF")
-    savePng(wdXBeam6x_FF, "wdXBeam6x_FF")
-    savePng(psmImage, "psm")
-    savePng(wdXBeam6x_ffDivPSMNorm, "psmCorrectedAndNormalized")
-    savePng(roundTrip, "roundTrip")
+    savePng(wdImage, "WD")
+    savePng(ffImageFixed, "FF")
+    savePng(wdXBeam6x_FF, "WD_x_FF")
+    savePng(psmImage, "PSM")
+    savePng(wdXBeam6x_ffDivPSMNorm, "PSM_corrected_and_normalized")
+    savePng(roundTrip, "round_trip")
 
-    makeCsv(beam6x_FFImage, wdXBeam6x_ffDivPSMNorm)
+    val namedImageList = Seq(
+      NamedImage("FF Original", ffOriginalImage),
+      NamedImage("FF Fixed", ffImageFixed),
+      NamedImage("WD", wdImage),
+      NamedImage("WD x FF / PSM Norm", wdXBeam6x_ffDivPSMNorm),
+      NamedImage("PSM Fixed", psmImage),
+      NamedImage("PSM Original", psmOriginalImage)
+    )
 
-    val finalDicomFile = new File(outDir, "psmCorrectedAndNormalized.dcm")
+    makeCsv(namedImageList)
+
+    val finalDicomFile = new File(outDir, "PSM_corrected_and_normalized.dcm")
     DicomUtil.writeAttributeListToFile(finalDicom, finalDicomFile, "PSM")
 
     val elapsed = System.currentTimeMillis() - start
