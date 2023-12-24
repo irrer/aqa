@@ -16,7 +16,6 @@ import us.hebi.matlab.mat.format.Mat5
 import java.awt.Rectangle
 import java.io.File
 import java.util.Date
-import scala.xml.Elem
 
 object PSM {
 
@@ -25,37 +24,14 @@ object PSM {
   private def middleOf(image: DicomImage): String = {
 
     //   This is the middle of the image
-    // val size = 10
-    // val x = (image.width - size) / 2
-    // val y = (image.height - size) / 2
+    val size = 10
+    val x = (image.width - size) / 2
+    val y = (image.height - size) / 2
 
-    //   This is an interesting part of the image
-    // val x = 95
-    // val y = 63
-
-    val x = 0
-    val y = 0
-
-    val rect = new Rectangle(x, y, 5, 5)
+    val rect = new Rectangle(x, y, size, size)
 
     val sub = image.getSubimage(rect)
 
-    val distinct = image.pixelData.flatten.distinct.sorted
-
-    val withoutEnds = {
-      val toDrop = 100
-      // list of all pixels with the highs and lows removed.
-      val list = image.pixelData.flatten.sorted.dropRight(toDrop).dropRight(toDrop)
-      val min = if (list.nonEmpty) list.head else -1
-      val max = if (list.nonEmpty) list.last else -1
-      val mean: Float = if (list.nonEmpty) list.sum / list.size else -1
-      val distinct: Float = if (list.nonEmpty) list.distinct.size else -1
-      s"without: min: $min    max: $max    mean: $mean    distinct count: $distinct"
-    }
-    val minMaxMean =
-      s"         min: ${image.minPixelValue}    max: ${image.maxPixelValue}    mean: ${image.sum / (image.width * image.height)}    distinct count: ${distinct.size}\n$withoutEnds"
-
-    // "\n" + minMaxMean +
     sub.pixelsToText
   }
 
@@ -79,72 +55,29 @@ object PSM {
   }
 
   /**
-    * Normalize the given image so that all of the values will be in the same range as the FF image.
+    * Normalize the given image so that the mean of the central pixels is 1.0.
     * @param brImage Image to normalize.
-    * @param ff FF image
-    * @param wd WD image
-    * @param psm PSM image
     * @return A normalized version of the calculated image.
     */
-  private def normalizeImage(brImage: DicomImage, ff: DicomImage, wd: DicomImage, psm: DicomImage): DicomImage = {
 
-    case class Pixel(x: Int, y: Int, value: Float) {
-      val xyText = s"$x,$y"
+  private def normalizeImage(brImage: DicomImage): DicomImage = {
+    val centerSize = 10
+    val x = (brImage.width - centerSize) / 2
+    val y = (brImage.height - centerSize) / 2
+    val rectangle = new Rectangle(x, y, centerSize, centerSize)
+    val centerImage = brImage.getSubimage(rectangle)
+
+    val mean = centerImage.sum / (centerSize * centerSize)
+
+    val scale = 1 / mean
+
+    //val pixelData = ffImage.pixelData.zip(wdImage.pixelData).map(tw => tw._1.zip(tw._2).map(pair => pair._1 * pair._2))
+    def rowOf(y: Int): IndexedSeq[Float] = {
+      for (x <- 0 until brImage.width) yield brImage.get(x, y) * scale
     }
 
-    Trace.trace()
-
-    /** Get the pixels in quartiles 2 and 3 of the image. */
-    def q2q3PixOf(image: DicomImage): Seq[Pixel] = {
-      val list = for (x <- 0 until image.width; y <- 0 until image.height; if image.get(x, y) > 0) yield { Pixel(x, y, image.get(x, y)) }
-      val sorted = list.sortBy(_.value)
-      val qFraction = 10000
-      val qSize = 200 // list.size / qFraction
-
-      sorted.drop(qSize).dropRight(qSize)
-    }
-
-    val ffPix = q2q3PixOf(ff)
-    val wdPix = q2q3PixOf(wd)
-    val psmPix = q2q3PixOf(psm)
-
-    def toSet(pixList: Seq[Pixel]): Set[String] = pixList.map(_.xyText).toSet
-
-    val wdPixSet = toSet(wdPix)
-    val psmPixSet = toSet(psmPix)
-
-    def inWdAndPsm(pix: Pixel): Boolean = {
-      wdPixSet.contains(pix.xyText) && psmPixSet.contains(pix.xyText)
-    }
-
-    val ffRange = ffPix.filter(inWdAndPsm).sortBy(_.value)
-    val ffMinPix = ffRange.head
-    val ffMaxPix = ffRange.last
-
-    val ffMin = ffMinPix.value
-    val ffMax = ffMaxPix.value
-
-    val brMin = brImage.get(ffMinPix.x, ffMinPix.y)
-    val brMax = brImage.get(ffMaxPix.x, ffMaxPix.y)
-
-    val scale = (ffMax - ffMin) / (brMax - brMin)
-    val offset = ffMax - (brMax * scale)
-    println(s"normalize  scale: $scale    offset: $offset    ffMin: $ffMin    ffMax: $ffMax    processedMin: $brMin    processedMax: $brMax")
-    def scalePixel(p: Float): Float = {
-      if (p == 0)
-        0
-      else
-        (p * scale) + offset
-    }
-
-    val pixelDataNormalized = brImage.pixelData.map(row => row.map(scalePixel))
-
-    if (true) {
-      Trace.trace("ff pixels low: " + ff.pixelData.flatten.sorted.take(10))
-      Trace.trace("nm pixels low: " + pixelDataNormalized.flatten.sorted.take(10))
-    }
-
-    new DicomImage(pixelDataNormalized)
+    val pixelData = for (y <- 0 until brImage.height) yield rowOf(y)
+    new DicomImage(pixelData)
   }
 
   private def savePng(dicomImage: DicomImage, name: String): File = {
@@ -157,41 +90,6 @@ object PSM {
     Util.writePng(buf, pngFile)
     println("Wrote file " + pngFile.getAbsolutePath)
     pngFile
-  }
-
-  private def centerPixelValues(image: DicomImage): Elem = {
-
-    val size = 1
-    val x = (image.width - size) / 2
-    val y = (image.height - size) / 2
-
-    val rect = new Rectangle(x, y, size, size)
-    val sub = image.getSubimage(rect)
-
-    <div>
-    <h4>Center Pixel values</h4>
-      <pre>
-        {sub.pixelsToText}
-      </pre>
-    </div>
-  }
-
-  private def show(al: AttributeList, description: String): Elem = {
-    val image = new DicomImage(al)
-    val pngFile = savePng(image, description)
-
-    <div>
-      <h3>{description}</h3>
-      Min pixel value: {image.minPixelValue}
-      <br/>
-      Max pixel value: {image.maxPixelValue}
-      <br/>
-      Mean pixel value: {image.pixelData.flatten.sum / (image.width * image.height)}
-      <br/>
-      {centerPixelValues(image)}
-      <br/>
-      <img src={pngFile.getName} />
-    </div>
   }
 
   private def makeDicom(image: DicomImage, template: AttributeList): AttributeList = {
@@ -226,7 +124,6 @@ object PSM {
     replace(TagByName.AcquisitionTime, timeText)
     replace(TagByName.SeriesTime, timeText)
 
-    val j = al.get(TagByName.PixelData)
     val pix = al.get(TagByName.PixelData).asInstanceOf[OtherWordAttribute]
     pix.removeValues()
 
@@ -369,6 +266,7 @@ object PSM {
   def main(args: Array[String]): Unit = {
     Trace.trace("Starting ----------------------------------------------------------------------------")
     val start = System.currentTimeMillis()
+    //noinspection SpellCheckingInspection
     val dir = new File("""src\test\resources\learnPSM""")
     FileUtil.deleteFileTree(outDir)
     outDir.mkdirs
@@ -408,7 +306,7 @@ object PSM {
           p
         }
       }
-      val pixelData = for (y <- 0 until wdImage.height) yield (rowOf(y))
+      val pixelData = for (y <- 0 until wdImage.height) yield rowOf(y)
       new DicomImage(pixelData)
     }
 
@@ -433,11 +331,11 @@ object PSM {
           }
         }
       }
-      val pixelData = for (y <- 0 until rawImage.height) yield (rowOf(y))
+      val pixelData = for (y <- 0 until rawImage.height) yield rowOf(y)
       new DicomImage(pixelData)
     }
 
-    val brNorm = normalizeImage(brImage, ffImage, wdImage, psmImage)
+    val brNorm = normalizeImage(brImage)
 
     val brNormDicom = makeDicom(brNorm, ffDicomFile.attributeList.get)
 
@@ -456,15 +354,15 @@ object PSM {
     savePng(rawImage, "Raw")
     savePng(psmImage, "PSM")
     savePng(brImage, "BR")
-    savePng(brNorm, "BR Norm")
+    savePng(brNorm, "BRNorm")
     savePng(roundTrip, "round_trip")
 
     val namedImageList = Seq(
       NamedImage("FF", ffImage),
       NamedImage("WD", wdImage),
-      NamedImage("WD x FF", rawImage),
-      NamedImage("(WD x FF) / PSM", brImage),
-      NamedImage("(WD x FF) / PSM -> Norm", brNorm),
+      NamedImage("Raw", rawImage),
+      NamedImage("BR", brImage),
+      NamedImage("BRNorm", brNorm),
       NamedImage("PSM", psmImage)
     )
 
