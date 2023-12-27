@@ -10,7 +10,6 @@ import scala.xml.Elem
  */
 object Phase3HtmlBeam extends Logging {
 
-
   /**
    * Generate the HTML id for the given beam.
    *
