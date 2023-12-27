@@ -47,13 +47,15 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
   private def makeCheckedList(doc: Elem, subProcedureList: SubProcedureList): Seq[Selection] = {
 
     def toSel(node: Node): Option[Selection] = {
-      if ((node \ "checked").text.toBoolean)
-        subProcedureList.findByHtmlId((node \ "id").text)
-      else
+      if ((node \ "checked").text.toBoolean) {
+        val sel = subProcedureList.findByHtmlId((node \ "id").text)
+        sel
+      } else
         None
     }
 
-    (doc \ "Checkbox").flatMap(toSel)
+    val list = (doc \ "Checkbox").flatMap(toSel)
+    list
   }
 
   // true if the use clicked a checkbox
@@ -101,6 +103,7 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
 
+    Trace.trace()
     val uploadText = {
       val t = request.getEntityAsText
       Option(t)
@@ -115,10 +118,8 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
         MachineUpdate.redirect(valueMap(machinePK.label).toLong, response)
 
       0 match {
-        // case _ if CachedUser.get(request).isEmpty => updateMach()
-        // case _ if machine.isEmpty => updateMach()
-        // case _ if (user.get.institutionPK != machine.get.institutionPK) && (!WebUtil.userIsWhitelisted(request)) => updateMach()
-        case _ if buttonIs(valueMap, Phase3HtmlForm.cancelButton) => updateMach()
+        case _ if buttonIs(valueMap, Phase3HtmlForm.cancelButton) =>
+          updateMach()
 
         case _ if request.getMethod == Method.POST =>
           val subProcedureList = SubProcedureList.makeSubProcedureList(SPMetaData(machine.get))
@@ -132,6 +133,7 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
           val subProcedureList = SubProcedureList.makeSubProcedureList(SPMetaData(machine.get))
           formSelect(valueMap, response, subProcedureList)
       }
+      Trace.trace()
     } catch {
       case t: Throwable =>
         WebUtil.internalFailure(response, t)

@@ -23,6 +23,8 @@ case class SubProcedureList(metaData: SPMetaData, beamList: Seq[Beam]) {
   /** List of Phase3 sub-procedures. */
   val subProcedureList: Seq[SubProcedure] = makeSubProcedureList
 
+  private val htmlIdMap = subProcedureList.flatMap(_.selectionList).map(sel => (sel.htmlId, sel)).toMap
+
   /**
     * Return the list of sub procedures that are selecting the beam.
     *
@@ -63,7 +65,8 @@ case class SubProcedureList(metaData: SPMetaData, beamList: Seq[Beam]) {
     * @return matching one.
     */
   def findByHtmlId(htmlId: String): Option[Selection] = {
-    subProcedureList.flatMap(_.selectionList).find(s => s.htmlIdMatches(htmlId))
+    htmlIdMap.get(htmlId)
+    //subProcedureList.flatMap(_.selectionList).find(s => s.htmlIdMatches(htmlId))
   }
 
   /**

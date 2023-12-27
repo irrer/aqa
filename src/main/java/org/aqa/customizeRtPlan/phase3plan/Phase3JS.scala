@@ -114,17 +114,16 @@ object Phase3JS extends Logging {
     subProcedureList.subProcedureList.map(beamSubProcToJs).mkString("\n") + "\n" + showBeam
   }
 
-  private def subProcessHeaderToJs(checkedSelectionList: Seq[Selection], subProcedure: SubProcedure): String = {
-    val selList = checkedSelectionList.filter(sel => subProcedure.selectionList.exists(s => s.selectionName.equals(sel.selectionName)))
-    val numBeam = selList.flatMap(sel => sel.beamList).map(_.beamName).distinct.size
+  private def subProcessHeaderToJs(checkedSelectionList: Option[Seq[Selection]], subProcedure: SubProcedure): String = {
 
-    val js = if (numBeam == 0) {
+    val js = if (checkedSelectionList.nonEmpty) {
+      //noinspection SpellCheckingInspection
+      val beamCount = checkedSelectionList.get.flatMap(_.beamList).size
+      s"""document.getElementById("${subProcedure.headerId}").style.background = "lightgreen";""" +
+        s"""document.getElementById("${subProcedure.headerId}").innerHTML = "${subProcedure.abbreviation + " : " + beamCount}";"""
+    } else {
       s"""document.getElementById("${subProcedure.headerId}").style.background = "lightgrey";""" +
         s"""document.getElementById("${subProcedure.headerId}").innerHTML = "${subProcedure.abbreviation}";"""
-    } else {
-      //noinspection SpellCheckingInspection
-      s"""document.getElementById("${subProcedure.headerId}").style.background = "lightgreen";""" +
-        s"""document.getElementById("${subProcedure.headerId}").innerHTML = "${subProcedure.abbreviation + " : " + numBeam}";"""
     }
 
     js
@@ -148,7 +147,8 @@ object Phase3JS extends Logging {
       s""" document.getElementById("$selectedBeamCountTag").innerHTML = "$count"; """
     }
 
-    val subHeaderText = subProcedureList.subProcedureList.map(sub => subProcessHeaderToJs(checkedSelectionList, sub)).mkString("\n")
+    val checkedSubProcedureNameMap = checkedSelectionList.groupBy(_.subProcedure.name)
+    val subHeaderText = subProcedureList.subProcedureList.map(sub => subProcessHeaderToJs(checkedSubProcedureNameMap.get(sub.name), sub)).mkString("\n")
 
     val js = Seq(selText, beamText, selectedBeamCountText, subHeaderText).mkString("\n")
     js
