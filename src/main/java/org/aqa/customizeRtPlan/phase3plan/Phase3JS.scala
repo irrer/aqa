@@ -39,7 +39,7 @@ object Phase3JS extends Logging {
        |  }
        |}
        |
-       |console.log("list of checkboxes:\\n" + checkboxList);
+       |//console.log("list of checkboxes:\\n" + checkboxList);
        |
        |var machinePK = document.getElementById("$machTag").getAttribute("value");
        |var phase3Url = "/Phase3HTML?$machTag=" + machinePK;
@@ -63,12 +63,12 @@ object Phase3JS extends Logging {
        |  https.onreadystatechange = function() {
        |    if (this.readyState == 4 && this.status == 200) {
        |      var text = this.responseText;
-       |      console.log("from the server:\\n" + text);
+       |      //console.log("from the server:\\n" + text);
        |      eval(text);
        |    }
        |  }
        |
-       |  console.log("Sending text\\n" + text);
+       |  //console.log("Sending text\\n" + text);
        |  https.send(text);
        |  return text;
        |}

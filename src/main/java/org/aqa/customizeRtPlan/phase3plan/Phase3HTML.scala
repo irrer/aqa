@@ -88,7 +88,7 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
 
     val js = Phase3JS.toJs(checkedList, subProcedureList)
     // Trace.trace(checkboxList.mkString("\n"))
-    Trace.trace(js)
+    // Trace.trace(js)
 
     WebUtil.setResponse(js, response, Status.SUCCESS_OK)
   }
