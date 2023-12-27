@@ -3,15 +3,11 @@ package org.aqa.customizeRtPlan.phase3plan
 import org.aqa.Config
 import org.aqa.Util
 
-import scala.xml.Elem
-
 class SPCenterDose(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(metaData, beamList: Seq[Beam]) {
 
   override val name = "Center Dose"
 
   override val abbreviation: String = "Cntr Dose"
-
-  def toCdBeam(beam: Beam): Elem = ???
 
   override def selectionList: Seq[Selection] = {
     def toSelection(beam: Beam): Selection = Selection(this, beam.beamName, Seq(beam))

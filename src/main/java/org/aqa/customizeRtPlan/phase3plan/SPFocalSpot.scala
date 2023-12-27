@@ -8,8 +8,6 @@ import org.aqa.Config
 import org.aqa.customizeRtPlan.CustomizeRtPlanUtil
 import org.aqa.Util
 
-import scala.xml.Elem
-
 class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(metaData, beamList: Seq[Beam]) {
 
   override val name = "Focal Spot"
@@ -64,8 +62,6 @@ class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedur
   }
 
   private val sfSelectionList = metaData.beamEnergyList.map(energy => setEnergyOfSet(prototypeSet, energy))
-
-  def toFsBeam(beam: Beam): Elem = ???
 
   private def beamNameToId(beamName: String): String = {
     val pair = beamName.split("-").last
