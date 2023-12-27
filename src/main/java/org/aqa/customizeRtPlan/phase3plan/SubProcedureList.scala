@@ -8,7 +8,7 @@ case class SubProcedureList(metaData: SPMetaData, beamList: Seq[Beam]) {
 
   private def makeSubProcedureList: Seq[SubProcedure] = {
 
-    Seq(
+    val list = Seq(
       new SPCollimatorCentering(metaData, beamList),
       new SPFocalSpot(metaData, beamList),
       new SPSymFlatConst(metaData, beamList),
@@ -18,6 +18,14 @@ case class SubProcedureList(metaData: SPMetaData, beamList: Seq[Beam]) {
       new SPWedge(metaData, beamList),
       new SPCenterDose(metaData, beamList)
     )
+
+    val claimed = list.flatMap(sub => sub.selectionList.flatMap(_.beamList)).map(_.beamName).toSet
+
+    val unclaimed = beamList.filterNot(beam => claimed.contains(beam.beamName))
+
+    val otherSubProc = new SPOther(metaData, unclaimed)
+
+    list :+ otherSubProc
   }
 
   /** List of Phase3 sub-procedures. */
