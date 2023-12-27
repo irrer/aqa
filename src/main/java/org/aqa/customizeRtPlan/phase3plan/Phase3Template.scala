@@ -5,8 +5,8 @@ import org.aqa.web.WebUtil.FormButton
 import org.aqa.Logging
 
 /**
- * Base class for making pre-defined selection lists.  Supports things like an official RTPLAN for Phase3 research.
- */
+  * Base class for making pre-defined selection lists.  Supports things like an official RTPLAN for Phase3 research.
+  */
 abstract class Phase3Template extends Logging {
 
   /** Define a button that will be shown to the user. */

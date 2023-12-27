@@ -1,11 +1,8 @@
 package org.aqa.customizeRtPlan.phase3plan
 
-import com.pixelmed.dicom.AttributeList
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.MachineBeamEnergy
-
-import scala.xml.Elem
 
 class SPSymFlatConst(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(metaData, beamList: Seq[Beam]) {
 
@@ -85,18 +82,6 @@ class SPSymFlatConst(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProce
     list ++ newBeamList
   }
 
-  override def setBeamList(beamList: Seq[Beam]): Elem = {
-    ???
-  }
-
-  override def update(checkboxIdList: Seq[String]): Seq[Beam] = {
-    ???
-  }
-
   override def getBeamList: Seq[Beam] = selectionList.flatMap(_.beamList)
-
-  override def generatePlan(checkboxIdList: Seq[String]): Seq[AttributeList] = {
-    ???
-  }
 
 }

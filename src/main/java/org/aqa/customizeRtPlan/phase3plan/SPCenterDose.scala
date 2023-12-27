@@ -1,6 +1,5 @@
 package org.aqa.customizeRtPlan.phase3plan
 
-import com.pixelmed.dicom.AttributeList
 import org.aqa.Config
 import org.aqa.Util
 
@@ -21,19 +20,6 @@ class SPCenterDose(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedu
     list
   }
 
-  override def setBeamList(beamList: Seq[Beam]): Elem = {
-    beamList.map(toCdBeam)
-    ???
-  }
-
-  override def update(checkboxIdList: Seq[String]): Seq[Beam] = {
-    ???
-  }
-
   override def getBeamList: Seq[Beam] = selectionList.flatMap(_.beamList)
-
-  override def generatePlan(checkboxIdList: Seq[String]): Seq[AttributeList] = {
-    ???
-  }
 
 }

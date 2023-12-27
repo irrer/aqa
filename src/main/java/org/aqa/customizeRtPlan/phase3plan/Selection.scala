@@ -6,7 +6,7 @@ import org.aqa.Util
 case class Selection(subProcedure: SubProcedure, selectionName: String, beamList: Seq[Beam]) {
 
   /** Unique identifier in HTML for this selection. */
-  val htmlId: String = Util.textToHtmlId( s"${subProcedure.name}::${selectionName}")
+  val htmlId: String = Util.textToHtmlId(s"${subProcedure.name}::${selectionName}")
 
   /**
     * Determine if the given ID refers to this selection.

@@ -74,19 +74,12 @@ class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedur
 
   override def selectionList: Seq[Selection] = sfSelectionList
 
-  override def setBeamList(beamList: Seq[Beam]): Elem = {
-    beamList.map(toFsBeam)
-    ???
-  }
+  // override def setBeamList(beamList: Seq[Beam]): Elem = { ??? }
 
-  override def update(checkboxIdList: Seq[String]): Seq[Beam] = {
-    ???
-  }
+  // override def update(checkboxIdList: Seq[String]): Seq[Beam] = { ??? }
 
   override def getBeamList: Seq[Beam] = selectionList.flatMap(_.beamList)
 
-  override def generatePlan(checkboxIdList: Seq[String]): Seq[AttributeList] = {
-    ???
-  }
+  // override def generatePlan(checkboxIdList: Seq[String]): Seq[AttributeList] = { ??? }
 
 }
