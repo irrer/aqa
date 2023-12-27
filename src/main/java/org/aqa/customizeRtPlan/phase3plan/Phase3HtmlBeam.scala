@@ -55,13 +55,49 @@ object Phase3HtmlBeam extends Logging {
 
   private def beamToHtml(beam: Beam, subProcedureList: SubProcedureList): Elem = {
 
+    val gantry = s"Gantry ${beam.gantryAngle_roundedDeg}"
+
+
+    val mv = {
+      beam.beamEnergy.photonEnergy_MeV match {
+        case Some(e) =>
+          "MV:" + {
+            if (e.round == e) e.round else Util.fmtDbl(e)
+          }
+        case _ =>
+          ""
+      }
+    }
+
+    val doseRate = {
+      beam.beamEnergy.maxDoseRate_MUperMin match {
+        case Some(dr) =>
+          "Dose Rate:" + {
+            if (dr.round == dr) dr.round else Util.fmtDbl(dr)
+          }
+        case _ => ""
+      }
+    }
+
+    val fff = if (beam.isFFF) "FFF" else ""
+
+    val title = s"$gantry    $mv    $doseRate    $fff"
+
     val image: Elem = {
       val imageUrl = subProcedureList.metaData.urlOfExampleImage(beam)
-      <div style="margin: 5px;">
-        <h4>
-          {beam.beamName}
-        </h4> <br/>
-        <img src={imageUrl} height="40" style="margin: 2px;"/>
+      <div style="margin: 5px;" title={title}>
+        <table>
+          <tr>
+            <td>
+              <img src={imageUrl} height="50" style="margin: 2px;"/>
+            </td>
+            <td>
+              <h4>
+                {beam.beamName}
+              </h4>{title}
+            </td>
+          </tr>
+        </table>
       </div>
     }
 
