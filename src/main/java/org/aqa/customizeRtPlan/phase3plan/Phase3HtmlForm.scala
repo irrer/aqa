@@ -20,6 +20,8 @@ object Phase3HtmlForm extends Logging {
 
   val selectedBeamCountTag = "selectedBeamCount"
 
+  val formBodyStyle: String = "overflow-y:auto; height:800px;"
+
   private def makeButton(name: String, buttonType: ButtonType.Value): FormButton = {
     new FormButton(name, 2, 0, Phase3HTML.subUrl, Phase3HTML.pathOf, buttonType)
   }
@@ -86,9 +88,20 @@ object Phase3HtmlForm extends Logging {
 
     def selectSubProceduresList = makeSubProcedureSelector(subProcedureList)
 
-    def selectSubProcedureHtml = new WebPlainText(label = "Procedures", showLabel = false, col = 6, offset = 0, _ => <div>
-      {selectSubProceduresList}
-    </div>)
+    def selectSubProcedureHtml = {
+      val html = {
+        <div>
+          <h3>Select Tests</h3>
+          <div style={formBodyStyle + "border: 1px solid lightgrey;"}>
+            <div style="margin-left: 20px">
+              {selectSubProceduresList}
+            </div>
+          </div>
+        </div>
+      }
+
+      new WebPlainText(label = "Procedures", showLabel = false, col = 6, offset = 0, _ => html)
+    }
 
     // @formatter:on
     val beamHtml: WebPlainText = {

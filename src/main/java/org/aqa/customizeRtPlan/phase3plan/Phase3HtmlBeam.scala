@@ -88,7 +88,7 @@ object Phase3HtmlBeam extends Logging {
    */
   private def tableHeader(subProcedureList: SubProcedureList, selectedBeamCountTag: String): Elem = {
 
-    val style = "position: sticky; top: 0px; background: lightgrey; text-align: center; border: 10px solid lightgrey;"
+    val style = "position: sticky; top: 0px; background: lightgrey; text-align: center;"
 
     def subToHeader(subProcedure: SubProcedure): Elem = {
       <th style={style} title={subProcedure.name} id={subProcedure.headerId}>
@@ -107,6 +107,7 @@ object Phase3HtmlBeam extends Logging {
 
   def selectedBeamsField(subProcedureList: SubProcedureList, selectedBeamCountTag: String): Elem = {
 
+    // @formatter:off
     val html = {
       <div>
         <div class="row">
@@ -120,15 +121,17 @@ object Phase3HtmlBeam extends Logging {
           </div>
         </div>
 
-        <div class="row" style="overflow-y:auto; height:800px;">
+        <div class="row" style={Phase3HtmlForm.formBodyStyle}>
           <table style="width: 100%;" class="table table-bordered">
-            {tableHeader(subProcedureList, selectedBeamCountTag)}<tbody>
-            {subProcedureList.beamList.map(beam => beamToHtml(beam, subProcedureList))}
-          </tbody>
+            {tableHeader(subProcedureList, selectedBeamCountTag)}
+            <tbody>
+              {subProcedureList.beamList.map(beam => beamToHtml(beam, subProcedureList))}
+            </tbody>
           </table>
         </div>
       </div>
     }
+    // @formatter:on
     html
   }
 

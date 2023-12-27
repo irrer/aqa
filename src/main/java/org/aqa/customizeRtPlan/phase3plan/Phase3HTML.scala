@@ -103,7 +103,6 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
 
-    Trace.trace()
     val uploadText = {
       val t = request.getEntityAsText
       Option(t)
@@ -133,7 +132,6 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
           val subProcedureList = SubProcedureList.makeSubProcedureList(SPMetaData(machine.get))
           formSelect(valueMap, response, subProcedureList)
       }
-      Trace.trace()
     } catch {
       case t: Throwable =>
         WebUtil.internalFailure(response, t)
