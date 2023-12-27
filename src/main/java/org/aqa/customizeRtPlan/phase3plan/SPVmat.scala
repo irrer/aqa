@@ -2,7 +2,7 @@ package org.aqa.customizeRtPlan.phase3plan
 
 import org.aqa.Config
 
-class SPVMAT(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(metaData, beamList: Seq[Beam]) {
+class SPVmat(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(metaData, beamList: Seq[Beam]) {
 
   override val name = "VMAT"
 

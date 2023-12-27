@@ -6,6 +6,7 @@ class SPCollimatorCentering(metaData: SPMetaData, beamList: Seq[Beam]) extends S
 
   override val name = "Collimator Centering"
 
+  //noinspection SpellCheckingInspection
   override val abbreviation: String = "Col Cntr"
 
   override def selectionList: Seq[Selection] = {

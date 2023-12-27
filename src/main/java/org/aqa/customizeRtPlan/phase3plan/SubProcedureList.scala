@@ -13,7 +13,7 @@ case class SubProcedureList(metaData: SPMetaData, beamList: Seq[Beam]) {
       new SPFocalSpot(metaData, beamList),
       new SPSymFlatConst(metaData, beamList),
       new SPLeafPosition(metaData, beamList),
-      new SPVMAT(metaData, beamList),
+      new SPVmat(metaData, beamList),
       new SPCollimatorPosition(metaData, beamList),
       new SPWedge(metaData, beamList),
       new SPCenterDose(metaData, beamList)
@@ -30,7 +30,7 @@ case class SubProcedureList(metaData: SPMetaData, beamList: Seq[Beam]) {
     * @param valueMap User selections.
     * @return List of sub procedures that are selecting the beam.
     */
-  def beamUseList(beam: Beam, valueMap: ValueMapT): Seq[SubProcedure] = {
+  private def beamUseList(beam: Beam, valueMap: ValueMapT): Seq[SubProcedure] = {
     val list = subProcedureList.flatMap(_.selectionList).filter(sel => sel.isSelected(valueMap)).map(_.subProcedure).groupBy(_.name).map(_._2.head)
     list.toSeq
   }

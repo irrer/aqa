@@ -36,10 +36,10 @@ class SPSymFlatConst(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProce
     missingEnergyList
   }
 
-  private def toBeam(beamEnergy: MachineBeamEnergy, protoypeBeam: Beam): Beam = {
+  private def toBeam(beamEnergy: MachineBeamEnergy, prototypeBeam: Beam): Beam = {
     val beamName = {
-      val prefix = protoypeBeam.beamName.take(4) // example beam names: J20G0-6F, J18G0-6X
-      val gantryAngle = protoypeBeam.gantryAngle_roundedDeg
+      val prefix = prototypeBeam.beamName.take(4) // example beam names: J20G0-6F, J18G0-6X
+      val gantryAngle = prototypeBeam.gantryAngle_roundedDeg
       val kvp = {
         val e = beamEnergy.photonEnergy_MeV.get
         if (e.round == e)
@@ -51,7 +51,7 @@ class SPSymFlatConst(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProce
       s"$prefix$gantryAngle-$kvp$fff"
     }
 
-    Beam(protoypeBeam.prototypeBeam, beamName, beamEnergy)
+    Beam(prototypeBeam.prototypeBeam, beamName, beamEnergy)
   }
 
   private def toSelection(beam: Beam): Selection = Selection(this, beam.beamName, Seq(beam))

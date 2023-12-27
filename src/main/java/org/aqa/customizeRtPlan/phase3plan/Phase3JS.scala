@@ -122,6 +122,7 @@ object Phase3JS extends Logging {
       s"""document.getElementById("${subProcedure.headerId}").style.background = "lightgrey";""" +
         s"""document.getElementById("${subProcedure.headerId}").innerHTML = "${subProcedure.abbreviation}";"""
     } else {
+      //noinspection SpellCheckingInspection
       s"""document.getElementById("${subProcedure.headerId}").style.background = "lightgreen";""" +
         s"""document.getElementById("${subProcedure.headerId}").innerHTML = "${subProcedure.abbreviation + " : " + numBeam}";"""
     }

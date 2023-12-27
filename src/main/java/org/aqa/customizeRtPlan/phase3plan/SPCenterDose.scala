@@ -7,6 +7,7 @@ class SPCenterDose(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedu
 
   override val name = "Center Dose"
 
+  //noinspection SpellCheckingInspection
   override val abbreviation: String = "Cntr Dose"
 
   override def selectionList: Seq[Selection] = {

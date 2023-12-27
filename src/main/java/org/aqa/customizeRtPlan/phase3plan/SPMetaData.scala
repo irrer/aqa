@@ -34,19 +34,6 @@ case class SPMetaData(machine: Machine) {
   }
 
   /**
-    * Return the URL prefix for the example images directory.
-    *
-    * @return Prefix for example beam images.
-    */
-  private def exampleBeamImagesUrlPrefix(): String = {
-    val prefix = "/static/images/exampleBeamImages/"
-    val patternList = Seq("30x40", "40x40")
-    val pattern = patternList.find(p => epid.model.contains(p)).get
-    val dirName = exampleBeamImagesDirNameList.find(example => example.contains(pattern)).get
-    prefix + dirName
-  }
-
-  /**
     * Given a beam, return the URL to an example image for that beam.
     * If there is nothing appropriate, then return an 'NA' image.
     *
@@ -113,6 +100,6 @@ case class SPMetaData(machine: Machine) {
   val epid: EPID = EPID.get(machine.epidPK).get
 
   /** List of PNG files representing examples of beams. */
-  val exampleImageFileList: Seq[File] = Util.listDirFiles(exampleBeamImagesDir(epid))
+  private val exampleImageFileList: Seq[File] = Util.listDirFiles(exampleBeamImagesDir(epid))
 
 }

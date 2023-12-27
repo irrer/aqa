@@ -5,13 +5,13 @@ import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.db.MachineBeamEnergy
 import org.aqa.Config
-import org.aqa.customizeRtPlan.CustomizeRtPlanUtil
 import org.aqa.Util
 
 class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(metaData, beamList: Seq[Beam]) {
 
   override val name = "Focal Spot"
 
+  //noinspection SpellCheckingInspection
   override val abbreviation: String = "Focl Spot"
 
   private val fsPrototypeList =
@@ -39,12 +39,6 @@ class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedur
 
       val beamName = makeBeamName(machineBeamEnergy, prototypeBeam)
 
-      val beamAl = CustomizeRtPlanUtil.makeBeam(
-        machineEnergy = machineBeamEnergy,
-        prototypeBeam,
-        beamName,
-        1 // This gets overwritten when the rtplan is created.
-      )
       new Beam(prototypeBeam, beamName, machineBeamEnergy)
     }
 
@@ -62,11 +56,6 @@ class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedur
   }
 
   private val sfSelectionList = metaData.beamEnergyList.map(energy => setEnergyOfSet(prototypeSet, energy))
-
-  private def beamNameToId(beamName: String): String = {
-    val pair = beamName.split("-").last
-    pair
-  }
 
   override def selectionList: Seq[Selection] = sfSelectionList
 

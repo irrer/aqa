@@ -3,7 +3,6 @@ package org.aqa.customizeRtPlan.phase3plan
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 import org.aqa.customizeRtPlan.CustomizeRtPlanUtil
 import org.aqa.db.Machine
@@ -28,10 +27,10 @@ case class Beam(prototypeBeam: AttributeList, beamName: String, beamEnergy: Mach
   def isFFF: Boolean = beamEnergy.isFFF
 
   /** First collimator angle in fraction sequence. */
-  def colAngle_deg: Double = Util.collimatorAngle(prototypeBeam)
+  private def colAngle_deg: Double = Util.collimatorAngle(prototypeBeam)
 
   /** Collimator angle rounded to 90. */
-  def colAngle_roundedDeg: Int = Util.angleRoundedTo90(colAngle_deg)
+  private def colAngle_roundedDeg: Int = Util.angleRoundedTo90(colAngle_deg)
 
   /** First gantry angle in fraction sequence. */
   def gantryAngle_deg: Double = Util.gantryAngle(prototypeBeam)
@@ -39,16 +38,7 @@ case class Beam(prototypeBeam: AttributeList, beamName: String, beamEnergy: Mach
   def gantryAngle_roundedDeg: Int = Util.angleRoundedTo90(gantryAngle_deg)
 
   override def toString: String = {
-    val j0 = beamName + ""
-    Trace.trace(j0)
-    val j1 = beamEnergy.photonEnergy_MeV + ""
-    Trace.trace(j1)
-    val j2 = beamEnergy.isFFF + ""
-    Trace.trace(j2)
-    val j3 = colAngle_roundedDeg + ""
-    Trace.trace(j3)
-    val j4 = gantryAngle_deg + ""
-    Trace.trace(j4)
+    //noinspection SpellCheckingInspection
     s"$beamName | ${beamEnergy.photonEnergy_MeV.get} Mev | isFFF: ${beamEnergy.isFFF} | maxDoseRate: ${beamEnergy.maxDoseRate_MUperMin.get} | col angle: $colAngle_roundedDeg  | gantry: $gantryAngle_deg "
   }
 
@@ -67,6 +57,7 @@ object Beam {
     val beamName = beamAl.get(TagByName.BeamName).getSingleStringValueOrEmptyString()
     val beamEnergy: MachineBeamEnergy = {
       val photonEnergy_MeV = DicomUtil.findAllSingle(beamAl, TagByName.NominalBeamEnergy).head.getDoubleValues.head
+      //noinspection SpellCheckingInspection
       val maxDoseRate_MUperMin = DicomUtil.findAllSingle(beamAl, TagByName.DoseRateSet).head.getDoubleValues.head
 
       val fffEnergy_MeV: Double = if (CustomizeRtPlanUtil.isFFFBeam(beamAl)) 1.0 else 0
