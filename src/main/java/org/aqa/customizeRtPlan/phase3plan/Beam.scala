@@ -30,7 +30,7 @@ case class Beam(prototypeBeam: AttributeList, beamName: String, beamEnergy: Mach
   private def colAngle_deg: Double = Util.collimatorAngle(prototypeBeam)
 
   /** Collimator angle rounded to 90. */
-  private def colAngle_roundedDeg: Int = Util.angleRoundedTo90(colAngle_deg)
+  def colAngle_roundedDeg: Int = Util.angleRoundedTo90(colAngle_deg)
 
   /** First gantry angle in fraction sequence. */
   def gantryAngle_deg: Double = Util.gantryAngle(prototypeBeam)

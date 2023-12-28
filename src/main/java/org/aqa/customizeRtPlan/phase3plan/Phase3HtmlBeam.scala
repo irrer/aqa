@@ -2,6 +2,7 @@ package org.aqa.customizeRtPlan.phase3plan
 
 import org.aqa.Logging
 import org.aqa.Util
+import org.aqa.web.WebUtil
 
 import scala.xml.Elem
 
@@ -78,17 +79,22 @@ object Phase3HtmlBeam extends Logging {
       }
     }
 
+    val col = {
+      "MLC: " + beam.colAngle_roundedDeg
+    }
+
     val fff = if (beam.isFFF) "FFF" else ""
 
-    val title = s"$gantry    $mv    $doseRate    $fff"
+    val sp = WebUtil.nbsp + WebUtil.nbsp
+    val title = s"$gantry $sp $col $sp $mv $sp $doseRate $sp $fff"
 
     val image: Elem = {
       val imageUrl = subProcedureList.metaData.urlOfExampleImage(beam)
-      <div style="margin: 5px;" title={title}>
+      <div style="margin: 5px;">
         <table>
           <tr>
             <td>
-              <img src={imageUrl} height="50" style="margin: 2px;"/>
+              <img src={imageUrl} height="80" style="margin: 2px;"/>
             </td>
             <td>
               <h4>
