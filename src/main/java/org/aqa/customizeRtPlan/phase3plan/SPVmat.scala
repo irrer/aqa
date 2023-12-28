@@ -22,8 +22,8 @@ class SPVmat(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(met
 
   }
 
-  override def selectionList: Seq[Selection] = vmatSelectionList
+  override def initialSelectionList: Seq[Selection] = vmatSelectionList
 
-  override def getBeamList: Seq[Beam] = selectionList.flatMap(_.beamList)
+  override def getBeamList: Seq[Beam] = initialSelectionList.flatMap(_.beamList)
 
 }

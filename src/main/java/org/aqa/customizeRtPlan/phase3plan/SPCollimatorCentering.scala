@@ -9,7 +9,7 @@ class SPCollimatorCentering(metaData: SPMetaData, beamList: Seq[Beam]) extends S
   //noinspection SpellCheckingInspection
   override val abbreviation: String = "Col Cntr"
 
-  override def selectionList: Seq[Selection] = {
+  override def initialSelectionList: Seq[Selection] = {
 
     val list = beamList.filter(beam => Config.collimatorCenteringPhase3List.contains(beam.beamName))
 
@@ -27,6 +27,6 @@ class SPCollimatorCentering(metaData: SPMetaData, beamList: Seq[Beam]) extends S
 
   }
 
-  override def getBeamList: Seq[Beam] = selectionList.flatMap(_.beamList)
+  override def getBeamList: Seq[Beam] = initialSelectionList.flatMap(_.beamList)
 
 }

@@ -22,8 +22,8 @@ class SPWedge(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(me
 
   }
 
-  override def selectionList: Seq[Selection] = wedgeSelectionList
+  override def initialSelectionList: Seq[Selection] = wedgeSelectionList
 
-  override def getBeamList: Seq[Beam] = selectionList.flatMap(_.beamList)
+  override def getBeamList: Seq[Beam] = initialSelectionList.flatMap(_.beamList)
 
 }

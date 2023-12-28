@@ -20,10 +20,17 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
   val abbreviation: String
 
   /**
-    * Given a machine, return the list of all checkboxes.
+    * Return the list of all checkboxes.
     * @return List of all selections.
     */
-  def selectionList: Seq[Selection]
+  protected def initialSelectionList: Seq[Selection]
+
+  final def selectionList: Seq[Selection] = {
+    def allBeamsSupported(sel: Selection): Boolean =
+      sel.beamList.map(beam => metaData.beamEnergyIsSupported(beam.beamEnergy)).reduce(_ && _)
+
+    initialSelectionList.filter(allBeamsSupported)
+  }
 
   /**
     * Given the beams from the original plans, return a list of beams that the user can choose from.
@@ -39,7 +46,7 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
     * @return
     */
   final def usesBeam(beam: Beam, valueMap: ValueMapT): Boolean = {
-    selectionList.filter(sel => sel.isSelected(valueMap)).flatMap(_.beamList).exists(b => b.beamName.equals(beam.beamName))
+    initialSelectionList.filter(sel => sel.isSelected(valueMap)).flatMap(_.beamList).exists(b => b.beamName.equals(beam.beamName))
   }
 
   /**

@@ -57,13 +57,13 @@ class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedur
 
   private val sfSelectionList = metaData.beamEnergyList.map(energy => setEnergyOfSet(prototypeSet, energy))
 
-  override def selectionList: Seq[Selection] = sfSelectionList
+  override def initialSelectionList: Seq[Selection] = sfSelectionList
 
   // override def setBeamList(beamList: Seq[Beam]): Elem = { ??? }
 
   // override def update(checkboxIdList: Seq[String]): Seq[Beam] = { ??? }
 
-  override def getBeamList: Seq[Beam] = selectionList.flatMap(_.beamList)
+  override def getBeamList: Seq[Beam] = initialSelectionList.flatMap(_.beamList)
 
   // override def generatePlan(checkboxIdList: Seq[String]): Seq[AttributeList] = { ??? }
 

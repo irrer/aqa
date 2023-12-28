@@ -67,7 +67,7 @@ class SPSymFlatConst(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProce
     beamList.map(toSelection)
   }
 
-  override def selectionList: Seq[Selection] = {
+  override def initialSelectionList: Seq[Selection] = {
     val margin = Config.SymmetryAndFlatnessDiameter_mm / 2
     val max = {
       val m = Config.SymmetryAndFlatnessPointList.flatMap(p => Seq(p.x_mm, p.y_mm)).flatMap(c => Seq(c + margin, c - margin))
@@ -82,6 +82,6 @@ class SPSymFlatConst(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProce
     list ++ newBeamList
   }
 
-  override def getBeamList: Seq[Beam] = selectionList.flatMap(_.beamList)
+  override def getBeamList: Seq[Beam] = initialSelectionList.flatMap(_.beamList)
 
 }

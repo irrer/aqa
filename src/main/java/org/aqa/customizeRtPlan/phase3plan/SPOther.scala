@@ -21,8 +21,8 @@ class SPOther(metaData: SPMetaData, unclaimedBeamList: Seq[Beam]) extends SubPro
 
   }
 
-  override def selectionList: Seq[Selection] = otherSelectionList
+  override def initialSelectionList: Seq[Selection] = otherSelectionList
 
-  override def getBeamList: Seq[Beam] = selectionList.flatMap(_.beamList)
+  override def getBeamList: Seq[Beam] = initialSelectionList.flatMap(_.beamList)
 
 }

@@ -102,4 +102,37 @@ case class SPMetaData(machine: Machine) {
   /** List of PNG files representing examples of beams. */
   private val exampleImageFileList: Seq[File] = Util.listDirFiles(exampleBeamImagesDir(epid))
 
+  /**
+    * Determine the machine supports this energy.
+    * @param energy Beam to examine.
+    * @return True if the machine supports it.
+    */
+  def beamEnergyIsSupported(energy: MachineBeamEnergy): Boolean = {
+
+    /** Return true if the beams have the same energy parameters. */
+    def isSame(beamEnergyA: MachineBeamEnergy, beamEnergyB: MachineBeamEnergy): Boolean = {
+
+      def pho = beamEnergyA.photonEnergy_MeV.get == beamEnergyB.photonEnergy_MeV.get
+
+      def dose = {
+        (beamEnergyA.maxDoseRate_MUperMin, beamEnergyB.maxDoseRate_MUperMin) match {
+          case (Some(doseA), Some(doseB)) => doseA == doseB
+          case _                          => true
+        }
+      }
+
+      def fff: Boolean = {
+        (beamEnergyA.fffEnergy_MeV, beamEnergyB.fffEnergy_MeV) match {
+          case (Some(fffA), Some(fffB)) => fffA == fffB
+          case _                        => true
+        }
+      }
+
+      pho && dose && fff
+    }
+
+    val same = beamEnergyList.exists(supportedEnergy => isSame(supportedEnergy, energy))
+    same
+  }
+
 }

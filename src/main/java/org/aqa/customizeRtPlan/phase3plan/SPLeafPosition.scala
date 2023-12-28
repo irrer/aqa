@@ -8,13 +8,13 @@ class SPLeafPosition(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProce
 
   override val abbreviation: String = "Leaf Pos"
 
-  override def selectionList: Seq[Selection] = {
+  override def initialSelectionList: Seq[Selection] = {
     def toSelection(beam: Beam): Selection = Selection(this, beam.beamName, Seq(beam))
     def ok(beam: Beam) = Config.LeafPositionBeamNameList.contains(beam.beamName)
     val list = beamList.filter(ok).map(toSelection)
     list
   }
 
-  override def getBeamList: Seq[Beam] = selectionList.flatMap(_.beamList)
+  override def getBeamList: Seq[Beam] = initialSelectionList.flatMap(_.beamList)
 
 }

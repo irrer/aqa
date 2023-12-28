@@ -16,8 +16,8 @@ class SPCollimatorPosition(metaData: SPMetaData, beamList: Seq[Beam]) extends Su
     list.map(beam => Selection(this, beam.beamName, Seq(beam)))
   }
 
-  override def selectionList: Seq[Selection] = colPosSelectionList
+  override def initialSelectionList: Seq[Selection] = colPosSelectionList
 
-  override def getBeamList: Seq[Beam] = selectionList.flatMap(_.beamList)
+  override def getBeamList: Seq[Beam] = initialSelectionList.flatMap(_.beamList)
 
 }
