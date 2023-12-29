@@ -13,7 +13,7 @@ abstract class Phase3Template extends Logging {
   def button: FormButton
 
   /** Generate the js that will change selections as needed. */
-  def js: String
+  def js(subProcedureList: SubProcedureList): String
 
   /**
     * Utility for creating a button appropriate for processing a template

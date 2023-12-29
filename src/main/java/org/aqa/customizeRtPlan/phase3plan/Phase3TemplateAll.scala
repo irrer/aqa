@@ -8,7 +8,7 @@ class Phase3TemplateAll extends Phase3Template {
 
   override def button: FormButton = makeButton("All", "Select everything.", s"$functionName()")
 
-  override def js: String =
+  override def js(subProcedureList: SubProcedureList): String =
     s"""
        | function $functionName() {
        |   for (cb = 0; cb < checkboxList.length; cb++) {

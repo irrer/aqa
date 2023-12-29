@@ -8,14 +8,25 @@ class Phase3TemplateFocalSpot extends Phase3Template {
 
   override def button: FormButton = makeButton("Focal Spot", "Select all energies for focal spot and un-select the others.", s"$functionName()")
 
-  override def js: String =
+  private def htmlIdList(subProcedureList: SubProcedureList): Seq[String] = {
+    val fs = subProcedureList.subProcedureList.find(_.isInstanceOf[SPFocalSpot]).get
+    fs.selectionList.map(_.htmlId)
+  }
+
+  override def js(subProcedureList: SubProcedureList): String = {
+
+    val idList = htmlIdList(subProcedureList)
+
+    val booleanExpression = idList.map(id => s"""(id == "$id")""").mkString(" || ")
+
     s"""
        | function $functionName() {
        |   for (cb = 0; cb < checkboxList.length; cb++) {
-       |     var isFs = checkboxList[cb].getAttribute("id").startsWith("Focal Spot::");
-       |     checkboxList[cb].checked = isFs;
+       |     var id = checkboxList[cb].getAttribute("id");
+       |     checkboxList[cb].checked = $booleanExpression;
        |   }
        |   phase3ClickHandler(null);
        | }
        |""".stripMargin
+  }
 }

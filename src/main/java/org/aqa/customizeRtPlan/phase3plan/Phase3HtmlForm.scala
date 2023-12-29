@@ -20,7 +20,7 @@ object Phase3HtmlForm extends Logging {
 
   val selectedBeamCountTag = "selectedBeamCount"
 
-  val formBodyStyle: String = "overflow-y:auto; height:800px;"
+  val formBodyStyle: String = "overflow-y:auto; height:700px;"
 
   private def makeButton(name: String, buttonType: ButtonType.Value): FormButton = {
     new FormButton(name, 2, 0, Phase3HTML.subUrl, Phase3HTML.pathOf, buttonType)
@@ -43,7 +43,7 @@ object Phase3HtmlForm extends Logging {
   private def toleranceTableName = new WebInputHidden(CustomizeRtPlanInterface.toleranceTableNameTag)
 
   /** List of pre-defined templates for making selections. */
-  private def templateList: Seq[Phase3Template] = Seq(new Phase3TemplateNone, new Phase3TemplateAll, new Phase3TemplateFocalSpot)
+  private def templateList: Seq[Phase3Template] = Seq(new Phase3TemplateDefault, new Phase3TemplateNone, new Phase3TemplateAll, new Phase3TemplateFocalSpot)
 
   private def makeSubProcedureSelector(subProcedureList: SubProcedureList): Seq[Elem] = {
     def makeSelectorHtml(subProc: SubProcedure): WebRow = {
@@ -129,7 +129,7 @@ object Phase3HtmlForm extends Logging {
     */
   def formSelect(valueMap: ValueMapT, response: Response, subProcedureList: SubProcedureList): Unit = {
 
-    val templateText = Phase3HtmlForm.templateList.map(_.js).mkString("\n")
+    val templateText = Phase3HtmlForm.templateList.map(_.js(subProcedureList)).mkString("\n")
     val js = s"${Phase3JS.javaScript}\n$templateText"
     val form = new WebForm(action = Phase3HTML.pathOf, title = None, rowList = rowList(subProcedureList), fileUpload = 0, runScript = Some(js)) // , runScript = Some(javaScript))
 

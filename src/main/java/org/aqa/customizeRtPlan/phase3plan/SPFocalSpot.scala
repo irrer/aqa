@@ -7,9 +7,13 @@ import org.aqa.db.MachineBeamEnergy
 import org.aqa.Config
 import org.aqa.Util
 
+object SPFocalSpot {
+  val name = "Focal Spot"
+}
+
 class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(metaData, beamList: Seq[Beam]) {
 
-  override val name = "Focal Spot"
+  override val name: String = SPFocalSpot.name
 
   //noinspection SpellCheckingInspection
   override val abbreviation: String = "Focl Spot"

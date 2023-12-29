@@ -8,7 +8,7 @@ class Phase3TemplateNone extends Phase3Template {
 
   override def button: FormButton = makeButton("None", "Un-select everything.", s"$functionName()")
 
-  override def js: String =
+  override def js(subProcedureList: SubProcedureList): String =
     s"""
        | function $functionName() {
        |   for (cb = 0; cb < checkboxList.length; cb++) {
