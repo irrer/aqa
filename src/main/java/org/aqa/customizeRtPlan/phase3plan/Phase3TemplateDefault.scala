@@ -31,7 +31,7 @@ class Phase3TemplateDefault extends Phase3Template {
 
     // @formatter:off
     val list: Seq[Selection] =
-      ofType(classOf[SPCollimatorCentering]).filter(_.beamList.size == 8).filterNot(hasFff).sortBy(gantry).take(1) ++
+      ofType(classOf[SPCollimatorCentering])                                                                       ++
       ofType(classOf[SPFocalSpot          ]).filter(hasStandardEnergy).filterNot(hasFff).sortBy(gantry).take(1)    ++
       ofType(classOf[SPFocalSpot          ]).filter(hasStandardEnergy).filter(hasFff).sortBy(gantry).take(1)       ++
       ofType(classOf[SPLeafPosition       ]).filter(hasStandardEnergy).filterNot(hasFff).sortBy(gantry).take(1)    ++
