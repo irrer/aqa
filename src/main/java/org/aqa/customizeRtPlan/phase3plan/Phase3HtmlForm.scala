@@ -3,7 +3,6 @@ package org.aqa.customizeRtPlan.phase3plan
 import org.aqa.Logging
 import org.aqa.customizeRtPlan.CustomizeRtPlanInterface
 import org.aqa.web.MachineUpdate
-import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
 import org.aqa.web.WebUtil.WebPlainText
 import org.restlet.data.Status
@@ -66,10 +65,11 @@ object Phase3HtmlForm extends Logging {
     */
   private def topRow(subProcedureList: SubProcedureList): WebRow = {
     val pageTitle = {
+      val machine = subProcedureList.metaData.machine
       val html =
         <div>
           <h2>Phase3 Custom Plan for Machine
-            {WebUtil.wrapAlias(subProcedureList.metaData.machine.id)}
+            {MachineUpdate.linkToMachineUpdate(machine.machinePK.get, machine.id)}
           </h2>
         </div>
       new WebPlainText(label = "Phase3 Plan", showLabel = false, col = 6, offset = 0, _ => html)
