@@ -132,8 +132,27 @@ object Phase3JS extends Logging {
   private def gantryAngleUseToJs(checkedSelectionList: Seq[Selection]): String = {
     val angleList = checkedSelectionList.flatMap(_.beamList).filter(_.gantryAngleList_deg.size == 1).map(_.gantryAngle_roundedDeg).distinct.toSet
 
+    def isCollimatorCentered(angle: Int): Boolean = {
+      def isColCent(sel: Selection) = sel.subProcedure.isInstanceOf[SPCollimatorCentering]
+      def hasAngle(sel: Selection) = sel.beamList.exists(_.gantryAngle_roundedDeg == angle)
+      val is = checkedSelectionList.exists(sel => isColCent(sel) && hasAngle(sel))
+      is
+    }
+
+    val isCollimatorCenteredMap: Map[Int, Boolean] = {
+      val list = Seq(0, 90, 180, 270)
+      val pairs = list.map(angle => (angle, isCollimatorCentered(angle)))
+      pairs.toMap
+    }
+
     def setAngleUse(angle: Int): String = {
-      val color = if (angleList.contains(angle)) "lightgreen" else "white"
+
+      val color = (isCollimatorCenteredMap(angle), angleList.contains(angle)) match {
+        case (true, _)     => "lightgreen"
+        case (false, true) => "yellow"
+        case _             => "white"
+      }
+
       s"""document.getElementById("${Phase3HtmlBeam.gantryAngleUsageId(angle)}").style.background = "$color";"""
     }
 
