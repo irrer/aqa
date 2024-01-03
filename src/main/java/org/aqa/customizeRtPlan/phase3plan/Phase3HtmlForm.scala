@@ -64,7 +64,7 @@ object Phase3HtmlForm extends Logging {
     * @param subProcedureList provide metadata.
     * @return HTML.
     */
-  private def banner(subProcedureList: SubProcedureList): WebRow = {
+  private def topRow(subProcedureList: SubProcedureList): WebRow = {
     val pageTitle = {
       val html =
         <div>
@@ -72,7 +72,7 @@ object Phase3HtmlForm extends Logging {
             {WebUtil.wrapAlias(subProcedureList.metaData.machine.id)}
           </h2>
         </div>
-      new WebPlainText(label = "Phase3 Plan", showLabel = false, col = 12, offset = 0, _ => html)
+      new WebPlainText(label = "Phase3 Plan", showLabel = false, col = 6, offset = 0, _ => html)
     }
 
     List(pageTitle)
@@ -116,7 +116,7 @@ object Phase3HtmlForm extends Logging {
 
     val rowButton: WebRow = List(Phase3HtmlForm.cancelButton, createPlanButton)
 
-    val rowList: List[WebRow] = List(banner(subProcedureList)) ++ List(rowTemplate) ++ List(rowCommonParameters) ++ List(row) ++ List(rowButton)
+    val rowList: List[WebRow] = List(topRow(subProcedureList)) ++ List(rowTemplate) ++ List(rowCommonParameters) ++ List(row) ++ List(rowButton)
     rowList
   }
 

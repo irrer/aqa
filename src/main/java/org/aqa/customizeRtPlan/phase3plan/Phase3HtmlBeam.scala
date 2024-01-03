@@ -55,8 +55,23 @@ object Phase3HtmlBeam extends Logging {
 
   private def beamToHtml(beam: Beam, subProcedureList: SubProcedureList): Elem = {
 
-    val gantry = s"Gantry ${beam.gantryAngle_roundedDeg}"
+    val gantry = {
+      def fmt(d: Double): String = {
+        if (d == d.round)
+          d.round.toString
+        else
+          d.toString
+      }
 
+      val text: String = {
+        if (beam.gantryAngleList_deg.size == 1)
+          fmt(beam.gantryAngle_deg)
+        else {
+          fmt(beam.gantryAngleList_deg.min) + " - " + fmt(beam.gantryAngleList_deg.last)
+        }
+      }
+      s"Gantry $text"
+    }
 
     val mv = {
       beam.beamEnergy.photonEnergy_MeV match {
@@ -146,23 +161,61 @@ object Phase3HtmlBeam extends Logging {
     // @formatter:on
   }
 
-  def selectedBeamsField(subProcedureList: SubProcedureList, selectedBeamCountTag: String): Elem = {
 
-    // @formatter:off
+  /** Generate HTML id for the usage of a given gantry angle. */
+  def gantryAngleUsageId(gantryAngle: Int): String = s"gantryAngle_$gantryAngle"
+
+  /**
+   * Indicate which gantry angles are used.
+   *
+   * @return HTML with id's for each angle.
+   */
+  private def gantryAngleUsage(): Elem = {
+    def beamUsageHtml(angle: Int) = {
+      val text = {
+        WebUtil.nbsp + angle + {
+          if (angle == 270) WebUtil.nbsp else ""
+        }
+      }
+      <span id={gantryAngleUsageId(angle)} style="margin-left: 5px;">
+        {text}
+      </span>
+    }
+
+    val html = {
+      val title = Seq(
+        "The highlighted gantry angles indicate which gantry angles will be",
+        "visited by the selected beams. This is to help the user decide",
+        "which angles they need to perform Collimator Centering at.  This",
+        "excludes beams that user multiple gantry angles, such as VMAT."
+      ).mkString(WebUtil.titleNewline)
+
+      <div title={title}>
+        Gantry Angles:
+        {Seq(0, 90, 180, 270).map(beamUsageHtml)}
+      </div>
+    }
+    html
+  }
+
+  def selectedBeamsField(subProcedureList: SubProcedureList, selectedBeamCountTag: String): Elem = {// @formatter:off
     val html = {
       <div>
         <div class="row">
-          <div class="col-md-4">
-            <h3>Beam List</h3>
-          </div>
-          <div class="col-md-4">
-            <h3>Selected:
-              <span id={selectedBeamCountTag}>0</span>
-            </h3>
-          </div>
+          <h3>
+            <div class="col-md-3" title="List of beams that will be delivered by the plan.">
+              Beam List
+            </div>
+            <div class="col-md-3" title="Number of beams that will be delivered by the plan">
+              Selected: <span id={selectedBeamCountTag}>0</span>
+            </div>
+            <div class="col-md-6">
+              {gantryAngleUsage()}
+            </div>
+          </h3>
         </div>
 
-        <div class="row" style={Phase3HtmlForm.formBodyStyle}>
+        <div class="row" style={Phase3HtmlForm.formBodyStyle + " margin-top:10px;"}>
           <table style="width: 100%;" class="table table-bordered">
             {tableHeader(subProcedureList, selectedBeamCountTag)}
             <tbody>

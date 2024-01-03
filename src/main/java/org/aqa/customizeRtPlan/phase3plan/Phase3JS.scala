@@ -129,6 +129,18 @@ object Phase3JS extends Logging {
     js
   }
 
+  private def gantryAngleUseToJs(checkedSelectionList: Seq[Selection]): String = {
+    val angleList = checkedSelectionList.flatMap(_.beamList).filter(_.gantryAngleList_deg.size == 1).map(_.gantryAngle_roundedDeg).distinct.toSet
+
+    def setAngleUse(angle: Int): String = {
+      val color = if (angleList.contains(angle)) "lightgreen" else "white"
+      s"""document.getElementById("${Phase3HtmlBeam.gantryAngleUsageId(angle)}").style.background = "$color";"""
+    }
+
+    val js = Seq(0, 90, 180, 270).map(setAngleUse).mkString("\n")
+    js
+  }
+
   /**
     * Write js code that tells the client what to modify in the DOM.
     *
@@ -140,6 +152,8 @@ object Phase3JS extends Logging {
 
     val beamText = subProcedureList.beamList.map(beam => beamUseToJs(beam, checkedSelectionList, subProcedureList)).mkString("\n")
 
+    val gantryAngleUseText = gantryAngleUseToJs(checkedSelectionList)
+
     val selText = selectionText(checkedSelectionList, subProcedureList)
 
     val selectedBeamCountText = {
@@ -150,7 +164,7 @@ object Phase3JS extends Logging {
     val checkedSubProcedureNameMap = checkedSelectionList.groupBy(_.subProcedure.name)
     val subHeaderText = subProcedureList.subProcedureList.map(sub => subProcessHeaderToJs(checkedSubProcedureNameMap.get(sub.name), sub)).mkString("\n")
 
-    val js = Seq(selText, beamText, selectedBeamCountText, subHeaderText).mkString("\n")
+    val js = Seq(selText, beamText, gantryAngleUseText, selectedBeamCountText, subHeaderText).mkString("\n")
     js
   }
 

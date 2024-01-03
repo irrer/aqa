@@ -35,6 +35,8 @@ case class Beam(prototypeBeam: AttributeList, beamName: String, beamEnergy: Mach
   /** First gantry angle in fraction sequence. */
   def gantryAngle_deg: Double = Util.gantryAngle(prototypeBeam)
 
+  def gantryAngleList_deg:Seq[ Double] = DicomUtil.findAllSingle(prototypeBeam, TagByName.GantryAngle).flatMap(_.getDoubleValues).distinct.sorted
+
   def gantryAngle_roundedDeg: Int = Util.angleRoundedTo90(gantryAngle_deg)
 
   override def toString: String = {
