@@ -184,10 +184,22 @@ object Phase3HtmlBeam extends Logging {
 
     val html = {
       val title = Seq(
+        "Collimator Centering is Optional",
+        "",
         "The highlighted gantry angles indicate which gantry angles will be",
-        "visited by the selected beams. This is to help the user decide",
-        "which angles they need to perform Collimator Centering at.  This",
-        "excludes beams that user multiple gantry angles, such as VMAT."
+        "visited by the selected beams.   If highlighted in green, then then",
+        "collimator centering is being done at that gantry angle.  If yellow,",
+        "then there is a test specified for that angle, but no collimator",
+        "centering.",
+        "",
+        "The user may choose whether collimator centering should be done or not.",
+        "Not doing it reduces the number of beams and therefore delivery time.",
+        "If collimator centering data is not available, the it will assumed to be",
+        "perfect (0, 0).",
+        "",
+        "Note: If collimator centering is specified only for gantry angle 0, then",
+        "those values will be used for all beams.  This is to maintain backwards",
+        "compatibility with Phase2.",
       ).mkString(WebUtil.titleNewline)
 
       <div title={title}>
