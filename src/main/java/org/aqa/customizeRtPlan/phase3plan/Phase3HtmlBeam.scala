@@ -172,13 +172,8 @@ object Phase3HtmlBeam extends Logging {
    */
   private def gantryAngleUsage(): Elem = {
     def beamUsageHtml(angle: Int) = {
-      val text = {
-        WebUtil.nbsp + angle + {
-          if (angle == 270) WebUtil.nbsp else ""
-        }
-      }
       <span id={gantryAngleUsageId(angle)} style="margin-left: 5px;">
-        {text}
+        {WebUtil.nbsp + angle}
       </span>
     }
 
@@ -202,15 +197,19 @@ object Phase3HtmlBeam extends Logging {
         "compatibility with Phase2.",
       ).mkString(WebUtil.titleNewline)
 
+      // @formatter:off
       <div title={title}>
         Gantry Angles:
         {Seq(0, 90, 180, 270).map(beamUsageHtml)}
+        <span> {WebUtil.nbsp} </span>
       </div>
+      // @formatter:on
     }
     html
   }
 
-  def selectedBeamsField(subProcedureList: SubProcedureList, selectedBeamCountTag: String): Elem = {// @formatter:off
+  def selectedBeamsField(subProcedureList: SubProcedureList, selectedBeamCountTag: String): Elem = {
+    // @formatter:off
     val html = {
       <div>
         <div class="row">
