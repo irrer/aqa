@@ -2,6 +2,7 @@ package org.aqa.customizeRtPlan.phase3plan
 
 import org.aqa.Logging
 import org.aqa.web.WebUtil.ValueMapT
+import org.aqa.Config
 import org.aqa.Util
 
 /**
@@ -26,15 +27,35 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
   protected def initialSelectionList: Seq[Selection]
 
   /**
-   * True if this procedure uses collimator centering.
-   */
+    * True if this procedure uses collimator centering.
+    */
   val usesCollimatorCentering: Boolean = true
+
+  private val colCenterBeamList = {
+    beamList.filter(beam => Config.collimatorCenteringPhase3List.exists(_.equals(beam.beamName)))
+  }
 
   final def selectionList: Seq[Selection] = {
     def allBeamsSupported(sel: Selection): Boolean =
       sel.beamList.map(beam => metaData.beamEnergyIsSupported(beam.beamEnergy)).reduce(_ && _)
 
-    initialSelectionList.filter(allBeamsSupported)
+    /** If the sub-process requires collimator centering, then require the collimator centering beams that have the same gantry angle. */
+    def requireColCent(selection: Selection): Selection = {
+      val gantryAngleSet = selection.beamList.filter(_.gantryAngleList_deg.size == 1).map(_.gantryAngle_roundedDeg).distinct.toSet
+
+      val colCentBeamList = colCenterBeamList.filter(colCentBeam => gantryAngleSet.contains(colCentBeam.gantryAngle_roundedDeg))
+
+      val newBeamList = (selection.beamList ++ colCentBeamList).groupBy(_.beamName).values.map(_.head).toSeq
+
+      val newSel = selection.copy(beamList = newBeamList)
+      newSel
+    }
+
+    val list = initialSelectionList.filter(allBeamsSupported)
+    if (usesCollimatorCentering)
+      list.map(sel => requireColCent(sel))
+    else
+      list
   }
 
   /**
