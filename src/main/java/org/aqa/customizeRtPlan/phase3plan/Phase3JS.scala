@@ -63,7 +63,7 @@ object Phase3JS extends Logging {
        |  https.onreadystatechange = function() {
        |    if (this.readyState == 4 && this.status == 200) {
        |      var text = this.responseText;
-       |      //console.log("from the server:\\n" + text);
+       |      // console.log("from the server:\\n" + text);
        |      eval(text);
        |    }
        |  }
@@ -76,6 +76,15 @@ object Phase3JS extends Logging {
        |populateCheckboxList();
        |
        |phase3ClickHandler(null);
+       |
+       |
+       |function setSelectionColor(list, color) {
+       |  for (i = 0; i < list.length; i++) {
+       |    var elem = document.getElementById(list[i]).parentElement.parentElement;
+       |    var styl = "border-left: 5px solid " + color + "; border-bottom: 4px solid " + color + "; background-color: " + color;
+       |    elem.style = styl;
+       |  }
+       |}
        |
        |""".stripMargin
   }
@@ -130,7 +139,7 @@ object Phase3JS extends Logging {
   }
 
   private def gantryAngleUseToJs(checkedSelectionList: Seq[Selection]): String = {
-    val angleList = checkedSelectionList.flatMap(_.beamList).filter(_.gantryAngleList_deg.size == 1).map(_.gantryAngle_roundedDeg).distinct.toSet
+    val angleList = checkedSelectionList.filter(_.subProcedure.usesCollimatorCentering).flatMap(_.beamList).filter(_.gantryAngleList_deg.size == 1).map(_.gantryAngle_roundedDeg).distinct.toSet
 
     def isCollimatorCentered(angle: Int): Boolean = {
       def isColCent(sel: Selection) = sel.subProcedure.isInstanceOf[SPCollimatorCentering]
@@ -161,6 +170,44 @@ object Phase3JS extends Logging {
   }
 
   /**
+   * Set HTML highlighting to show which selections are covered by collimator centering.  Note that if the
+   * procedure does not use collimator centering, then its selections are not highlighted.
+   *
+   * If a selection is selected, and uses collimator centering, but collimator centering is not being done
+   * for a gantry angle that it uses, then it will be highlighted with yellow.
+   *
+   * @param checkedSelectionList Selections that are selected.
+   * @param subProcedureList Metadata and sub-procedures.
+   * @return js to set highlighting.
+   */
+  private def selectionGantryAngleUseToJs(checkedSelectionList: Seq[Selection], subProcedureList: SubProcedureList): String = {
+    // List of gantry angles for which collimator centering is being done.
+    val centeredAngleSet = checkedSelectionList.filter(_.subProcedure.isInstanceOf[SPCollimatorCentering]).flatMap(_.beamList).map(_.gantryAngle_roundedDeg).distinct
+
+    def isCenteringForSelection(sel: Selection): Boolean = {
+      val anglesRequired = sel.beamList.filter(_.gantryAngleList_deg.size == 1).map(_.gantryAngle_roundedDeg).distinct.sorted
+      centeredAngleSet.intersect(anglesRequired).size == anglesRequired.size
+    }
+
+    def toJsStatement(selList: Seq[Selection], color: String) = {
+      val body = selList.map(sel => s""" "${sel.htmlId}" """).mkString(",")
+      val js = s"""setSelectionColor([ $body ], "$color");"""
+      js
+    }
+
+    val okList = checkedSelectionList.filter(_.subProcedure.usesCollimatorCentering).filter(isCenteringForSelection)
+    val cautionList = checkedSelectionList.filter(_.subProcedure.usesCollimatorCentering).filterNot(isCenteringForSelection)
+    val uncheckedList = subProcedureList.subProcedureList.flatMap(_.selectionList).filterNot(sel => checkedSelectionList.exists(_.htmlId.equals(sel.htmlId)))
+
+    Seq(
+      toJsStatement(okList, "lightgreen"),
+      toJsStatement(cautionList, "yellow"),
+      toJsStatement(uncheckedList, "white")
+    ).mkString("\n")
+
+  }
+
+  /**
     * Write js code that tells the client what to modify in the DOM.
     *
     * @param checkedSelectionList List of selections that the user has checked.
@@ -183,7 +230,8 @@ object Phase3JS extends Logging {
     val checkedSubProcedureNameMap = checkedSelectionList.groupBy(_.subProcedure.name)
     val subHeaderText = subProcedureList.subProcedureList.map(sub => subProcessHeaderToJs(checkedSubProcedureNameMap.get(sub.name), sub)).mkString("\n")
 
-    val js = Seq(selText, beamText, gantryAngleUseText, selectedBeamCountText, subHeaderText).mkString("\n")
+    val js = Seq(selText, beamText, gantryAngleUseText, selectedBeamCountText, subHeaderText, selectionGantryAngleUseToJs(checkedSelectionList, subProcedureList)).mkString("\n")
+    // Trace.trace(js)
     js
   }
 

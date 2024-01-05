@@ -25,6 +25,11 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
     */
   protected def initialSelectionList: Seq[Selection]
 
+  /**
+   * True if this procedure uses collimator centering.
+   */
+  val usesCollimatorCentering: Boolean = true
+
   final def selectionList: Seq[Selection] = {
     def allBeamsSupported(sel: Selection): Boolean =
       sel.beamList.map(beam => metaData.beamEnergyIsSupported(beam.beamEnergy)).reduce(_ && _)

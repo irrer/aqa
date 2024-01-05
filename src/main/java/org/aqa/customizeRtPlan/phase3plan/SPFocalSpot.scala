@@ -63,6 +63,8 @@ class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedur
 
   override def initialSelectionList: Seq[Selection] = sfSelectionList
 
+  override val usesCollimatorCentering: Boolean = false
+
   // override def setBeamList(beamList: Seq[Beam]): Elem = { ??? }
 
   // override def update(checkboxIdList: Seq[String]): Seq[Beam] = { ??? }
