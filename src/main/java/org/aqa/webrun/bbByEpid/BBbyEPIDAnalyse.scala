@@ -204,7 +204,7 @@ fprintf("AVERAGE MV(BB - DIGITAL_CAX) @ ISOCENTER PLANE - CBCT(BB - DIGITAL_PLAN
     val vert = getByAngleType(AngleType.vertical).takeRight(1)
     val horz = getByAngleType(AngleType.horizontal).takeRight(1)
 
-    vert.head.bbByEpid.attributeList
+    // vert.head.bbByEpid.attributeList
 
     if (vert.nonEmpty && horz.nonEmpty) {
       // Use the same number of vertical and horizontal beams to get the averages.  Handles cases where are there are many of one and few of the others.
