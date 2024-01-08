@@ -31,6 +31,13 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
     */
   val usesCollimatorCentering: Boolean = true
 
+  /**
+    * True if this procedure uses the flood field.
+    * Note: Currently this requires all plans to include a flood field.  Making the flood field optional
+    * would be an AQA steering committee group decision.
+    */
+  private val usesFlood: Boolean = true
+
   private val colCenterBeamList = {
     beamList.filter(beam => Config.collimatorCenteringPhase3List.exists(_.equals(beam.beamName)))
   }
@@ -39,7 +46,9 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
     def allBeamsSupported(sel: Selection): Boolean =
       sel.beamList.map(beam => metaData.beamEnergyIsSupported(beam.beamEnergy)).reduce(_ && _)
 
-    /** If the sub-process requires collimator centering, then require the collimator centering beams that have the same gantry angle. */
+    /** If the sub-process requires collimator centering, then require the collimator centering beams that have the same
+      * gantry angle. Do this by adding the appropriate collimator centering beams to the selection's beam list.
+      */
     def requireColCent(selection: Selection): Selection = {
       val gantryAngleSet = selection.beamList.filter(_.gantryAngleList_deg.size == 1).map(_.gantryAngle_roundedDeg).distinct.toSet
 
@@ -51,11 +60,31 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
       newSel
     }
 
-    val list = initialSelectionList.filter(allBeamsSupported)
-    if (usesCollimatorCentering)
-      list.map(sel => requireColCent(sel))
-    else
-      list
+    def requireFlood(selection: Selection): Selection = {
+      beamList.find(_.beamName.toLowerCase.contains("flood")) match {
+        case Some(floodBeam) =>
+          val newBeamList = selection.beamList :+ floodBeam
+          selection.copy(beamList = newBeamList)
+        case _ =>
+          selection
+      }
+    }
+
+    val list1 = initialSelectionList.filter(allBeamsSupported)
+
+    val list2 =
+      if (usesFlood)
+        list1.map(requireFlood)
+      else
+        list1
+
+    val list3 =
+      if (usesCollimatorCentering)
+        list2.map(requireColCent)
+      else
+        list2
+
+    list3
   }
 
   /**

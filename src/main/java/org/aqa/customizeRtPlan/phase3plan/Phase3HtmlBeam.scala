@@ -178,6 +178,7 @@ object Phase3HtmlBeam extends Logging {
     }
 
     val html = {
+      /*
       val title = Seq(
         "Collimator Centering is Optional",
         "",
@@ -195,6 +196,16 @@ object Phase3HtmlBeam extends Logging {
         "Note: If collimator centering is specified only for gantry angle 0, then",
         "those values will be used for all beams.  This is to maintain backwards",
         "compatibility with Phase2.",
+      ).mkString(WebUtil.titleNewline)
+      */
+
+      val title = Seq(
+        "The highlighted gantry angles indicate which gantry angles will be",
+        "visited by the selected beams.  For every gantry angle visited,",
+        "collimator centering will be done.",
+        "",
+        "The user may explicitly specify that collimator centering being ",
+        "done for all four gantry angles."
       ).mkString(WebUtil.titleNewline)
 
       // @formatter:off
