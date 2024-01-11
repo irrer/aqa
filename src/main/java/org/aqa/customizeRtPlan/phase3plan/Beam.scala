@@ -27,7 +27,7 @@ case class Beam(prototypeBeam: AttributeList, beamName: String, beamEnergy: Mach
   def isFFF: Boolean = beamEnergy.isFFF
 
   /** First collimator angle in fraction sequence. */
-  private def colAngle_deg: Double = Util.collimatorAngle(prototypeBeam)
+  def colAngle_deg: Double = Util.collimatorAngle(prototypeBeam)
 
   /** Collimator angle rounded to 90. */
   def colAngle_roundedDeg: Int = Util.angleRoundedTo90(colAngle_deg)
@@ -35,7 +35,8 @@ case class Beam(prototypeBeam: AttributeList, beamName: String, beamEnergy: Mach
   /** First gantry angle in fraction sequence. */
   def gantryAngle_deg: Double = Util.gantryAngle(prototypeBeam)
 
-  def gantryAngleList_deg:Seq[ Double] = DicomUtil.findAllSingle(prototypeBeam, TagByName.GantryAngle).flatMap(_.getDoubleValues).distinct.sorted
+  /** List all gantry angles visited by this beam in the order they were visited. */
+  def gantryAngleList_deg: Seq[Double] = DicomUtil.findAllSingle(prototypeBeam, TagByName.GantryAngle).flatMap(_.getDoubleValues).distinct.sorted
 
   def gantryAngle_roundedDeg: Int = Util.angleRoundedTo90(gantryAngle_deg)
 

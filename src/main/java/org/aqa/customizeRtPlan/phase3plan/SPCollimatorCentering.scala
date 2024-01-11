@@ -25,4 +25,6 @@ class SPCollimatorCentering(metaData: SPMetaData, beamList: Seq[Beam]) extends S
 
   override def getBeamList: Seq[Beam] = initialSelectionList.flatMap(_.beamList)
 
+  override def consecutivelyDeliveredBeamSets: Seq[Seq[Beam]] = selectionList.map(_.beamList)
+
 }

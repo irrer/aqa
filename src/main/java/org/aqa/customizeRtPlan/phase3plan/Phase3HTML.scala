@@ -1,5 +1,7 @@
 package org.aqa.customizeRtPlan.phase3plan
 
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.web.WebUtil.SubUrlRoot
 import org.aqa.Logging
@@ -8,6 +10,7 @@ import org.aqa.db.Machine
 import org.aqa.web.MachineUpdate
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
+import org.aqa.Util
 import org.restlet.Restlet
 import org.restlet.data.Status
 import org.restlet.Request
@@ -113,6 +116,28 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
     try {
       val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong)
 
+      if (true) { // TODO rm
+        val subProcedureList = SubProcedureList.makeSubProcedureList(SPMetaData(machine.get))
+        val beamList = subProcedureList.subProcedureList.flatMap(_.selectionList.flatMap(_.beamList)).groupBy(_.beamName).values.map(_.head).toSeq.sortBy(_.beamName)
+
+        val text = beamList.map(beam =>
+          s"Beam Gantry: ${"%-24s".format(beam.beamName)}   Energy: ${"%4.1f".format(beam.beamEnergy.photonEnergy_MeV.get)} FFF: ${"%-4s"
+            .format(beam.isFFF.toString)}    Gantry: ${beam.gantryAngleList_deg.map(Util.fmtDbl).mkString("    ")}"
+        )
+        Trace.trace("\n" + text.mkString("\n"))
+      }
+
+      if (true) { // TODO rm
+        val subProcedureList = SubProcedureList.makeSubProcedureList(SPMetaData(machine.get))
+        val beamList = subProcedureList.subProcedureList.flatMap(_.selectionList.flatMap(_.beamList)).groupBy(_.beamName).values.map(_.head).toSeq.sortBy(_.beamName)
+        def colListOf(beam: Beam): Seq[Double] = {
+          DicomUtil.findAllSingle(beam.prototypeBeam, TagByName.BeamLimitingDeviceAngle).flatMap(_.getDoubleValues)
+        }
+
+        val text = beamList.map(beam => s"Beam MLC: ${"%-24s".format(beam.beamName)} :: ${colListOf(beam).map(Util.fmtDbl).mkString("    ")}")
+        Trace.trace("\n" + text.mkString("\n"))
+      }
+
       def updateMach(): Unit =
         MachineUpdate.redirect(valueMap(machinePK.label).toLong, response)
 
@@ -122,6 +147,7 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
 
         case _ if request.getMethod == Method.POST =>
           val subProcedureList = SubProcedureList.makeSubProcedureList(SPMetaData(machine.get))
+
           updateBeamStatus(uploadText, response, subProcedureList)
 
         case _ if buttonIs(valueMap, Phase3HtmlForm.createPlanButton) =>

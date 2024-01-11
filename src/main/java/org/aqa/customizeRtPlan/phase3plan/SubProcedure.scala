@@ -50,7 +50,7 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
       * gantry angle. Do this by adding the appropriate collimator centering beams to the selection's beam list.
       */
     def requireColCent(selection: Selection): Selection = {
-      val gantryAngleSet = selection.beamList.filter(_.gantryAngleList_deg.size == 1).map(_.gantryAngle_roundedDeg).distinct.toSet
+      val gantryAngleSet = selection.beamList.filter(_.gantryAngleList_deg.distinct.size == 1).map(_.gantryAngle_roundedDeg).distinct.toSet
 
       val colCentBeamList = colCenterBeamList.filter(colCentBeam => gantryAngleSet.contains(colCentBeam.gantryAngle_roundedDeg))
 
@@ -109,4 +109,17 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
     * @return HTML id.
     */
   final def headerId: String = Util.textToHtmlId("header_" + name)
+
+  /**
+    * Get the list of all beams used by this subprocedure.
+    * @return The list of all beams used by this sub-procedure.
+    */
+  final def distinctBeamList: Seq[Beam] = selectionList.flatMap(_.beamList).groupBy(_.beamName).values.map(_.head).toSeq
+
+  /**
+    * Get the sets of beams that must be delivered consecutively.  Most sub procedures do not
+    * restrict the beam ordering, so by default they are each put in their own list.
+    * @return Sets of beams.
+    */
+  def consecutivelyDeliveredBeamSets: Seq[Seq[Beam]] = distinctBeamList.map(beam => Seq(beam))
 }

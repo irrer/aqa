@@ -64,10 +64,10 @@ object Phase3HtmlBeam extends Logging {
       }
 
       val text: String = {
-        if (beam.gantryAngleList_deg.size == 1)
+        if (beam.gantryAngleList_deg.distinct.size == 1)
           fmt(beam.gantryAngle_deg)
         else {
-          fmt(beam.gantryAngleList_deg.min) + " - " + fmt(beam.gantryAngleList_deg.last)
+          fmt(beam.gantryAngleList_deg.min) + " - " + fmt(beam.gantryAngleList_deg.max)
         }
       }
       s"Gantry $text"
