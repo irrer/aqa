@@ -201,6 +201,10 @@ abstract class MakeRtplan extends Logging {
       response: Response
   ): Download = {
     val rtplan = makeRtplan(machine, userPK, planSpecification)
+
+    val machineEnergyList = CustomizeRtPlanUtil.getMachineEnergyList(machine.machinePK.get)
+    CustomizeRtPlanUtil.removeUnsupportedBeams(rtplan, machineEnergyList)
+
     // note: If the plan needed modifications (such as adding beams) then it would be done here.
     saveDicomToDatabase(machine, userPK, rtplan, planSpecification, procedure)
 

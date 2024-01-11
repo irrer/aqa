@@ -176,7 +176,7 @@ object CustomizeRtPlanUtil extends Logging {
   /**
     * Remove beams from the plan that are not supported by this machine.  Also remove their ControlPoint counterparts.
     */
-  private def removeUnsupportedBeams(rtplan: AttributeList, machineEnergyList: Seq[MachineBeamEnergy]): Unit = {
+  def removeUnsupportedBeams(rtplan: AttributeList, machineEnergyList: Seq[MachineBeamEnergy]): Unit = {
     val beamAlList = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
     val unsupported = beamAlList.filter(beamAl => !beamIsSupported(beamAl, machineEnergyList))
     val unsupportedNameList = unsupported.map(beamAl => beamNameOf(beamAl))
