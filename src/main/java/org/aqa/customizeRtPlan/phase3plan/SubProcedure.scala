@@ -84,7 +84,17 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
       else
         list2
 
-    list3
+    def sortSignature(sel: Selection): String = {
+      val energy = sel.beamList.head.beamEnergy
+
+      val energyText = "%05.1f".format(energy.photonEnergy_MeV.get)
+      val fffText = if (energy.isFFF) "1" else "0"
+      val gantryText = "%3d".format(sel.beamList.head.gantryAngle_roundedDeg)
+
+      Seq(fffText, energyText, gantryText).mkString(" | ")
+    }
+
+    list3.sortBy(sortSignature)
   }
 
   /**
