@@ -123,7 +123,7 @@ object CustomizeRtPlanUtil extends Logging {
   /**
     * Ensure that the number of beams in the FractionGroupSequence is correct.
     */
-  private def setNumberOfBeamsInFractionGroupSequence(rtplan: AttributeList): Unit = {
+  def setNumberOfBeamsInFractionGroupSequence(rtplan: AttributeList): Unit = {
     val noOfBeams = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence).size
 
     def setNumberOfBeams(al: AttributeList): Unit = {
