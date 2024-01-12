@@ -42,7 +42,12 @@ case class Beam(prototypeBeam: AttributeList, beamName: String, beamEnergy: Mach
 
   override def toString: String = {
     //noinspection SpellCheckingInspection
-    s"$beamName | ${beamEnergy.photonEnergy_MeV.get} Mev | isFFF: ${beamEnergy.isFFF} | maxDoseRate: ${beamEnergy.maxDoseRate_MUperMin.get} | col angle: $colAngle_roundedDeg  | gantry: $gantryAngle_deg "
+    s"""${"%-24s".format(beamName)} |""" +
+      s""" ${"%4.1f".format(beamEnergy.photonEnergy_MeV.get)} Mev |""" +
+      s""" isFFF: ${"%5s".format(beamEnergy.isFFF)} |""" +
+      s""" maxDoseRate: ${"%6.1f".format(beamEnergy.maxDoseRate_MUperMin.get)} |""" +
+      s""" col angle: ${"%3d".format(colAngle_roundedDeg)}  |""" +
+      s""" gantry angle list: ${gantryAngleList_deg.map(ga => Util.fmtDbl(ga)).mkString("  ")} """
   }
 
 }
@@ -68,4 +73,15 @@ object Beam {
     }
     new Beam(beamAl, beamName, beamEnergy)
   }
+
+  /**
+    * Make a list of beams from the given plan.
+    * @param rtplan  For this plan.
+    * @param machine For this machine.
+    * @return
+    */
+  def beamsFromPlan(rtplan: AttributeList, machine: Machine): Seq[Beam] = {
+    DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence).map(al => Beam.makeBeamFromAl(machine, al))
+  }
+
 }
