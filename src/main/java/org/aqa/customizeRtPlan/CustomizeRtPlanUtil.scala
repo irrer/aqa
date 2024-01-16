@@ -146,12 +146,16 @@ object CustomizeRtPlanUtil extends Logging {
     * @param rtplan   Remove from this plan.
     * @param beamName The name of the beam.
     */
-  private def removeBeamFromPlan(rtplan: AttributeList, beamName: String): Unit = {
+  def removeBeamFromPlan(rtplan: AttributeList, beamName: String): Unit = {
     logger.info("Removing beam " + beamName)
 
     def deleteFractionSeq(BeamNumber: Int): Unit = {
       val FractionGroupSequence = DicomUtil.seqToAttr(rtplan, TagByName.FractionGroupSequence).head
-      DicomUtil.removeSeq(FractionGroupSequence, TagByName.ReferencedBeamSequence, (al: AttributeList) => al.get(TagByName.ReferencedBeamNumber).getIntegerValues.head == BeamNumber)
+      val findRBS = (al: AttributeList) => {
+        val attr = al.get(TagByName.ReferencedBeamNumber)
+        (attr != null) && (al.get(TagByName.ReferencedBeamNumber).getIntegerValues.head == BeamNumber)
+      }
+      DicomUtil.removeSeq(FractionGroupSequence, TagByName.ReferencedBeamSequence, findRBS)
     }
 
     def deletePatientSetup(PatientSetupNumber: Int): Unit = {
@@ -162,11 +166,13 @@ object CustomizeRtPlanUtil extends Logging {
     def deleteBeamSeq(): Unit = {
       val removed = DicomUtil.removeSeq(rtplan, TagByName.BeamSequence, (al: AttributeList) => beamNameOf(al).equals(beamName))
 
-      val BeamNumber = removed.head.get(TagByName.BeamNumber).getIntegerValues.head
-      val PatientSetupNumber = removed.head.get(TagByName.ReferencedPatientSetupNumber).getIntegerValues.head
+      if (removed.nonEmpty) {
+        val BeamNumber = removed.head.get(TagByName.BeamNumber).getIntegerValues.head
+        val PatientSetupNumber = removed.head.get(TagByName.ReferencedPatientSetupNumber).getIntegerValues.head
 
-      deleteFractionSeq(BeamNumber)
-      deletePatientSetup(PatientSetupNumber)
+        deleteFractionSeq(BeamNumber)
+        deletePatientSetup(PatientSetupNumber)
+      }
     }
 
     deleteBeamSeq()
@@ -267,8 +273,12 @@ object CustomizeRtPlanUtil extends Logging {
   private def getAvailableBeamNumber(rtplan: AttributeList): Int = {
     val beamAlList = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
     val all = beamAlList.map(beamAl => beamAl.get(TagByName.BeamNumber).getIntegerValues.head)
-    val available = (1 to (all.max + 1)).find(i => !all.contains(i))
-    available.get
+    if (all.isEmpty)
+      1
+    else {
+      val available = (1 to (all.max + 1)).find(i => !all.contains(i))
+      available.get
+    }
   }
 
   private def setFluence(beamAl: AttributeList, fff: Boolean): Unit = {
@@ -381,26 +391,14 @@ object CustomizeRtPlanUtil extends Logging {
     * Add another entry with the given number to the PatientSetupSequence.
     */
   private def addPatientSetup(rtplan: AttributeList, PatientSetupNumber: Int): Unit = {
-    val patientSetup = DicomUtil.clone(DicomUtil.seqToAttr(rtplan, TagByName.PatientSetupSequence).head)
+    val patientSetup = makePatientSetup(PatientSetupNumber)
     val PatientSetupSequence = rtplan.get(TagByName.PatientSetupSequence).asInstanceOf[SequenceAttribute]
-
-    patientSetup.get(TagByName.PatientSetupNumber).removeValues()
-    patientSetup.get(TagByName.PatientSetupNumber).addValue(PatientSetupNumber)
     PatientSetupSequence.addItem(patientSetup)
   }
 
-  private def insertBeam(rtplan: AttributeList, beamAl: AttributeList): Unit = {
-    val beamList = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
-    val index = beamList.indexWhere(b => beamNameOf(b).startsWith(Config.PrefixForMachineDependentBeamName))
-    val seq = AttributeFactory.newAttribute(TagByName.BeamSequence).asInstanceOf[SequenceAttribute]
-
-    for (i <- beamList.indices) {
-      seq.addItem(beamList(i))
-      if (i == index)
-        seq.addItem(beamAl)
-    }
-
-    rtplan.put(seq)
+  private def appendBeam(rtplan: AttributeList, beamAl: AttributeList): Unit = {
+    val seq = rtplan.get(TagByName.BeamSequence).asInstanceOf[SequenceAttribute]
+    seq.addItem(beamAl)
   }
 
   /**
@@ -441,6 +439,29 @@ object CustomizeRtPlanUtil extends Logging {
   }
 
   /**
+    * Make a patient setup attribute list (goes in PatientSetupSequence).  Note: byi
+    * convention the patientSetupNumber is the same as the BeamNumber.
+    * @param patientSetupNumber   value for PatientSetupNumber.  Usually the same as BeamNumber.
+    * @return Newly created attribute list.
+    */
+  private def makePatientSetup(patientSetupNumber: Int): AttributeList = {
+
+    val al = new AttributeList
+
+    def putAttribute(tag: AttributeTag, value: String): Unit = {
+      val attr = AttributeFactory.newAttribute(tag)
+      attr.addValue(value)
+      al.put(attr)
+    }
+
+    putAttribute(TagByName.PatientPosition, "HFS")
+    putAttribute(TagByName.PatientSetupNumber, patientSetupNumber.toString)
+    putAttribute(TagByName.SetupTechnique, "ISOCENTRIC")
+
+    al
+  }
+
+  /**
     * Add a beam that supports the given machine energy.  Do it by copying and modifying both prototypes.  The original prototypes are
     * not changed, but rtplan is changed.
     *
@@ -459,13 +480,8 @@ object CustomizeRtPlanUtil extends Logging {
       BeamNameOpt: Option[String] = None
   ): AttributeList = {
     val BeamNumber = getAvailableBeamNumber(rtplan)
-    // val beamAl = DicomUtil.clone(prototypeBeam)
-    val fraction = DicomUtil.clone(prototypeFractionReference)
 
-    // modify the fraction
-    val ReferencedBeamNumber = fraction.get(TagByName.ReferencedBeamNumber)
-    ReferencedBeamNumber.removeValues()
-    ReferencedBeamNumber.addValue(BeamNumber)
+    val fraction = makePatientSetup(BeamNumber)
 
     val BeamName =
       if (BeamNameOpt.isDefined)
@@ -479,7 +495,7 @@ object CustomizeRtPlanUtil extends Logging {
 
     val beamAl = makeBeam(machineEnergy, prototypeBeam, BeamName: String, BeamNumber)
 
-    insertBeam(rtplan, beamAl)
+    appendBeam(rtplan, beamAl)
 
     val FractionGroupSequence = DicomUtil.seqToAttr(rtplan, TagByName.FractionGroupSequence).head
     val ReferencedBeamSequence = FractionGroupSequence.get(TagByName.ReferencedBeamSequence).asInstanceOf[SequenceAttribute]
@@ -706,25 +722,4 @@ object CustomizeRtPlanUtil extends Logging {
     }
     mbe
   }
-
-  /**
-    * Given all the required information, create an rtplan that is compatible with the given machine for Daily QA.
-    */
-
-  /**
-    * Given all the required information, create an rtplan that is compatible with the given machine for gap skew.
-    */
-
-  /**
-    * Given all the required information, create an rtplan that is compatible with the given machine for focal spot.
-    */
-
-  /**
-    * Given all the required information, create an rtplan that is compatible with the given machine for Winston Lutz.
-    */
-
-  /**
-    * Given all the required information, create a pair of rtplans that are compatible with the given machine for LOC.
-    */
-
 }
