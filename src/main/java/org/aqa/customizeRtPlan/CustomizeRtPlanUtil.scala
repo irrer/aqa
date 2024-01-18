@@ -431,7 +431,12 @@ object CustomizeRtPlanUtil extends Logging {
     val maxDoseRate: Double =
       machineEnergy.maxDoseRate_MUperMin match {
         case Some(mdr) => mdr
-        case _         => 6.0
+        case _         =>
+          // if the dose rate is not defined, then use a reasonable value based on known characteristics of the machines
+          val machine = Machine.get(machineEnergy.machinePK).get
+          val machineType = MachineType.get(machine.machineTypePK).get
+          val resolved = resolveEnergy(machineEnergy, machineType)
+          resolved.maxDoseRate_MUperMin.get
       }
     changeDoseRate(beamAl, maxDoseRate)
 
@@ -455,6 +460,7 @@ object CustomizeRtPlanUtil extends Logging {
     }
 
     putAttribute(TagByName.PatientPosition, "HFS")
+    putAttribute(TagByName.ReferencedBeamNumber, patientSetupNumber.toString)
     putAttribute(TagByName.PatientSetupNumber, patientSetupNumber.toString)
     putAttribute(TagByName.SetupTechnique, "ISOCENTRIC")
 
@@ -501,6 +507,7 @@ object CustomizeRtPlanUtil extends Logging {
     val ReferencedBeamSequence = FractionGroupSequence.get(TagByName.ReferencedBeamSequence).asInstanceOf[SequenceAttribute]
     ReferencedBeamSequence.addItem(fraction)
     addPatientSetup(rtplan, BeamNumber)
+    setNumberOfBeamsInFractionGroupSequence(rtplan)
 
     beamAl
   }
@@ -551,7 +558,7 @@ object CustomizeRtPlanUtil extends Logging {
     dateTimeTagList.map(dt => setDateTime(dt._1, dt._2))
   }
 
-  private def orderBeamsByRenaming(rtplan: AttributeList): immutable.IndexedSeq[Attribute] = {
+  def orderBeamsByRenaming(rtplan: AttributeList): immutable.IndexedSeq[Attribute] = {
 
     val beamList = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
 

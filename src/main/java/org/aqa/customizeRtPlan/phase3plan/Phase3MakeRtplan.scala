@@ -3,13 +3,14 @@ package org.aqa.customizeRtPlan.phase3plan
 import com.pixelmed.dicom.AttributeList
 import org.aqa.customizeRtPlan.CustomizeRtPlanUtil
 import org.aqa.web.WebUtil.ValueMapT
+import org.aqa.Logging
 import org.restlet.Response
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
-object Phase3MakeRtplan {
+object Phase3MakeRtplan extends Logging {
 
   /**
     * A set of beams that must be delivered consecutively.  They may be delivered in any order, but the order does not matter.
@@ -231,25 +232,39 @@ object Phase3MakeRtplan {
     */
   private def optimizeBeamSetByEnergy(beamSetList: Seq[BeamSet]): Seq[BeamSet] = {
 
-    val timeout = System.currentTimeMillis() + 2000
+    val start = System.currentTimeMillis()
+    val timeout = start + 2000
 
     @tailrec
-    def generation(rate: Double, population: Seq[BeamSetList]): Seq[BeamSetList] = {
-      val nextGen = population.sortBy(_.fitness).take(population.size / 2).map(bsl => mutate(rate, bsl))
-      if (timeout > System.currentTimeMillis())
-        generation(rate * 0.95, nextGen)
+    def nextGeneration(generation: Int, mutationRate: Double, population: Seq[BeamSetList]): Seq[BeamSetList] = {
+      // create the next generation by removing the least fit, and adding a mutated version of the most fit.
+      val nextGen = {
+        val mostFit = population.sortBy(_.fitness).take(population.size / 2)
+        mostFit ++ mostFit.map(bsl => mutate(mutationRate, bsl))
+      }
+
+      val meanFitness = nextGen.map(_.fitness).sum / nextGen.size
+      logger.info(
+        s"Generation $generation" +
+          s"    mutation rate: $mutationRate" +
+          s"    best fitness: ${nextGen.minBy(_.fitness).fitness}" +
+          s"    mean fitness: $meanFitness" +
+          s"    elapsed ms: ${System.currentTimeMillis() - start}"
+      )
+      if ((timeout > System.currentTimeMillis()) && (mutationRate > 1))
+        nextGeneration(generation + 1, mutationRate * 0.95, nextGen)
       else
         nextGen
     }
 
     val populationSize = 1000
-    val rate = 2.0
+    val initialMutationRate = 2.0
 
     val bsl = BeamSetList(beamSetList)
 
-    val population = (0 until populationSize).map(_ => mutate(rate, bsl))
+    val population = (0 until populationSize).map(_ => mutate(initialMutationRate, bsl))
 
-    val finalPopulation = generation(rate, population)
+    val finalPopulation = nextGeneration(0, initialMutationRate, population)
 
     finalPopulation.minBy(_.fitness).list
   }
@@ -261,17 +276,18 @@ object Phase3MakeRtplan {
     val beamSetListToBeDelivered = makeBeamSetList(selectedDistinctBeamList, subProcedureList).toSeq
 
     def gantryAngleUse(beamSet: BeamSet): String = {
-      s"${beamSet.firstGantryAngle} -> ${beamSet.firstGantryAngle}"
+      s"${beamSet.firstGantryAngle} -> ${beamSet.lastGantryAngle}"
     }
 
-    val j = optimizeBeamSetByEnergy(beamSetListToBeDelivered)
     val beamSetListGroupedByGantryUse = beamSetListToBeDelivered.groupBy(gantryAngleUse).values.map(optimizeBeamSetByEnergy)
 
-    val sortedBeamSet = beamSetListGroupedByGantryUse
+    def showGroup(list: Seq[BeamSet]): Unit = {
+      val text = list.flatMap(_.beamList).map(_.toString).mkString("\n")
+    }
 
-    beamSetListToBeDelivered.groupBy(gantryAngleUse)
+    logger.info("Beams to be delivered\n" + beamSetListGroupedByGantryUse.map(showGroup).mkString("\n\n"))
 
-    ???
+    selectedDistinctBeamList.toSeq // TODO rm.  Should return optimized list.
   }
 
   private def makeDeliverableBeam(beam: Beam): AttributeList = {

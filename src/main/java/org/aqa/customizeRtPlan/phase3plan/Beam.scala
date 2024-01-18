@@ -41,11 +41,12 @@ case class Beam(prototypeBeam: AttributeList, beamName: String, beamEnergy: Mach
   def gantryAngle_roundedDeg: Int = Util.angleRoundedTo90(gantryAngle_deg)
 
   override def toString: String = {
+    val mdr = if (beamEnergy.maxDoseRate_MUperMin.isDefined) s""" maxDoseRate: ${"%6.1f".format(beamEnergy.maxDoseRate_MUperMin.get)} |"""  else "  NA  "
     //noinspection SpellCheckingInspection
     s"""${"%-24s".format(beamName)} |""" +
       s""" ${"%4.1f".format(beamEnergy.photonEnergy_MeV.get)} Mev |""" +
       s""" isFFF: ${"%5s".format(beamEnergy.isFFF)} |""" +
-      s""" maxDoseRate: ${"%6.1f".format(beamEnergy.maxDoseRate_MUperMin.get)} |""" +
+      s""" maxDoseRate: $mdr |""" +
       s""" col angle: ${"%3d".format(colAngle_roundedDeg)}  |""" +
       s""" gantry angle list: ${gantryAngleList_deg.map(ga => Util.fmtDbl(ga)).mkString("  ")} """
   }

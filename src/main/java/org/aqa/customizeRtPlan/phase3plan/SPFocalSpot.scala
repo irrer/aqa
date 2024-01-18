@@ -3,34 +3,29 @@ package org.aqa.customizeRtPlan.phase3plan
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.db.MachineBeamEnergy
 import org.aqa.Config
 import org.aqa.Util
 
 object SPFocalSpot {
   val name = "Focal Spot"
-}
-
-class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(metaData, beamList: Seq[Beam]) {
-
-  override val name: String = SPFocalSpot.name
-
-  //noinspection SpellCheckingInspection
-  override val abbreviation: String = "Focl Spot"
-
-  private val fsPrototypeList =
-    beamList.filter(beam => Config.FocalSpotBeamNameList.contains(beam.beamName)).sortBy(_.beamName)
-
-  private val prototypeSet = fsPrototypeList.filterNot(_.isFFF).groupBy(beam => s"${beam.isFFF} ${beam.beamEnergy.photonEnergy_MeV.get}").values.head
 
   /**
     * True if the field is defined by the MLC.
     * @param prototypeBeam Attribute list in the RTPLAN for the beam of interest.
     * @return True if MLC, false if jaw.
     */
-  private def isMLC(prototypeBeam: AttributeList): Boolean = {
+  def isMLC(prototypeBeam: AttributeList): Boolean = {
     DicomUtil.findAllSingle(prototypeBeam, TagByName.LeafJawPositions).map(_.getDoubleValues).exists(ljp => ljp.length > 2)
   }
+
+  /**
+    * True if the field is defined by the jaw.
+    * @param prototypeBeam Attribute list in the RTPLAN for the beam of interest.
+    * @return True if jaw, false if MLC.
+    */
+  def isJaw(prototypeBeam: AttributeList): Boolean = !isMLC(prototypeBeam)
 
   /**
     * Make a name for a beam.
@@ -45,16 +40,41 @@ class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedur
     s"${machineBeamEnergy.photonEnergy_MeV.get.round.toString}$beamType-10-$limitName-$colAngle"
   }
 
-  private def setEnergyOfSet(prototypeSet: Seq[Beam], machineBeamEnergy: MachineBeamEnergy): Selection = {
+  def setEnergyOfSet(prototypeSet: Seq[Beam], machineBeamEnergy: MachineBeamEnergy): Seq[Beam] = {
 
     def makeBeam(prototypeBeam: AttributeList): Beam = {
-
       val beamName = makeBeamName(machineBeamEnergy, prototypeBeam)
-
+      if (beamName.contains("loo"))
+        Trace.trace("hey")
       new Beam(prototypeBeam, beamName, machineBeamEnergy)
     }
 
     val beamList = prototypeSet.map(beam => makeBeam(beam.prototypeBeam))
+    beamList
+  }
+
+}
+
+class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedure(metaData, beamList: Seq[Beam]) {
+
+  override val name: String = SPFocalSpot.name
+
+  //noinspection SpellCheckingInspection
+  override val abbreviation: String = "Focl Spot"
+
+  private val fsPrototypeList =
+    beamList.filter(beam => Config.FocalSpotBeamNameList.contains(beam.beamName)).sortBy(_.beamName)
+
+  private val prototypeSet = fsPrototypeList.filterNot(_.isFFF).groupBy(beam => s"${beam.isFFF} ${beam.beamEnergy.photonEnergy_MeV.get}").values.head
+
+  private val sfSelectionList = metaData.beamEnergyList.map(energy => SPFocalSpot.setEnergyOfSet(prototypeSet, energy))
+
+  override val usesCollimatorCentering: Boolean = true // false // Not sure if this is right.
+
+  override def getBeamList: Seq[Beam] = initialSelectionList.flatMap(_.beamList)
+
+  private def beamSetToSelection(beamSet: Seq[Beam]): Selection = {
+    val machineBeamEnergy = beamSet.head.beamEnergy
     val energyType = if (machineBeamEnergy.isFFF) "FFF" else "X"
     val energyText = {
       val e = machineBeamEnergy.photonEnergy_MeV.get
@@ -64,22 +84,21 @@ class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedur
         Util.fmtDbl(e)
     }
     val selectionName = s"$energyText $energyType"
-    Selection(this, selectionName, beamList)
+    Selection(this, selectionName, beamSet)
   }
 
-  private val sfSelectionList = metaData.beamEnergyList.map(energy => setEnergyOfSet(prototypeSet, energy))
-
-  override def initialSelectionList: Seq[Selection] = sfSelectionList
-
-  override val usesCollimatorCentering: Boolean = true // false // Not sure if this is right.
-
-  override def getBeamList: Seq[Beam] = initialSelectionList.flatMap(_.beamList)
+  override def initialSelectionList: Seq[Selection] = {
+    val j = sfSelectionList.map(beamSetToSelection)
+    val nameText = j.map(sel => sel.selectionName + " -> " + sel.beamList.map(_.beamName).mkString(" | ")).mkString(" |||| ")
+    Trace.trace(s"j size: ${j.size} : $nameText")
+    j
+  }
 
   override def consecutivelyDeliveredBeamSets: Seq[Seq[Beam]] = {
 
     /** Split into MLC and jaw pairs. */
     def selToSets(selection: Selection): Seq[Seq[Beam]] = {
-      selection.beamList.groupBy(beam => isMLC(beam.prototypeBeam)).values.map(_.toSeq).toSeq
+      selection.beamList.groupBy(beam => SPFocalSpot.isMLC(beam.prototypeBeam)).values.map(_.toSeq).toSeq
     }
 
     selectionList.flatMap(selToSets)
