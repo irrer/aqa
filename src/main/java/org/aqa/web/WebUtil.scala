@@ -79,6 +79,7 @@ object WebUtil extends Logging {
   val singleQuote = "@@quote1@@"
   private val doubleQuote = "@@quote2@@"
   val amp = "@@amp@@"
+  val magnify = "@@magnify@@"
   val nl = "@@nl@@"
   private val openCurly = "@@openCurly@@"
   private val closeCurly = "@@closeCurly@@"
@@ -141,6 +142,7 @@ object WebUtil extends Logging {
       .replace(gt, "&#62;")
       .replace(mathPre, """<math xmlns="http://www.w3.org/1998/Math/MathML">""")
       .replace(mathSuf, """</math>""")
+      .replace(magnify, """&#x1F50D;""")
   }
 
   private def specialCharTagsToLiteralJs(text: String): String = {
@@ -1878,8 +1880,8 @@ object WebUtil extends Logging {
   def expandCollapse(id: String, header: Elem => Elem, details: Elem): Elem = {
     val button = {
       <button type="button" class="btn btn-info" data-toggle="collapse" data-target={"#" + id} title="Click to expand details">
-        {WebUtil.amp}
-        #x1F50D;</button>
+        {WebUtil.magnify}
+      </button>
     }
 
     <div class="container">

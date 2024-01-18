@@ -89,7 +89,7 @@ class MaintenanceRecordUpdate extends Restlet with SubUrlAdmin {
       <div>
         <b>Originating Machine Log</b>
         <div class="container">
-          <button type="button" class="btn btn-info" data-toggle="collapse" data-target={"#" + id}>{WebUtil.amp}#x1F50D;</button>
+          <button type="button" class="btn btn-info" data-toggle="collapse" data-target={"#" + id}>{WebUtil.magnify}</button>
           <span style="white-space: pre-line;">{pre}</span>
           <div id={id} class="collapse">
             <pre>{WebUtil.nl + text}</pre>
