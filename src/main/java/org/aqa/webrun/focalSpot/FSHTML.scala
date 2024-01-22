@@ -130,7 +130,7 @@ object FSHTML {
 
     fsSetList.foreach(fsSet => FSsubHTML.makeHtml(extendedData, fsRunReq, fsSet))
 
-    val content = makeContent(extendedData, fsRunReq, fsSetList.sortBy(_.jaw090.NominalBeamEnergy), mainChart.html)
+    val content = makeContent(extendedData, fsRunReq, fsSetList.sortBy(fsSet => "%020.2f".format(fsSet.jaw090.NominalBeamEnergy) + fsSet.jaw090.isFFF), mainChart.html)
     val javascript = s"""<script src="${FSHistoryRestlet.path}?${FSHistoryRestlet.outputPKTag}=${extendedData.output.outputPK.get}"></script>"""
     val text = Phase2Util.wrapSubProcedure(extendedData, content, FSAnalysis.subProcedureName, ProcedureStatus.done, runScript = Some(javascript), rtimageMap = fsRunReq.rtimageMap)
     val mainHtmlFile = new File(dir, htmlFileName)

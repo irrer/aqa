@@ -729,4 +729,18 @@ object CustomizeRtPlanUtil extends Logging {
     }
     mbe
   }
+
+  /**
+    * Change RTPlanGeometry to "TREATMENT_DEVICE" so that we do not need patient position.  Also remove reference to RTSTRUCT.
+    * @param rtplan Change this plan.
+    */
+  def fixRtplanGeometry(rtplan: AttributeList): Unit = {
+    rtplan.remove(TagByName.RTPlanGeometry)
+    val attr = AttributeFactory.newAttribute(TagByName.RTPlanGeometry)
+    attr.addValue("TREATMENT_DEVICE")
+    rtplan.put(attr)
+
+    rtplan.remove(TagByName.ReferencedStructureSetSequence)
+  }
+
 }

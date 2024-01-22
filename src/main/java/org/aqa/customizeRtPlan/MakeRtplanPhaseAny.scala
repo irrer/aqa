@@ -16,6 +16,8 @@
 
 package org.aqa.customizeRtPlan
 
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.db.Machine
 import org.aqa.Util
 import org.restlet.Response
@@ -29,6 +31,13 @@ abstract class MakeRtplanPhaseAny extends MakeRtplan {
     val machineEnergyList = CustomizeRtPlanUtil.getMachineEnergyList(machine.machinePK.get)
 
     CustomizeRtPlanUtil.reassignPlanEnergies(rtplan, machineEnergyList)
+
+    CustomizeRtPlanUtil.fixRtplanGeometry(rtplan)
+
+    // These tags are for treating patients.  They are not needed for machine testing, and deleting them simplifies the RTPLAN.
+    val toRemove = Seq(TagByName.FrameOfReferenceUID, TagByName.DoseReferenceUID, TagByName.ReferencedPrimaryDoseRefUID)
+    toRemove.foreach(tag => DicomUtil.removeAllInTree(rtplan, tag))
+
     saveDicomToDatabase(machine, userPK, rtplan, planSpecification, procedure)
     val elem = {
       <div>
