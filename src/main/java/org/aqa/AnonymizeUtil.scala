@@ -56,7 +56,11 @@ object AnonymizeUtil extends Logging {
   private val securityDirName = "security"
 
   /** Directory where security credentials are kept. */
-  private lazy val securityDir = new File(Config.DataDir, securityDirName)
+  private lazy val securityDir = {
+    val dir = new File(Config.DataDir, securityDirName)
+    dir.mkdirs
+    dir
+  }
 
   private val credentialFileNamePrefix = "credential_"
   private val credentialFileNameSuffix = ".xml"

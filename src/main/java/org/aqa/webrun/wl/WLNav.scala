@@ -51,7 +51,15 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
     )
   private def setFormResponse(valueMap: ValueMapT, response: Response): Unit = form.setFormResponse(valueMap, errorMap = styleNone, pageTitle = "Winston Lutz", response, Status.SUCCESS_OK)
 
-  private val wlProcedurePK = Procedure.ProcOfWinstonLutz.get.procedurePK.get
+  private val wlProcedurePK: Long = {
+    try {
+      Procedure.ProcOfWinstonLutz.get.procedurePK.get
+    } catch {
+      case t: Throwable =>
+        logger.error("Unable to get Winston-Lutz procedure key.  This is a configuration problem.")
+        -1
+    }
+  }
 
   /* shows the small WL icon. */
   private val imageElem = <img height="16px" src="/static/images/WL_EPID.png"/>
