@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# dumps a single database table in binary format
+
+# This is a Linux bash script, but could be converted to an MS cmd file.
+
+# usage: dump table-name
+# A file will be created with the name of <table-name>.tar
+
+export PGPASSWORD="source-system-db-password"
+
+export table=$1
+
+echo Dumping $table ...
+
+pg_dump                                                 \
+  --host aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com   \
+  --dbname AQA                                          \
+  --username aqa                                        \
+  --table '"'$table'"'                                  \
+  --format tar                                          \
+  > $table.tar
+
