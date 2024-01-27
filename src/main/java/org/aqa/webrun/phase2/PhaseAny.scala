@@ -123,15 +123,16 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
 
     // Look in the uploaded rtplan list and DicomSeries in the database for the plan(s) referenced.  If that fails, then try the shared directory.
     val referencedRtplanList: Seq[AttributeList] = {
-      val matchingUploaded = rtplanList.filter(plan => planUIDReferences.contains(Util.sopOfAl(plan)))
-      val list = matchingUploaded ++ dbList
-      if (list.nonEmpty)
-        list
-      else {
-        // TODO deprecate this when the shared directory is removed
-        val sharedList = DicomFile.readDicomInDir(Config.sharedDir).filter(df => df.isRtplan).flatMap(df => df.attributeList)
-        val matchingList = sharedList.filter(plan => planUIDReferences.contains(Util.sopOfAl(plan)))
-        matchingList
+      if (Config.ProductionMode || rtplanList.isEmpty) { // Either this is is ProductionMode, or is TestMode and the user did not upload a plan.
+        val matchingUploaded = rtplanList.filter(plan => planUIDReferences.contains(Util.sopOfAl(plan)))
+        val list = matchingUploaded ++ dbList
+        if (list.nonEmpty)
+          list
+        else
+          Seq() // nothing found
+      } else {
+        // this is TestMode, and the user uploaded a plan, so use the RTPLAN that the user uploaded
+        rtplanList
       }
     }
 
@@ -151,8 +152,8 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
       * Make a human readable list of machines
       */
     0 match {
-      case _ if planUIDReferences.size > 1    => formErr("The RTIMAGES reference more than one RTPLAN.")
-      case _ if referencedRtplanList.isEmpty  => formErr("Can not find the referenced RTPLAN.  Retry and upload the RTPLAN with the images. ")
+      case _ if Config.ProductionMode && (planUIDReferences.size > 1) => formErr("The RTIMAGES reference more than one RTPLAN.")
+      case _ if referencedRtplanList.isEmpty                          => formErr("Can not find the referenced RTPLAN.  Retry and upload the RTPLAN with the images. ")
       //noinspection SpellCheckingInspection
       case _ if rtimageList.isEmpty           => formErr("No RTIMAGEs given")
       case _ if dbRefWrongProcedure.isDefined => formErr(dbRefWrongProcedure.get)
@@ -175,7 +176,7 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
             "The device serial number is required by this software to identify the instance of the machine."
         )
 
-      case _ if (dateTimeList.last - dateTimeList.head) > maxDuration =>
+      case _ if Config.ProductionMode && ((dateTimeList.last - dateTimeList.head) > maxDuration) =>
         formErr("Over " + Config.MaxProcedureDuration + " minutes from first to last image.  These RTIMAGE files were not from the same session")
 
       case _ =>
@@ -458,17 +459,24 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
   override def makeRunReqForRedo(alList: Seq[AttributeList], xmlList: Seq[Elem], oldOutput: Option[Output]): RunReqClass = {
     //val result = validate(emptyValueMap, alList.filter(al => Util.isRtimage(al)))
     val rtimageList = alList.filter(al => Util.isRtimage(al))
+    val rtplanList = alList.filter(al => Util.isRtplan(al))
 
     def getRtplan = {
-      val rtplanUID = Phase2Util.referencedPlanUID(rtimageList.head)
-      DicomSeries.getBySopInstanceUID(rtplanUID).headOption match {
-        // get this from the database
-        case Some(ds) => ds.attributeListList.head
-        case _ =>
-          logger.warn("Could not find RTPLAN in database.  Looking in file system.") // if it was not in the database, then check in the share directory.  This code should be deprecated soon.  TODO
-          val file = new File(Config.sharedDir, rtplanUID + ".dcm")
-          val df = new DicomFile(file)
-          df.attributeList.get
+      // If this is production mode, or, if it is test mode and there is no RTPLAN in the input list, then find the plan with the matching UID.
+      if (Config.ProductionMode || rtplanList.isEmpty) {
+        val rtplanUID = Phase2Util.referencedPlanUID(rtimageList.head)
+        DicomSeries.getBySopInstanceUID(rtplanUID).headOption match {
+          // get this from the database
+          case Some(ds) => ds.attributeListList.head
+          case _ =>
+            logger.warn("Could not find RTPLAN in database.  Looking in file system.") // if it was not in the database, then check in the share directory.  This code should be deprecated soon.  TODO
+            val file = new File(Config.sharedDir, rtplanUID + ".dcm")
+            val df = new DicomFile(file)
+            df.attributeList.get
+        }
+      } else {
+        // TestMode
+        rtplanList.head
       }
     }
 
