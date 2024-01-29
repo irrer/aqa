@@ -34,6 +34,7 @@ import org.aqa.web.WebUtil.getValueMap
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.WebRunProcedure
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.Config
 import org.restlet.Request
 import org.restlet.Response
 
@@ -78,14 +79,19 @@ class FSRun(procedure: Procedure) extends WebRunProcedure with RunTrait[FSRunReq
     * @return
     */
   private def getRtplan(rtplanSop: String, rtplanList: Seq[AttributeList]): Option[AttributeList] = {
-    rtplanList.find(al => Util.sopOfAl(al).equals(rtplanSop)) match {
-      case Some(al) => Some(al) // found it in the RTPLAN passed in
-      case _ => // look in the database
-        val ds = DicomSeries.getBySopInstanceUID(rtplanSop).headOption
-        if (ds.isDefined) {
-          ds.get.attributeListList.find(al => Util.sopOfAl(al).equals(rtplanSop))
-        } else
-          None
+    if (Config.TestMode && rtplanList.nonEmpty) {
+      // in test mode, and user wants to use the uploaded plan
+      rtplanList.headOption
+    } else {
+      rtplanList.find(al => Util.sopOfAl(al).equals(rtplanSop)) match {
+        case Some(al) => Some(al) // found it in the RTPLAN passed in
+        case _ => // look in the database
+          val ds = DicomSeries.getBySopInstanceUID(rtplanSop).headOption
+          if (ds.isDefined) {
+            ds.get.attributeListList.find(al => Util.sopOfAl(al).equals(rtplanSop))
+          } else
+            None
+      }
     }
   }
 
@@ -122,7 +128,13 @@ class FSRun(procedure: Procedure) extends WebRunProcedure with RunTrait[FSRunReq
       val uploaded = rtplanList.exists(plan => Util.sopOfAl(plan).equals(rtplanRefList.head))
       def inDatabase() = DicomSeries.getBySopInstanceUID(rtplanRefList.head).nonEmpty
 
-      uploaded || inDatabase()
+      val is = 0 match {
+        case _ if Config.TestMode && rtplanList.nonEmpty => true
+        case _ if uploaded || inDatabase()               => true
+        case _                                           => false
+      }
+
+      is
     }
 
     /**
@@ -156,7 +168,7 @@ class FSRun(procedure: Procedure) extends WebRunProcedure with RunTrait[FSRunReq
   override def makeRunReqForRedo(alList: Seq[AttributeList], xmlList: Seq[Elem], oldOutput: Option[Output]): RunReqClass = {
     val rtimageList = alList.filter(Util.isRtimage)
     val rtplanSop = getRtplanRefList(rtimageList.head).head
-    val rtplan = getRtplan(rtplanSop, Seq()).get
+    val rtplan = getRtplan(rtplanSop, alList.filter(Util.isRtplan)).get
     FSRunReq(rtplan, makeRtimageMap(rtplan, rtimageList))
   }
 
