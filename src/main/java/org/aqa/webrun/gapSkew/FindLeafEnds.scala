@@ -254,6 +254,7 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
       } else {
         // Getting here means that at least one of the bounding boxes was out of bounds.  This is a hard failure.
         val bufferedImage: BufferedImage = dicomImage.toDeepColorBufferedImage(minPixel, maxPixel)
+        Config.applyWatermark(bufferedImage)
 
         val RTImageSID = rtimage.get(TagByName.RTImageSID).getDoubleValues.head
 

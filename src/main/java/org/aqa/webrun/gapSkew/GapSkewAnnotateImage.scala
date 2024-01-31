@@ -23,6 +23,7 @@ import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.Util
 import org.aqa.db.GapSkew
 import org.aqa.webrun.gapSkew.GapSkewUtil._
+import org.aqa.Config
 
 import java.awt.Color
 import java.awt.Polygon
@@ -230,6 +231,7 @@ case class GapSkewAnnotateImage(
 
   def annotate: BufferedImage = {
     val bufferedImage: BufferedImage = dicomImage.toDeepColorBufferedImage(minPixel, maxPixel)
+    Config.applyWatermark(bufferedImage)
     Util.addGraticulesNegY(bufferedImage, translator, Color.yellow)
 
     annotateLeaf(bufferedImage, topLeft, isTop = true) // , isTop = !colIs270) // true)

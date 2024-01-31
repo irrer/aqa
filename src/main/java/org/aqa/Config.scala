@@ -421,6 +421,11 @@ object Config extends Logging {
     milliseconds
   }
 
+  val TestMode: Boolean = logMainText("TestMode", "false").toLowerCase.trim.toBoolean
+
+  /** True if in production (not test) mode. */
+  val ProductionMode: Boolean = !TestMode
+
   private def getSlickDb: com.typesafe.config.Config = {
     import com.typesafe.config.ConfigFactory
     val name = "SlickDb"

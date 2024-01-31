@@ -261,8 +261,12 @@ object Util extends Logging {
   }
 
   def gantryAngle(al: AttributeList): Double = {
-    val at = al.get(TagByName.GantryAngle)
-    if (at == null) 0 else at.getDoubleValues.head
+    try {
+      DicomUtil.findAllSingle(al, TagByName.GantryAngle).head.getDoubleValues.head
+    }
+    catch {
+      case _: Throwable => 0.0
+    }
   }
 
   def gantryAngle(df: DicomFile): Double = gantryAngle(df.attributeList.get)
@@ -1101,6 +1105,15 @@ object Util extends Logging {
   //noinspection RegExpSimplifiable
   def textToId(text: String): String = text.replaceAll("[^0-9a-zA-Z]", "_").replaceAll("__*", "_")
 
+
+  /**
+   * Given arbitrary text, replace all special characters with underscore so it can be used as a HTML5 identifier.
+   *
+   * @param text Original text.
+   * @return Text valid to be used as an HTML5 id tag.
+   */
+  def textToHtmlId(text: String): String = text.replaceAll("[^A-Za-z0-9_\\-:. ]", "_")
+
   def attributeListToDeviceSerialNumber(al: AttributeList): Option[String] = {
     val at = al.get(TagByName.DeviceSerialNumber)
     if (at == null) None
@@ -1445,6 +1458,23 @@ object Util extends Logging {
   }
 
   /**
+   * Determine if a given beam is always are open for the given size centered.
+   * This is used to determine which beams are suitable for tests that require a minimally
+   * sized rectangular field, such as symmetry+flatness or center dose.
+   *
+   * @param beam       Beam meta data.
+   * @param minSize_mm Minimum field size.
+   * @return True if criteria is met.
+   */
+  def minCenteredFieldBeam(beam: AttributeList, minSize_mm: Double): Boolean = {
+    val distance = minSize_mm / 2
+    val positionList = DicomUtil.findAllSingle(beam, TagByName.LeafJawPositions).flatMap(_.getDoubleValues)
+    val notOpen = positionList.exists(pos => pos.abs < distance)
+    val wedgeList = DicomUtil.findAllSingle(beam, TagByName.NumberOfWedges).flatMap(_.getIntegerValues).distinct.filter(_ != 0)
+    (!notOpen) && wedgeList.isEmpty
+  }
+
+  /**
    * Get the list of beam names whose fields always are open for the given size centered.
    * This is used to determine which beams are suitable for tests that require a minimally
    * sized rectangular field, such as symmetry+flatness or center dose.
@@ -1463,15 +1493,17 @@ object Util extends Logging {
      * @param beam Check this beam.
      * @return true if this beam qualifies.
      */
+    /*
     def isOpen(beam: AttributeList): Boolean = {
       val positionList = DicomUtil.findAllSingle(beam, TagByName.LeafJawPositions).flatMap(_.getDoubleValues)
       val notOpen = positionList.exists(pos => pos.abs < distance)
       val wedgeList = DicomUtil.findAllSingle(beam, TagByName.NumberOfWedges).flatMap(_.getIntegerValues).distinct.filter(_ != 0)
       (!notOpen) && wedgeList.isEmpty
     }
+    */
 
     val BeamSequence = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
-    val list = BeamSequence.filter(isOpen).map(normalizedBeamName).distinct
+    val list = BeamSequence.filter(b => minCenteredFieldBeam(b, minSize_mm)).map(normalizedBeamName).distinct
     list
   }
 
@@ -1553,7 +1585,35 @@ object Util extends Logging {
     }
   }
 
+  /**
+   * Determine if the beam is an FFF beam.
+   * Throw an exception if more than one beam (e.g. an entire rtplan) is specified.
+   *
+   * @param beam Attribute list for just one beam.
+   * @return True if it is an FFF beam.
+   */
+  def isFFF(beam: AttributeList): Boolean = {
+    val fluenceList = DicomUtil.findAllSingle(beam, TagByName.FluenceModeID)
+    fluenceList.size match {
+      case 0 => false
+      case 1 => fluenceList.head.getSingleStringValueOrEmptyString.trim.toUpperCase().equals("FFF")
+      case _ => throw new RuntimeException("More than one beam specified in call to isFFF.")
+    }
+  }
+
   def main(args: Array[String]): Unit = {
-    //
+    Config.validate
+
+    println("Starting --------------------------------------------------------------------------------------------------------------------------")
+    val dir = new File("""D:\pf\IntelliJ\ws\aqa\src\main\resources\static\rtplan""")
+    val fileList = listDirFiles(dir).filter(f => f.getName.toLowerCase().endsWith(".dcm"))
+
+    def showRtplan(file: File): Unit = {
+      val al = DicomFile(file).attributeList.get
+      val names = makeCenterDoseBeamNameList(al) ++ Seq(" :: ") ++ makeSymFlatConstBeamNameList(al)
+      println(s"""${file.getName} :: ${names.mkString("  ")}""")
+    }
+
+    fileList.foreach(showRtplan)
   }
 }

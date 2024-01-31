@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# restores a single database table from a binary (tar) file.
+
+# usage: restore table-name
+
+# This is a Linux bash script, but could be converted to an MS cmd file.
+
+export PGPASSWORD="destination-system-db-password"
+
+export table=$1
+
+echo Restoring $table ...
+
+psql                                                    \
+  --host aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com   \
+  --dbname AQAAWSTest                                   \
+  --username aqatest                                    \
+  < $table.sql                                          \
+

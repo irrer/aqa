@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# dumps a single database table as an SQL script
+# Note: If the table was already created by running AQA, then it was
+# best to edit the SQL so as to only run the part that insert the data.
+# Permission problems were being encountered when the entire script was run.
+# The statement will be of the form:
+#
+#     COPY public.<table-name>
+
+# This is a Linux bash script, but could be converted to an MS cmd file.
+
+# usage: dump table-name
+# A file will be created with the name of <table-name>.sql
+
+export PGPASSWORD="source-system-db-password"
+
+export table=$1
+
+echo Dumping $table ...
+
+#pg_dump                                                 \
+#  --host aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com   \
+#  --dbname AQA                                          \
+#  --username aqa                                        \
+#  --table '"'$table'"'                                  \
+#  --format tar                                          \
+#  > $table.tar
+
+pg_dump                                                 \
+  --host aqa.cek8wjwn06iu.us-west-2.rds.amazonaws.com   \
+  --dbname AQA                                          \
+  --username aqa                                        \
+  --table '"'$table'"'                                  \
+  > $table.sql
+

@@ -168,6 +168,17 @@ Note that when building a package for release, the Maven build process uses the 
     formatted as a 24 hour clock, so 23:00 is eleven PM. -->
     <RestartTime>3:10</RestartTime>
 
+    <!-- If true, run in test mode. This mode is used for 'testing the test', or, in other words, commissioning the
+    AQA software.
+      In this mode, RTIMAGE files are associated with the uploaded RTPLAN instead of finding the RTPLAN referenced in the RTIMAGE
+    files.  This allows users to make copies of a production plan, modify the copies so has to have known errors, and then
+    test to see how AQA handles them.   It also disables other checks (such as time stamp and series membership) to allow
+    users to make test data.
+
+    Must be true or false.  If not specified or if improperly specified, it defaults to false.
+    -->
+    <TestMode>false</TestMode>
+
     <!-- List of users that should have permissions to everything. -->
     <UserWhiteList>
         <User>admin</User>
@@ -960,7 +971,7 @@ Note that when building a package for release, the Maven build process uses the 
         <WLTreatmentMachine>
             <MachineId>UM-600CD</MachineId>
             <MachineName>UM-600CD</MachineName>
-            <DeviceSerialNumber>824327626427</DeviceSerialNumber>  <!-- TODO Is this right?  Eclipse says 898 -->
+            <DeviceSerialNumber>824327626427</DeviceSerialNumber>
             <XCorrected>0.0</XCorrected>
             <YCorrected>-0.0</YCorrected>
         </WLTreatmentMachine>

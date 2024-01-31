@@ -21,6 +21,7 @@ import edu.umro.RestletUtil.RestletHttps
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.customizeRtPlan.CustomizeRtPlanInterface
+import org.aqa.customizeRtPlan.phase3plan.Phase3HTML
 import org.aqa.db.CachedUser
 import org.aqa.db.Input
 import org.aqa.db.Output
@@ -568,6 +569,7 @@ class WebServer extends Application with Logging {
         anonymousTranslate,
         getSeries,
         new CustomizeRtPlanInterface,
+        new Phase3HTML,
         new SimpleRtPlanInterface,
         termsOfUse,
         outputList,

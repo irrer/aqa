@@ -96,6 +96,16 @@ trait RunTrait[RunReqClassType] extends Logging {
   }
 
   /**
+   * Utility for getting data date from uploaded RTIMAGE files.
+   * @param alList List of all uploaded DICOM files.
+   * @return Date when data was acquired.
+   */
+  def getDataDateFromRtimageList(alList: Seq[AttributeList]): Option[Timestamp] = {
+    val min = alList.filter(Util.isRtimage).map(Util.extractDateTimeAndPatientIdFromDicomAl).flatMap(dp => dp._1.map(_.getTime)).min
+    Some(new Timestamp(min))
+  }
+
+  /**
     * Get the machine's DeviceSerialNumber from the input files.  This is used to handle the
     * case where a new machine needs to have it's serial number established.
     */

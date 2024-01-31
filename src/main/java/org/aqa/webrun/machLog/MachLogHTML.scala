@@ -80,26 +80,6 @@ class MachLogHTML(
   private def listMaintenanceRecords(): Elem = {
     val uploaded = (oldMaintenanceRecordList ++ newMaintenanceRecordList).sortBy(_.creationTime.getTime).reverse
     val id = "MachMaintenanceList"
-    /*
-    <div style="margin:10px" class="container">
-      <h3 style="margin-top: 60px;">
-        <button type="button" class="btn btn-info" data-toggle="collapse" data-target={"#" + id} title="Click to expand details">{WebUtil.amp}#x1F50D;</button>
-        Maintenance Records Constructed from Logs: {uploaded.size.toString}<span class="bg-success " style="margin-left:50px;"> {WebUtil.nbsp} New: {newMaintenanceRecordList.size} {WebUtil.nbsp} </span>
-      </h3>
-      <div id={id} class="collapse">
-        <table style="margin:10px;">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Category</th>
-              <th>Description</th>
-            </tr>
-          </thead>
-          {uploaded.map(recToHtml)}
-        </table>
-      </div>
-    </div>
-     */
 
     def header(button: Elem) = {
       <h3 style="margin-top: 60px;">
@@ -179,18 +159,6 @@ class MachLogHTML(
         {list.map(logToHtml)}
       </table>
     }
-
-    /*
-    <div style="margin:10px" class="container">
-      <h3>
-        <button type="button" class="btn btn-info" data-toggle="collapse" data-target={"#" + id} title="Click to expand details">{WebUtil.amp}#x1F50D;</button>
-        Machine Logs Uploaded: {list.size.toString} <span class="bg-success " style="margin-left:50px;"> {WebUtil.nbsp} New: {newMachLogList.size} {WebUtil.nbsp} </span>
-      </h3>
-      <div id={id} class="collapse">
-        {details}
-      </div>
-    </div>
-     */
 
     def header(button: Elem) = {
       <h3>

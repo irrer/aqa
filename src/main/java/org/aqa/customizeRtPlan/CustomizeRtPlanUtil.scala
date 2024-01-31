@@ -35,6 +35,7 @@ import org.aqa.db.DicomAnonymous
 import org.aqa.db.DicomSeries
 import org.aqa.db.Machine
 import org.aqa.db.MachineBeamEnergy
+import org.aqa.db.MachineType
 import org.aqa.db.PatientProcedure
 import org.aqa.db.Procedure
 
@@ -90,7 +91,7 @@ object CustomizeRtPlanUtil extends Logging {
     * @param beamAl Represents one member of 300a,00b0 BeamSequence list.
     * @return True if this is an FFF beam.
     */
-  private def isFFFBeam(beamAl: AttributeList): Boolean = {
+  def isFFFBeam(beamAl: AttributeList): Boolean = {
     val PrimaryFluenceModeSequence = DicomUtil.seqToAttr(beamAl, TagByName.PrimaryFluenceModeSequence)
 
     def isFFF(pfmSeq: AttributeList): Boolean = {
@@ -122,7 +123,7 @@ object CustomizeRtPlanUtil extends Logging {
   /**
     * Ensure that the number of beams in the FractionGroupSequence is correct.
     */
-  private def setNumberOfBeamsInFractionGroupSequence(rtplan: AttributeList): Unit = {
+  def setNumberOfBeamsInFractionGroupSequence(rtplan: AttributeList): Unit = {
     val noOfBeams = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence).size
 
     def setNumberOfBeams(al: AttributeList): Unit = {
@@ -145,12 +146,16 @@ object CustomizeRtPlanUtil extends Logging {
     * @param rtplan   Remove from this plan.
     * @param beamName The name of the beam.
     */
-  private def removeBeamFromPlan(rtplan: AttributeList, beamName: String): Unit = {
+  def removeBeamFromPlan(rtplan: AttributeList, beamName: String): Unit = {
     logger.info("Removing beam " + beamName)
 
     def deleteFractionSeq(BeamNumber: Int): Unit = {
       val FractionGroupSequence = DicomUtil.seqToAttr(rtplan, TagByName.FractionGroupSequence).head
-      DicomUtil.removeSeq(FractionGroupSequence, TagByName.ReferencedBeamSequence, (al: AttributeList) => al.get(TagByName.ReferencedBeamNumber).getIntegerValues.head == BeamNumber)
+      val findRBS = (al: AttributeList) => {
+        val attr = al.get(TagByName.ReferencedBeamNumber)
+        (attr != null) && (al.get(TagByName.ReferencedBeamNumber).getIntegerValues.head == BeamNumber)
+      }
+      DicomUtil.removeSeq(FractionGroupSequence, TagByName.ReferencedBeamSequence, findRBS)
     }
 
     def deletePatientSetup(PatientSetupNumber: Int): Unit = {
@@ -161,11 +166,13 @@ object CustomizeRtPlanUtil extends Logging {
     def deleteBeamSeq(): Unit = {
       val removed = DicomUtil.removeSeq(rtplan, TagByName.BeamSequence, (al: AttributeList) => beamNameOf(al).equals(beamName))
 
-      val BeamNumber = removed.head.get(TagByName.BeamNumber).getIntegerValues.head
-      val PatientSetupNumber = removed.head.get(TagByName.ReferencedPatientSetupNumber).getIntegerValues.head
+      if (removed.nonEmpty) {
+        val BeamNumber = removed.head.get(TagByName.BeamNumber).getIntegerValues.head
+        val PatientSetupNumber = removed.head.get(TagByName.ReferencedPatientSetupNumber).getIntegerValues.head
 
-      deleteFractionSeq(BeamNumber)
-      deletePatientSetup(PatientSetupNumber)
+        deleteFractionSeq(BeamNumber)
+        deletePatientSetup(PatientSetupNumber)
+      }
     }
 
     deleteBeamSeq()
@@ -175,7 +182,7 @@ object CustomizeRtPlanUtil extends Logging {
   /**
     * Remove beams from the plan that are not supported by this machine.  Also remove their ControlPoint counterparts.
     */
-  private def removeUnsupportedBeams(rtplan: AttributeList, machineEnergyList: Seq[MachineBeamEnergy]): Unit = {
+  def removeUnsupportedBeams(rtplan: AttributeList, machineEnergyList: Seq[MachineBeamEnergy]): Unit = {
     val beamAlList = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
     val unsupported = beamAlList.filter(beamAl => !beamIsSupported(beamAl, machineEnergyList))
     val unsupportedNameList = unsupported.map(beamAl => beamNameOf(beamAl))
@@ -266,8 +273,12 @@ object CustomizeRtPlanUtil extends Logging {
   private def getAvailableBeamNumber(rtplan: AttributeList): Int = {
     val beamAlList = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
     val all = beamAlList.map(beamAl => beamAl.get(TagByName.BeamNumber).getIntegerValues.head)
-    val available = (1 to (all.max + 1)).find(i => !all.contains(i))
-    available.get
+    if (all.isEmpty)
+      1
+    else {
+      val available = (1 to (all.max + 1)).find(i => !all.contains(i))
+      available.get
+    }
   }
 
   private def setFluence(beamAl: AttributeList, fff: Boolean): Unit = {
@@ -380,72 +391,125 @@ object CustomizeRtPlanUtil extends Logging {
     * Add another entry with the given number to the PatientSetupSequence.
     */
   private def addPatientSetup(rtplan: AttributeList, PatientSetupNumber: Int): Unit = {
-    val patientSetup = DicomUtil.clone(DicomUtil.seqToAttr(rtplan, TagByName.PatientSetupSequence).head)
+    val patientSetup = makePatientSetup(PatientSetupNumber)
     val PatientSetupSequence = rtplan.get(TagByName.PatientSetupSequence).asInstanceOf[SequenceAttribute]
-
-    patientSetup.get(TagByName.PatientSetupNumber).removeValues()
-    patientSetup.get(TagByName.PatientSetupNumber).addValue(PatientSetupNumber)
     PatientSetupSequence.addItem(patientSetup)
   }
 
-  private def insertBeam(rtplan: AttributeList, beamAl: AttributeList): Unit = {
-    val beamList = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
-    val index = beamList.indexWhere(b => beamNameOf(b).startsWith(Config.PrefixForMachineDependentBeamName))
-    val seq = AttributeFactory.newAttribute(TagByName.BeamSequence).asInstanceOf[SequenceAttribute]
+  private def appendBeam(rtplan: AttributeList, beamAl: AttributeList): Unit = {
+    val seq = rtplan.get(TagByName.BeamSequence).asInstanceOf[SequenceAttribute]
+    seq.addItem(beamAl)
+  }
 
-    for (i <- beamList.indices) {
-      seq.addItem(beamList(i))
-      if (i == index) seq.addItem(beamAl)
+  /**
+    * Given a prototype beam, rake a copy with the given characteristics.
+    *
+    * @param machineEnergy Use these parameters.
+    * @param prototypeBeam Start with this beam.
+    * @param BeamName New name of beam.
+    * @param BeamNumber New number of beam.
+    * @return Modified copy of prototype.
+    */
+  def makeBeam(machineEnergy: MachineBeamEnergy, prototypeBeam: AttributeList, BeamName: String, BeamNumber: Int): AttributeList = {
+    val beamAl = DicomUtil.clone(prototypeBeam)
+
+    def setBeamNumber(tag: AttributeTag): Unit = {
+      val beamNum = beamAl.get(tag)
+      beamNum.removeValues()
+      beamNum.addValue(BeamNumber)
     }
 
-    rtplan.put(seq)
+    setBeamNumber(TagByName.BeamNumber)
+    setBeamNumber(TagByName.ReferencedPatientSetupNumber)
+
+    val BeamNameAttr = beamAl.get(TagByName.BeamName)
+    BeamNameAttr.removeValues()
+    BeamNameAttr.addValue(BeamName)
+
+    setFluence(beamAl, machineEnergy.isFFF)
+    changeNominalBeamEnergy(beamAl, machineEnergy.photonEnergy_MeV.get)
+    val maxDoseRate: Double =
+      machineEnergy.maxDoseRate_MUperMin match {
+        case Some(mdr) => mdr
+        case _         =>
+          // if the dose rate is not defined, then use a reasonable value based on known characteristics of the machines
+          val machine = Machine.get(machineEnergy.machinePK).get
+          val machineType = MachineType.get(machine.machineTypePK).get
+          val resolved = resolveEnergy(machineEnergy, machineType)
+          resolved.maxDoseRate_MUperMin.get
+      }
+    changeDoseRate(beamAl, maxDoseRate)
+
+    beamAl
+  }
+
+  /**
+    * Make a patient setup attribute list (goes in PatientSetupSequence).  Note: byi
+    * convention the patientSetupNumber is the same as the BeamNumber.
+    * @param patientSetupNumber   value for PatientSetupNumber.  Usually the same as BeamNumber.
+    * @return Newly created attribute list.
+    */
+  private def makePatientSetup(patientSetupNumber: Int): AttributeList = {
+
+    val al = new AttributeList
+
+    def putAttribute(tag: AttributeTag, value: String): Unit = {
+      val attr = AttributeFactory.newAttribute(tag)
+      attr.addValue(value)
+      al.put(attr)
+    }
+
+    putAttribute(TagByName.PatientPosition, "HFS")
+    putAttribute(TagByName.ReferencedBeamNumber, patientSetupNumber.toString)
+    putAttribute(TagByName.PatientSetupNumber, patientSetupNumber.toString)
+    putAttribute(TagByName.SetupTechnique, "ISOCENTRIC")
+
+    al
   }
 
   /**
     * Add a beam that supports the given machine energy.  Do it by copying and modifying both prototypes.  The original prototypes are
     * not changed, but rtplan is changed.
+    *
+    * @param rtplan Add to this RTPLAN.
+    * @param machineEnergy Make beam with these values.
+    * @param prototypeBeam Made from a copy of this beam.
+    * @param prototypeFractionReference fraction item.
+    *
+    * @return Cloned beam with new values.
     */
-  def addBeam(rtplan: AttributeList, machineEnergy: MachineBeamEnergy, prototypeBeam: AttributeList, prototypeFractionReference: AttributeList): Unit = {
+  def addBeam(
+      rtplan: AttributeList,
+      machineEnergy: MachineBeamEnergy,
+      prototypeBeam: AttributeList,
+      prototypeFractionReference: AttributeList,
+      BeamNameOpt: Option[String] = None
+  ): AttributeList = {
     val BeamNumber = getAvailableBeamNumber(rtplan)
-    val beamAl = DicomUtil.clone(prototypeBeam)
-    val fraction = DicomUtil.clone(prototypeFractionReference)
 
-    // modify the fraction
-    val ReferencedBeamNumber = fraction.get(TagByName.ReferencedBeamNumber)
-    ReferencedBeamNumber.removeValues()
-    ReferencedBeamNumber.addValue(BeamNumber)
+    val fraction = makePatientSetup(BeamNumber)
 
-    // modify the beam
+    val BeamName =
+      if (BeamNameOpt.isDefined)
+        BeamNameOpt.get
+      else {
+        val energy = machineEnergy.photonEnergy_MeV.get
+        val numText = if (energy.round == energy) energy.round.toString else Util.fmtDbl(energy)
+        val fffText = if (machineEnergy.isFFF) "F" else "X"
+        Config.PrefixForMachineDependentBeamName + numText + fffText
+      }
 
-    val beamNum = beamAl.get(TagByName.BeamNumber)
-    beamNum.removeValues()
-    beamNum.addValue(BeamNumber)
+    val beamAl = makeBeam(machineEnergy, prototypeBeam, BeamName: String, BeamNumber)
 
-    val refPatSetupNumber = beamAl.get(TagByName.ReferencedPatientSetupNumber)
-    refPatSetupNumber.removeValues()
-    refPatSetupNumber.addValue(BeamNumber)
-
-    val beamNameText = {
-      val energy = machineEnergy.photonEnergy_MeV.get
-      val numText = if (energy.round == energy) energy.round.toString else Util.fmtDbl(energy)
-      val fffText = if (machineEnergy.isFFF) "F" else "X"
-      Config.PrefixForMachineDependentBeamName + numText + fffText
-    }
-
-    val BeamNameAttr = beamAl.get(TagByName.BeamName)
-    BeamNameAttr.removeValues()
-    BeamNameAttr.addValue(beamNameText)
-
-    setFluence(beamAl, machineEnergy.isFFF)
-    changeNominalBeamEnergy(beamAl, machineEnergy.photonEnergy_MeV.get)
-    changeDoseRate(beamAl, machineEnergy.maxDoseRate_MUperMin.get)
-
-    insertBeam(rtplan, beamAl)
+    appendBeam(rtplan, beamAl)
 
     val FractionGroupSequence = DicomUtil.seqToAttr(rtplan, TagByName.FractionGroupSequence).head
     val ReferencedBeamSequence = FractionGroupSequence.get(TagByName.ReferencedBeamSequence).asInstanceOf[SequenceAttribute]
     ReferencedBeamSequence.addItem(fraction)
     addPatientSetup(rtplan, BeamNumber)
+    setNumberOfBeamsInFractionGroupSequence(rtplan)
+
+    beamAl
   }
 
   private def showBeamList(rtplan: AttributeList): String = {
@@ -494,7 +558,7 @@ object CustomizeRtPlanUtil extends Logging {
     dateTimeTagList.map(dt => setDateTime(dt._1, dt._2))
   }
 
-  private def orderBeamsByRenaming(rtplan: AttributeList): immutable.IndexedSeq[Attribute] = {
+  def orderBeamsByRenaming(rtplan: AttributeList): immutable.IndexedSeq[Attribute] = {
 
     val beamList = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
 
@@ -604,23 +668,79 @@ object CustomizeRtPlanUtil extends Logging {
   }
 
   /**
-    * Given all the required information, create an rtplan that is compatible with the given machine for Daily QA.
+    * If the maxDoseRate is defined, then the energy is fine.  Otherwise, make a copy
+    * of the energy with a reasonable value inserted.
+    *
+    * The value is based on the machine type.
+    *
+    * If the machine type is not recognized then an exception is thrown.
+    *
+    * The following is an email from Justin Mikell regarding how to handle missing dose rate:
+    *
+    * >  From: Mikell, Justin <mikell@wustl.edu>
+    * >  Sent: Tuesday, November 14, 2023 12:21 PM
+    * >  To: Irrer, Jim <irrer@med.umich.edu>
+    * >  Subject: RE: AQA machine configuration
+    * >
+    * >  Good question,  The maximum allowable dose rate is defined by the machine class and energy.
+    * >  I think it should be driven by the TYPE or machine class AND energy.
+    * >  Varian only allows certain dose rates – they create so many pulses and then drop pulses to lower the dose rate from the max.
+    * >  I think the maxes listed below should be sufficient for your plans.
+    * >
+    * >  For Varian Truebeam and C-Series: 600 MU/min for 6X, 10X, 15X, 18X: 600,500,400,300,200,100 MU/min. Some go lower, but I think for AQA testing purposes this range should be sufficient.
+    * >
+    * >
+    * >  For the FFF beams on Truebeam:
+    * >  6FFF: 1400,1200,1000,800,600,400 MU/min
+    * >  10FFF: 2400, 2000, 1600, 1200, 800, 400 MU/min
+    * >
+    * >  For Halycon/Ethos:6FFF: 800Mu/min
+    * >
+    * >  Clinically we would typically plan with the maximum dose rate to decrease beam on time.
+    * >  There are some games you can play with changing dose rate to make gantry go faster or slower (limited by dose rate or limited by max gantry speed).
+    *
+    * @param beamEnergy Check for this energy.
+    * @param machineType Type of machine.  Note: This function could look this up in the database, but because
+    *                    this operation may be performed multiple times with the same machine type, it is more
+    *                    efficient to have the caller get it once and pass it as a parameter.
+    *
+    * @return Beam energy with dose rate defined.
     */
+  def resolveEnergy(beamEnergy: MachineBeamEnergy, machineType: MachineType): MachineBeamEnergy = {
+    val fff = beamEnergy.isFFF
+    val trueBeam = machineType.isTrueBeam
+    val cSeries = machineType.isCSeries
+
+    val mbe = 0 match {
+      case _ if beamEnergy.maxDoseRate_MUperMin.isDefined                  => beamEnergy
+      case _ if (!fff) && (trueBeam || cSeries)                            => beamEnergy.copy(maxDoseRate_MUperMin = Some(600))
+      case _ if fff && trueBeam && (beamEnergy.photonEnergy_MeV.get == 6)  => beamEnergy.copy(maxDoseRate_MUperMin = Some(1400))
+      case _ if fff && trueBeam && (beamEnergy.photonEnergy_MeV.get == 10) => beamEnergy.copy(maxDoseRate_MUperMin = Some(2400))
+      case _ if fff && trueBeam                                            => beamEnergy.copy(maxDoseRate_MUperMin = Some(1200)) // this accommodates other FFF photon energies
+      case _ => // We can not make a good decision, so punt.
+        val machine = Machine.get(beamEnergy.machinePK).get
+        //noinspection SpellCheckingInspection
+        val msg =
+          s"Unexpected exception: Machine $machine has undefined maxDoseRate_MUperMin for machine beam energy $beamEnergy ." +
+            s" Machine type: $machineType  .  This can be resolved by changing the machine's configuration via the web" +
+            s" interface (see Administration --> Machines) to define (currently undefined) max dose rate."
+        logger.error(msg)
+        throw new RuntimeException(msg)
+    }
+    mbe
+  }
 
   /**
-    * Given all the required information, create an rtplan that is compatible with the given machine for gap skew.
+    * Change RTPlanGeometry to "TREATMENT_DEVICE" so that we do not need patient position.  Also remove reference to RTSTRUCT.
+    * @param rtplan Change this plan.
     */
+  def fixRtplanGeometry(rtplan: AttributeList): Unit = {
+    rtplan.remove(TagByName.RTPlanGeometry)
+    val attr = AttributeFactory.newAttribute(TagByName.RTPlanGeometry)
+    attr.addValue("TREATMENT_DEVICE")
+    rtplan.put(attr)
 
-  /**
-    * Given all the required information, create an rtplan that is compatible with the given machine for focal spot.
-    */
-
-  /**
-    * Given all the required information, create an rtplan that is compatible with the given machine for Winston Lutz.
-    */
-
-  /**
-    * Given all the required information, create a pair of rtplans that are compatible with the given machine for LOC.
-    */
+    rtplan.remove(TagByName.ReferencedStructureSetSequence)
+  }
 
 }

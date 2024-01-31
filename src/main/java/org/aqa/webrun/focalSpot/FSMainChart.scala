@@ -40,25 +40,35 @@ class FSMainChart(outputPK: Long) extends Logging {
   private val procedure: Procedure = Procedure.get(output.procedurePK).get
   private val machine: Machine = Machine.get(output.machinePK.get).get
 
-  /** Focal spot sets. */
-  private val history = FocalSpotSet.history(machine.machinePK.get, procedure.procedurePK.get)
-
-  private val allDates = history.map(_.output.dataDate.get).groupBy(_.getTime).values.map(_.head).toSeq.sortBy(_.getTime)
-
-  /** All maintenance records for the entire history interval for all beams except for 'Set Baseline' to reduce clutter. */
-  private val maintenanceRecordList =
-    MaintenanceRecord.getRange(machine.machinePK.get, allDates.minBy(_.getTime), allDates.maxBy(_.getTime)).filter(m => !m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline))
-
   def chartId: String = C3Chart.idTagPrefix + Util.textToId(machine.id)
 
   def chartReference: Elem = {
     C3ChartHistory.htmlRef(chartId)
   }
 
-  private val setList = history.groupBy(_.output.outputPK.get).values.map(_.sortBy(_.focalSpotSet.KVP_kv)).toSeq
+  private val setList = {
+
+    /** Focal spot sets. */
+    val history = FocalSpotSet.history(machine.machinePK.get, procedure.procedurePK.get)
+
+    val list = history.groupBy(_.output.outputPK.get).values.map(_.sortBy(f => "%020.2f".format(f.focalSpotSet.KVP_kv) + " " + f.focalSpotSet.isFFF)).toSeq
+    val max = {
+      if (list.isEmpty)
+        0
+      else
+        list.map(_.size).max
+    }
+    list.filter(_.size == max).sortBy(_.head.output.dataDate.get.getTime)
+  }
+
+  private val allDates = setList.map(_.head.output.dataDate.get).groupBy(_.getTime).values.map(_.head).toSeq.sortBy(_.getTime)
+
+  /** All maintenance records for the entire history interval for all beams except for 'Set Baseline' to reduce clutter. */
+  private val maintenanceRecordList =
+    MaintenanceRecord.getRange(machine.machinePK.get, allDates.minBy(_.getTime), allDates.maxBy(_.getTime)).filter(m => !m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline))
 
   private def chartOf: C3ChartHistory = {
-    val index = history.indexWhere(sh => sh.focalSpotSet.outputPK == output.outputPK.get)
+    val index = setList.indexWhere(sh => sh.head.focalSpotSet.outputPK == output.outputPK.get)
     val units = "mm"
 
     // make a list of sets of data, each group sorted by KV

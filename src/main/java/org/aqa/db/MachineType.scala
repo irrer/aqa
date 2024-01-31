@@ -34,9 +34,16 @@ case class MachineType(
     result
   }
 
-  def insertOrUpdate = Db.run(MachineType.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(MachineType.query.insertOrUpdate(this))
 
   def toName: String = (model + " " + version).trim
+
+  /** True if this is a Varian TrueBeam model. */
+  //noinspection SpellCheckingInspection
+  val isTrueBeam: Boolean = manufacturer.toLowerCase().contains("varian") && model.toLowerCase().contains("truebeam")
+
+  /** True if this is a Varian C-Series model. */
+  val isCSeries: Boolean = manufacturer.toLowerCase().contains("varian") && model.toLowerCase().contains("c-series")
 }
 
 object MachineType {
@@ -48,7 +55,7 @@ object MachineType {
     def version = column[String]("version")
     def notes = column[String]("notes")
 
-    def * = (machineTypePK.?, manufacturer, model, version, notes) <> ((MachineType.apply _) tupled, MachineType.unapply _)
+    def * = (machineTypePK.?, manufacturer, model, version, notes) <> (MachineType.apply _ tupled, MachineType.unapply)
   }
 
   val query = TableQuery[MachineTypeTable]
@@ -56,9 +63,9 @@ object MachineType {
   def get(machineTypePK: Long): Option[MachineType] = {
     val action = for {
       inst <- MachineType.query if inst.machineTypePK === machineTypePK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   def get(manufacturer: String, model: String, version: String): Option[MachineType] = {
@@ -66,15 +73,15 @@ object MachineType {
       inst <- MachineType.query if (inst.manufacturer.toLowerCase === manufacturer.toLowerCase) &&
         (inst.model.toLowerCase === model.toLowerCase) &&
         (inst.version.toLowerCase === version.toLowerCase)
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   /**
     * Get a list of all machineTypes.
     */
-  def list = Db.run(query.result)
+  def list: Seq[MachineType] = Db.run(query.result)
 
   def delete(machineTypePK: Long): Int = {
     val q = query.filter(_.machineTypePK === machineTypePK)
@@ -83,7 +90,7 @@ object MachineType {
   }
 
   def main(args: Array[String]): Unit = {
-    val valid = Config.validate
+    Config.validate
     DbSetup.init
   }
 }

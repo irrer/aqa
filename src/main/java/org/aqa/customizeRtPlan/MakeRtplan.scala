@@ -152,6 +152,11 @@ abstract class MakeRtplan extends Logging {
 
     removeVarianPrivateTagAttributes(rtplan)
 
+    val machineEnergyList = CustomizeRtPlanUtil.getMachineEnergyList(machine.machinePK.get)
+    CustomizeRtPlanUtil.removeUnsupportedBeams(rtplan, machineEnergyList)
+
+    CustomizeRtPlanUtil.setNumberOfBeamsInFractionGroupSequence(rtplan)
+
     rtplan
   }
 
