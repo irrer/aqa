@@ -1,5 +1,21 @@
 package org.aqa.customizeRtPlan.phase3plan
 
+/*
+ * Copyright 2024 Regents of the University of Michigan
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
@@ -41,7 +57,7 @@ case class Beam(prototypeBeam: AttributeList, beamName: String, beamEnergy: Mach
   def gantryAngle_roundedDeg: Int = Util.angleRoundedTo90(gantryAngle_deg)
 
   override def toString: String = {
-    val mdr = if (beamEnergy.maxDoseRate_MUperMin.isDefined) s""" maxDoseRate: ${"%6.1f".format(beamEnergy.maxDoseRate_MUperMin.get)} |"""  else "  NA  "
+    val mdr = if (beamEnergy.maxDoseRate_MUperMin.isDefined) s""" maxDoseRate: ${"%6.1f".format(beamEnergy.maxDoseRate_MUperMin.get)} |""" else "  NA  "
     //noinspection SpellCheckingInspection
     s"""${"%-24s".format(beamName)} |""" +
       s""" ${"%4.1f".format(beamEnergy.photonEnergy_MeV.get)} Mev |""" +
