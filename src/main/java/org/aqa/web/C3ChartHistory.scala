@@ -87,8 +87,12 @@ class C3ChartHistory(
       "[ '" + label + "', " + valueList.map(d => "'" + Util.standardDateFormat.format(d) + "'").mkString(", ") + "]"
   }
 
-  private val minDate = xDateList.flatten.minBy(d => d.getTime)
-  private val maxDate = xDateList.flatten.maxBy(d => d.getTime)
+  private val now = new Date()
+  private val allDates = xDateList.flatten
+
+  // allow for charts with no data.  Data might later be define.
+  private val minDate = if (allDates.isEmpty) now else allDates.minBy(d => d.getTime)
+  private val maxDate = if (allDates.isEmpty) now else allDates.maxBy(d => d.getTime)
 
   // private val maintenanceDateList = dateColumn("maintenanceDateList", maintenanceList.flatMap(maintenance => Seq(maintenance.creationTime, maintenance.creationTime)))
 
@@ -136,8 +140,8 @@ class C3ChartHistory(
 
   val all: Seq[Double] = yValues.flatten
 
-  val minY: Double = all.min
-  val maxY: Double = all.max
+  val minY: Double = if (all.isEmpty) 0 else all.min
+  val maxY: Double = if (all.isEmpty) 0 else all.max
 
   private val yRangeY: C3Chart.YRange = {
     val minYt = if (tolerance.isDefined) Math.min(minY, tolerance.get.min) else minY
