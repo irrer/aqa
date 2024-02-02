@@ -124,6 +124,7 @@ object DbSetup extends Logging {
     WedgePoint.query,
     BBbyCBCT.query,
     BBbyEPID.query,
+    BBbyEPIDComposite.query,
     FocalSpot.query,
     BBbyEPID.query,
     FocalSpotSet.query,
