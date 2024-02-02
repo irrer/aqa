@@ -36,11 +36,14 @@ import java.awt.Color
   */
 class BBbyEPIDChart(outputPK: Long) extends Logging {
 
-  val output: Output = Output.get(outputPK).get
-  val procedure: Procedure = Procedure.get(output.procedurePK).get
-  val input: Input = Input.get(output.inputPK).get
-  val machine: Machine = Machine.get(output.machinePK.get).get
-  val history: Seq[BBbyEPIDComposite.BBbyEPIDCompositeHistory] = BBbyEPIDComposite.history(machine.machinePK.get, procedure.procedurePK.get)
+  private val output: Output = Output.get(outputPK).get
+  private val procedure: Procedure = Procedure.get(output.procedurePK).get
+  private val input: Input = Input.get(output.inputPK).get
+  private val machine: Machine = Machine.get(output.machinePK.get).get
+  private val history: Seq[BBbyEPIDComposite.BBbyEPIDCompositeHistory] = BBbyEPIDComposite.history(machine.machinePK.get, procedure.procedurePK.get)
+
+  /** True if there is data to show */
+  val hasData: Boolean = history.nonEmpty
 
   private val allDates = history.map(cd => cd.date)
 
@@ -66,25 +69,26 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
     val colorList = Seq(new Color(102, 136, 187), new Color(104, 187, 154), new Color(104, 187, 112), new Color(137, 187, 104))
 
     new C3ChartHistory(
-      Some(chartId),
-      maintenanceRecordList,
-      None, // width
-      None, // height
-      "Date",
-      Seq(history.map(h => h.date)),
-      None, // BaselineSpec
-      Some(new C3Chart.Tolerance(-Config.BBbyEPIDChartTolerance_mm, Config.BBbyEPIDChartTolerance_mm)),
-      Some(new C3Chart.YRange(-Config.BBbyEPIDChartYRange_mm, Config.BBbyEPIDChartYRange_mm)),
-      Seq("Total offset", "X offset", "Y offset", "Z offset"),
-      units,
-      dataToBeGraphed,
-      index,
-      ".3r",
-      colorList
+      chartIdOpt = Some(chartId),
+      maintenanceList = maintenanceRecordList,
+      width = None, // width
+      height = None, // height
+      xLabel = "Date",
+      xDateList = Seq(history.map(h => h.date)),
+      baseline = None, // BaselineSpec
+      tolerance = Some(new C3Chart.Tolerance(-Config.BBbyEPIDChartTolerance_mm, Config.BBbyEPIDChartTolerance_mm)),
+      yRange = Some(new C3Chart.YRange(-Config.BBbyEPIDChartYRange_mm, Config.BBbyEPIDChartYRange_mm)),
+      yAxisLabels = Seq("Total offset", "X offset", "Y offset", "Z offset"),
+      yDataLabel = units,
+      yValues = dataToBeGraphed,
+      yIndex = index,
+      yFormat = ".3r",
+      yColorList = colorList
     )
   }
 
   private val chart = {
+    // if no data, then index will be -1
     val index = history.indexWhere(sh => sh.bbByEPIDComposite.outputPK == output.outputPK.get)
     Some(chartOf(index))
   }
