@@ -26,4 +26,4 @@ import org.aqa.run.RunReqClass
   * @param rtplan RTPLAN referenced.
   * @param rtimageMap Map of RTIMAGEs by beam name.
   */
-case class FSRunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList]) extends RunReqClass with Logging {}
+case class FSRunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList]) extends RunReqClass {}

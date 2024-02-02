@@ -21,7 +21,6 @@ import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Config
-import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.run.RunReqClass
 
@@ -37,8 +36,7 @@ import java.awt.image.BufferedImage
   * @param wedgeBaselineRedoBeamList               List of beams that were explicitly marked as baselines when this data was processed previously
   */
 case class RunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList], flood: AttributeList, symmetryAndFlatnessBaselineRedoBeamList: Seq[String], wedgeBaselineRedoBeamList: Seq[String])
-    extends RunReqClass
-    with Logging {
+    extends RunReqClass {
 
   private val floodAttributeList = flood
   val floodOriginalImage = new DicomImage(floodAttributeList)
