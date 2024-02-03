@@ -18,6 +18,4 @@ package org.aqa.run
 
 import org.aqa.Logging
 
-abstract class RunReqClass extends Logging{
-
-}
+abstract class RunReqClass extends Logging {}
