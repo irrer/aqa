@@ -22,6 +22,7 @@ import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.DicomSeries
+import org.aqa.db.Input
 import org.aqa.db.Output
 import org.aqa.db.SymmetryAndFlatness
 import org.aqa.db.User
@@ -31,6 +32,7 @@ import org.aqa.web.WebUtil.SubUrlAdmin
 import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.web.WebUtil.getValueMap
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.DicomFile
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -309,20 +311,38 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       .map(uidDs => uidDs._2.head)
 
     // list of all AttributeList's referenced by SymmetryFlatness rows
-    val alList: immutable.Iterable[AttributeList] =
-      dicomSeries.flatMap(ds => ds.attributeListList)
+    // TODO: This statement takes several seconds to run while the user is waiting for the
+    //  page to show.  It would be nice if it were faster.
+    val alList: immutable.Iterable[AttributeList] = dicomSeries.flatMap(ds => ds.attributeListList)
 
-    // list RTPLANs SOP UIDs referenced by SymmetryFlatness rows
-    val rtplanSopList: Seq[String] =
-      alList.map(al => Phase2Util.referencedPlanUID(al)).toSeq.distinct
+    // the RTPLAN for this result, if the RTPLAN can be found
+    val rtplanAl: Option[AttributeList] = {
+      // If in test mode, then look in the input first.  This will only be defined if in test
+      // mode and the RTPLAN is found in the input.
+      val testPlan = {
+        if (Config.TestMode) {
+          val input = Input.get(output.inputPK).get
 
-    // list of all distinct RTPLAN DicomSeries referenced by SymmetryFlatness rows
-    val rtplanDicomSeriesList: immutable.Iterable[DicomSeries] = rtplanSopList
-      .flatMap(rtplanSop => DicomSeries.getBySopInstanceUID(rtplanSop))
-      .groupBy(_.seriesInstanceUID)
-      .map(_._2.head)
+          // make sure that the files are there
+          if (Util.listDirFiles(input.dir).isEmpty) {
+            Input.getFilesFromDatabase(input.inputPK.get, input.dir)
+          }
 
-    val rtplanAlList = rtplanDicomSeriesList.flatMap(ds => ds.attributeListList)
+          val rtplanList = Util.listDirFiles(input.dir).map(f => new DicomFile(f)).flatMap(_.attributeList).filter(Util.isRtplan)
+          rtplanList.headOption
+        }
+        else
+          None
+      }
+
+      if (testPlan.isDefined)
+        testPlan
+      else { // either in production mode or the RTPLAN is not in the input
+        val rtplanRefList: Iterable[AttributeList] = alList.groupBy(al => Phase2Util.referencedPlanUID(al)).map(_._2.head)
+        val rtplanList = rtplanRefList.flatMap(DicomSeries.getRtplan)
+        rtplanList.headOption
+      }
+    }
 
     /**
      * Make a data set that contains all the relevant information associated with a SymmetryFlatness row.
@@ -342,26 +362,13 @@ object SymmetryAndFlatnessSubHTML extends Logging {
           aa
         }
 
-        sf.toString
-
-        val rtplanAl: Option[AttributeList] = {
-          if (al.isDefined) {
-            val refRtplanSop = Phase2Util.referencedPlanUID(al.get)
-            val aa = rtplanAlList.find(a => Util.sopOfAl(a).equals(refRtplanSop))
-            if (aa.isEmpty) // TODO Test mode breaks this:
-              logger.warn(s"Could not find RTPLAN SOP $refRtplanSop   Beam name: ${sf.beamName} List of RTPLAN SOPs size: ${rtplanAlList.size} : " + rtplanAlList.map(Util.sopOfAl).mkString("  "))
-            aa
-          } else
-            None
-        }
-
         if (al.isDefined && rtplanAl.isDefined)
           Some(SymmetryAndFlatnessDataSet(sf, output, baseline, al.get, rtplanAl.get))
         else
           None
       } catch {
         case t: Throwable =>
-          logger.error("Unexpected error: " + fmtEx(t))
+          logger.error(s"Unexpected error on $sf : ${fmtEx(t)}")
           None
       }
     }
@@ -541,15 +548,21 @@ class SymmetryAndFlatnessSubHTML extends Restlet with Logging with SubUrlAdmin {
 
     def has(tag: String) = valueMap.contains(tag)
 
+
     val SF = SymmetryAndFlatnessSubHTML
 
     try {
       0 match {
-        case _ if has(SF.csvTag) => SF.makeCsv(valueMap, response)
-        case _ if has(SF.outputPKTag) && has(SF.beamNameTag) => SF.beamData(valueMap, response)
-        case _ if has(SF.outputPKTag) => SF.collectData(valueMap, response)
-        case _ if has(SF.baselineTag) => SF.setBaseline(valueMap, response)
-        case _ => WebUtil.badRequest(response, message = "Invalid request", Status.CLIENT_ERROR_BAD_REQUEST)
+        case _ if has(SF.csvTag) =>
+          SF.makeCsv(valueMap, response)
+        case _ if has(SF.outputPKTag) && has(SF.beamNameTag) =>
+          SF.beamData(valueMap, response)
+        case _ if has(SF.outputPKTag) =>
+          SF.collectData(valueMap, response)
+        case _ if has(SF.baselineTag) =>
+          SF.setBaseline(valueMap, response)
+        case _ =>
+          WebUtil.badRequest(response, message = "Invalid request", Status.CLIENT_ERROR_BAD_REQUEST)
       }
     } catch {
       case t: Throwable =>
