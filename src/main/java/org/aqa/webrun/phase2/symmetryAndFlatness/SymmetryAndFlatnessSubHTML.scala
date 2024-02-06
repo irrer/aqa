@@ -42,8 +42,8 @@ import scala.collection.immutable
 import scala.xml.Elem
 
 /**
-  * Analyze DICOM files for symmetry and flatness.
-  */
+ * Analyze DICOM files for symmetry and flatness.
+ */
 object SymmetryAndFlatnessSubHTML extends Logging {
 
   private def titleDetails = "Click to view graphs and other details"
@@ -114,9 +114,9 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   }
 
   private def detailsColumn(
-      subDir: File,
-      symFlatDataSet: SymmetryAndFlatnessDataSet
-  ): Elem = {
+                             subDir: File,
+                             symFlatDataSet: SymmetryAndFlatnessDataSet
+                           ): Elem = {
     val errorClass = if (symFlatDataSet.symmetryAndFlatness.allPass(symFlatDataSet.baseline)) "normal" else "danger"
     val detailUrl = WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, symFlatDataSet.symmetryAndFlatness.beamName))
     val pk = symFlatDataSet.symmetryAndFlatness.symmetryAndFlatnessPK.get
@@ -125,9 +125,9 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 
     val input =
       if (symFlatDataSet.symmetryAndFlatness.isBaseline) {
-        <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"} checked={baseline}/>
+          <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"} checked={baseline}/>
       } else {
-        <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"}/>
+          <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"}/>
       }
 
     val elem = {
@@ -156,7 +156,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       )
     )
     val imgSmall = {
-      <img src={imgUrl} width="100"/>
+        <img src={imgUrl} width="100"/>
     }
     val ref = {
       <a href={dicomHref}>
@@ -264,12 +264,12 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   }
 
   /**
-    * Respond to a request for the data nicely formatted in HTML.
-    *
-    * @param output          Get data for machine referenced by this output.
-    * @param symFlatDataList List of data to display
-    * @return Formatted report
-    */
+   * Respond to a request for the data nicely formatted in HTML.
+   *
+   * @param output          Get data for machine referenced by this output.
+   * @param symFlatDataList List of data to display
+   * @return Formatted report
+   */
   def makeContent(output: Output, symFlatDataList: Seq[SymmetryAndFlatnessDataSet]): Elem = {
     // show link to CSV
     val csv: Elem = {
@@ -292,11 +292,11 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   }
 
   /**
-    * Collect and format the data as HTML and return it.
-    *
-    * @param valueMap List of parsed parameters.
-    * @return
-    */
+   * Collect and format the data as HTML and return it.
+   *
+   * @param valueMap List of parsed parameters.
+   * @return
+   */
   private def collectData(valueMap: ValueMapT, response: Response): Unit = {
     val output = Output.get(valueMap(outputPKTag).toLong).get
     val dataDate = output.dataDate.get
@@ -325,11 +325,11 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     val rtplanAlList = rtplanDicomSeriesList.flatMap(ds => ds.attributeListList)
 
     /**
-      * Make a data set that contains all the relevant information associated with a SymmetryFlatness row.
-      *
-      * @param sf Basis of data
-      * @return Convenient set of data
-      */
+     * Make a data set that contains all the relevant information associated with a SymmetryFlatness row.
+     *
+     * @param sf Basis of data
+     * @return Convenient set of data
+     */
     def makeDataSet(sf: SymmetryAndFlatness): Option[SymmetryAndFlatnessDataSet] = {
       try {
         logger.info("Making data set for: " + sf)
@@ -348,7 +348,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
           if (al.isDefined) {
             val refRtplanSop = Phase2Util.referencedPlanUID(al.get)
             val aa = rtplanAlList.find(a => Util.sopOfAl(a).equals(refRtplanSop))
-            if (aa.isEmpty)
+            if (aa.isEmpty) // TODO Test mode breaks this:
               logger.warn(s"Could not find RTPLAN SOP $refRtplanSop   Beam name: ${sf.beamName} List of RTPLAN SOPs size: ${rtplanAlList.size} : " + rtplanAlList.map(Util.sopOfAl).mkString("  "))
             aa
           } else
@@ -375,23 +375,29 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   }
 
   /**
-    * Format an HTML td with a double value.  Add title to show more precision.
-    * @param d Value to format.
-    * @return td element.
-    */
+   * Format an HTML td with a double value.  Add title to show more precision.
+   *
+   * @param d Value to format.
+   * @return td element.
+   */
   private def td(d: Double) = {
-    <td title={d.toString}>{Util.fmtDbl(d)}</td>
+    <td title={d.toString}>
+      {Util.fmtDbl(d)}
+    </td>
   }
 
   /**
-    * Make HTML to show the results of the calculation of the beam data.
-    * @param beamData Data to show.
-    * @return HTML to display.
-    */
+   * Make HTML to show the results of the calculation of the beam data.
+   *
+   * @param beamData Data to show.
+   * @return HTML to display.
+   */
   private def resultTable(beamData: SymmetryAndFlatness.SymmetryAndFlatnessHistory): Elem = {
 
     <div style="margin:20px;">
-      <center><h3>Results</h3></center>
+      <center>
+        <h3>Results</h3>
+      </center>
       <table class="table table-bordered" title={"Results of this analysis and baseline values" + WebUtil.titleNewline + "for comparison.  All values are in percent."}>
         <thead>
           <tr>
@@ -403,31 +409,26 @@ object SymmetryAndFlatnessSubHTML extends Logging {
           </tr>
         </thead>
         <tr>
-          <td>Analysis</td>
-          {td(beamData.symmetryAndFlatness.transverseSymmetry)}
-          {td(beamData.symmetryAndFlatness.axialSymmetry)}
-          {td(beamData.symmetryAndFlatness.flatness)}
-          {td(beamData.symmetryAndFlatness.profileConstancy(beamData.baseline))}
+          <td>Analysis</td>{td(beamData.symmetryAndFlatness.transverseSymmetry)}{td(beamData.symmetryAndFlatness.axialSymmetry)}{td(beamData.symmetryAndFlatness.flatness)}{td(beamData.symmetryAndFlatness.profileConstancy(beamData.baseline))}
         </tr>
         <tr>
-          <td>Baseline</td>
-          {td(beamData.baseline.transverseSymmetry)}
-          {td(beamData.baseline.axialSymmetry)}
-          {td(beamData.baseline.flatness)}
-          {td(beamData.baseline.profileConstancy(beamData.baseline))}
+          <td>Baseline</td>{td(beamData.baseline.transverseSymmetry)}{td(beamData.baseline.axialSymmetry)}{td(beamData.baseline.flatness)}{td(beamData.baseline.profileConstancy(beamData.baseline))}
         </tr>
       </table>
     </div>
   }
 
   /**
-    * Make HTML to show the raw beam data.
-    * @param beamData Data to show.
-    * @return HTML to display.
-    */
+   * Make HTML to show the raw beam data.
+   *
+   * @param beamData Data to show.
+   * @return HTML to display.
+   */
   private def inputTable(beamData: SymmetryAndFlatness.SymmetryAndFlatnessHistory): Elem = {
     <div style="margin:20px;">
-      <center><h3>Inputs</h3></center>
+      <center>
+        <h3>Inputs</h3>
+      </center>
       <table class="table table-bordered" title="Input values from this data set and from baseline.">
         <thead>
           <tr>
@@ -440,31 +441,21 @@ object SymmetryAndFlatnessSubHTML extends Logging {
           </tr>
         </thead>
         <tr>
-          <td>Analysis</td>
-          {td(beamData.symmetryAndFlatness.top_cu)}
-          {td(beamData.symmetryAndFlatness.bottom_cu)}
-          {td(beamData.symmetryAndFlatness.left_cu)}
-          {td(beamData.symmetryAndFlatness.right_cu)}
-          {td(beamData.symmetryAndFlatness.center_cu)}
+          <td>Analysis</td>{td(beamData.symmetryAndFlatness.top_cu)}{td(beamData.symmetryAndFlatness.bottom_cu)}{td(beamData.symmetryAndFlatness.left_cu)}{td(beamData.symmetryAndFlatness.right_cu)}{td(beamData.symmetryAndFlatness.center_cu)}
         </tr>
         <tr>
-          <td>Baseline</td>
-          {td(beamData.baseline.top_cu)}
-          {td(beamData.baseline.bottom_cu)}
-          {td(beamData.baseline.left_cu)}
-          {td(beamData.baseline.right_cu)}
-          {td(beamData.baseline.center_cu)}
+          <td>Baseline</td>{td(beamData.baseline.top_cu)}{td(beamData.baseline.bottom_cu)}{td(beamData.baseline.left_cu)}{td(beamData.baseline.right_cu)}{td(beamData.baseline.center_cu)}
         </tr>
       </table>
     </div>
   }
 
   /**
-    * Format data for the just the given output and beam.  Build an HTML response to show it.
-    *
-    * @param valueMap Parameter list.  Already validated to have an output PK and beam name.
-    * @param response Put HTML here.
-    */
+   * Format data for the just the given output and beam.  Build an HTML response to show it.
+   *
+   * @param valueMap Parameter list.  Already validated to have an output PK and beam name.
+   * @param response Put HTML here.
+   */
   private def beamData(valueMap: ValueMapT, response: Response): Unit = {
     val outputPK = valueMap(outputPKTag).toLong
     val output = Output.get(outputPK).get
@@ -476,8 +467,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     val content = {
       <div class="row">
         <div class="col-md-4 col-md-offset-4">
-          {resultTable(beamData)}
-          {inputTable(beamData)}
+          {resultTable(beamData)}{inputTable(beamData)}
         </div>
       </div>
     }
@@ -487,13 +477,13 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   }
 
   /**
-    * If the user is authorized (must be in same institution or be whitelisted) then
-    * change the given baseline to the given value.
-    *
-    * @param valueMap Contains user, symmetry and flatness PK, and baseline setting.
-    * @param response Put response (HTML) here.
-    * @return Message indicating what was done.
-    */
+   * If the user is authorized (must be in same institution or be whitelisted) then
+   * change the given baseline to the given value.
+   *
+   * @param valueMap Contains user, symmetry and flatness PK, and baseline setting.
+   * @param response Put response (HTML) here.
+   * @return Message indicating what was done.
+   */
   private def setBaseline(valueMap: ValueMapT, response: Response): Unit = {
     // Get parameters.  If there is any syntax error then throw an exception.
     val user = WebUtil.getUser(valueMap).get
@@ -525,10 +515,10 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   }
 
   /**
-    *
-    * @param valueMap Contains parameters indicating which data to process.
-    * @param response Put results here.
-    */
+   *
+   * @param valueMap Contains parameters indicating which data to process.
+   * @param response Put results here.
+   */
   private def makeCsv(valueMap: ValueMapT, response: Response): Unit = {
     val output = Output.get(valueMap(outputPKTag).toLong).get
     val csvText = SymmetryAndFlatnessCSV.makeCsvFile(output)
@@ -540,24 +530,26 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 class SymmetryAndFlatnessSubHTML extends Restlet with Logging with SubUrlAdmin {
 
   /**
-    * If the incoming request is for the given handler, then handle it and return true.
-    *
-    * @param request  User request.
-    * @param response Put results and status here.
-    */
+   * If the incoming request is for the given handler, then handle it and return true.
+   *
+   * @param request  User request.
+   * @param response Put results and status here.
+   */
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
     val valueMap = getValueMap(request)
+
     def has(tag: String) = valueMap.contains(tag)
+
     val SF = SymmetryAndFlatnessSubHTML
 
     try {
       0 match {
-        case _ if has(SF.csvTag)                             => SF.makeCsv(valueMap, response)
+        case _ if has(SF.csvTag) => SF.makeCsv(valueMap, response)
         case _ if has(SF.outputPKTag) && has(SF.beamNameTag) => SF.beamData(valueMap, response)
-        case _ if has(SF.outputPKTag)                        => SF.collectData(valueMap, response)
-        case _ if has(SF.baselineTag)                        => SF.setBaseline(valueMap, response)
-        case _                                               => WebUtil.badRequest(response, message = "Invalid request", Status.CLIENT_ERROR_BAD_REQUEST)
+        case _ if has(SF.outputPKTag) => SF.collectData(valueMap, response)
+        case _ if has(SF.baselineTag) => SF.setBaseline(valueMap, response)
+        case _ => WebUtil.badRequest(response, message = "Invalid request", Status.CLIENT_ERROR_BAD_REQUEST)
       }
     } catch {
       case t: Throwable =>
