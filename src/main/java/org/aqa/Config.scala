@@ -792,7 +792,7 @@ object Config extends Logging {
 
   val FloodFieldBeamName: String = logMainText("FloodFieldBeamName", "Flood 6X")
 
-  val PrototypeCustomBeamName: String = logMainText("PrototypeCustomBeamName", "J18G0-6F")
+  val PrototypeCustomBeamName: String = logMainText("PrototypeCustomBeamName", "J18G0-6X")
   val PrefixForMachineDependentBeamName: String = logMainText("PrefixForMachineDependentBeamName", "J18G0-")
 
   val CollimatorCenteringTolerence_mm: Double = logMainText("CollimatorCenteringTolerence_mm", "2.0").toDouble
