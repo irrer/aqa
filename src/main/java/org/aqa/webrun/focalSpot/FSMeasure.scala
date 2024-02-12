@@ -29,11 +29,23 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
 
   /** MV energy formatted to the minimal string that represents its full precision. */
   val mvText: String = if (mv.round == mv) mv.round.toString else mv.toString
-  private val ExposureTime = DicomUtil.findAllSingle(rtimage, TagByName.ExposureTime).head.getDoubleValues.head
+  private val ExposureTime: Double = {
+    val list = DicomUtil.findAllSingle(rtimage, TagByName.ExposureTime)
+    if (list.nonEmpty && list.head.getDoubleValues.nonEmpty)
+      list.head.getDoubleValues.head
+    else
+      -1
+  }
 
   private val XRayImageReceptorTranslation = {
-    val xrayTrans = DicomUtil.findAllSingle(rtimage, TagByName.XRayImageReceptorTranslation).head.getDoubleValues
-    new javax.vecmath.Point3d(xrayTrans.head, xrayTrans(1), xrayTrans(2))
+    val list = DicomUtil.findAllSingle(rtimage, TagByName.XRayImageReceptorTranslation)
+    if (list.nonEmpty && (list.head.getDoubleValues.length == 3)) {
+      val xrayTrans = list.head.getDoubleValues
+      new javax.vecmath.Point3d(xrayTrans.head, xrayTrans(1), xrayTrans(2))
+    }
+    else
+      new javax.vecmath.Point3d(0.0, 0.0, 0.0)
+
   }
 
   private val beam = Util.getBeamOfRtimage(plan = rtplan, rtimage).get
