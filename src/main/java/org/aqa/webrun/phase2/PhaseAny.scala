@@ -21,7 +21,6 @@ import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Config
-import org.aqa.DicomFile
 import org.aqa.Util
 import org.aqa.db.DicomSeries
 import org.aqa.db.Output
@@ -115,7 +114,7 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
     // associate each image with a plan
     //val planGroups = rtplanList.map(plan => (plan, rtimageList.filter(img => Phase2Util.imageReferencesPlan(plan, img)))).filter(pi => pi._2.nonEmpty).toMap
 
-    val planUIDReferences = rtimageList.map(img => Phase2Util.referencedPlanUID(img)).distinct
+    val planUIDReferences = rtimageList.flatMap(img => Phase2Util.referencedPlanUID(img)).distinct
 
     val dbSeriesList = planUIDReferences.flatMap(planUID => DicomSeries.getBySopInstanceUID(planUID))
 
@@ -464,16 +463,9 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
     def getRtplan = {
       // If this is production mode, or, if it is test mode and there is no RTPLAN in the input list, then find the plan with the matching UID.
       if (Config.ProductionMode || rtplanList.isEmpty) {
-        val rtplanUID = Phase2Util.referencedPlanUID(rtimageList.head)
-        DicomSeries.getBySopInstanceUID(rtplanUID).headOption match {
-          // get this from the database
-          case Some(ds) => ds.attributeListList.head
-          case _ =>
-            logger.warn("Could not find RTPLAN in database.  Looking in file system.") // if it was not in the database, then check in the share directory.  This code should be deprecated soon.  TODO
-            val file = new File(Config.sharedDir, rtplanUID + ".dcm")
-            val df = new DicomFile(file)
-            df.attributeList.get
-        }
+        val rtplanUID = Phase2Util.referencedPlanUID(rtimageList.head).head
+        val rtplanDicomSeries = DicomSeries.getBySopInstanceUID(rtplanUID).head
+        rtplanDicomSeries.attributeListList.find(al => Util.sopOfAl(al).equals(rtplanUID)).get
       } else {
         // TestMode
         rtplanList.head

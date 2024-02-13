@@ -338,7 +338,7 @@ object MetadataCheck extends ProcedureOutput with Logging {
           }
           if (needToDoList.nonEmpty) {
             val imageAl = getDicomSeriesByOutput(outputPK)
-            val rtplanUID = Phase2Util.referencedPlanUID(imageAl.head)
+            val rtplanUID = Phase2Util.referencedPlanUID(imageAl.head).head
             val rtplanAl = getPlan(rtplanUID)
             //val rtplanText = DicomUtil.attributeListToString(rtplanAl)
             //if (false) println(rtplanText)

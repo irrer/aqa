@@ -52,13 +52,20 @@ import scala.xml.Elem
 object Phase2Util extends Logging {
 
   /**
-    * Get the plan that this image references.  If it does not reference exactly one it will throw an exception.
+    * Get the list of SOP UIDs of the plan referenced by this image.
     */
-  def referencedPlanUID(rtimage: AttributeList): String = {
-    val planSeqList = DicomUtil.seqToAttr(rtimage, TagByName.ReferencedRTPlanSequence)
-    val planUidList = planSeqList.map(al => al.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrNull).filter(uid => uid != null).distinct
-    if (planUidList.size != 1) throw new RuntimeException("RTIMAGE file should reference exactly one plan, but actually references " + planUidList.size)
-    planUidList.head
+  def referencedPlanUID(rtimage: AttributeList): Seq[String] = {
+    try {
+      if (rtimage.get(TagByName.ReferencedRTPlanSequence) == null)
+        Seq() // no RTPLAN is referenced
+      else {
+        val planSeqList = DicomUtil.seqToAttr(rtimage, TagByName.ReferencedRTPlanSequence)
+        val planUidList = planSeqList.map(al => al.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrNull).filter(uid => uid != null).distinct
+        planUidList
+      }
+    } catch {
+      case _: Throwable => Seq()
+    }
   }
 
   /**
