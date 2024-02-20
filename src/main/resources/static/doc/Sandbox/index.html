@@ -1,0 +1,83 @@
+<div title="Sandbox">
+    <!--
+    Copyright 2024 Regents of the University of Michigan
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    -->
+
+    <h2>@@title@@</h2>
+
+    <p>
+        The AQA sandbox is a separate installation of the software and data that allows users to introduce known errors
+        and verify that AQA responds as expected. In other words, 'test the test'.
+    </p>
+
+
+    The production and sandbox systems are at the following URSs and have different logos to avoid confusion:
+    <div class="row">
+        <p style="margin:40px;"></p>
+        <div class="col-md-6" style="margin-left:auto; margin-right:auto; text-align:center;">
+            <a href="https://automatedqualityassurance.org" target="_blank"> https://automatedqualityassurance.org </a>
+            <br/>
+            <a href="https://automatedqualityassurance.org" target="_blank">
+                <img src="production.png" style="margin:30px;" width="200px;" alt="Production logo"/>
+            </a>
+        </div>
+
+        <div class="col-md-6" style="margin-left:auto; margin-right:auto; text-align:center;">
+            <a href="https://test.automatedqualityassurance.org" target="_blank">
+                https://test.automatedqualityassurance.org </a>
+            <br/>
+            <a href="https://test.automatedqualityassurance.org" target="_blank">
+                <img src="test.png" style="margin:30px;" width="200px;" alt="Sandbox logo"/>
+            </a>
+        </div>
+
+    </div>
+
+    <p>
+        The sandbox contains a copy of all the meta-data such as machine configurations and user accounts that were on
+        the production system (as of February 2024). This saves the effort of re-configuration. Note that because this
+        is a copy, changes made on one system will not automatically be made on the other.
+    </p>
+
+
+    <p>
+        The chief difference of the sandbox software is that it allows users to break the rules. In production, when
+        performing a test, the RTPLAN referenced by the RTIMAGE files is used. The sandbox allows uses to specify a
+        different RTPLAN.
+    </p>
+
+
+    <h3>Running a Test</h3>
+    <p>
+        To run a test with known errors:
+    </p>
+
+    <ul>
+        <li> Use a treatment planning system to modify an existing AQA RTPLAN (custom plan can be made by either
+            system). Introduce the desired known errors by changing jaw positions, collimator angles, etc.
+        </li>
+        <li> Deliver the modified plan. This creates images with known errors.</li>
+        <li> Upload the images to the sandbox via 'Run Procedure' with the original 'good' RTPLAN. This tells the
+            software to use this plan instead of the modified one that the images reference. Note: This will not work on
+            the production system.
+        </li>
+        <li> View the results.</li>
+    </ul>
+
+
+    <!-- xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx -->
+    <!-- xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx -->
+
+</div>
