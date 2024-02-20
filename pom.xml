@@ -22,7 +22,7 @@
         <dependency> <groupId>commons-fileupload</groupId>       <artifactId>commons-fileupload</artifactId>         <version>1.5</version>             </dependency>
         <dependency> <groupId>commons-io</groupId>               <artifactId>commons-io</artifactId>                 <version>2.11.0</version>          </dependency>
         <dependency> <groupId>edu.umro</groupId>                 <artifactId>MSOfficeUtil</artifactId>               <version>0.0.3</version>           </dependency>
-        <dependency> <groupId>edu.umro</groupId>                 <artifactId>RestletUtil_2.12</artifactId>           <version>0.0.13</version>          </dependency>
+        <dependency> <groupId>edu.umro</groupId>                 <artifactId>RestletUtil_2.12</artifactId>           <version>0.1.2</version>           </dependency>
         <dependency> <groupId>edu.umro</groupId>                 <artifactId>ScalaUtil_2.12</artifactId>             <version>0.0.19</version>          </dependency>
         <dependency> <groupId>edu.umro</groupId>                 <artifactId>util</artifactId>                       <version>1.3.20</version>          </dependency>
         <dependency> <groupId>edu.umro</groupId>                 <artifactId>ImageUtil_2.12</artifactId>             <version>0.0.9</version>           </dependency>
