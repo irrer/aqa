@@ -66,7 +66,7 @@ object ExtendedData {
     new ExtendedData(output, input, machine, machineType, multileafCollimator, epid, institution, procedure, user)
   }
 
-  def wrapExtendedData(extendedData: ExtendedData, content: Elem, offset: Int = 1) = {
+  def wrapExtendedData(extendedData: ExtendedData, content: Elem, offset: Int = 1): Elem = {
     val twoLineDate = new SimpleDateFormat("MMM dd yyyy\nHH:mm")
     def wrapElement(col: Int, name: String, value: String, asAlias: Boolean): Elem = {
       val html =
@@ -98,7 +98,6 @@ object ExtendedData {
     val procedureDesc: String = extendedData.procedure.name + " : " + extendedData.procedure.version
 
     val showMachine = {
-      val href = "/admin/MachineUpdate?machinePK=22"
       <div class="col-md-1">
         <h2 title="Treatment machine.  Click for details.">{MachineUpdate.linkToMachineUpdate(extendedData.machine.machinePK.get, extendedData.machine.id)}</h2>
       </div>
@@ -109,12 +108,12 @@ object ExtendedData {
         <div class="row">
           <div class="col-md-10 col-md-offset-1">
             {showMachine}
-            {wrapElement(2, "Institution", extendedData.institution.name, true)}
-            {wrapElement(1, "Data Acquisition", dataAcquisitionDate, false)}
-            {wrapElement(1, "Analysis Started", twoLineDate.format(extendedData.output.startDate), false)}
-            {wrapElement(1, "User", extendedData.user.id, true)}
-            {wrapElement(1, "Elapsed", elapsed, false)}
-            {wrapElement(1, "Procedure", procedureDesc, false)}
+            {wrapElement(2, "Institution", extendedData.institution.name, asAlias = true)}
+            {wrapElement(1, "Data Acquisition", dataAcquisitionDate, asAlias = false)}
+            {wrapElement(1, "Analysis Started", twoLineDate.format(extendedData.output.startDate), asAlias = false)}
+            {wrapElement(1, "User", extendedData.user.id, asAlias = true)}
+            {wrapElement(1, "Elapsed", elapsed, asAlias = false)}
+            {wrapElement(1, "Procedure", procedureDesc, asAlias = false)}
             <div class="col-md-1">{OutputList.redoUrl(extendedData.output.outputPK.get)}</div>
           </div>
         </div>
