@@ -47,11 +47,11 @@ case class RunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList],
 
   val floodBadPixelList: Seq[DicomImage.PixelRating] = Phase2Util.identifyBadPixels(floodOriginalImage, floodBadPixelRadius)
 
-  val floodCorrectedImage: DicomImage = floodOriginalImage.correctBadPixels(floodBadPixelList, floodBadPixelRadius)
+  private val floodCorrectedImage: DicomImage = floodOriginalImage.correctBadPixels(floodBadPixelList, floodBadPixelRadius)
 
   val imageSize = new Point(floodOriginalImage.width, floodOriginalImage.height)
 
-  val floodTranslator = new IsoImagePlaneTranslator(floodAttributeList)
+  private val floodTranslator = new IsoImagePlaneTranslator(floodAttributeList)
 
   val treatmentMachineType: Option[DicomUtil.TreatmentMachineType.Value] = DicomUtil.TreatmentMachineType.attrListToTreatmentMachineType(rtplan)
 
@@ -79,7 +79,7 @@ case class RunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList],
 
   }
 
-  val floodMeasurement: MeasureTBLREdges.TBLR = floodMeasurementAndImage.measurementSet
+  private val floodMeasurement: MeasureTBLREdges.TBLR = floodMeasurementAndImage.measurementSet
 
   /**
     * Rectangle in pixels (not mm) within an image that flood field floods.  Image analysis for other images should
@@ -100,7 +100,7 @@ case class RunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList],
 
   val floodOffset: Point = floodRectangle.getLocation
 
-  val floodPixelCorrectedAndCroppedImage: DicomImage = floodCorrectedImage.getSubimage(floodRectangle)
+  private val floodPixelCorrectedAndCroppedImage: DicomImage = floodCorrectedImage.getSubimage(floodRectangle)
 
   lazy val floodImage: BufferedImage = floodMeasurementAndImage.bufferedImage
 
@@ -108,7 +108,7 @@ case class RunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList],
     lazy val originalImage = new DicomImage(al)
     lazy val badPixels: Seq[DicomImage.PixelRating] = Phase2Util.identifyBadPixels(originalImage, Util.badPixelRadius(al))
     lazy val pixelCorrectedImage: DicomImage = originalImage.correctBadPixels(badPixels, Util.badPixelRadius(al))
-    lazy val pixelCorrectedCroppedImage: DicomImage = pixelCorrectedImage.getSubimage(floodRectangle)
+    private lazy val pixelCorrectedCroppedImage: DicomImage = pixelCorrectedImage.getSubimage(floodRectangle)
     lazy val biasAndPixelCorrectedCroppedImage: DicomImage = pixelCorrectedCroppedImage.biasCorrect(floodPixelCorrectedAndCroppedImage)
     val attributeList: AttributeList = al // convenience
   }
@@ -130,9 +130,9 @@ case class RunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList],
   }
 
   /** List of all attribute lists. */
-  val attributeListSeq: Iterable[AttributeList] = derivedMap.values.map(_.attributeList) ++ Seq(flood, rtplan)
+  private val attributeListSeq: Iterable[AttributeList] = derivedMap.values.map(_.attributeList) ++ Seq(flood, rtplan)
 
-  val sopToPatientIdMap: Map[String, String] = attributeListSeq.map(al => (Util.sopOfAl(al), Util.patientIdOfAl(al))).toMap
+  private val sopToPatientIdMap: Map[String, String] = attributeListSeq.map(al => (Util.sopOfAl(al), Util.patientIdOfAl(al))).toMap
 
   /** Given the SOPInstanceUID, return the patient ID. */
   def patientIdOfSop(sopUid: String): String = sopToPatientIdMap(sopUid)
