@@ -1105,7 +1105,7 @@ Note that when building a package for release, the Maven build process uses the 
     In tests, a 'good' image will yield a ratio of about 17, and a 'bad' image with no ball
     will be around 1.
     -->
-    <WLBallAreaFlatnessRatioLowerLimit>5.0</WLBallAreaFlatnessRatioLowerLimit>
+    <WLBallAreaFlatnessRatioLowerLimit>4.0</WLBallAreaFlatnessRatioLowerLimit>
 
     <!-- The percentage of the height of the profile spline for the ball that should be
     used to determine the center of the ball.  Expressed as a floating point value from
