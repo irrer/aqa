@@ -44,6 +44,7 @@ import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
 import org.aqa.webrun.ExtendedData
 import org.aqa.AnonymizeUtil
+import org.aqa.db.OutputNote
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.data.Status
@@ -613,6 +614,14 @@ object RunProcedure extends Logging {
       Output.get(outputPK)
     }
 
+    // Get the OutputNote associated with the old output, if there is one.
+    val oldOutputNote: Option[OutputNote] = {
+      oldOutput match {
+        case Some(_) => OutputNote.getByOutput(oldOutput.get.outputPK.get)
+        case _       => None
+      }
+    }
+
     val input = {
       if (oldOutput.isDefined)
         Input.get(oldOutput.get.inputPK)
@@ -682,6 +691,13 @@ object RunProcedure extends Logging {
         val out = tempOutput.insert
         out
       }
+
+      // if there was an OutputNote associated with the old output, then associate it with the new output.
+      if (oldOutputNote.isDefined) {
+        val newOutputNote = oldOutputNote.get.copy(outputPK = newOutput.outputPK.get)
+        newOutputNote.insertOrUpdate()
+      }
+
       // instantiate the input files from originals
       val extendedData = ExtendedData.get(newOutput)
       val inputDir = extendedData.input.dir

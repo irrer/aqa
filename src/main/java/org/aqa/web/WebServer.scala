@@ -566,6 +566,7 @@ class WebServer extends Application with Logging {
         new Phase2CsvRestlet,
         new MachineLogXml,
         new WLUpdateRestlet,
+        new OutputHeading,
         anonymousTranslate,
         getSeries,
         new CustomizeRtPlanInterface,

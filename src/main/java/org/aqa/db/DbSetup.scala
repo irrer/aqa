@@ -104,6 +104,7 @@ object DbSetup extends Logging {
     MaintenanceRecord.query,
     Output.query,
     OutputFiles.query,
+    OutputNote.query,
     DicomSeries.query,
     DicomAnonymous.query,
     PatientProcedure.query,

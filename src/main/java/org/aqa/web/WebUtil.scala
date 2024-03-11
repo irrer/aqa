@@ -1375,10 +1375,13 @@ object WebUtil extends Logging {
         Math.max(3, s)
       }
 
-      val html = // must not allow embedded blanks
-        <textarea rows={rowCount.toString}>
-          {if (value.isDefined) markLiteralValue(label) else ""}
-        </textarea> % idNameClassAsAttr(label) % placeholderAsAttr(placeholder)
+      val html = { // must not allow embedded blanks
+        // Note: turning formatting off is a non-trival action.  Auto-formatting breaks this up into multiple lines.  The result is
+        // that every time the user makes a change, a leading and trailing blank are added.
+        // @formatter:off
+        <textarea rows={rowCount.toString}>{if (value.isDefined) markLiteralValue(label) else ""}</textarea> % idNameClassAsAttr(label) % placeholderAsAttr(placeholder)
+}
+        // @formatter:on
 
       val htmlAlias = ifAqaAliasAttr(html, aqaAlias)
       val elem = wrapInput(label, showLabel = true, htmlAlias, col, offset, errorMap)

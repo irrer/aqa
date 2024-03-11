@@ -16,7 +16,6 @@
 
 package org.aqa.webrun
 
-import org.aqa.Util
 import org.aqa.db.EPID
 import org.aqa.db.Input
 import org.aqa.db.Institution
@@ -26,10 +25,8 @@ import org.aqa.db.MultileafCollimator
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.db.User
-import org.aqa.web.MachineUpdate
-import org.aqa.web.OutputList
+import org.aqa.web.OutputHeading
 
-import java.text.SimpleDateFormat
 import scala.xml.Elem
 
 /**
@@ -46,7 +43,14 @@ case class ExtendedData(
     institution: Institution,
     procedure: Procedure,
     user: User
-) {}
+) {
+
+  /**
+    * Convenience method.  Will throw an exception if output.outputPK is None.
+    * @return outputPK
+    */
+  def outputPK: Long = output.outputPK.get
+}
 
 object ExtendedData {
 
@@ -67,56 +71,10 @@ object ExtendedData {
   }
 
   def wrapExtendedData(extendedData: ExtendedData, content: Elem, offset: Int = 1): Elem = {
-    val twoLineDate = new SimpleDateFormat("MMM dd yyyy\nHH:mm")
-    def wrapElement(col: Int, name: String, value: String, asAlias: Boolean): Elem = {
-      val html =
-        if (asAlias) {
-          <span aqaalias="">{value}</span>
-        } else {
-          val valueList = value.split("\n");
-          { <span>{valueList.head}{valueList.tail.map(line => { <span><br/> {line} </span> })}</span> }
-        }
 
-      { <div class={"col-md-" + col}><em>{name}:</em><br/>{html}</div> }
-
-    }
-
-    val dataAcquisitionDate = {
-      if (extendedData.output.dataDate.isDefined) twoLineDate.format(extendedData.output.dataDate.get)
-      else "unknown"
-    }
-
-    val elapsed: String = {
-      val fin = extendedData.output.finishDate match {
-        case Some(finDate) => finDate.getTime
-        case _             => System.currentTimeMillis
-      }
-      val elapsed = fin - extendedData.output.startDate.getTime
-      Util.elapsedTimeHumanFriendly(elapsed)
-    }
-
-    val procedureDesc: String = extendedData.procedure.name + " : " + extendedData.procedure.version
-
-    val showMachine = {
-      <div class="col-md-1">
-        <h2 title="Treatment machine.  Click for details.">{MachineUpdate.linkToMachineUpdate(extendedData.machine.machinePK.get, extendedData.machine.id)}</h2>
-      </div>
-    }
-
-    def wrapWithHeader = {
+    val wrapWithHeader = {
       <div class="row">
-        <div class="row">
-          <div class="col-md-10 col-md-offset-1">
-            {showMachine}
-            {wrapElement(2, "Institution", extendedData.institution.name, asAlias = true)}
-            {wrapElement(1, "Data Acquisition", dataAcquisitionDate, asAlias = false)}
-            {wrapElement(1, "Analysis Started", twoLineDate.format(extendedData.output.startDate), asAlias = false)}
-            {wrapElement(1, "User", extendedData.user.id, asAlias = true)}
-            {wrapElement(1, "Elapsed", elapsed, asAlias = false)}
-            {wrapElement(1, "Procedure", procedureDesc, asAlias = false)}
-            <div class="col-md-1">{OutputList.redoUrl(extendedData.output.outputPK.get)}</div>
-          </div>
-        </div>
+        {OutputHeading.reference(extendedData.outputPK)}
         <div class="row">
           <div class={"col-md-10 col-md-offset-" + offset}>
             {content}
@@ -124,7 +82,7 @@ object ExtendedData {
         </div>
       </div>
     }
-
     wrapWithHeader
   }
+
 }

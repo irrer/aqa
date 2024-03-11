@@ -84,6 +84,7 @@ jsonhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       aliasToRealList = JSON.parse(this.responseText);
       translateAliases();
+      showOutputHeader();
   }
 };
 
@@ -652,3 +653,24 @@ function MRclose(id) {
 
 // ---------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------
+
+var currentLocation = window.location;
+
+function showOutputHeader() {
+  var attrName = "headerOutputPK";
+  var headerData = document.getElementById(attrName);
+
+  if ((headerData != null) && headerData.hasAttribute(attrName)) {
+    // headerData.setAttribute("returnUrl", currentLocation);
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        headerData.innerHTML = this.responseText;
+      }
+    };
+    var url = headerData.getAttribute(attrName) + "&returnUrl=" + window.location;
+    xhttp.open("GET", url, true);
+    xhttp.send();
+  }
+}
+
