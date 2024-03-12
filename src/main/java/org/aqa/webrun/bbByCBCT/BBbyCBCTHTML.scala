@@ -28,15 +28,13 @@ import org.aqa.db.BBbyCBCT
 import org.aqa.db.DicomSeries
 import org.aqa.db.Output
 import org.aqa.web.C3ChartHistory
-import org.aqa.web.MachineUpdate
-import org.aqa.web.OutputList
+import org.aqa.web.OutputHeading
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.restlet.Response
 
 import java.awt.Color
 import java.io.File
-import java.text.SimpleDateFormat
 import scala.annotation.tailrec
 import scala.xml.Elem
 
@@ -57,82 +55,10 @@ object BBbyCBCTHTML extends Logging {
   private def getZ(al: AttributeList): Double = al.get(TagFromName.ImagePositionPatient).getDoubleValues()(2)
 
   def wrap(content: Elem, extendedData: ExtendedData): Elem = {
-    val twoLineDate = new SimpleDateFormat("MMM dd yyyy\nHH:mm")
-
-    def wrapElement(col: Int, name: String, value: String, asAlias: Boolean): Elem = {
-      val html =
-        if (asAlias) {
-          <span aqaalias="">
-            {value}
-          </span>
-        } else {
-          val valueList = value.split("\n");
-          {
-            <span>
-              {valueList.head}{
-              valueList.tail.map(line => {
-                <span>
-                <br/>{line}
-              </span>
-              })
-            }
-            </span>
-          }
-        }
-
-      {
-        <div class={"col-md-" + col}>
-          <em>
-            {name}
-            :</em> <br/>{html}
-        </div>
-      }
-
-    }
-
-    val dataAcquisitionDate = {
-      if (extendedData.output.dataDate.isDefined) twoLineDate.format(extendedData.output.dataDate.get)
-      else "unknown"
-    }
-
-    val elapsed: String = {
-      val fin = extendedData.output.finishDate match {
-        case Some(finDate) => finDate.getTime
-        case _             => System.currentTimeMillis
-      }
-      val elapsed = fin - extendedData.output.startDate.getTime
-      Util.elapsedTimeHumanFriendly(elapsed)
-    }
-
-    val procedureDesc: String = extendedData.procedure.name + " : " + extendedData.procedure.version
-
-    val showMachine = {
-      <div class="col-md-1">
-        <h2 title="Treatment machine.  Click for details.">
-          {MachineUpdate.linkToMachineUpdate(extendedData.machine.machinePK.get, extendedData.machine.id)}
-        </h2>
-      </div>
-    }
-
     val elem = {
-
-      val header = Seq(
-        showMachine,
-        wrapElement(2, "Institution", extendedData.institution.name, asAlias = true),
-        wrapElement(1, "Data Acquisition", dataAcquisitionDate, asAlias = false),
-        wrapElement(1, "Analysis Started", twoLineDate.format(extendedData.output.startDate), asAlias = false),
-        wrapElement(1, "User", extendedData.user.id, asAlias = true),
-        wrapElement(1, "Elapsed", elapsed, asAlias = false),
-        wrapElement(1, "Procedure", procedureDesc, asAlias = false)
-      )
-
       <div class="row">
         <div class="row">
-          <div class="col-md-10 col-md-offset-1">
-            {header}<div class="col-md-1">
-            {OutputList.redoUrl(extendedData.output.outputPK.get)}
-          </div>
-          </div>
+          {OutputHeading.reference(extendedData.outputPK)}
         </div>
         <div class="row">
           <div class="col-md-10 col-md-offset-1">
@@ -506,13 +432,13 @@ object BBbyCBCTHTML extends Logging {
     }
 
     val runScript = {
-      def zoomy(index: Int) = {
+      def zoomIt(index: Int) = {
         "\n" +
           "      $(document).ready(function(){ $('#" + Util.textToId(fileNameOfAreaOfInterest(index)) + "').zoom(); });\n" +
           "      $(document).ready(function(){ $('#" + Util.textToId(fileNameOfFull(index)) + "').zoom(); });"
       }
 
-      val zoomList = Seq(0, 1, 2).map(index => zoomy(index))
+      val zoomList = Seq(0, 1, 2).map(index => zoomIt(index))
       val zoomScript = zoomList.mkString("\n<script>\n      ", "\n      ", "\n</script>")
       val chartRef = BBbyCBCTChartHistoryRestlet.makeReference(extendedData.output.outputPK.get)
 

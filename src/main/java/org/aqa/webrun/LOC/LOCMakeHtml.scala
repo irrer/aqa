@@ -3,17 +3,13 @@ package org.aqa.webrun.LOC
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.EPIDCenterCorrection
-import org.aqa.db.Institution
-import org.aqa.db.Machine
 import org.aqa.db.Output
-import org.aqa.db.Procedure
-import org.aqa.db.User
 import org.aqa.procedures.ProcedureOutputUtil
 import org.aqa.run.StdLogger
+import org.aqa.web.OutputHeading
 import org.aqa.web.ViewOutput
 import org.aqa.web.WebUtil._
 
-import java.util.Date
 import scala.xml.Elem
 
 object LOCMakeHtml extends Logging {
@@ -21,13 +17,6 @@ object LOCMakeHtml extends Logging {
   private def okDbl(d: Double) = { (d < Double.MaxValue) && (d > Double.MinValue) }
 
   def makeDisplay(output: Output, locXml: LOCToXml, fileWorkbookList: Seq[LOCFileWorkbook]): String = {
-
-    val machine = for (machPK <- output.machinePK; mach <- Machine.get(machPK)) yield mach
-
-    val machineId = machine match {
-      case Some(mach) => mach.id
-      case _          => ""
-    }
 
     val numberOfBadValues = {
       val all = locXml.LeafOffsetConstancyMean ++
@@ -50,13 +39,6 @@ object LOCMakeHtml extends Logging {
       all.count(d => !okDbl(d))
     }
 
-    val institution = for (mach <- machine; inst <- Institution.get(mach.institutionPK)) yield inst
-
-    val institutionName = institution match {
-      case Some(inst) => inst.name
-      case _          => ""
-    }
-
     val epidCenterCorrection: String = {
       EPIDCenterCorrection.getByOutput(output.outputPK.get).headOption match {
         case Some(ecc) => ecc.epidCenterCorrection_mm.formatted("%6.3f")
@@ -64,70 +46,14 @@ object LOCMakeHtml extends Logging {
       }
     }
 
-    val user = for (userPK <- output.userPK; u <- User.get(userPK)) yield u
-
-    val userId = user match {
-      case Some(u) => u.id
-      case _       => ""
-    }
-
-    val elapsed: String = {
-      val fin = output.finishDate match {
-        case Some(finDate) => finDate.getTime
-        case _             => System.currentTimeMillis
-      }
-      val elapsed = fin - output.startDate.getTime
-      Util.elapsedTimeHumanFriendly(elapsed)
-    }
-
-    val analysisDate: String = {
-      val date = output.analysisDate match {
-        case Some(d) => d
-        case _       => output.startDate
-      }
-      Util.timeHumanFriendly(date)
-    }
-
-    def dateToString(date: Option[Date]): String = {
-      date match {
-        case Some(date) => Util.timeHumanFriendly(date)
-        case _          => "unknown"
-      }
-    }
-
-    val procedureDesc: String = {
-      Procedure.get(output.procedurePK) match {
-        case Some(proc) =>
-          proc.name + " : " + proc.version
-        case _ => ""
-      }
-    }
-
-    case class LeafValue(section: String, leafIndex: Int, value: Double) {}
-
     def fmt(d: Double): String = d.formatted("%7.5e")
 
-    /*
-    def groupToDataString(group: Seq[LeafValue]): String = {
-
-      /** Number of digits of precision to display. */
-      val sorted = group.sortWith((a, b) => a.leafIndex < b.leafIndex)
-      "            ['Position" + sorted.head.section + "'," + sorted.map(x => x.value).map(d => fmt(d)).mkString(", ") + "]"
-    }
-
-    def leavesToString(leaves: Seq[Int]): String = {
-      "            ['Leaf'," + leaves.mkString(", ") + "]"
-    }
-
-    val transData = LeafTransmission.getByOutput(outputPK).map(v => LeafValue(v.section, v.leafIndex, v.transmission_fract))
-    val transLeaves = transData.map(_.section).distinct.sorted
-     */
     val leavesText = locXml.leafIndexList.distinct.sorted.mkString("            ['Leaf', ", ", ", "]")
 
     def twoD2Text(data: Seq[Seq[Double]]): String = {
       def sec2String(s: Int): String = {
-        val textNums = data.map(v => v(s)).map(d => fmt(d))
-        textNums.mkString("            ['Position" + (s + 1) + "', ", ", ", "]")
+        val textNumbers = data.map(v => v(s)).map(d => fmt(d))
+        textNumbers.mkString("            ['Position" + (s + 1) + "', ", ", ", "]")
       }
       val values = (0 until locXml.sections).map(s => sec2String(s)).reverse.mkString(",\n")
       values
@@ -330,33 +256,13 @@ object LOCMakeHtml extends Logging {
         <div class={"col-md-" + col}>{elem}</div>
       }
 
-      def wrap2(col: Int, name: String, value: String): Elem = {
-        <div class={"col-md-" + col}><em>{name}:</em><br/>{value}</div>
-      }
-
-      def wrap2Anon(col: Int, name: String, value: String): Elem = {
-        <div class={"col-md-" + col}><em>{name}:</em><br/><span aqaalias="">{value}</span></div>
-      }
-
-      val redoLink = {
-        <a href={"/view/OutputList?redo=" + output.outputPK.get}>Redo</a>
-      }
-
       val div = {
         <div class="row col-md-10 col-md-offset-1">
           <div class="row">
-            <div class="col-md-1" title="Leaf Offset Constancy and Transmission"><h2>LOC</h2></div>
-            <div class="col-md-2 col-md-offset-1" title="Machine"><h2 aqaalias="">{machineId}</h2></div>
             <div class="col-md-3 col-md-offset-1">EPID Center Correction in mm: {epidCenterCorrection}</div>
           </div>
           <div class="row" style="margin:20px;">
-            {wrap2Anon(1, "Institution", institutionName)}
-            {wrap2(2, "Data Acquisition", dateToString(output.dataDate))}
-            {wrap2(2, "Analysis", analysisDate)}
-            {wrap2Anon(1, "Analysis by", userId)}
-            {wrap2Anon(1, "Elapsed", elapsed)}
-            {wrap2(2, "Procedure", procedureDesc)}
-            {wrap(1, redoLink)}
+            {OutputHeading.reference(output.outputPK.get)}
           </div>
           <div class="row" style="margin:20px;">
             {spreadSheetLinks(fileWorkbookList).map(e => { wrap(3, e) })}

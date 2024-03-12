@@ -25,6 +25,9 @@ import org.aqa.db.User
 import org.aqa.web.OutputHeading.returnUrlTag
 import org.aqa.web.WebUtil._
 import org.aqa.webrun.ExtendedData
+import org.aqa.Config
+import org.aqa.run.ProcedureStatus
+import org.aqa.web.OutputHeading.reference
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -48,40 +51,71 @@ class OutputHeading extends Restlet with SubUrlAdmin with Logging {
 
   private def showOutputHeading(extendedData: ExtendedData, valueMap: ValueMapT, response: Response): Unit = {
 
-    val showMachine = {
-      <div class="col-md-1">
-        <h2 title="Treatment machine.  Click for details.">{MachineUpdate.linkToMachineUpdate(extendedData.machine.machinePK.get, extendedData.machine.id)}</h2>
-      </div>
+    val machineElem = {
+      <h2 title="Treatment machine.  Click for details.">{MachineUpdate.linkToMachineUpdate(extendedData.machine.machinePK.get, extendedData.machine.id)}</h2>
     }
 
-    def wrapElement(col: Int, name: String, value: String, asAlias: Boolean): Elem = {
-      val html =
-        if (asAlias) {
-          <span aqaalias="">{value}</span>
-        } else {
-          val valueList = value.split("\n");
-          { <span>{valueList.head}{valueList.tail.map(line => { <span><br/> {line} </span> })}</span> }
-        }
-
-      { <div class={"col-md-" + col}><em>{name}:</em><br/>{html}</div> }
-
+    val institutionElem = {
+      <span aqaalias="">{extendedData.institution.name}</span>
     }
+
+
     val twoLineDate = new SimpleDateFormat("MMM dd yyyy\nHH:mm")
 
-    def dataAcquisitionDate = {
-      if (extendedData.output.dataDate.isDefined) twoLineDate.format(extendedData.output.dataDate.get)
-      else "unknown"
+    def dataAcquisitionDateElem: Elem = {
+      val text =
+        if (extendedData.output.dataDate.isDefined)
+          twoLineDate.format(extendedData.output.dataDate.get)
+        else "unknown"
+      <span>
+        <em>Data Acquisition:</em>
+        <br>{text}</br>
+      </span>
     }
-    val elapsed: String = {
+
+    def analysisStartDateElem: Elem = {
+      <span>
+        <em>Data Analysis:</em>
+        <br>{twoLineDate.format(extendedData.output.startDate)}</br>
+      </span>
+    }
+
+    def userElem: Elem = {
+      <span>
+        <span aqaalias="">{extendedData.user.id}</span>
+      </span>
+    }
+
+    def elapsedTimeElem: Elem = {
+
       val fin = extendedData.output.finishDate match {
         case Some(finDate) => finDate.getTime
         case _             => System.currentTimeMillis
       }
       val elapsed = fin - extendedData.output.startDate.getTime
-      Util.elapsedTimeHumanFriendly(elapsed)
+
+      <span>
+        <em>Elapsed:</em>
+        <br>{Util.elapsedTimeHumanFriendly(elapsed)}</br>
+      </span>
     }
 
-    val procedureDesc: String = extendedData.procedure.name + " : " + extendedData.procedure.version
+    def procedureElem: Elem = {
+      <h2>{extendedData.procedure.name}</h2>
+    }
+
+    def machineTypeElem: Elem = {
+      <span>
+        {extendedData.machineType.manufacturer}
+        <br>{extendedData.machineType.model}</br>
+      </span>
+    }
+
+    def epidElem: Elem = {
+      <span>
+        {extendedData.epid.model}
+      </span>
+    }
 
     def noteElem(valueMap: ValueMapT) = {
       val noteText: String = OutputNote.getByOutput(extendedData.outputPK) match {
@@ -95,21 +129,68 @@ class OutputHeading extends Restlet with SubUrlAdmin with Logging {
         val returnUrl = if (valueMap.contains(returnUrlTag)) valueMap(returnUrlTag) else ViewOutput.viewOutputUrl(extendedData.outputPK)
         s"$editUrl&$editTag=true&$returnUrlTag=$returnUrl"
       }
-      <span>{noteText}<a href={url}> Edit</a></span>
+      val noteContent: Elem = {
+        if (noteText.trim.isEmpty)
+          <em style="color: #B0B0B0;">User defined note.  Click 'Note' to add.</em>
+        else
+          <span>{noteText}</span>
+      }
+      <span><a title="Note regarding this output.  Click here to edit." href={url}>Note: </a>{noteContent}</span>
+    }
+
+    val passed = {
+      extendedData.output.status.equals(ProcedureStatus.pass.toString) || extendedData.output.status.equals(ProcedureStatus.done.toString)
+    }
+
+    val redoElem: Elem = OutputList.redoUrl(extendedData.outputPK)
+
+    val passFailImage = {
+      if (passed) {
+        <div title="Passed!">
+          <img src={Config.passImageUrl} width="128"/>
+        </div>
+      } else {
+        <div title="Failed">
+          <img src={Config.failImageUrl} width="128"/>
+        </div>
+      }
+    }
+
+    val row1: Elem = {
+      val align = "text-align:center;"
+      val padding = "padding-right:15px; padding-left:15px;"
+      val wrap = "white-space:nowrap;"
+      val border = "border-right: 1px solid #e0e0e0;"
+      val noBorder = "border:1px solid white;"
+      val trStyle = s"$align $padding $wrap $noBorder $border"
+      <table>
+        <tr>
+          <td style={s"$padding $noBorder"} > {passFailImage} </td>
+          <td style={s"$align $padding $noBorder"} > {procedureElem} </td>
+          <td style={s"$align $padding $noBorder"} > {machineElem} </td>
+          <td style={trStyle + " padding-left:30px;"} > {machineTypeElem} </td>
+          <td style={s"$align $padding $border $noBorder"} > {epidElem} </td>
+          <td style={trStyle} > {dataAcquisitionDateElem} </td>
+          <td style={trStyle} > {analysisStartDateElem} </td>
+          <td style={trStyle} > {elapsedTimeElem} </td>
+          <td style={trStyle} title="User and institution"> {userElem} <br/> {institutionElem} </td>
+          <td style={s"$align $padding $wrap $noBorder"} > {redoElem} </td>
+        </tr>
+      </table>
+    }
+
+    val row2: Elem = {
+      reference(extendedData.outputPK)
     }
 
     def content(valueMap: ValueMapT) = {
       <div class="row">
         <div class="row">
           <div class="col-md-10 col-md-offset-1">
-            {showMachine}
-            {wrapElement(2, "Institution", extendedData.institution.name, asAlias = true)}
-            {wrapElement(1, "Data Acquisition", dataAcquisitionDate, asAlias = false)}
-            {wrapElement(1, "Analysis Started", twoLineDate.format(extendedData.output.startDate), asAlias = false)}
-            {wrapElement(1, "User", extendedData.user.id, asAlias = true)}
-            {wrapElement(1, "Elapsed", elapsed, asAlias = false)}
-            {wrapElement(1, "Procedure", procedureDesc, asAlias = false)}
-            <div class="col-md-1">{OutputList.redoUrl(extendedData.outputPK)}</div>
+            {row1}
+          </div>
+          <div class="col-md-10 col-md-offset-1">
+            {row2}
           </div>
         </div>
         <div class="row">
@@ -161,7 +242,7 @@ class OutputHeading extends Restlet with SubUrlAdmin with Logging {
   private val cancelButton = makeButton("Cancel", primary = false, ButtonType.BtnDefault)
   private val buttonList: WebRow = List(cancelButton, saveButton)
 
-  private def noteField() = new WebInputTextArea("Note", 6, 0, "", true)
+  private def noteField() = new WebInputTextArea("Note", 6, 0, "User defined note regarding output ...", true)
   private def outputPkField = new WebInputHidden("outputPK")
 
   private def returnUrlField = new WebInputHidden(returnUrlTag)

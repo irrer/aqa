@@ -30,11 +30,8 @@ import org.aqa.db.Baseline
 import org.aqa.db.DicomSeries
 import org.aqa.db.Machine
 import org.aqa.db.MaintenanceRecord
-import org.aqa.db.Output
 import org.aqa.run.ProcedureStatus
-import org.aqa.web.MachineUpdate
-import org.aqa.web.MaintenanceRecordList
-import org.aqa.web.OutputList
+import org.aqa.web.OutputHeading
 import org.aqa.web.WebServer
 import org.aqa.web.WebUtil._
 import org.aqa.webrun.ExtendedData
@@ -42,8 +39,6 @@ import org.aqa.webrun.ExtendedData
 import java.awt.Point
 import java.awt.geom.Point2D
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
 import scala.xml.Elem
 
 /**
@@ -188,7 +183,7 @@ object Phase2Util extends Logging {
   /**
     * Given an RTPLAN and an RTIMAGE, get the name of the beam that the RTIMAGE is referencing in the plan.
     */
-  def getBeamNameOfRtimageDf(plan: DicomFile, rtimage: DicomFile): Option[String] = getBeamNameOfRtimage(plan.attributeList.get, rtimage.attributeList.get)
+  private def getBeamNameOfRtimageDf(plan: DicomFile, rtimage: DicomFile): Option[String] = getBeamNameOfRtimage(plan.attributeList.get, rtimage.attributeList.get)
 
   /**
     * Given an RTPLAN and a beam name, get the beam sequence.
@@ -218,142 +213,10 @@ object Phase2Util extends Logging {
     */
   def wrapSubProcedure(extendedData: ExtendedData, content: Elem, title: String, status: ProcedureStatus.Value, runScript: Option[String], rtimageMap: Map[String, AttributeList]): String = {
 
-    def mainReport: Elem = {
-      val href = WebServer.urlOfResultsFile(extendedData.output.dir) + "/" + Output.displayFilePrefix + ".html"
-      <div class="col-md-1 col-md-offset-1" title='Return to main (overview) report'>
-        <a href={href}>Main Report</a>
-      </div>
-    }
-
-    val analysisDate: Date = {
-      val date = extendedData.output.analysisDate match {
-        case Some(d) => d
-        case _       => extendedData.output.startDate
-      }
-      date
-    }
-
-    val machineId = extendedData.machine.id
-    val userId = extendedData.user.id
-
-    val elapsed: String = {
-      val fin = extendedData.output.finishDate match {
-        case Some(finDate) => finDate.getTime
-        case _             => System.currentTimeMillis
-      }
-      val elapsed = fin - extendedData.output.startDate.getTime
-      Util.elapsedTimeHumanFriendly(elapsed)
-    }
-
-    val procedureDesc: String = extendedData.procedure.name + " : " + extendedData.procedure.version
-
-    val passFailImage = {
-      if (statusOk(status)) {
-        <div title="Passed!">
-          <img src={Config.passImageUrl} width="128"/>
-        </div>
-      } else {
-        <div title="Failed">
-          <img src={Config.failImageUrl} width="128"/>
-        </div>
-      }
-    }
-
-    val machType = extendedData.machineType.manufacturer + " " + extendedData.machineType.model + " " + extendedData.machineType.version
-
-    val pixelSpacing = {
-      val rtimage = rtimageMap.values.head
-      val width = rtimage.get(TagByName.Columns).getIntegerValues.head
-      val height = rtimage.get(TagByName.Rows).getIntegerValues.head
-      val trans = new IsoImagePlaneTranslator(rtimage)
-
-      width.toString + " * " + height.toString +
-        " pixels " + trans.pix2IsoDistX(1).formatted("%5.3f") + " * " + trans.pix2IsoDistY(1).formatted("%5.3f") +
-        " mm"
-    }
-
-    def wrap(col: Int, name: String, value: String, asAlias: Boolean): Elem = {
-      val html =
-        if (asAlias) {
-          <span aqaalias="">
-            {value}
-          </span>
-        } else {
-          val valueList = value.split("\n");
-          {
-            <span>
-              {valueList.head}{
-              valueList.tail.map(line => {
-                <span>
-                <br/>{line}
-              </span>
-              })
-            }
-            </span>
-          }
-        }
-
-      {
-        <div class={"col-md-" + col}>
-          <em>
-            {name}
-            :</em> <br/>{html}
-        </div>
-      }
-
-    }
-
-    val twoLineDate = new SimpleDateFormat("MMM dd yyyy\nHH:mm")
-
-    val dataAcquisitionDate = {
-      if (extendedData.output.dataDate.isDefined) twoLineDate.format(extendedData.output.dataDate.get)
-      else "unknown"
-    }
-
     val div = {
       <div class="row">
         <div class="row">
-          <div class="col-md-1 col-md-offset-1">
-            {passFailImage}
-          </div>
-          <div class="col-md-3" title={title}>
-            <h2>
-              {title}
-            </h2>
-          </div>
-          <div class="col-md-1" title="Treatment machine. Click to view and modify machine configuration.">
-            <h2>
-              {MachineUpdate.linkToMachineUpdate(extendedData.machine.machinePK.get, machineId)}
-            </h2>
-          </div>
-          <div class="col-md-1">
-            <span title="Machine Type">
-              {machType}
-            </span>
-            <br/>
-            <span title="Multileaf Collimator">
-              {extendedData.multileafCollimator.model}
-            </span>
-          </div>
-          <div class="col-md-2" title="Machine Type">
-            <span title="EPID (electronic portal imaging device)">
-              {extendedData.epid.model}
-            </span>
-            <br/>
-            <span title="X*Y pixel size in mm">
-              {pixelSpacing}
-            </span>
-          </div>
-          <div class="col-md-1">
-            <a href={MaintenanceRecordList.path + "?machinePK=" + extendedData.machine.machinePK.get} title="View and modify maintenance events for this machine">Maintenance</a>
-          </div>
-        </div>
-        <div class="row">
-          {mainReport}{wrap(2, "Institution", extendedData.institution.name, asAlias = true)}{wrap(1, "Data Acquisition", dataAcquisitionDate, asAlias = false)}{
-        wrap(1, "Analysis", twoLineDate.format(analysisDate), asAlias = false)
-      }{wrap(1, "User", userId, asAlias = true)}{wrap(1, "Elapsed", elapsed, asAlias = false)}{wrap(1, "Procedure", procedureDesc, asAlias = false)}<div class="col-md-1">
-          {OutputList.redoUrl(extendedData.output.outputPK.get)}
-        </div>
+          {OutputHeading.reference(extendedData.outputPK)}
         </div>
         <div class="row">
           {content}
@@ -417,13 +280,13 @@ object Phase2Util extends Logging {
     (beamName.trim + "_" + jawDescription(rtimage, rtplan)).replaceAll("[^a-zA-Z0-9]", "_").replaceAll("__*", "_").replaceAll("_$", "").replaceAll("^_", "")
   }
 
-  def dicomViewHtmlFile(al: AttributeList, beamName: String, outputDir: File, rtplanAl: AttributeList): File = {
+  private def dicomViewHtmlFile(al: AttributeList, beamName: String, outputDir: File, rtplanAl: AttributeList): File = {
     val htmlFile = dicomViewBaseName(beamName, al, rtplanAl) + ".html"
     val viewDir = new File(outputDir, "view")
     new File(viewDir, htmlFile)
   }
 
-  def dicomViewHtmlFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
+  private def dicomViewHtmlFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
     val f1 = dicomViewHtmlFile(al, runReq.beamNameOfAl(al), extendedData.output.dir, runReq.rtplan)
     if (true) { // TODO rm
       val htmlFile = dicomViewBaseName(runReq.beamNameOfAl(al), al, runReq.rtplan) + ".html"
@@ -435,13 +298,13 @@ object Phase2Util extends Logging {
     f1
   }
 
-  def dicomViewImageHtmlFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
+  private def dicomViewImageHtmlFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
     val htmlFile = dicomViewBaseName(runReq.beamNameOfAl(al), al, runReq.rtplan) + "_image.html"
     val viewDir = new File(extendedData.output.dir, "view")
     new File(viewDir, htmlFile)
   }
 
-  def dicomViewImageFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
+  private def dicomViewImageFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
     val pngFile = dicomViewBaseName(runReq.beamNameOfAl(al), al, runReq.rtplan) + ".png"
     val viewDir = new File(extendedData.output.dir, "view")
     new File(viewDir, pngFile)

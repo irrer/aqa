@@ -463,7 +463,10 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
     def getRtplan = {
       // If this is production mode, or, if it is test mode and there is no RTPLAN in the input list, then find the plan with the matching UID.
       if (Config.ProductionMode || rtplanList.isEmpty) {
-        val rtplanUID = Phase2Util.referencedPlanUID(rtimageList.head).head
+        val rtplanUID = {
+          val list = rtimageList.flatMap(Phase2Util.referencedPlanUID)
+          list.head
+        }
         val rtplanDicomSeries = DicomSeries.getBySopInstanceUID(rtplanUID).head
         rtplanDicomSeries.attributeListList.find(al => Util.sopOfAl(al).equals(rtplanUID)).get
       } else {
