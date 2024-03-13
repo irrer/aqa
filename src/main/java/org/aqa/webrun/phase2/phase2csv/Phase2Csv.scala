@@ -123,6 +123,7 @@ abstract class Phase2Csv[T] extends Logging {
   private val prefixCsv = new PrefixCsv(metadataCache)
   private val machineDescriptionCsv = new MachineDescriptionCsv(metadataCache)
   private val dicomCsv = new DicomCsv
+  private val noteCsv = new NoteCsv(metadataCache)
 
   //noinspection SpellCheckingInspection
   private val dicomCsvCacheDirName = "DICOMCSV"
@@ -135,7 +136,7 @@ abstract class Phase2Csv[T] extends Logging {
   def makeHeader(): String = {
     val dataHeaderList = colList.map(col => Util.textToCsv(col.header)).mkString(",")
 
-    val list = Seq(prefixCsv.headerText, dataHeaderList, machineDescriptionCsv.headerText, makeDicomHeader).filter(_.nonEmpty)
+    val list = Seq(prefixCsv.headerText, dataHeaderList, machineDescriptionCsv.headerText, makeDicomHeader, noteCsv.headerText).filter(_.nonEmpty)
     list.mkString(",")
   }
 
@@ -244,8 +245,10 @@ abstract class Phase2Csv[T] extends Logging {
 
       val dicomText = makeDicomCsvRow(dataSet, machine)
 
+      val noteText = noteCsv.toCsvText(getOutput(dataSet))
+
       val csvRow = {
-        val list = Seq(prefixText, dataText, machineDescriptionText, dicomText)
+        val list = Seq(prefixText, dataText, machineDescriptionText, dicomText, noteText)
         list.filter(_.nonEmpty).mkString(",")
       }
 
@@ -304,7 +307,7 @@ abstract class Phase2Csv[T] extends Logging {
   }
 
   def writeDoc(): Unit = {
-    val colList = prefixCsv.colList ++ makeColList ++ machineDescriptionCsv.colList ++ getDicomColList
+    val colList = prefixCsv.colList ++ makeColList ++ machineDescriptionCsv.colList ++ getDicomColList ++ noteCsv.colList
 
     Phase2Csv.writeDoc(colList.asInstanceOf[Seq[CsvCol[Any]]], dataName)
   }

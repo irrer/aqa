@@ -115,11 +115,15 @@ object RunProcedure extends Logging {
 
   private val machineSelectorLabel = "Machine"
 
+  private val noteFieldName = "Note"
+
   /** Convenience function for constructing error messages to display to user on web page. */
   def formError(msg: String): Left[Map[String, Error], Nothing] = Left(WebUtil.Error.make(WebUtil.uploadFileLabel, msg))
 
   private def makeForm(runTrait: RunTrait[RunReqClass]): WebForm = {
     val machineSelector = new WebInputSelectMachine(machineSelectorLabel, 6, 0)
+
+    val noteField = new WebInputTextArea(noteFieldName, col = 6, offset = 0, placeholder = "Enter note (optional).", aqaAlias = false)
 
     def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
       val action = runTrait.getProcedure.webUrl + "?" + name + "=" + name
@@ -129,7 +133,7 @@ object RunProcedure extends Logging {
     val runButton = makeButton(runButtonName, primary = true, ButtonType.BtnDefault)
     val cancelButton = makeButton(cancelButtonName, primary = false, ButtonType.BtnDefault)
 
-    val form = new WebForm(runTrait.getProcedure.webUrl, Some(runTrait.getProcedure.fullName), List(List(machineSelector), List(runButton, cancelButton)), 10)
+    val form = new WebForm(runTrait.getProcedure.webUrl, Some(runTrait.getProcedure.fullName), List(List(noteField), List(machineSelector), List(runButton, cancelButton)), 10)
     form
   }
 
@@ -530,6 +534,13 @@ object RunProcedure extends Logging {
       )
       val out = tempOutput.insert
       out
+    }
+
+    if (valueMap.contains(noteFieldName) && valueMap(noteFieldName).trim.nonEmpty) {
+      val content = valueMap(noteFieldName)
+      val outputNote = OutputNote(None, output.outputPK.get, "", content.getBytes)
+      val newOutputNote = outputNote.insert
+      logger.info(s"Added output note $newOutputNote")
     }
 
     // invalidate cache in case this data was from a previous date

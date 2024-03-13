@@ -21,6 +21,7 @@ import org.aqa.db.Institution
 import org.aqa.db.Machine
 import org.aqa.db.MachineType
 import org.aqa.db.MultileafCollimator
+import org.aqa.db.OutputNote
 import org.aqa.db.Procedure
 import org.aqa.db.User
 
@@ -55,6 +56,8 @@ class MetadataCache {
   val phase3ProcedurePK: Long = Procedure.ProcOfPhase3.get.procedurePK.get
 
   val gapSkewProcedurePK: Long = Procedure.ProcOfGapSkew.get.procedurePK.get
+
+  val noteMap: Map[Long, String] = OutputNote.list().map(n => (n.outputPK, n.contentAsText)).toMap
 }
 
 object MetadataCache {
