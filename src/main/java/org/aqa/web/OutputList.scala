@@ -259,7 +259,16 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   private val machineCol = new Column[ColT]("Machine", _.machine_id, colT => wrapAlias(colT.machine_id))
 
-  override val columnList: Seq[Column[ColT]] = Seq(startTimeCol, inputFileCol, redoCol, procedureCol, machineCol, institutionCol, userCol, deleteCol)
+  def noteText(col: ColT): String = if (col.note.isDefined) col.note.get.take(40) else "- - - - -"
+  private def showNote(col: ColT): Elem = {
+    val href = s"/admin/OutputHeading?outputPK=${col.output_outputPK}&edit=true&returnUrl=/view/OutputList"
+    val text = noteText(col)
+    <a href={href} title="Click to edit note for this output.">{text}</a>
+  }
+  //private val noteCol = new Column[ColT]("Note", "", colT => showNote(colT))
+  private val noteCol = new Column[ColT]("Note", c => noteText(c), showNote)
+
+  override val columnList: Seq[Column[ColT]] = Seq(startTimeCol, inputFileCol, redoCol, procedureCol, machineCol, noteCol, institutionCol, userCol, deleteCol)
 
   /**
     * Get the set of outputs that user wants to redo.  Return empty set if none.  This

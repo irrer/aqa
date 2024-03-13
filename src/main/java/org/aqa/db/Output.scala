@@ -190,7 +190,8 @@ object Output extends Logging {
       procedure_name: String,
       procedure_version: String,
       user_id: String,
-      dataValidity: DataValidity.Value
+      dataValidity: DataValidity.Value,
+      note: Option[String]
   ) {}
 
   /**
@@ -228,8 +229,9 @@ object Output extends Logging {
     }
 
     val sorted = filteredByDate.sortBy(_._6.desc).take(maxSize)
+    val noteMap = OutputNote.list().map(n => (n.outputPK, n.contentAsText)).toMap
 
-    val result = Db.run(sorted.result).map(a => ExtendedValues(a._1, a._2, a._3._1, a._3._2, a._4, a._5, a._6, a._7, a._8, a._9, toDV(a._10)))
+    val result = Db.run(sorted.result).map(a => ExtendedValues(a._1, a._2, a._3._1, a._3._2, a._4, a._5, a._6, a._7, a._8, a._9, toDV(a._10), noteMap.get(a._5)))
     result
   }
 
@@ -249,7 +251,9 @@ object Output extends Logging {
 
     val sorted = search.sortBy(_._6.desc)
 
-    val result = Db.run(sorted.result).map(a => ExtendedValues(a._1, a._2, a._3._1, a._3._2, a._4, a._5, a._6, a._7, a._8, a._9, toDV(a._10)))
+    val noteMap = OutputNote.list().map(n => (n.outputPK, n.contentAsText)).toMap
+
+    val result = Db.run(sorted.result).map(a => ExtendedValues(a._1, a._2, a._3._1, a._3._2, a._4, a._5, a._6, a._7, a._8, a._9, toDV(a._10), noteMap.get(a._5)))
     result
   }
 

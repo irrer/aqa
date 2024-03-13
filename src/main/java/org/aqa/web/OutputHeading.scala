@@ -59,7 +59,6 @@ class OutputHeading extends Restlet with SubUrlAdmin with Logging {
       <span aqaalias="">{extendedData.institution.name}</span>
     }
 
-
     val twoLineDate = new SimpleDateFormat("MMM dd yyyy\nHH:mm")
 
     def dataAcquisitionDateElem: Elem = {
@@ -272,13 +271,27 @@ class OutputHeading extends Restlet with SubUrlAdmin with Logging {
   private def saveNote(extendedData: ExtendedData, valueMap: ValueMapT, response: Response): Unit = {
     val content = valueMap(noteField().label).getBytes()
 
-    OutputNote.getByOutput(extendedData.outputPK) match {
-      case Some(outputNote) =>
-        val outNote = outputNote.copy(content = content)
-        outNote.insertOrUpdate()
-      case _ =>
+    val hasContent = new String(content).trim.nonEmpty
+
+    val oldOutputNote = OutputNote.getByOutput(extendedData.outputPK)
+
+    (hasContent, oldOutputNote.isDefined) match {
+      // note already exists, and user is putting new content in it. Update the note with new content.
+      case (true, true) =>
+        val newOutputNote = oldOutputNote.get.copy(content = content)
+        newOutputNote.insertOrUpdate()
+
+      // note already exists, but user is deleting it.  Delete the note.
+      case (false, true) =>
+        OutputNote.delete(oldOutputNote.get.outputNotePK.get)
+
+      // user is putting content in note, but it does not exist.  Make a new note with the user's content.
+      case (true, false) =>
         val outNote = OutputNote(None, extendedData.outputPK, "", content)
         outNote.insert
+
+      // user is not putting content in note, and it does not exist. Do nothing.
+      case (false, false) =>
     }
 
     redirectBack(extendedData, valueMap, response)

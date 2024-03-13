@@ -84,6 +84,17 @@ object OutputNote extends Logging {
   }
 
   /**
+   * Get all the notes
+   * @return All the notes.
+   */
+  def list(): Seq[OutputNote] = {
+    val action = for {
+      inst <- OutputNote.query
+    } yield inst
+    Db.run(action.result)
+  }
+
+  /**
     * Get the note (if there is one) for the given output.
     * @param outputPK For this output.
     * @return the OutputNote, if it exists.
