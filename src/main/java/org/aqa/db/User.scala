@@ -82,6 +82,13 @@ case class User(
   def isAdmin: Boolean = {
     id_real.isDefined && AnonymizeUtil.decryptWithNonce(institutionPK, id_real.get).toLowerCase.contains(User.adminIndicator)
   }
+
+  def getRealId: Option[String] = {
+    if (id_real.isDefined)
+      Some(AnonymizeUtil.decryptWithNonce(institutionPK, id_real.get))
+    else
+      None
+  }
 }
 
 object User extends Logging {

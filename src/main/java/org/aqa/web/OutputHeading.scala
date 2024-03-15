@@ -225,11 +225,12 @@ class OutputHeading extends Restlet with SubUrlAdmin with Logging {
     */
   private def isAuthorized(extendedData: ExtendedData, user: Option[User]): Boolean = {
 
-    0 match {
-      case _ if user.isDefined && WebUtil.userIsWhitelisted(user.get.id_real.get)           => true
-      case _ if user.isDefined && user.get.institutionPK == extendedData.user.institutionPK => true
-      case _                                                                                => false
+    val ok = 0 match {
+      case _ if user.isDefined && user.get.getRealId.isDefined && WebUtil.userIsWhitelisted(user.get.getRealId.get) => true
+      case _ if user.isDefined && user.get.institutionPK == extendedData.user.institutionPK                         => true
+      case _                                                                                                        => false
     }
+    ok
   }
 
   private def makeButton(name: String, primary: Boolean, buttonType: ButtonType.Value): FormButton = {
@@ -340,11 +341,12 @@ class OutputHeading extends Restlet with SubUrlAdmin with Logging {
       val user = getUser(valueMap)
 
       0 match {
-        case _ if extendedData.isDefined && save && isAuthorized(extendedData.get, user) => saveNote(extendedData.get, valueMap, response)
-        case _ if extendedData.isDefined && edit && user.isDefined                       => editNote(valueMap, extendedData.get, response)
-        case _ if extendedData.isDefined && cancel && user.isDefined                     => redirectBack(extendedData.get, valueMap, response)
-        case _ if extendedData.isDefined                                                 => showOutputHeading(extendedData.get, valueMap, response)
-        case _                                                                           => emptyResponse(response)
+        case _ if extendedData.isDefined && save && isAuthorized(extendedData.get, user)    => saveNote(extendedData.get, valueMap, response)
+        case _ if extendedData.isDefined && save && (!isAuthorized(extendedData.get, user)) => redirectBack(extendedData.get, valueMap, response)
+        case _ if extendedData.isDefined && edit && user.isDefined                          => editNote(valueMap, extendedData.get, response)
+        case _ if extendedData.isDefined && cancel && user.isDefined                        => redirectBack(extendedData.get, valueMap, response)
+        case _ if extendedData.isDefined                                                    => showOutputHeading(extendedData.get, valueMap, response)
+        case _                                                                              => emptyResponse(response)
       }
     } catch {
       case t: Throwable =>
