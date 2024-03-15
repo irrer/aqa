@@ -7,6 +7,7 @@ import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Output
 import org.aqa.db.WinstonLutz
 import org.aqa.web.C3ChartHistory
+import org.aqa.Config
 import org.aqa.Util
 
 import java.awt.Color
@@ -20,10 +21,11 @@ class WLChart(outputPK: Long) extends Logging {
   val beamNameList: Seq[String] = WinstonLutz.getByOutput(outputPK).map(_.beamNameOf).sorted
 
   /**
-    * Make a chart for the given history.
-    * @param history History for one beam sorted by date.
-    * @return history chart
-    */
+   * Make a chart for the given history.
+   *
+   * @param history History for one beam sorted by date.
+   * @return history chart
+   */
   private def makeChart(history: Seq[WinstonLutz.WinstonLutzHistory]): C3ChartHistory = {
 
     val maintenanceList = {
@@ -100,6 +102,6 @@ class WLChart(outputPK: Long) extends Logging {
     list.groupBy(_.winstonLutz.beamNameOf).toSeq.sortBy(_._1).map(_._2.sortBy(_.output.dataDate.get.getTime))
   }
 
-  val chartList: Seq[C3ChartHistory] = historyForAllBeams.map(makeChart)
+  val chartList: Seq[C3ChartHistory] = historyForAllBeams.map(_.takeRight(Config.WLMaxChartHistory)).map(makeChart)
 
 }

@@ -954,9 +954,12 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Number of rows of WL results shown on the page by default.  Must be an integer value greater than zero. -->
     <WLRowsPerPageDefault>50</WLRowsPerPageDefault>
 
+    <!-- Maximum number of values shown in history charts.  Default: 200.  Must be an integer value greater than zero. -->
+    <WLMaxChartHistory>200</WLMaxChartHistory>
+
     <!-- Treatment machine parameters.
 
-    Name : Name of treatment machine.  Names are case insensitive.
+    Name : Name of treatment machine.  Names are case-insensitive.
 
     PixelSizeX, PixelSizeY : The default width and height of pixels in mm if the value from Aria is missing.
 
