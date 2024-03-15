@@ -62,6 +62,9 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
   /** Distance in mm from source to EPID. */
   val dEpid_mm: Double = RTImageSID_mm
 
+  /** Distance from source to isoplane. */
+  def dIso_mm: Double = rtimage.get(TagByName.RadiationMachineSAD).getDoubleValues.head
+
   /** True if the collimator angle rounded to 90 degrees is 90. */
   val is090: Boolean = Util.angleRoundedTo90(Util.collimatorAngle(rtimage)) == 90
 

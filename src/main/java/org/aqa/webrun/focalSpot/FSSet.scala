@@ -20,7 +20,7 @@ case class FSSet(jaw090: FSMeasure, jaw270: FSMeasure, mlc090: FSMeasure, mlc270
   private val measureList = Seq(jaw090, jaw270, mlc090, mlc270)
 
   // @formatter:off
-  private val jawXCenter: Double =
+  val jawXCenter: Double =
     (
       jaw090.focalSpot.leftEdge_mm  +
       jaw090.focalSpot.rightEdge_mm +
@@ -28,7 +28,7 @@ case class FSSet(jaw090: FSMeasure, jaw270: FSMeasure, mlc090: FSMeasure, mlc270
       jaw270.focalSpot.rightEdge_mm
     ) / 4
 
-  private val mlcXCenter: Double =
+  val mlcXCenter: Double =
     (
       mlc090.focalSpot.leftEdge_mm  +
       mlc090.focalSpot.rightEdge_mm +
@@ -36,41 +36,42 @@ case class FSSet(jaw090: FSMeasure, jaw270: FSMeasure, mlc090: FSMeasure, mlc270
       mlc270.focalSpot.rightEdge_mm
     ) / 4
 
-  private val jawYCenter: Double =
+  val jawYCenter: Double =
     (
-      jaw090.focalSpot.topEdge_mm +
-        jaw090.focalSpot.bottomEdge_mm +
-        jaw270.focalSpot.topEdge_mm +
-        jaw270.focalSpot.bottomEdge_mm
+      jaw090.focalSpot.topEdge_mm    +
+      jaw090.focalSpot.bottomEdge_mm +
+      jaw270.focalSpot.topEdge_mm    +
+      jaw270.focalSpot.bottomEdge_mm
       ) / 4
 
-  private val mlcYCenter: Double =
+  val mlcYCenter: Double =
     (
-      mlc090.focalSpot.topEdge_mm +
-        mlc090.focalSpot.bottomEdge_mm +
-        mlc270.focalSpot.topEdge_mm +
-        mlc270.focalSpot.bottomEdge_mm
+      mlc090.focalSpot.topEdge_mm    +
+      mlc090.focalSpot.bottomEdge_mm +
+      mlc270.focalSpot.topEdge_mm    +
+      mlc270.focalSpot.bottomEdge_mm
       ) / 4
 
   // @formatter:on
 
-  private val dEpid_mm: Double = measureList.map(_.dEpid_mm).sum / 4.0 // take the average epid value
+  // private val dEpid_mm: Double = measureList.map(_.dEpid_mm).sum / 4.0 // take the average epid value
+  private val dIso_mm: Double = measureList.map(_.dIso_mm).sum / 4.0 // take the average ISO value
 
   logger.info(s"MV ${jaw090.NominalBeamEnergy}    jawXCenter: $jawXCenter    mlcXCenter: $mlcXCenter    jawYCenter: $jawYCenter    mlcYCenter: $mlcYCenter")
 
-  private val aX = {
+  val aX: Double = {
     val xJaw = Config.TrueBeamSourceToXJawDistance_mm
     val col = Config.TrueBeamSourceToMLCDistance_mm
-    val jaw = (dEpid_mm - xJaw) / xJaw
-    val mlc = (dEpid_mm - col) / col
+    val jaw = (dIso_mm - xJaw) / xJaw
+    val mlc = (dIso_mm - col) / col
     1.0 / (jaw - mlc)
   }
 
-  private val aY = {
+  val aY: Double = {
     val yJaw = Config.TrueBeamSourceToYJawDistance_mm
     val col = Config.TrueBeamSourceToMLCDistance_mm
-    val jaw = (dEpid_mm - yJaw) / yJaw
-    val mlc = (dEpid_mm - col) / col
+    val jaw = (dIso_mm - yJaw) / yJaw
+    val mlc = (dIso_mm - col) / col
     1.0 / (jaw - mlc)
   }
 

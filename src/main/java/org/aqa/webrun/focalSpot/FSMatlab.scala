@@ -182,6 +182,7 @@ object FSMatlab {
 
     // calculate the average epid to source value
     val dEpid_mm: Double = (fsSet.jaw090.dEpid_mm + fsSet.jaw270.dEpid_mm + fsSet.mlc090.dEpid_mm + fsSet.mlc270.dEpid_mm) / 4.0
+    val dIso_mm: Double = (fsSet.jaw090.dIso_mm + fsSet.jaw270.dIso_mm + fsSet.mlc090.dIso_mm + fsSet.mlc270.dIso_mm) / 4.0
 
     val focalSpotText = {
       s"""
@@ -198,6 +199,18 @@ object FSMatlab {
          |fprintf("Jaw 270 top bottom right left mm:  $f    $f    $f    $f\\n", Jaw_270_top_mm, Jaw_270_bottom_mm, Jaw_270_left_mm, Jaw_270_right_mm);
          |fprintf("MLC 090 top bottom right left mm:  $f    $f    $f    $f\\n", MLC_090_top_mm, MLC_090_bottom_mm, MLC_090_left_mm, MLC_090_right_mm);
          |fprintf("MLC 270 top bottom right left mm:  $f    $f    $f    $f\\n", MLC_270_top_mm, MLC_270_bottom_mm, MLC_270_left_mm, MLC_270_right_mm);
+         |
+         |topPlanned    = -50.0;
+         |bottomPlanned =  50.0;
+         |leftPlanned   = -50.0;
+         |rightPlanned  =  50.0;
+         |
+         |fprintf("\\nIsoplane measurements in mm difference from plan:\\n");
+         |fprintf("Jaw 090 measured-planned top bottom right left mm:  $f    $f    $f    $f\\n", Jaw_090_top_mm - topPlanned, Jaw_090_bottom_mm - bottomPlanned, Jaw_090_left_mm - leftPlanned, Jaw_090_right_mm - rightPlanned);
+         |fprintf("Jaw 270 measured-planned top bottom right left mm:  $f    $f    $f    $f\\n", Jaw_270_top_mm - topPlanned, Jaw_270_bottom_mm - bottomPlanned, Jaw_270_left_mm - leftPlanned, Jaw_270_right_mm - rightPlanned);
+         |fprintf("MLC 090 measured-planned top bottom right left mm:  $f    $f    $f    $f\\n", MLC_090_top_mm - topPlanned, MLC_090_bottom_mm - bottomPlanned, MLC_090_left_mm - leftPlanned, MLC_090_right_mm - rightPlanned);
+         |fprintf("MLC 270 measured-planned top bottom right left mm:  $f    $f    $f    $f\\n", MLC_270_top_mm - topPlanned, MLC_270_bottom_mm - bottomPlanned, MLC_270_left_mm - leftPlanned, MLC_270_right_mm - rightPlanned);
+         |
          |fprintf("\\n------------------------ End summary of edge measurements for MV $mvText ------------------------\\n");
          |
          |fprintf("------------------------ Begin Focal Spot Calculations for MV $mvText ------------------------\\n");
@@ -212,35 +225,57 @@ object FSMatlab {
          |yJaw = ${Config.TrueBeamSourceToYJawDistance_mm};
          |MLC  = ${Config.TrueBeamSourceToMLCDistance_mm};
          |
-         |fprintf("Source to X jaws mm: $f\\n", xJaw);
-         |fprintf("Source to Y jaws mm: $f\\n", yJaw);
-         |fprintf("Source to MLC    mm: $f\\n", MLC);
+         |fprintf("xJaw = $f;  %% Source to X jaws mm\\n", xJaw);
+         |fprintf("yJaw = $f;  %% Source to Y jaws mm\\n", yJaw);
+         |fprintf("MLC  = $f;  %% Source to MLC    mm\\n", MLC);
          |fprintf("\\n");
          |
          |dEpid_mm = $dEpid_mm;
-         |fprintf("Average source to EPID mm: $f\\n", dEpid_mm);
+         |dIso_mm = $dIso_mm;
+         |fprintf("dEpid_mm = $f  %% Average source to EPID mm\\n", dEpid_mm);
+         |fprintf("dIso_mm  = $f  %% Average source to  ISO mm\\n", dIso_mm);
          |
          |JawCenterX = ( Jaw_090_left_mm + Jaw_090_right_mm  + Jaw_270_left_mm + Jaw_270_right_mm  ) / 4.0;
          |JawCenterY = ( Jaw_090_top_mm  + Jaw_090_bottom_mm + Jaw_270_top_mm  + Jaw_270_bottom_mm ) / 4.0;
          |MLCCenterX = ( MLC_090_left_mm + MLC_090_right_mm  + MLC_270_left_mm + MLC_270_right_mm  ) / 4.0;
          |MLCCenterY = ( MLC_090_top_mm  + MLC_090_bottom_mm + MLC_270_top_mm  + MLC_270_bottom_mm ) / 4.0;
          |
-         |fprintf("Jaw center X: $f\\n", JawCenterX);
-         |fprintf("Jaw center Y: $f\\n", JawCenterY);
+         |fprintf("JawCenterX = $f\\n", JawCenterX);
+         |fprintf("JawCenterY = $f\\n", JawCenterY);
          |
-         |fprintf("MLC center X: $f\\n", MLCCenterX);
-         |fprintf("MLC center Y: $f\\n", MLCCenterY);
+         |fprintf("MLCCenterX = $f\\n", MLCCenterX);
+         |fprintf("MLCCenterY = $f\\n", MLCCenterY);
          |
          |fprintf("\\n");
          |
-         |aX = 1.0 / (((dEpid_mm - xJaw) / xJaw) - ((dEpid_mm - MLC) / MLC));
-         |aY = 1.0 / (((dEpid_mm - yJaw) / yJaw) - ((dEpid_mm - MLC) / MLC));
+         |% aX = 1.0 / (((dEpid_mm - xJaw) / xJaw) - ((dEpid_mm - MLC) / MLC));
+         |% aY = 1.0 / (((dEpid_mm - yJaw) / yJaw) - ((dEpid_mm - MLC) / MLC));
          |
-         |fprintf("aX: $f\\n", aX);
-         |fprintf("aY: $f\\n", aY);
+         |fprintf("aX = 1.0 / (((dIso_mm - xJaw) / xJaw) - ((dIso_mm - MLC) / MLC))\\n");
+         |fprintf("aX = 1.0 / ((($dIso_mm - %f) / %f) - (($dIso_mm - %f) / %f))\\n", xJaw, xJaw, MLC, MLC);
+         |aX = 1.0 / (((dIso_mm - xJaw) / xJaw) - ((dIso_mm - MLC) / MLC));
+         |fprintf("aX = $f\\n", aX);
+         |fprintf("\\n");
+         |fprintf("aY = 1.0 / (((dIso_mm - yJaw) / yJaw) - ((dIso_mm - MLC) / MLC))\\n");
+         |fprintf("aY = 1.0 / ((($dIso_mm - %f) / %f) - (($dIso_mm - %f) / %f))\\n", yJaw, yJaw, MLC, MLC);
+         |aY = 1.0 / (((dIso_mm - yJaw) / yJaw) - ((dIso_mm - MLC) / MLC));
+         |fprintf("aY = $f\\n", aY);
          |
+         |fprintf("\\n");
+         |
+         |fprintf("focalSpotX = aX * ( JawCenterX - MLCCenterX )\\n");
+         |fprintf("focalSpotX = $f * ( $f - $f )\\n", aX, JawCenterX, MLCCenterX);
          |focalSpotX = aX * ( JawCenterX - MLCCenterX );
+         |fprintf("focalSpotX = $f\\n", focalSpotX);
+         |
+         |fprintf("\\n");
+         |
+         |fprintf("focalSpotY = aY * ( JawCenterY - MLCCenterY )\\n");
+         |fprintf("focalSpotY = $f * ( $f - $f )\\n", aY, JawCenterY, MLCCenterY);
          |focalSpotY = aY * ( JawCenterY - MLCCenterY );
+         |fprintf("focalSpotY = $f\\n", focalSpotY);
+         |fprintf("\\n");
+         |
          |fprintf("Focal spot calculated from Matlab code: X: $f    Y: $f\\n", focalSpotX, focalSpotY);
          |
          |fprintf("Focal spot retrieved from AQA database: X: $f    Y: $f\\n", ${fsSet.focalSpotAlignmentX_mm}, ${fsSet.focalSpotAlignmentY_mm});

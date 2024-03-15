@@ -64,7 +64,7 @@ case class FocalSpot(
   }
 
   val centerX: Double = (leftEdge_mm + rightEdge_mm) / 2
-  val centerY: Double = (leftEdge_mm + rightEdge_mm) / 2
+  val centerY: Double = (topEdge_mm + bottomEdge_mm) / 2
 
   val topEdgeError_mm: Double = topEdge_mm - topEdgePlanned_mm
   val bottomEdgeError_mm: Double = bottomEdge_mm - bottomEdgePlanned_mm
