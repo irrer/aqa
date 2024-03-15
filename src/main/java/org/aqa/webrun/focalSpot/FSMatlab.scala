@@ -200,16 +200,11 @@ object FSMatlab {
          |fprintf("MLC 090 top bottom right left mm:  $f    $f    $f    $f\\n", MLC_090_top_mm, MLC_090_bottom_mm, MLC_090_left_mm, MLC_090_right_mm);
          |fprintf("MLC 270 top bottom right left mm:  $f    $f    $f    $f\\n", MLC_270_top_mm, MLC_270_bottom_mm, MLC_270_left_mm, MLC_270_right_mm);
          |
-         |topPlanned    = ${fsSet.jaw090.focalSpot.topEdgePlanned_mm}; 
-         |bottomPlanned = ${fsSet.jaw090.focalSpot.bottomEdgePlanned_mm};
-         |leftPlanned   = ${fsSet.jaw090.focalSpot.leftEdgePlanned_mm};
-         |rightPlanned  = ${fsSet.jaw090.focalSpot.rightEdgePlanned_mm};
-         |
          |fprintf("\\nIsoplane measurements in mm difference from plan:\\n");
-         |fprintf("Jaw 090 measured-planned top bottom right left mm:  $f    $f    $f    $f\\n", Jaw_090_top_mm - topPlanned, Jaw_090_bottom_mm - bottomPlanned, Jaw_090_left_mm - leftPlanned, Jaw_090_right_mm - rightPlanned);
-         |fprintf("Jaw 270 measured-planned top bottom right left mm:  $f    $f    $f    $f\\n", Jaw_270_top_mm - topPlanned, Jaw_270_bottom_mm - bottomPlanned, Jaw_270_left_mm - leftPlanned, Jaw_270_right_mm - rightPlanned);
-         |fprintf("MLC 090 measured-planned top bottom right left mm:  $f    $f    $f    $f\\n", MLC_090_top_mm - topPlanned, MLC_090_bottom_mm - bottomPlanned, MLC_090_left_mm - leftPlanned, MLC_090_right_mm - rightPlanned);
-         |fprintf("MLC 270 measured-planned top bottom right left mm:  $f    $f    $f    $f\\n", MLC_270_top_mm - topPlanned, MLC_270_bottom_mm - bottomPlanned, MLC_270_left_mm - leftPlanned, MLC_270_right_mm - rightPlanned);
+         |fprintf("Jaw 090 measured-planned top bottom right left mm:  $f    $f    $f    $f\\n", Jaw_090_top_mm - ${fsSet.jaw090.focalSpot.topEdgePlanned_mm}, Jaw_090_bottom_mm - ${fsSet.jaw090.focalSpot.bottomEdgePlanned_mm}, Jaw_090_left_mm - ${fsSet.jaw090.focalSpot.leftEdgePlanned_mm}, Jaw_090_right_mm - ${fsSet.jaw090.focalSpot.rightEdgePlanned_mm});
+         |fprintf("Jaw 270 measured-planned top bottom right left mm:  $f    $f    $f    $f\\n", Jaw_270_top_mm - ${fsSet.jaw270.focalSpot.topEdgePlanned_mm}, Jaw_270_bottom_mm - ${fsSet.jaw270.focalSpot.bottomEdgePlanned_mm}, Jaw_270_left_mm - ${fsSet.jaw270.focalSpot.leftEdgePlanned_mm}, Jaw_270_right_mm - ${fsSet.jaw270.focalSpot.rightEdgePlanned_mm});
+         |fprintf("MLC 090 measured-planned top bottom right left mm:  $f    $f    $f    $f\\n", MLC_090_top_mm - ${fsSet.mlc090.focalSpot.topEdgePlanned_mm}, MLC_090_bottom_mm - ${fsSet.mlc090.focalSpot.bottomEdgePlanned_mm}, MLC_090_left_mm - ${fsSet.mlc090.focalSpot.leftEdgePlanned_mm}, MLC_090_right_mm - ${fsSet.mlc090.focalSpot.rightEdgePlanned_mm});
+         |fprintf("MLC 270 measured-planned top bottom right left mm:  $f    $f    $f    $f\\n", MLC_270_top_mm - ${fsSet.mlc270.focalSpot.topEdgePlanned_mm}, MLC_270_bottom_mm - ${fsSet.mlc270.focalSpot.bottomEdgePlanned_mm}, MLC_270_left_mm - ${fsSet.mlc270.focalSpot.leftEdgePlanned_mm}, MLC_270_right_mm - ${fsSet.mlc270.focalSpot.rightEdgePlanned_mm});
          |
          |fprintf("\\n------------------------ End summary of edge measurements for MV $mvText ------------------------\\n");
          |
