@@ -1163,7 +1163,7 @@ object WebUtil extends Logging {
             else
               Seq[String]()
           }
-          all.diff(planDsn)
+          all.diff(planDsn).toIndexedSeq
         }
 
         def isMatchingMachine = {
