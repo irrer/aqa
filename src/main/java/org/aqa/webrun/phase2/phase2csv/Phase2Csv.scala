@@ -81,7 +81,7 @@ abstract class Phase2Csv[T] extends Logging {
 
   private def makeDicomHeader: String = {
     def rename(prefix: String): Seq[String] = {
-      dicomCsv.colList.map(c => (prefix + " " + c.header).trim)
+      dicomCsv.colList.map(c => (prefix + " " + c.header).trim).toIndexedSeq
     }
     val header = dicomHeaderPrefixList.flatMap(rename).mkString(",")
     header
