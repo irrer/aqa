@@ -19,7 +19,7 @@ package org.aqa.db
 import org.aqa.Config
 
 case class MaintenanceCategory(Name: String, Color: String, Description: String) {
-  override def toString = "Name: " + Name + "  Color: " + Color + "    Description: " + Description
+  override def toString: String = "Name: " + Name + "  Color: " + Color + "    Description: " + Description
 }
 
 /**

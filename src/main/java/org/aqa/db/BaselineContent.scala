@@ -38,7 +38,7 @@ case class BaselineContent(
     result
   }
 
-  def insertOrUpdate = Db.run(BaselineContent.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(BaselineContent.query.insertOrUpdate(this))
 }
 
 object BaselineContent extends Logging {
@@ -59,9 +59,9 @@ object BaselineContent extends Logging {
   def get(baselineContentPK: Long): Option[BaselineContent] = {
     val action = for {
       baselineContent <- query if baselineContent.baselineContentPK === baselineContentPK
-    } yield (baselineContent)
+    } yield baselineContent
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   def delete(baselineContentPK: Long): Int = {
@@ -76,14 +76,12 @@ object BaselineContent extends Logging {
     */
   def makeBaselineContent(baselinePK: Long, attributeList: AttributeList): BaselineContent = {
     Util.dicomToBytes(attributeList) match {
-      case Left(err) => {
+      case Left(err) =>
         val msg = "Could not create BaselineContent for DICOM: " + err
         logger.warn(msg)
         throw new RuntimeException(msg)
-      }
-      case Right(bytes) => {
+      case Right(bytes) =>
         new BaselineContent(None, baselinePK, bytes)
-      }
     }
   }
 

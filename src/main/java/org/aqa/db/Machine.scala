@@ -352,13 +352,13 @@ object Machine extends Logging {
   def getForInstitution(institutionPK: Long): Seq[Machine] = {
     val action = query.filter(m => m.institutionPK === institutionPK)
     val list = Db.run(action.result)
-    list
+    list.toIndexedSeq
   }
 
   /**
     * Get a list of all machines.
     */
-  def list: Seq[Machine] = Db.run(query.result)
+  def list: Seq[Machine] = Db.run(query.result).toIndexedSeq
 
   /** Dependent types */
   case class MMI(machine: Machine, machineType: MachineType, institution: Institution, mlc: MultileafCollimator, epid: EPID)
@@ -383,19 +383,19 @@ object Machine extends Logging {
       else action
     }
 
-    Db.run(filtered.result).map(mmi => MMI(mmi._1, mmi._2, mmi._3, mmi._4, mmi._5))
+    Db.run(filtered.result).map(mmi => MMI(mmi._1, mmi._2, mmi._3, mmi._4, mmi._5)).toIndexedSeq
   }
 
   def listMachinesFromInstitution(institutionPK: Long): Seq[Machine] = {
     val action = query.filter(m => m.institutionPK === institutionPK)
     val seq = Db.run(action.result)
-    seq
+    seq.toIndexedSeq
   }
 
   def listMachinesWithCollimator(multileafCollimatorPK: Long): Seq[Machine] = {
     val action = query.filter(m => m.multileafCollimatorPK === multileafCollimatorPK)
     val seq = Db.run(action.result)
-    seq
+    seq.toIndexedSeq
   }
 
   /**
@@ -407,7 +407,7 @@ object Machine extends Logging {
     val sn = serialNumber.trim
     val action = query.filter(m => m.serialNumber === sn)
     val seq = Db.run(action.result)
-    seq
+    seq.toIndexedSeq
   }
 
   /**
@@ -547,7 +547,7 @@ object Machine extends Logging {
       }
 
       val machine = Machine.get(27).head
-      machine.setTpsIdIfNeeded(alList, writeToDatabase)
+      machine.setTpsIdIfNeeded(alList.toIndexedSeq, writeToDatabase)
       System.exit(0)
     }
 

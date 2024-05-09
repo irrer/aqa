@@ -43,7 +43,7 @@ case class SystemModification(
     result
   }
 
-  def insertOrUpdate = Db.run(SystemModification.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(SystemModification.query.insertOrUpdate(this))
 }
 
 object SystemModification extends Logging {
@@ -67,12 +67,12 @@ object SystemModification extends Logging {
   def get(systemModificationPK: Long): Option[SystemModification] = {
     val action = for {
       inst <- query if inst.systemModificationPK === systemModificationPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
-  case class SystemModificationComposite(systemModification: SystemModification, user: User);
+  case class SystemModificationComposite(systemModification: SystemModification, user: User) {}
 
   /**
     * Get a list of all users with institution name.
@@ -82,7 +82,7 @@ object SystemModification extends Logging {
       sysMod <- query
       user <- User.query if sysMod.userPK === user.userPK
     } yield (sysMod, user)
-    Db.run(action.result).map(smc => new SystemModificationComposite(smc._1, smc._2))
+    Db.run(action.result).map(smc => SystemModificationComposite(smc._1, smc._2))
   }
 
   /**
@@ -101,7 +101,7 @@ object SystemModification extends Logging {
   /**
     * Get the number of rows.
     */
-  def getSize = Db.run(query.size.result)
+  def getSize: Int = Db.run(query.size.result)
 
   def delete(systemModificationPK: Long): Int = {
     val q = query.filter(_.systemModificationPK === systemModificationPK)
@@ -110,7 +110,7 @@ object SystemModification extends Logging {
   }
 
   def main(args: Array[String]): Unit = {
-    val valid = Config.validate
+    Config.validate
     DbSetup.init
     println("======== listSystemModifications: " + list.map(i => println("\n >>>>>>>> " + i)))
     println("======== inst: " + get(5))
