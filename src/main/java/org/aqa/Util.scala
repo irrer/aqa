@@ -463,7 +463,7 @@ object Util extends Logging {
         case _: Throwable => null
       }
 
-    if (list != null) list else Seq[File]()
+    if (list != null) list.toIndexedSeq else Seq[File]()
   }
 
   def deleteFileTreeSafely(dir: File): Unit = {
@@ -504,14 +504,14 @@ object Util extends Logging {
    * @return Array o text strings ordered as they were in the input.
    */
   def csvToText(csv: String): Seq[String] =
-  // Do this synchronized because it is not certain that the library is thread safe.
+    // Do this synchronized because it is not certain that the library is thread safe.
     CSVFormat.DEFAULT.synchronized {
       val parsed = CSVParser.parse(csv, CSVFormat.DEFAULT)
       val textSeq = scala.collection.mutable.ArrayBuffer[String]()
       parsed.forEach(line => {
         line.forEach(col => textSeq.append(new String(col.getBytes)))
       })
-      textSeq
+      textSeq.toIndexedSeq
     }
 
   /**
@@ -1055,7 +1055,7 @@ object Util extends Logging {
     val otherFrameOfRefUID: Seq[String] = {
       val regSeq = DicomUtil.seqToAttr(attrList, TagByName.RegistrationSequence)
       val frmUid = regSeq.map(rs => rs.get(TagByName.FrameOfReferenceUID).getSingleStringValueOrEmptyString).filterNot(fu => fu.equalsIgnoreCase(frameOfRefUID))
-      frmUid
+      frmUid.toIndexedSeq
     }
   }
 
@@ -1080,7 +1080,7 @@ object Util extends Logging {
 
     val BeamSequence = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
     val list = BeamSequence.flatMap(bs => beamSeqToIsocenter(bs)).flatten
-    list
+    list.toIndexedSeq
   }
 
   /**
@@ -1148,7 +1148,7 @@ object Util extends Logging {
     val million = 1000.0 * 1000
     val maxBadPixels = ((Config.MaxEstimatedBadPixelPerMillion / million) * numPixels).round.toInt
     val badPixels = dicomImage.identifyBadPixels(maxBadPixels, Config.BadPixelStdDev, Config.BadPixelMaximumPercentChange, Util.badPixelRadius(al), Config.BadPixelMinimumDeviation_CU)
-    badPixels.filter(bp => bp.rating > 100)
+    badPixels.filter(bp => bp.rating > 100).toIndexedSeq
   }
 
   /**
@@ -1268,7 +1268,7 @@ object Util extends Logging {
       vector.get(values)
 
       val textList = values.map(fmt)
-      Specs(textList)
+      Specs(textList.toIndexedSeq)
     }
 
     val range = 0 to 3
@@ -1416,7 +1416,7 @@ object Util extends Logging {
         case _ if ValueRepresentation.isOtherByteOrWordVR(vr) => throw new RuntimeException("binary values not supported")
         case _ => at.getStringValues // Handle all of the various string VRs.
       }
-      numList.map(n => n.toString)
+      numList.map(n => n.toString).toIndexedSeq
     } catch {
       case _: Throwable => Seq("NA", "NA", "NA")
     }
@@ -1485,26 +1485,9 @@ object Util extends Logging {
    */
   def minCenteredFieldBeamList(rtplan: AttributeList, minSize_mm: Double): Seq[String] = {
 
-    val distance = minSize_mm / 2
-
-    /**
-     * Return true if this beam qualifies.
-     *
-     * @param beam Check this beam.
-     * @return true if this beam qualifies.
-     */
-    /*
-    def isOpen(beam: AttributeList): Boolean = {
-      val positionList = DicomUtil.findAllSingle(beam, TagByName.LeafJawPositions).flatMap(_.getDoubleValues)
-      val notOpen = positionList.exists(pos => pos.abs < distance)
-      val wedgeList = DicomUtil.findAllSingle(beam, TagByName.NumberOfWedges).flatMap(_.getIntegerValues).distinct.filter(_ != 0)
-      (!notOpen) && wedgeList.isEmpty
-    }
-    */
-
     val BeamSequence = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)
     val list = BeamSequence.filter(b => minCenteredFieldBeam(b, minSize_mm)).map(normalizedBeamName).distinct
-    list
+    list.toIndexedSeq
   }
 
   /**
