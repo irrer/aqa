@@ -4,7 +4,6 @@ import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.EPIDCenterCorrection
 import org.aqa.db.Output
-import org.aqa.procedures.ProcedureOutputUtil
 import org.aqa.run.StdLogger
 import org.aqa.web.OutputHeading
 import org.aqa.web.ViewOutput
@@ -125,7 +124,7 @@ object LOCMakeHtml extends Logging {
     }
 
     val viewXml: Elem = {
-      <a href={ProcedureOutputUtil.outputFileName}>View XML</a>
+      <a href={LOCUtil.locXmlOutputFileName}>View XML</a>
     }
 
     /**

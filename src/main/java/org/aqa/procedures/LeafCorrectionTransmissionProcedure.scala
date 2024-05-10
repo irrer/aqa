@@ -26,6 +26,7 @@ import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.WebUtil
+import org.aqa.webrun.LOC.LOCUtil
 
 import java.io.File
 import scala.xml.Elem
@@ -126,7 +127,7 @@ object LeafCorrectionTransmissionProcedure extends Logging {
     }
 
     val text = xmlToText(xml)
-    Util.writeFile(new File(curDir, ProcedureOutputUtil.outputFileName), text)
+    Util.writeFile(new File(curDir, LOCUtil.locXmlOutputFileName), text)
   }
 
   /**

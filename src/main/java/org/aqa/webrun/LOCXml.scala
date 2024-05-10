@@ -16,7 +16,7 @@
 
 package org.aqa.webrun
 
-import org.aqa.procedures.ProcedureOutputUtil
+import org.aqa.webrun.LOC.LOCUtil
 
 import java.io.File
 import scala.collection.immutable
@@ -27,7 +27,7 @@ import scala.xml.XML
   * Extract LOC related values from XML file.
   */
 class LOCXml(dir: File) {
-  private val file = new File(dir, ProcedureOutputUtil.outputFileName)
+  private val file = new File(dir, LOCUtil.locXmlOutputFileName)
   private val elem = XML.loadFile(file)
 
   private def nodeSeqToDouble(ns: NodeSeq): Seq[Double] = {
