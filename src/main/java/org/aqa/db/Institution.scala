@@ -58,7 +58,7 @@ object Institution extends Logging {
     def url_real = column[String]("url_real")
     def description_real = column[String]("description_real")
 
-    def * = (institutionPK.?, name, name_real, url_real, description_real) <> (Institution.apply _ tupled, Institution.unapply _)
+    def * = (institutionPK.?, name, name_real, url_real, description_real) <> (Institution.apply _ tupled, Institution.unapply)
   }
 
   val query = TableQuery[InstitutionTable]

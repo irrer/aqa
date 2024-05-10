@@ -16,15 +16,8 @@
 
 package org.aqa.db
 
-import org.aqa.Config
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
-import org.aqa.webrun.LOCXml
-
-import java.io.File
-import scala.xml.Elem
-import scala.xml.Node
-import scala.xml.XML
+import org.aqa.Logging
 
 case class LeafOffsetCorrection(
     leafOffsetCorrectionPK: Option[Long], // primary key
@@ -48,14 +41,14 @@ case class LeafOffsetCorrection(
   override def toString: String = "leaf: " + leafIndex.formatted("%2d") + "    section: " + section + "    correction_mm: " + correction_mm.toString.trim
 }
 
-object LeafOffsetCorrection extends ProcedureOutput {
+object LeafOffsetCorrection extends Logging {
   class LeafOffsetCorrectionTable(tag: Tag) extends Table[LeafOffsetCorrection](tag, "leafOffsetCorrection") {
 
     def leafOffsetCorrectionPK = column[Long]("leafOffsetCorrectionPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
     def section = column[String]("section")
     def leafIndex = column[Int]("leafIndex")
-    def correction_mm = column[Double]("correction_mm")
+    private def correction_mm = column[Double]("correction_mm")
 
     def * = (leafOffsetCorrectionPK.?, outputPK, section, leafIndex, correction_mm) <> (LeafOffsetCorrection.apply _ tupled, LeafOffsetCorrection.unapply)
 
@@ -63,8 +56,6 @@ object LeafOffsetCorrection extends ProcedureOutput {
   }
 
   val query = TableQuery[LeafOffsetCorrectionTable]
-
-  override val topXmlLabel = "LeafOffsetConstancy"
 
   def get(leafOffsetCorrectionPK: Long): Option[LeafOffsetCorrection] = {
     val action = for {
@@ -97,40 +88,7 @@ object LeafOffsetCorrection extends ProcedureOutput {
     Db.run(action)
   }
 
-  private def xmlToList(elem: Elem, outputPK: Long): Seq[LeafOffsetCorrection] = {
-    def leafNodeToLocList(leaf: Node): Seq[LeafOffsetCorrection] = {
-      val leafIndex = (leaf \ "leafIndex").head.text.toInt
-      (leaf \ "Value").map(n => LOCXml.textToDouble(n.text)).zipWithIndex.map(di => new LeafOffsetCorrection(None, outputPK, (di._2 + 1).toString, leafIndex, di._1))
-    }
-
-    (elem \ topXmlLabel).headOption match {
-      case Some(node) => (node \ "LeafList" \ "Leaf").flatMap(leaf => leafNodeToLocList(leaf))
-      case None       => Seq[LeafOffsetCorrection]()
-    }
-  }
-
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    val toInsert = xmlToList(elem, outputPK)
-    insertSeq(toInsert)
-    toInsert.size
-  }
-
   def insertSeq(list: Seq[LeafOffsetCorrection]): Unit = {
-    val ops = list.map { loc => LeafOffsetCorrection.query.insertOrUpdate(loc) }
-    Db.perform(ops)
-  }
-
-  /** For testing only. */
-  def main(args: Array[String]): Unit = {
-    Config.validate
-    DbSetup.init
-    System.exit(99)
-    val elem = XML.loadFile(new File("""D:\tmp\aqa\tmp\output.xml"""))
-    val xmlList = xmlToList(elem, 134)
-    xmlList.foreach(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     correction_mm: " + loc.correction_mm))
-    xmlList.map(loc => loc.insertOrUpdate())
-    println("LeafOffsetCorrection.main done")
-    //println("======== inst: " + get(5))
-    //println("======== inst delete: " + delete(5))
+    list.foreach(_.insertOrUpdate())
   }
 }

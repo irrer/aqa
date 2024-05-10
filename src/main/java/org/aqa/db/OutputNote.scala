@@ -84,9 +84,9 @@ object OutputNote extends Logging {
   }
 
   /**
-   * Get all the notes
-   * @return All the notes.
-   */
+    * Get all the notes
+    * @return All the notes.
+    */
   def list(): Seq[OutputNote] = {
     val action = for {
       inst <- OutputNote.query

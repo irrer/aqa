@@ -51,7 +51,7 @@ object InputFiles extends Logging {
     def inputPK = column[Long]("inputPK")
     def zippedContent = column[Array[Byte]]("zippedContent")
 
-    def * = (inputFilesPK, inputPK, zippedContent) <> (InputFiles.apply _ tupled, InputFiles.unapply _)
+    def * = (inputFilesPK, inputPK, zippedContent) <> (InputFiles.apply _ tupled, InputFiles.unapply)
 
     def inputFK = foreignKey("InputFiles_inputPKConstraint", inputPK, Input.query)(_.inputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }

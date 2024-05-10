@@ -206,7 +206,7 @@ class WebServer extends Application with Logging {
 
         Input.getByDirectory(fileNameSuffix(inputDir)) match {
           case Some(input) =>
-            Input.getFilesFromDatabase(input.inputPK.get, inputDir.getParentFile)
+            Input.restoreFilesFromDatabase(input.inputPK.get, inputDir.getParentFile)
             logger.info("Restored input directory from database: " + inputDir.getAbsolutePath)
           case _ =>
         }

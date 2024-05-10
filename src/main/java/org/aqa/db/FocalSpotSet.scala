@@ -17,9 +17,6 @@
 package org.aqa.db
 
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
-
-import scala.xml.Elem
 
 /**
  * Store and instance of all of the data for a single image of focal spot.
@@ -68,7 +65,7 @@ case class FocalSpotSet(
   }
 }
 
-object FocalSpotSet extends ProcedureOutput {
+object FocalSpotSet {
   class FocalSpotSetTable(tag: Tag) extends Table[FocalSpotSet](tag, "focalSpotSet") {
 
     def focalSpotSetPK = column[Long]("focalSpotSetPK", O.PrimaryKey, O.AutoInc)
@@ -118,8 +115,6 @@ object FocalSpotSet extends ProcedureOutput {
 
   val query = TableQuery[FocalSpotSetTable]
 
-  override val topXmlLabel = "FocalSpotSet"
-
   def get(focalSpotSetPK: Long): Option[FocalSpotSet] = {
     val action = for {
       inst <- FocalSpotSet.query if inst.focalSpotSetPK === focalSpotSetPK
@@ -147,20 +142,6 @@ object FocalSpotSet extends ProcedureOutput {
     val q = query.filter(_.outputPK === outputPK)
     val action = q.delete
     Db.run(action)
-  }
-
-  def insert(list: Seq[FocalSpotSet]): Seq[Int] = {
-    val ops = list.map { imgId => FocalSpotSet.query.insertOrUpdate(imgId) }
-    Db.perform(ops)
-  }
-
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    throw new RuntimeException("Focal Spot insert not defined for Elem data.")
-  }
-
-  def insertSeq(list: Seq[FocalSpotSet]): Unit = {
-    val ops = list.map { loc => FocalSpotSet.query.insertOrUpdate(loc) }
-    Db.perform(ops)
   }
 
   case class FocalSpotSetHistory(output: Output, focalSpotSet: FocalSpotSet) {}
@@ -206,3 +187,5 @@ object FocalSpotSet extends ProcedureOutput {
   }
 
 }
+
+

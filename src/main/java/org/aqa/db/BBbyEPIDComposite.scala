@@ -19,7 +19,6 @@ package org.aqa.db
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
 import org.aqa.webrun.dailyQA.DailyDataSetComposite
 
 import java.sql.Timestamp
@@ -40,13 +39,17 @@ case class BBbyEPIDComposite(
     x_mm: Double, // X position in EPID in 3D plan space
     y_mm: Double, // Y position in EPID in 3D plan space
     z_mm: Double, // Z position in EPID in 3D plan space
+    //noinspection SpellCheckingInspection
     bbByCBCTPK: Option[Long], // referenced CBCT measurement
     offsetAdjusted_mm: Option[Double], // total distance in 3D plan space adjusted for corresponding CBCT location
     xAdjusted_mm: Option[Double], // X position in 3D plan space adjusted for corresponding CBCT location
     yAdjusted_mm: Option[Double], // Y position in 3D plan space adjusted for corresponding CBCT location
     zAdjusted_mm: Option[Double], //  Z position in 3D plan space adjusted for corresponding CBCT location
+    //noinspection SpellCheckingInspection
     tableXlateral_mm: Option[Double], // table position change (RTIMAGE - CT) in X dimension / lateral
+    //noinspection SpellCheckingInspection
     tableYvertical_mm: Option[Double], // table position change (RTIMAGE - CT) in Y dimension / vertical
+    //noinspection SpellCheckingInspection
     tableZlongitudinal_mm: Option[Double] // table position change (RTIMAGE - CT) in Z dimension / longitudinal
 ) {
 
@@ -70,6 +73,7 @@ case class BBbyEPIDComposite(
       }
     }
 
+    //noinspection SpellCheckingInspection
     "bbByEPIDCompositePK : " + bbByEPIDCompositePK +
       "\n    outputPK : " + outputPK +
       "\n    rtplanSOPInstanceUID : " + rtplanSOPInstanceUID +
@@ -84,7 +88,7 @@ case class BBbyEPIDComposite(
   val epid = new Point3d(x_mm, y_mm, z_mm)
 }
 
-object BBbyEPIDComposite extends ProcedureOutput with Logging {
+object BBbyEPIDComposite extends Logging {
 
   class BBbyEPIDCompositeTable(tag: Tag) extends Table[BBbyEPIDComposite](tag, "bbByEPIDComposite") {
 
@@ -104,6 +108,7 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
 
     def z_mm = column[Double]("z_mm")
 
+    //noinspection SpellCheckingInspection
     def bbByCBCTPK = column[Option[Long]]("bbByCBCTPK")
 
     def offsetAdjusted_mm = column[Option[Double]]("offsetAdjusted_mm")
@@ -114,10 +119,13 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
 
     def zAdjusted_mm = column[Option[Double]]("zAdjusted_mm")
 
+    //noinspection SpellCheckingInspection
     def tableXlateral_mm = column[Option[Double]]("tableXlateral_mm")
 
+    //noinspection SpellCheckingInspection
     def tableYvertical_mm = column[Option[Double]]("tableYvertical_mm")
 
+    //noinspection SpellCheckingInspection
     def tableZlongitudinal_mm = column[Option[Double]]("tableZlongitudinal_mm")
 
     def * =
@@ -141,12 +149,11 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
       ) <> (BBbyEPIDComposite.apply _ tupled, BBbyEPIDComposite.unapply)
 
     // Note that if the output row is deleted, then this row will be deleted through the reference to BBbyCBCT
+    //noinspection SpellCheckingInspection
     def bbByCBCTFK = foreignKey("BBbyEPIDComposite_bbByCBCTPKConstraint", bbByCBCTPK, BBbyCBCT.query)(_.bbByCBCTPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[BBbyEPIDCompositeTable]
-
-  override val topXmlLabel = "BBbyEPIDComposite"
 
   def get(bbByEPIDCompositePK: Long): Option[BBbyEPIDComposite] = {
     val action = for {
@@ -185,15 +192,8 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
     Seq[BBbyEPIDComposite]()
   }
 
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    val toInsert = xmlToList(elem, outputPK)
-    insertSeq(toInsert)
-    toInsert.size
-  }
-
   def insertSeq(list: Seq[BBbyEPIDComposite]): Unit = {
-    val ops = list.map { loc => BBbyEPIDComposite.query.insertOrUpdate(loc) }
-    Db.perform(ops)
+    list.foreach(_.insertOrUpdate())
   }
 
   case class BBbyEPIDCompositeHistory(date: Date, bbByEPIDComposite: BBbyEPIDComposite) {
@@ -204,7 +204,7 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
 
   /**
     * Get the BBbyEPIDComposite results that are nearest in time to the given date.  The rows must
-    * have valid bbByCBCTPK and associated values.
+    * have valid CBCT PK and associated values.
     *
     * @param machinePK   : For this machine
     * @param procedurePK : For this procedure
@@ -229,7 +229,7 @@ object BBbyEPIDComposite extends ProcedureOutput with Logging {
     val search = for {
       compositeOutputPK <- BBbyEPIDComposite.query.map(_.outputPK)
       md <- Output.query.filter(o => (compositeOutputPK === o.outputPK) && o.dataDate.isDefined).map(o => (o.machinePK, o.dataDate))
-      machineInstitutionPK <- Machine.query.filter(m => (m.machinePK === md._1) && (m.institutionPK === institutionPK)).map(_.institutionPK)
+      _ <- Machine.query.filter(m => (m.machinePK === md._1) && (m.institutionPK === institutionPK)).map(_.institutionPK)
     } yield md._2
 
     val list = search.sorted.take(num = 1)

@@ -20,7 +20,6 @@ import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 import slick.jdbc.meta.MTable
-import slick.sql.FixedSqlAction
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -171,14 +170,18 @@ object Db extends Logging {
 
     }
 
+  type DvOp = driver.ProfileAction[Unit, NoStream, Effect.Schema]
+
   def perform(dbOperation: driver.ProfileAction[Unit, NoStream, Effect.Schema]): Unit = {
     dbOperation.statements.foreach { s => logger.info("Executing database statement: " + s) }
     run(DBIO.seq(dbOperation))
   }
 
+  /*
   def perform(ops: Seq[FixedSqlAction[Int, NoStream, Effect.Write]]): Seq[Int] = {
     run(DBIO.sequence(ops))
   }
+   */
 
   private object TableList {
 

@@ -21,11 +21,12 @@ package org.aqa.db
   */
 object UserRole extends Enumeration {
 
-  val publik = Value // can look at 'about us' type of information
-  val guest = Value // can look at data but not run procedures
-  val user = Value // can run procedures
-  val dev = Value // can develop procedures
-  val admin = Value // can change configuration
+  //noinspection SpellCheckingInspection
+  val publik: UserRole.Value = Value // can look at 'about us' type of information
+  val guest: UserRole.Value = Value // can look at data but not run procedures
+  val user: UserRole.Value = Value // can run procedures
+  val dev: UserRole.Value = Value // can develop procedures
+  val admin: UserRole.Value = Value // can change configuration
 
   /**
     * Convert text to a UserRole.  Is case insensitive.
@@ -42,10 +43,10 @@ object UserRole extends Enumeration {
     }
 
     println("equality ==     : " + (stringToUserRole("guest").get == UserRole.guest))
-    println("equality eq     : " + (stringToUserRole("guest").get.eq(UserRole.guest)))
-    println("equality equals : " + (stringToUserRole("guest").get.equals(UserRole.guest)))
+    println("equality eq     : " + stringToUserRole("guest").get.eq(UserRole.guest))
+    println("equality equals : " + stringToUserRole("guest").get.equals(UserRole.guest))
 
-    values.toArray.toList.map(ur => println("ur: " + ur.id + "  " + ur))
+    values.toArray.toList.foreach(ur => println("ur: " + ur.id + "  " + ur))
 
     foo(UserRole.admin)
 

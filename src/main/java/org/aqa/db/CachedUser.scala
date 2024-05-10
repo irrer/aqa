@@ -158,7 +158,7 @@ object CachedUser extends Logging {
       if (ldapUserInfo.isDefined) {
         createUserWithLdap(id, secret, ldapUserInfo.get) match {
           case Some(user) =>
-            user.insertOrUpdate
+            user.insertOrUpdate()
             put(id, user)
             logger.info("New user has been automatically created because they were authenticated by LDAP: " + user)
             Some(user)

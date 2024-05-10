@@ -24,6 +24,7 @@ case class MachineBeamEnergy(
     machineBeamEnergyPK: Option[Long], // primary key
     machinePK: Long, // machine primary key
     photonEnergy_MeV: Option[Double], // photon energy in million electron volts
+    //noinspection SpellCheckingInspection
     maxDoseRate_MUperMin: Option[Double], // dose rate in MU / minute
     fffEnergy_MeV: Option[Double] // flat filter free energy in million electron volts
 ) {
@@ -37,7 +38,7 @@ case class MachineBeamEnergy(
     result
   }
 
-  def insertOrUpdate = Db.run(MachineBeamEnergy.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(MachineBeamEnergy.query.insertOrUpdate(this))
 
   override def equals(o: Any): Boolean = {
     val other = o.asInstanceOf[MachineBeamEnergy]
@@ -46,11 +47,12 @@ case class MachineBeamEnergy(
     fffEnergy_MeV.equals(other.fffEnergy_MeV)
   }
 
-  def isFFF = fffEnergy_MeV.isDefined && (fffEnergy_MeV.get > 0)
+  def isFFF: Boolean = fffEnergy_MeV.isDefined && (fffEnergy_MeV.get > 0)
 
-  override def toString = {
+  override def toString: String = {
     def show(d: Option[Double]) = if (d.isDefined) Util.fmtDbl(d.get) else "none"
 
+    //noinspection SpellCheckingInspection
     "PK: " + machineBeamEnergyPK +
       "    machinePK: " + machinePK +
       "    photonEnergy_MeV: " + show(photonEnergy_MeV) +
@@ -65,10 +67,11 @@ object MachineBeamEnergy {
     def machineBeamEnergyPK = column[Long]("machineBeamEnergyPK", O.PrimaryKey, O.AutoInc)
     def machinePK = column[Long]("machinePK")
     def photonEnergy_MeV = column[Option[Double]]("photonEnergy_MeV")
+    //noinspection SpellCheckingInspection
     def maxDoseRate_MUperMin = column[Option[Double]]("maxDoseRate_MUperMin")
     def fffEnergy_MeV = column[Option[Double]]("fffEnergy_MeV")
 
-    def * = (machineBeamEnergyPK.?, machinePK, photonEnergy_MeV, maxDoseRate_MUperMin, fffEnergy_MeV) <> ((MachineBeamEnergy.apply _) tupled, MachineBeamEnergy.unapply _)
+    def * = (machineBeamEnergyPK.?, machinePK, photonEnergy_MeV, maxDoseRate_MUperMin, fffEnergy_MeV) <> (MachineBeamEnergy.apply _ tupled, MachineBeamEnergy.unapply)
 
     def machineFK = foreignKey("MachineBeamEnergy_machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -78,15 +81,15 @@ object MachineBeamEnergy {
   def get(machineBeamEnergyPK: Long): Option[MachineBeamEnergy] = {
     val action = for {
       inst <- MachineBeamEnergy.query if inst.machineBeamEnergyPK === machineBeamEnergyPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   def getByMachine(machinePK: Long): Seq[MachineBeamEnergy] = {
     val action = for {
       inst <- MachineBeamEnergy.query if inst.machinePK === machinePK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
     list
   }
@@ -94,7 +97,7 @@ object MachineBeamEnergy {
   /**
     * Get a list of all machineBeamEnergies.
     */
-  def list = Db.run(query.result)
+  def list: Seq[MachineBeamEnergy] = Db.run(query.result)
 
   def delete(machineBeamEnergyPK: Long): Int = {
     val q = query.filter(_.machineBeamEnergyPK === machineBeamEnergyPK)
@@ -109,31 +112,30 @@ object MachineBeamEnergy {
   }
 
   def sorter(a: MachineBeamEnergy, b: MachineBeamEnergy): Boolean = {
-    def srtDef(mbe: (MachineBeamEnergy) => Option[Double]): Option[Boolean] = {
-      for (ea <- mbe(a); eb <- mbe(b)) yield (ea < eb)
+    def srtDef(mbe: MachineBeamEnergy => Option[Double]): Option[Boolean] = {
+      for (ea <- mbe(a); eb <- mbe(b)) yield ea < eb
     }
 
-    def srtNotDef(mbe: (MachineBeamEnergy) => Option[Double]): Option[Boolean] = {
+    def srtNotDef(mbe: MachineBeamEnergy => Option[Double]): Option[Boolean] = {
       { (mbe(a), mbe(b)) } match {
-        case (Some(a), _) => Some(false)
-        case (_, Some(b)) => Some(true)
+        case (Some(_), _) => Some(false)
+        case (_, Some(_)) => Some(true)
         case _            => None
       }
     }
     Seq(srtDef(_.photonEnergy_MeV), srtDef(_.maxDoseRate_MUperMin), srtDef(_.fffEnergy_MeV)).flatten.headOption match {
       case Some(bool) => bool
-      case _ => {
+      case _ =>
         Seq(srtNotDef(_.photonEnergy_MeV), srtNotDef(_.maxDoseRate_MUperMin), srtNotDef(_.fffEnergy_MeV)).flatten.headOption match {
           case Some(b) => b
           case _       => false
         }
-      }
     }
   }
 
   /** For testing only. */
   def main(args: Array[String]): Unit = {
-    val valid = Config.validate
+    Config.validate
     DbSetup.init
     println("MachineBeamEnergy.main done")
   }

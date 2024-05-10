@@ -17,9 +17,6 @@
 package org.aqa.db
 
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
-
-import scala.xml.Elem
 
 /**
  * Store and instance of all of the data for a single image of focal spot.
@@ -106,7 +103,7 @@ case class FocalSpot(
   }
 }
 
-object FocalSpot extends ProcedureOutput {
+object FocalSpot {
   class FocalSpotTable(tag: Tag) extends Table[FocalSpot](tag, "focalSpot") {
 
     def focalSpotPK = column[Long]("focalSpotPK", O.PrimaryKey, O.AutoInc)
@@ -184,8 +181,6 @@ object FocalSpot extends ProcedureOutput {
 
   val query = TableQuery[FocalSpotTable]
 
-  override val topXmlLabel = "FocalSpot"
-
   def get(focalSpotPK: Long): Option[FocalSpot] = {
     val action = for {
       inst <- FocalSpot.query if inst.focalSpotPK === focalSpotPK
@@ -216,17 +211,11 @@ object FocalSpot extends ProcedureOutput {
   }
 
   def insert(list: Seq[FocalSpot]): Seq[Int] = {
-    val ops = list.map { imgId => FocalSpot.query.insertOrUpdate(imgId) }
-    Db.perform(ops)
-  }
-
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    throw new RuntimeException("Focal Spot insert not defined for Elem data.")
+    list.map(_.insertOrUpdate())
   }
 
   def insertSeq(list: Seq[FocalSpot]): Unit = {
-    val ops = list.map { loc => FocalSpot.query.insertOrUpdate(loc) }
-    Db.perform(ops)
+    list.foreach(_.insertOrUpdate())
   }
 
   case class FocalSpotHistory(output: Output, focalSpot: FocalSpot) {}
@@ -272,6 +261,7 @@ object FocalSpot extends ProcedureOutput {
 
   /**
    * Round the RTImageSID to the nearest 10.
+   *
    * @param RTImageSID Raw value from attribute list.
    * @return Value rounded.
    */

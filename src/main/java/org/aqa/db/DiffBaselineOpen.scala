@@ -16,15 +16,7 @@
 
 package org.aqa.db
 
-import org.aqa.Config
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
-import org.aqa.webrun.LOCXml
-
-import java.io.File
-import scala.xml.Elem
-import scala.xml.Node
-import scala.xml.XML
 
 case class DiffBaselineOpen(
     diffBaselineOpenPK: Option[Long], // primary key
@@ -48,14 +40,14 @@ case class DiffBaselineOpen(
   override def toString: String = "leaf: " + leafIndex.formatted("%2d") + "    section: " + section + "    diffBaselineOpen_mm: " + diffBaselineOpen_mm.toString.trim
 }
 
-object DiffBaselineOpen extends ProcedureOutput {
+object DiffBaselineOpen {
   class DiffBaselineOpenTable(tag: Tag) extends Table[DiffBaselineOpen](tag, "diffBaselineOpen") {
 
     def diffBaselineOpenPK = column[Long]("diffBaselineOpenPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
     def section = column[String]("section")
     def leafIndex = column[Int]("leafIndex")
-    def diffBaselineOpen_mm = column[Double]("diffBaselineOpen_mm")
+    private def diffBaselineOpen_mm = column[Double]("diffBaselineOpen_mm")
 
     def * = (diffBaselineOpenPK.?, outputPK, section, leafIndex, diffBaselineOpen_mm) <> (DiffBaselineOpen.apply _ tupled, DiffBaselineOpen.unapply)
 
@@ -63,8 +55,6 @@ object DiffBaselineOpen extends ProcedureOutput {
   }
 
   val query = TableQuery[DiffBaselineOpenTable]
-
-  override val topXmlLabel = "LOCDifferenceFromBaselineOpen"
 
   def get(diffBaselineOpenPK: Long): Option[DiffBaselineOpen] = {
     val action = for {
@@ -97,40 +87,8 @@ object DiffBaselineOpen extends ProcedureOutput {
     Db.run(action)
   }
 
-  private def xmlToList(elem: Elem, outputPK: Long): Seq[DiffBaselineOpen] = {
-    def leafNodeToLocList(leaf: Node): Seq[DiffBaselineOpen] = {
-      val leafIndex = (leaf \ "leafIndex").head.text.toInt
-      (leaf \ "Value").map(n => LOCXml.textToDouble(n.text)).zipWithIndex.map(di => new DiffBaselineOpen(None, outputPK, (di._2 + 1).toString, leafIndex, di._1))
-    }
-
-    (elem \ topXmlLabel).headOption match {
-      case Some(node) => (node \ "Leaf").flatMap(leaf => leafNodeToLocList(leaf))
-      case None       => Seq[DiffBaselineOpen]()
-    }
-  }
-
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    val toInsert = xmlToList(elem, outputPK)
-    insertSeq(toInsert)
-    toInsert.size
-  }
-
   def insertSeq(list: Seq[DiffBaselineOpen]): Unit = {
-    val ops = list.map { loc => DiffBaselineOpen.query.insertOrUpdate(loc) }
-    Db.perform(ops)
+    list.foreach(_.insertOrUpdate())
   }
 
-  /** For testing only. */
-  def main(args: Array[String]): Unit = {
-    Config.validate
-    DbSetup.init
-    System.exit(99)
-    val elem = XML.loadFile(new File("""D:\tmp\aqa\tmp\output.xml"""))
-    val xmlList = xmlToList(elem, 134)
-    xmlList.foreach(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     diffBaselineOpen_mm: " + loc.diffBaselineOpen_mm))
-    xmlList.map(loc => loc.insertOrUpdate())
-    println("DiffBaselineOpen.main done")
-    //println("======== inst: " + get(5))
-    //println("======== inst delete: " + delete(5))
-  }
 }

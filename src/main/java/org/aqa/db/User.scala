@@ -62,6 +62,7 @@ case class User(
 
   def getRole: Option[UserRole.Value] = UserRole.stringToUserRole(role)
 
+  //noinspection SpellCheckingInspection
   override def toString: String = {
     def fmt(text: String) = text.take(6) + "..."
     "userPK: " + (if (userPK.isDefined) userPK.get else "None") +
@@ -93,7 +94,7 @@ case class User(
 
 object User extends Logging {
 
-  val adminIndicator = "admin"
+  private val adminIndicator = "admin"
 
   class UserTable(tag: Tag) extends Table[User](tag, "user") {
 
@@ -108,7 +109,7 @@ object User extends Logging {
     def role = column[String]("role")
     def termsOfUseAcknowledgment = column[Option[Timestamp]]("termsOfUseAcknowledgment")
 
-    def * = (userPK.?, id, id_real, fullName_real, email_real, institutionPK, hashedPassword, passwordSalt, role, termsOfUseAcknowledgment) <> (User.apply _ tupled, User.unapply _)
+    def * = (userPK.?, id, id_real, fullName_real, email_real, institutionPK, hashedPassword, passwordSalt, role, termsOfUseAcknowledgment) <> (User.apply _ tupled, User.unapply)
 
     def institutionFK = foreignKey("User_institutionPKConstraint", institutionPK, Institution.query)(_.institutionPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -220,7 +221,7 @@ object User extends Logging {
   /**
     * Get the admin for the given institution if there is one.
     */
-  def getInstitutionAdminUser(institutionPK: Long): Option[User] = {
+  private def getInstitutionAdminUser(institutionPK: Long): Option[User] = {
     listUsersFromInstitution(institutionPK).find(_.isAdmin)
   }
 
@@ -233,7 +234,7 @@ object User extends Logging {
     *
     * The user is created as an admin.
     */
-  def getOrMakeInstitutionAdminUser(institutionPK: Long): User = {
+  private def getOrMakeInstitutionAdminUser(institutionPK: Long): User = {
     getInstitutionAdminUser(institutionPK) match {
       case Some(user) => user // there already is one.
       case _ =>
@@ -262,7 +263,8 @@ object User extends Logging {
     //    println("======== user: " + get(5))
     //    println("======== user delete: " + delete(5))
     if (true) {
-      val adminUser = getOrMakeInstitutionAdminUser(1)
+      val pk = 1
+      val adminUser = getOrMakeInstitutionAdminUser(pk)
       println("admin user: " + adminUser)
     }
   }

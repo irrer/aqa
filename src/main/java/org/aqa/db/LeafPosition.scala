@@ -18,25 +18,24 @@ package org.aqa.db
 
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
 import org.aqa.run.ProcedureStatus
 
 import scala.xml.Elem
 
 case class LeafPosition(
-    leafPositionPK: Option[Long], // primary key
-    outputPK: Long, // output primary key
-    SOPInstanceUID: String, // UID of source image
-    beamName: String, // name of beam in plan
-    leafIndex: Int, // leaf number starting at 1
-    leafPositionIndex: Int, // leaf position number as it moves across the field
-    offset_mm: Double, // difference from expected location: measuredEndPosition_mm - expectedEndPosition_mm
-    status: String, // termination status
-    measuredEndPosition_mm: Double, // measured position of leaf end
-    expectedEndPosition_mm: Double, // expected position of leaf end
-    measuredMinorSide_mm: Double, // measured position of top side of leaf, or left side if collimator is vertical
-    measuredMajorSide_mm: Double // measured position of bottom side of leaf, or right side if collimator is vertical
-) {
+                         leafPositionPK: Option[Long], // primary key
+                         outputPK: Long, // output primary key
+                         SOPInstanceUID: String, // UID of source image
+                         beamName: String, // name of beam in plan
+                         leafIndex: Int, // leaf number starting at 1
+                         leafPositionIndex: Int, // leaf position number as it moves across the field
+                         offset_mm: Double, // difference from expected location: measuredEndPosition_mm - expectedEndPosition_mm
+                         status: String, // termination status
+                         measuredEndPosition_mm: Double, // measured position of leaf end
+                         expectedEndPosition_mm: Double, // expected position of leaf end
+                         measuredMinorSide_mm: Double, // measured position of top side of leaf, or left side if collimator is vertical
+                         measuredMajorSide_mm: Double // measured position of bottom side of leaf, or right side if collimator is vertical
+                       ) {
 
   def insert: LeafPosition = {
     val insertQuery = LeafPosition.query returning LeafPosition.query.map(_.leafPositionPK) into ((leafPosition, leafPositionPK) => leafPosition.copy(leafPositionPK = Some(leafPositionPK)))
@@ -58,20 +57,31 @@ case class LeafPosition(
   def pass: Boolean = status.equalsIgnoreCase(ProcedureStatus.pass.toString)
 }
 
-object LeafPosition extends ProcedureOutput with Logging {
+object LeafPosition extends Logging {
   class LeafPositionTable(tag: Tag) extends Table[LeafPosition](tag, "leafPosition") {
 
     def leafPositionPK = column[Long]("leafPositionPK", O.PrimaryKey, O.AutoInc)
+
     def outputPK = column[Long]("outputPK")
+
     def SOPInstanceUID = column[String]("SOPInstanceUID")
+
     def beamName = column[String]("beamName")
+
     def leafIndex = column[Int]("leafIndex")
+
     def leafPositionIndex = column[Int]("leafPositionIndex")
+
     def offset_mm = column[Double]("offset_mm")
+
     def status = column[String]("status")
+
     def measuredEndPosition_mm = column[Double]("measuredEndPosition_mm")
+
     def expectedEndPosition_mm = column[Double]("expectedEndPosition_mm")
+
     def measuredMinorSide_mm = column[Double]("measuredLowSide_mm")
+
     def measuredMajorSide_mm = column[Double]("measuredHighSide_mm")
 
     def * =
@@ -95,8 +105,6 @@ object LeafPosition extends ProcedureOutput with Logging {
 
   val query = TableQuery[LeafPositionTable]
 
-  override val topXmlLabel = "LeafPosition"
-
   def get(leafPositionPK: Long): Option[LeafPosition] = {
     val action = for {
       inst <- LeafPosition.query if inst.leafPositionPK === leafPositionPK
@@ -106,8 +114,8 @@ object LeafPosition extends ProcedureOutput with Logging {
   }
 
   /**
-    * Get a list of all LeafPosition for the given output
-    */
+   * Get a list of all LeafPosition for the given output
+   */
   def getByOutput(outputPK: Long): Seq[LeafPosition] = {
     val action = for {
       inst <- LeafPosition.query if inst.outputPK === outputPK
@@ -132,25 +140,18 @@ object LeafPosition extends ProcedureOutput with Logging {
     throw new RuntimeException("Constructing from Elem not supported: " + outputPK + " : " + elem)
   }
 
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    val toInsert = xmlToList(elem, outputPK)
-    insertSeq(toInsert)
-    toInsert.size
-  }
-
   def insertSeq(list: Seq[LeafPosition]): Unit = {
-    val ops = list.map { loc => LeafPosition.query.insertOrUpdate(loc) }
-    Db.perform(ops)
+    list.foreach(_.insertOrUpdate())
   }
 
   /**
-    * Container for a group of LeafPositions associated with a single DICOM image.
-    *
-    * All data will have the same SOPInstanceUID.
-    *
-    * @param output Output with which the data is associated.
-    * @param leafPosSeq List of leaf positions.
-    */
+   * Container for a group of LeafPositions associated with a single DICOM image.
+   *
+   * All data will have the same SOPInstanceUID.
+   *
+   * @param output     Output with which the data is associated.
+   * @param leafPosSeq List of leaf positions.
+   */
   case class LeafPosHistory(output: Output, leafPosSeq: Seq[LeafPosition]) {
     // Used for sorting instances of this class
     val ordering: String = output.dataDate.get.getTime + "  " + leafPosSeq.head.beamName
@@ -159,19 +160,21 @@ object LeafPosition extends ProcedureOutput with Logging {
     private val leafPosMap = leafPosSeq.map(lp => ((lp.leafPositionIndex, lp.leafIndex), lp)).toMap
 
     /**
-      * Get the entry corresponding to the leaf's position and index.
-      * @param leafPositionIndex Index of horizontal position of leaf.  Currently a number from 1 to 10.  Note: NOT zero relative.
-      * @param leafIndex Index of leaf.  Will be either 1 to 36 or 1 to 52 depending on the collimator.  Note: NOT zero relative.
-      * @return A leaf position entry.
-      */
+     * Get the entry corresponding to the leaf's position and index.
+     *
+     * @param leafPositionIndex Index of horizontal position of leaf.  Currently a number from 1 to 10.  Note: NOT zero relative.
+     * @param leafIndex         Index of leaf.  Will be either 1 to 36 or 1 to 52 depending on the collimator.  Note: NOT zero relative.
+     * @return A leaf position entry.
+     */
     def get(leafPositionIndex: Int, leafIndex: Int): Option[LeafPosition] = leafPosMap.get((leafPositionIndex, leafIndex))
   }
 
   /**
-    * Get the entire history of leaf position data for the given machine.
-    * @param machinePK Machine to get data for.
-    * @return List of history items sorted by data date and then beam name.  The leafPosSeq is not sorted.
-    */
+   * Get the entire history of leaf position data for the given machine.
+   *
+   * @param machinePK Machine to get data for.
+   * @return List of history items sorted by data date and then beam name.  The leafPosSeq is not sorted.
+   */
   def history(machinePK: Long, procedurePK: Long): Seq[LeafPosHistory] = {
 
     logger.info("LeafPosition history starting for machine: " + machinePK + " : " + Machine.get(machinePK).get.id)

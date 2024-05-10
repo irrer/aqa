@@ -19,10 +19,8 @@ package org.aqa.db
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
 
 import java.sql.Timestamp
-import scala.xml.Elem
 
 /**
   * Represent the results of a symmetry, flatness, and constancy analysis.
@@ -142,7 +140,7 @@ case class SymmetryAndFlatness(
 
 }
 
-object SymmetryAndFlatness extends ProcedureOutput with Logging {
+object SymmetryAndFlatness extends Logging {
 
   class SymmetryAndFlatnessTable(tag: Tag) extends Table[SymmetryAndFlatness](tag, "symmetryAndFlatness") {
 
@@ -196,14 +194,10 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
         centerStdDev_cu
       ) <> (SymmetryAndFlatness.apply _ tupled, SymmetryAndFlatness.unapply)
 
-    // center_cu) <> (SymmetryAndFlatness.apply _ tupled, SymmetryAndFlatness.unapply _)  This is how it was before.
-
     def outputFK = foreignKey("SymmetryAndFlatness_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[SymmetryAndFlatnessTable]
-
-  override val topXmlLabel = "SymmetryAndFlatness"
 
   def get(symmetryAndFlatnessPK: Long): Option[SymmetryAndFlatness] = {
     val action = for {
@@ -232,21 +226,6 @@ object SymmetryAndFlatness extends ProcedureOutput with Logging {
     val q = query.filter(_.outputPK === outputPK)
     val action = q.delete
     Db.run(action)
-  }
-
-  def insert(list: Seq[SymmetryAndFlatness]): Seq[Int] = {
-    val ops = list.map { imgId => SymmetryAndFlatness.query.insertOrUpdate(imgId) }
-    Db.perform(ops)
-  }
-
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    logger.error("the insert method should never be called")
-    throw new RuntimeException("the insert method should never be called")
-  }
-
-  def insertSeq(list: Seq[SymmetryAndFlatness]): Unit = {
-    val ops = list.map { loc => SymmetryAndFlatness.query.insertOrUpdate(loc) }
-    Db.perform(ops)
   }
 
   case class SymmetryAndFlatnessHistory(output: Output, symmetryAndFlatness: SymmetryAndFlatness, baselineOutput: Output, baseline: SymmetryAndFlatness) {}

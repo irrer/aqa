@@ -17,10 +17,8 @@
 package org.aqa.db
 
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
 
 import java.awt.geom.Point2D
-import scala.xml.Elem
 
 case class CollimatorCentering(
     collimatorCenteringPK: Option[Long], // primary key
@@ -79,7 +77,7 @@ case class CollimatorCentering(
   val center = new Point2D.Double(xCollimatorCenter_mm, yCollimatorCenter_mm)
 }
 
-object CollimatorCentering extends ProcedureOutput {
+object CollimatorCentering {
   class CollimatorCenteringTable(tag: Tag) extends Table[CollimatorCentering](tag, "collimatorCentering") {
 
     def collimatorCenteringPK = column[Long]("collimatorCenteringPK", O.PrimaryKey, O.AutoInc)
@@ -128,8 +126,6 @@ object CollimatorCentering extends ProcedureOutput {
 
   val query = TableQuery[CollimatorCenteringTable]
 
-  override val topXmlLabel = "CollimatorCentering"
-
   def get(collimatorCenteringPK: Long): Option[CollimatorCentering] = {
     val action = for {
       inst <- CollimatorCentering.query if inst.collimatorCenteringPK === collimatorCenteringPK
@@ -160,17 +156,11 @@ object CollimatorCentering extends ProcedureOutput {
   }
 
   def insert(list: Seq[CollimatorCentering]): Seq[Int] = {
-    val ops = list.map { imgId => CollimatorCentering.query.insertOrUpdate(imgId) }
-    Db.perform(ops)
-  }
-
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    throw new RuntimeException("Collimator Centering insert not defined for Elem data.")
+    list.map(_.insertOrUpdate())
   }
 
   def insertSeq(list: Seq[CollimatorCentering]): Unit = {
-    val ops = list.map { loc => CollimatorCentering.query.insertOrUpdate(loc) }
-    Db.perform(ops)
+    list.foreach(_.insertOrUpdate())
   }
 
   case class ColCentHistory(output: Output, colCent: CollimatorCentering) {}

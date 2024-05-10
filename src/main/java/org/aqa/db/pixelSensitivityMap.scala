@@ -19,14 +19,12 @@ package org.aqa.db
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
 
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import javax.vecmath.Point2i
-import scala.xml.Elem
 
 case class PixelSensitivityMap(
     pixelSensitivityMapPK: Option[Long], // primary key
@@ -84,9 +82,9 @@ case class PixelSensitivityMap(
     matrix
   }
 
-  var pixelSensitivityMapAsDouble: Seq[Seq[Double]] = byte1dToDouble2d(pixelSensitivityMap_array)
+  private var pixelSensitivityMapAsDouble: Seq[Seq[Double]] = byte1dToDouble2d(pixelSensitivityMap_array)
 
-  var wholeDetectorAsDouble: Seq[Seq[Double]] = byte1dToDouble2d(wholeDetector_array)
+  private var wholeDetectorAsDouble: Seq[Seq[Double]] = byte1dToDouble2d(wholeDetector_array)
 
   def insertOrUpdate(): Int = Db.run(PixelSensitivityMap.query.insertOrUpdate(this))
 
@@ -103,7 +101,6 @@ case class PixelSensitivityMap(
 
   private def multiplyByWholeDetector(dicomImage: DicomImage): Seq[Seq[Double]] = {
 
-
     def doRow(y: Int) = {
       wholeDetectorAsDouble(y).zip(dicomImage.pixelData(y)).map(wi => wi._1 * wi._2)
     }
@@ -114,10 +111,10 @@ case class PixelSensitivityMap(
   }
 
   /**
-   * Divide each pixel in the given image by the corresponding pixel in the PSM.
-   * @param wdXimg For this image.
-   * @return New image map.
-   */
+    * Divide each pixel in the given image by the corresponding pixel in the PSM.
+    * @param wdXimg For this image.
+    * @return New image map.
+    */
   private def divByPsm(wdXimg: Seq[Seq[Double]]): Seq[Seq[Double]] = {
     val zeroSet = {
       val list = for (x <- 0 until width_pix; y <- 0 until height_pix; if wdXimg(y)(x) == 0) yield new Point2i(x, y)
@@ -153,7 +150,6 @@ case class PixelSensitivityMap(
     val imageLoMean = imageSorted.slice(sampleSize, sampleSize + sampleSize).sum / sampleSize
     val imageHiMean = imageSorted.dropRight(sampleSize).takeRight(sampleSize).sum / sampleSize
 
-
     ???
   }
 
@@ -176,7 +172,7 @@ case class PixelSensitivityMap(
 }
 
 //noinspection ScalaWeakerAccess
-object PixelSensitivityMap extends ProcedureOutput {
+object PixelSensitivityMap {
   class PSMTable(tag: Tag) extends Table[PixelSensitivityMap](tag, "pixelSensitivityMap") {
 
     def pixelSensitivityMapPK = column[Long]("pixelSensitivityMapPK", O.PrimaryKey, O.AutoInc)
@@ -195,8 +191,6 @@ object PixelSensitivityMap extends ProcedureOutput {
   }
 
   val query = TableQuery[PSMTable]
-
-  override val topXmlLabel = "pixelSensitivityMap"
 
   def get(pixelSensitivityMapPK: Long): Option[PixelSensitivityMap] = {
     val action = for {
@@ -225,20 +219,6 @@ object PixelSensitivityMap extends ProcedureOutput {
     val q = query.filter(_.outputPK === outputPK)
     val action = q.delete
     Db.run(action)
-  }
-
-  def insert(list: Seq[PixelSensitivityMap]): Seq[Int] = {
-    val ops = list.map { imgId => PixelSensitivityMap.query.insertOrUpdate(imgId) }
-    Db.perform(ops)
-  }
-
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    throw new RuntimeException("Insert by elem not implemented.")
-  }
-
-  def insertSeq(list: Seq[PixelSensitivityMap]): Unit = {
-    val ops = list.map { loc => PixelSensitivityMap.query.insertOrUpdate(loc) }
-    Db.perform(ops)
   }
 
   private def double2dToByte1d(width: Int, height: Int, doubleMatrix: Seq[Seq[Double]]): Array[Byte] = {

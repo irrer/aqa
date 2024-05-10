@@ -53,8 +53,8 @@ case class MachineDailyQA(
   override def toString: String = {
     "PK: " + machineDailyQAPK +
       "    passLimit_mm: " + Util.fmtDbl(passLimit_mm) +
-      "    warningLimit_mm: " + Util.fmtDbl(warningLimit_mm)
-    "    requireXRayOffset: " + requireXRayOffset.toString
+      "    warningLimit_mm: " + Util.fmtDbl(warningLimit_mm) +
+      "    requireXRayOffset: " + requireXRayOffset.toString
   }
 }
 

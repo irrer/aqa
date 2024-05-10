@@ -17,13 +17,6 @@
 package org.aqa.db
 
 import org.aqa.db.Db.driver.api._
-import org.aqa.Config
-import org.aqa.procedures.ProcedureOutput
-
-import java.io.File
-import scala.xml.Elem
-import scala.xml.Node
-import scala.xml.XML
 
 case class EPIDCenterCorrection(
     epidCenterCorrectionPK: Option[Long], // primary key
@@ -40,33 +33,31 @@ case class EPIDCenterCorrection(
     result
   }
 
-  def insertOrUpdate = Db.run(EPIDCenterCorrection.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(EPIDCenterCorrection.query.insertOrUpdate(this))
 
-  override def toString: String = (epidCenterCorrection_mm.toString).trim
+  override def toString: String = epidCenterCorrection_mm.toString.trim
 }
 
-object EPIDCenterCorrection extends ProcedureOutput {
+object EPIDCenterCorrection {
   class EPIDCenterCorrectionTable(tag: Tag) extends Table[EPIDCenterCorrection](tag, "epidCenterCorrection") {
 
     def epidCenterCorrectionPK = column[Long]("epidCenterCorrectionPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
     def epidCenterCorrection_mm = column[Double]("epidCenterCorrection_mm")
 
-    def * = (epidCenterCorrectionPK.?, outputPK, epidCenterCorrection_mm) <> ((EPIDCenterCorrection.apply _) tupled, EPIDCenterCorrection.unapply _)
+    def * = (epidCenterCorrectionPK.?, outputPK, epidCenterCorrection_mm) <> (EPIDCenterCorrection.apply _ tupled, EPIDCenterCorrection.unapply)
 
     def outputFK = foreignKey("EPIDCenterCorrection_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[EPIDCenterCorrectionTable]
 
-  override val topXmlLabel = "EPIDCenterCorrection"
-
   def get(epidCenterCorrectionPK: Long): Option[EPIDCenterCorrection] = {
     val action = for {
       inst <- EPIDCenterCorrection.query if inst.epidCenterCorrectionPK === epidCenterCorrectionPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   /**
@@ -75,7 +66,7 @@ object EPIDCenterCorrection extends ProcedureOutput {
   def getByOutput(outputPK: Long): Seq[EPIDCenterCorrection] = {
     val action = for {
       inst <- EPIDCenterCorrection.query if inst.outputPK === outputPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
     list
   }
@@ -90,41 +81,5 @@ object EPIDCenterCorrection extends ProcedureOutput {
     val q = query.filter(_.outputPK === outputPK)
     val action = q.delete
     Db.run(action)
-  }
-
-  private def xmlToList(elem: Elem, outputPK: Long): Seq[EPIDCenterCorrection] = {
-    def nodeToEPIDCenterCorrection(ecc: Node): EPIDCenterCorrection = {
-      val epidCenterCorrection_mm = ecc.head.text.toDouble
-      new EPIDCenterCorrection(None, outputPK, epidCenterCorrection_mm)
-    }
-
-    (elem \ topXmlLabel).headOption match {
-      case Some(node) => Seq(nodeToEPIDCenterCorrection(node))
-      case None       => Seq[EPIDCenterCorrection]()
-    }
-  }
-
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    val toInsert = xmlToList(elem, outputPK)
-    toInsert.map(t => t.insertOrUpdate)
-    toInsert.size
-  }
-
-  /** For testing only. */
-  def main(args: Array[String]): Unit = {
-    val valid = Config.validate
-    DbSetup.init
-    val elem = XML.loadFile(new File("""D:\tmp\aqa\LOC.xml"""))
-    val xmlList = xmlToList(elem, 90)
-    xmlList.map(loc =>
-      println(
-        "    outputPK: " + loc.outputPK +
-          "     epidCenterCorrection_mm: " + loc.epidCenterCorrection_mm
-      )
-    )
-    xmlList.map(loc => loc.insertOrUpdate)
-    println("EPIDCenterCorrection.main done")
-    //println("======== inst: " + get(5))
-    //println("======== inst delete: " + delete(5))
   }
 }

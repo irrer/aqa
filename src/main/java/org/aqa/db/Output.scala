@@ -325,7 +325,7 @@ object Output extends Logging {
     val inputDir = output.dir.getParentFile
 
     if (!inputDir.isDirectory) {
-      Input.getFilesFromDatabase(output.inputPK, inputDir.getParentFile)
+      Input.restoreFilesFromDatabase(output.inputPK, inputDir.getParentFile)
       Output.getFilesFromDatabase(output.outputPK.get, inputDir)
     } else {
       if (!output.dir.isDirectory) {

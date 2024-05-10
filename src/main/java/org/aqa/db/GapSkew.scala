@@ -19,7 +19,6 @@ package org.aqa.db
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
 
 import scala.xml.Elem
 
@@ -238,7 +237,7 @@ case class GapSkew(
   }
 }
 
-object GapSkew extends ProcedureOutput with Logging {
+object GapSkew extends Logging {
 
   class GapSkewTable(tag: Tag) extends Table[GapSkew](tag, "gapSkew") {
 
@@ -405,14 +404,6 @@ object GapSkew extends ProcedureOutput with Logging {
     def toEdgeType(text: String): EdgeType = list.find(_.name.equals(text)).get
   }
 
-  /*
-  val edgeTypeJaw = "Jaw" // edge was formed by jaw
-  val edgeTypeMlc = "MLC" // edge was formed by MLC leaf ends
-  val edgeTypeNone = "None" // indicates that there was no measurement
-   */
-
-  override val topXmlLabel = "GapSkew"
-
   def get(gapSkewPK: Long): Option[GapSkew] = {
     val action = for {
       inst <- GapSkew.query if inst.gapSkewPK === gapSkewPK
@@ -450,15 +441,8 @@ object GapSkew extends ProcedureOutput with Logging {
     Seq[GapSkew]()
   }
 
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    val toInsert = xmlToList(elem, outputPK)
-    insertSeq(toInsert)
-    toInsert.size
-  }
-
   def insertSeq(list: Seq[GapSkew]): Unit = {
-    val ops = list.map { loc => GapSkew.query.insertOrUpdate(loc) }
-    Db.perform(ops)
+    list.foreach(_.insertOrUpdate())
   }
 
   case class GapSkewHistory(output: Output, gapSkew: GapSkew) {}

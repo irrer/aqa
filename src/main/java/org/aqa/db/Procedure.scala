@@ -87,14 +87,20 @@ case class Procedure(
 
   }
 
+  //noinspection ScalaWeakerAccess
   // TODO There should be a more structured way of identifying procedure types.
   final val isBBbyCBCT = name.toLowerCase.contains("bb") && name.toLowerCase.contains("cbct")
+  //noinspection ScalaWeakerAccess
   final val isBBbyEPID = name.toLowerCase.contains("bb") && name.toLowerCase.contains("epid")
   final val isPhase2 = name.toLowerCase.contains("phase2")
   final val isPhase3 = name.toLowerCase.contains("phase3")
+  //noinspection ScalaWeakerAccess
   final val isLOC = (name.toLowerCase.contains("loc") || name.toLowerCase.contains("leaf offset")) && (!name.toLowerCase.contains("base"))
+  //noinspection ScalaWeakerAccess
   final val isLOCBaseline = name.toLowerCase.contains("loc") && name.toLowerCase.contains("base")
+  //noinspection ScalaWeakerAccess
   final val isGapSkew = name.toLowerCase.contains("gap") && name.toLowerCase.contains("skew")
+  //noinspection ScalaWeakerAccess
   final val isWinstonLutz = name.toLowerCase.contains("winston") && name.toLowerCase.contains("lutz")
   final val isFocalSpot = name.toLowerCase.contains("focal") && name.toLowerCase.contains("spot")
 
@@ -112,7 +118,7 @@ object Procedure {
 
     def timeout = column[Float]("timeout")
 
-    def created = column[Date]("created")
+    private def created = column[Date]("created")
 
     def supportingUserPK = column[Long]("userPK")
 
@@ -120,7 +126,7 @@ object Procedure {
 
     def notes = column[String]("notes")
 
-    def * = (procedurePK.?, name, version, timeout, created, supportingUserPK, webInterface, notes) <> (Procedure.apply _ tupled, Procedure.unapply _)
+    def * = (procedurePK.?, name, version, timeout, created, supportingUserPK, webInterface, notes) <> (Procedure.apply _ tupled, Procedure.unapply)
 
     def supportingUserFK = foreignKey("Procedure_userPKConstraint", supportingUserPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
   }

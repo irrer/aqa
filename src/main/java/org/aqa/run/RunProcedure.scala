@@ -718,7 +718,7 @@ object RunProcedure extends Logging {
       // force the contents of the input directory to be reestablished so that they are
       // exactly the same as the first time this was run.
       Util.deleteFileTreeSafely(inputDir)
-      Try(Input.getFilesFromDatabase(extendedData.input.inputPK.get, inputDir.getParentFile))
+      Try(Input.restoreFilesFromDatabase(extendedData.input.inputPK.get, inputDir.getParentFile))
 
       makeOutputDir(inputDir, now)
 

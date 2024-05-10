@@ -17,9 +17,6 @@
 package org.aqa.db
 
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
-
-import scala.xml.Elem
 
 /**
   * Describe a bad pixel found in a DICOM image.
@@ -43,7 +40,7 @@ case class BadPixel(
     result
   }
 
-  def insertOrUpdate = Db.run(BadPixel.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(BadPixel.query.insertOrUpdate(this))
 
   override def toString: String = {
     "    badPixelPK: " + badPixelPK + "\n" +
@@ -56,7 +53,7 @@ case class BadPixel(
   }
 }
 
-object BadPixel extends ProcedureOutput {
+object BadPixel {
   class BadPixelTable(tag: Tag) extends Table[BadPixel](tag, "badPixel") {
 
     def badPixelPK = column[Long]("badPixelPK", O.PrimaryKey, O.AutoInc)
@@ -65,9 +62,9 @@ object BadPixel extends ProcedureOutput {
     def y = column[Int]("y")
     def SOPInstanceUID = column[String]("SOPInstanceUID")
     def imageName = column[String]("imageName")
-    def pixelValues_csv = column[String]("pixelValues_csv")
+    private def pixelValues_csv = column[String]("pixelValues_csv")
 
-    def * = (badPixelPK.?, outputPK, x, y, SOPInstanceUID, imageName, pixelValues_csv) <> ((BadPixel.apply _) tupled, BadPixel.unapply _)
+    def * = (badPixelPK.?, outputPK, x, y, SOPInstanceUID, imageName, pixelValues_csv) <> (BadPixel.apply _ tupled, BadPixel.unapply)
 
     def outputFK = foreignKey("BadPixel_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -81,12 +78,10 @@ object BadPixel extends ProcedureOutput {
 
   val query = TableQuery[BadPixelTable]
 
-  override val topXmlLabel = "BadPixel"
-
   def get(badPixelPK: Long): Option[BadPixel] = {
     val action = for {
       inst <- BadPixel.query if inst.badPixelPK === badPixelPK
-    } yield (inst)
+    } yield inst
     Db.run(action.result).headOption
   }
 
@@ -96,7 +91,7 @@ object BadPixel extends ProcedureOutput {
   def getByOutput(outputPK: Long): Seq[BadPixel] = {
     val action = for {
       inst <- BadPixel.query if inst.outputPK === outputPK
-    } yield (inst)
+    } yield inst
     Db.run(action.result)
   }
 
@@ -112,17 +107,8 @@ object BadPixel extends ProcedureOutput {
     Db.run(action)
   }
 
-  def insert(list: Seq[BadPixel]) = {
-    val ops = list.map { imgId => BadPixel.query.insertOrUpdate(imgId) }
-    Db.perform(ops)
+  def insert(list: Seq[BadPixel]): Unit = {
+    list.foreach(_.insertOrUpdate())
   }
 
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    ??? // TODO
-  }
-
-  def insertSeq(list: Seq[BadPixel]): Unit = {
-    val ops = list.map { loc => BadPixel.query.insertOrUpdate(loc) }
-    Db.perform(ops)
-  }
 }

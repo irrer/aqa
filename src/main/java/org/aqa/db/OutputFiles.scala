@@ -35,7 +35,7 @@ case class OutputFiles(
 ) // The files in zip form created by the process
 {
 
-  def insert: Unit = Db.run(OutputFiles.query += this)
+  def insert(): Unit = Db.run(OutputFiles.query += this)
 
 }
 
@@ -46,7 +46,7 @@ object OutputFiles extends Logging {
     def outputPK = column[Long]("outputPK")
     def zippedContent = column[Array[Byte]]("zippedContent")
 
-    def * = (outputFilesPK, outputPK, zippedContent) <> ((OutputFiles.apply _) tupled, OutputFiles.unapply _)
+    def * = (outputFilesPK, outputPK, zippedContent) <> (OutputFiles.apply _ tupled, OutputFiles.unapply)
 
     def outputFK = foreignKey("OutputFiles_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -56,17 +56,17 @@ object OutputFiles extends Logging {
   def get(outputFilesPK: Long): Option[OutputFiles] = {
     val action = for {
       outputFiles <- query if outputFiles.outputFilesPK === outputFilesPK
-    } yield (outputFiles)
+    } yield outputFiles
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   def getByOutput(outputPK: Long): Option[OutputFiles] = {
     val action = for {
       outputFiles <- query if outputFiles.outputPK === outputPK
-    } yield (outputFiles)
+    } yield outputFiles
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   def delete(outputFilesPK: Long): Int = {

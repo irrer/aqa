@@ -325,7 +325,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 
           // make sure that the files are there
           if (Util.listDirFiles(input.dir).isEmpty) {
-            Input.getFilesFromDatabase(input.inputPK.get, input.dir)
+            Input.restoreFilesFromDatabase(input.inputPK.get, input.dir)
           }
 
           val rtplanList = Util.listDirFiles(input.dir).map(f => new DicomFile(f)).flatMap(_.attributeList).filter(Util.isRtplan)

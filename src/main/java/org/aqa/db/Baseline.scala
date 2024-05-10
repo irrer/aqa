@@ -67,7 +67,7 @@ object Baseline extends Logging {
 
     def setup = column[String]("setup")
 
-    def * = (baselinePK.?, maintenanceRecordPK, acquisitionDate, SOPInstanceUID, id, value, setup) <> (Baseline.apply _ tupled, Baseline.unapply _)
+    def * = (baselinePK.?, maintenanceRecordPK, acquisitionDate, SOPInstanceUID, id, value, setup) <> (Baseline.apply _ tupled, Baseline.unapply)
 
     def maintenanceRecordFK =
       foreignKey("Baseline_maintenanceRecordPKConstraint", maintenanceRecordPK, MaintenanceRecord.query)(
@@ -120,8 +120,7 @@ object Baseline extends Logging {
   }
 
   def insert(list: Seq[Baseline]): Seq[Int] = {
-    val ops = list.map { bl => Baseline.query.insertOrUpdate(bl) }
-    Db.perform(ops)
+    list.map(_.insertOrUpdate())
   }
 
   /**

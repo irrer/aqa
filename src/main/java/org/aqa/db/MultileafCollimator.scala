@@ -41,7 +41,7 @@ case class MultileafCollimator(
     result
   }
 
-  def insertOrUpdate = Db.run(MultileafCollimator.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(MultileafCollimator.query.insertOrUpdate(this))
 
   def toName: String = (manufacturer + " " + model + " " + version).trim
 }
@@ -72,7 +72,7 @@ object MultileafCollimator {
         innerLeafWidth_cm,
         leafTravelDistance_cm,
         notes
-      ) <> ((MultileafCollimator.apply _) tupled, MultileafCollimator.unapply _)
+      ) <> (MultileafCollimator.apply _ tupled, MultileafCollimator.unapply)
   }
 
   val query = TableQuery[MultileafCollimatorTable]
@@ -80,9 +80,9 @@ object MultileafCollimator {
   def get(multileafCollimatorPK: Long): Option[MultileafCollimator] = {
     val action = for {
       inst <- MultileafCollimator.query if inst.multileafCollimatorPK === multileafCollimatorPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   def get(manufacturer: String, model: String, version: String): Option[MultileafCollimator] = {
@@ -90,15 +90,15 @@ object MultileafCollimator {
       inst <- MultileafCollimator.query if (inst.manufacturer.toLowerCase === manufacturer.toLowerCase) &&
         (inst.model.toLowerCase === model.toLowerCase) &&
         (inst.version.toLowerCase === version.toLowerCase)
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   /**
     * Get a list of all multileafCollimators.
     */
-  def list = Db.run(query.result)
+  def list: Seq[MultileafCollimator] = Db.run(query.result)
 
   def delete(multileafCollimatorPK: Long): Int = {
     val q = query.filter(_.multileafCollimatorPK === multileafCollimatorPK)
@@ -107,7 +107,7 @@ object MultileafCollimator {
   }
 
   def main(args: Array[String]): Unit = {
-    val valid = Config.validate
+    Config.validate
     DbSetup.init
     println("======== inst: " + get(5))
     println("======== inst delete: " + delete(5))

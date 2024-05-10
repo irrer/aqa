@@ -67,10 +67,10 @@ object MachineLog extends Logging {
     def machinePK = column[Long]("machinePK")
     def outputPK = column[Long]("outputPK")
     def DateTimeSaved = column[Timestamp]("DateTimeSaved")
-    def LoggedInUser = column[String]("LoggedInUser")
+    private def LoggedInUser = column[String]("LoggedInUser")
     def SystemVersion = column[String]("SystemVersion")
-    def ServiceSoftwareVersion = column[String]("ServiceSoftwareVersion")
-    def RTSSVersion = column[String]("RTSSVersion")
+    private def ServiceSoftwareVersion = column[String]("ServiceSoftwareVersion")
+    private def RTSSVersion = column[String]("RTSSVersion")
     def content = column[String]("content")
 
     def * =
@@ -121,13 +121,6 @@ object MachineLog extends Logging {
     try {
       def env(tag: String) = {
         (elem \ "Environment" \ tag).head.text
-      }
-
-      def hasNode(tag: String): Boolean = {
-        val parentList = elem \ "Node"
-        val list = parentList.map(n => (n \ "@name").head.text)
-        val has = list.contains(tag)
-        has
       }
 
       val loggedInUser: String = {
@@ -197,7 +190,7 @@ object MachineLog extends Logging {
 
   /**
     * Get the sorted list of dates from all machine log entries for the given machine.
-    * @param machinePK
+    * @param machinePK For this machine.
     * @return
     */
   def getDateList(machinePK: Long): Seq[Timestamp] = {

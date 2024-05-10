@@ -17,12 +17,10 @@
 package org.aqa.db
 
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
 
 import java.sql.Timestamp
 import java.util.Date
 import scala.annotation.tailrec
-import scala.xml.Elem
 
 case class WedgePoint(
     wedgePointPK: Option[Long], // primary key
@@ -67,7 +65,7 @@ case class WedgePoint(
   }
 }
 
-object WedgePoint extends ProcedureOutput {
+object WedgePoint {
 
   class WedgePointTable(tag: Tag) extends Table[WedgePoint](tag, "wedgePoint") {
 
@@ -115,8 +113,6 @@ object WedgePoint extends ProcedureOutput {
 
   val query = TableQuery[WedgePointTable]
 
-  override val topXmlLabel = "WedgePoint"
-
   def get(wedgePointPK: Long): Option[WedgePoint] = {
     val action = for {
       inst <- WedgePoint.query if inst.wedgePointPK === wedgePointPK
@@ -144,20 +140,6 @@ object WedgePoint extends ProcedureOutput {
     val q = query.filter(_.outputPK === outputPK)
     val action = q.delete
     Db.run(action)
-  }
-
-  def insert(list: Seq[WedgePoint]): Seq[Int] = {
-    val ops = list.map { imgId => WedgePoint.query.insertOrUpdate(imgId) }
-    Db.perform(ops)
-  }
-
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    throw new RuntimeException("This should never be called")
-  }
-
-  def insertSeq(list: Seq[WedgePoint]): Unit = {
-    val ops = list.map { loc => WedgePoint.query.insertOrUpdate(loc) }
-    Db.perform(ops)
   }
 
   case class WedgePointHistory1(date: Date, wedgeBeamName: String, backgroundBeamName: String, percentOfBackground_pct: Double, outputPK: Long) {}

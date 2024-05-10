@@ -17,10 +17,8 @@
 package org.aqa.db
 
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
 
 import java.sql.Timestamp
-import scala.xml.Elem
 
 case class CenterDose(
     centerDosePK: Option[Long], // primary key
@@ -52,7 +50,7 @@ case class CenterDose(
   }
 }
 
-object CenterDose extends ProcedureOutput {
+object CenterDose {
   class CenterDoseTable(tag: Tag) extends Table[CenterDose](tag, "centerDose") {
 
     def centerDosePK = column[Long]("centerDosePK", O.PrimaryKey, O.AutoInc)
@@ -68,8 +66,6 @@ object CenterDose extends ProcedureOutput {
   }
 
   val query = TableQuery[CenterDoseTable]
-
-  override val topXmlLabel = "CenterDose"
 
   def get(centerDosePK: Long): Option[CenterDose] = {
     val action = for {
@@ -101,17 +97,11 @@ object CenterDose extends ProcedureOutput {
   }
 
   def insert(list: Seq[CenterDose]): Seq[Int] = {
-    val ops = list.map { imgId => CenterDose.query.insertOrUpdate(imgId) }
-    Db.perform(ops)
-  }
-
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    throw new RuntimeException("Insert by elem not implemented.")
+    list.map(_.insertOrUpdate())
   }
 
   def insertSeq(list: Seq[CenterDose]): Unit = {
-    val ops = list.map { loc => CenterDose.query.insertOrUpdate(loc) }
-    Db.perform(ops)
+    list.foreach(_.insertOrUpdate())
   }
 
   case class CenterDoseHistory(output: Output, centerDose: CenterDose) {

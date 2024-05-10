@@ -334,7 +334,7 @@ class UserUpdate extends Restlet with SubUrlAdmin with Logging {
 
   private def userHasInput(valueMap: ValueMapT): StyleMapT = {
     val user = getReference(valueMap)
-    val inputCount = Input.getUserRefernceCount(user.get.userPK.get)
+    val inputCount = Input.getUserReferenceCount(user.get.userPK.get)
     if (inputCount == 0) styleNone
     else Error.make(id, "User has " + inputCount + " input data records and can not be deleted")
   }

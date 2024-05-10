@@ -23,7 +23,6 @@ import org.aqa.AngleType
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
 
 import java.sql.Timestamp
 import java.util.Date
@@ -34,6 +33,7 @@ import scala.xml.Elem
   * Store the analysis results for one EPID image containing a BB.
   */
 case class BBbyEPID(
+    //noinspection SpellCheckingInspection
     bbByEPIDPK: Option[Long], // primary key
     outputPK: Long, // output primary key
     epidSOPInstanceUid: String, // SOP instance UID of EPID image
@@ -45,8 +45,11 @@ case class BBbyEPID(
     epid3DX_mm: Double, // X position in EPID in 3D plan space
     epid3DY_mm: Double, // Y position in EPID in 3D plan space
     epid3DZ_mm: Double, // Z position in EPID in 3D plan space
+    //noinspection SpellCheckingInspection
     tableXlateral_mm: Double, // table position in X dimension / lateral
+    //noinspection SpellCheckingInspection
     tableYvertical_mm: Double, // table position in Y dimension / vertical
+    //noinspection SpellCheckingInspection
     tableZlongitudinal_mm: Double, // table position in Z dimension / longitudinal
     bbStdDevMultiple: Double, // Number of times (multiple) that the BB's mean pixel value was of the background's standard deviation.  A higher number means that the BB was more distinctive.
     pixelStandardDeviation_cu: Double, // standard deviation of pixels in search area around BB, not including BB pixels.  In CU (calibrated units)
@@ -55,6 +58,7 @@ case class BBbyEPID(
     metadata_dcm_zip: Option[Array[Byte]]
 ) { // DICOM without image for the slice referenced by this EPID
 
+  //noinspection SpellCheckingInspection
   def insert: BBbyEPID = {
     val insertQuery = BBbyEPID.query returning BBbyEPID.query.map(_.bbByEPIDPK) into ((bbByEPID, bbByEPIDPK) => bbByEPID.copy(bbByEPIDPK = Some(bbByEPIDPK)))
     val action = insertQuery += this
@@ -64,6 +68,7 @@ case class BBbyEPID(
 
   def insertOrUpdate(): Int = Db.run(BBbyEPID.query.insertOrUpdate(this))
 
+  //noinspection SpellCheckingInspection
   override def toString: String =
     "bbByEPIDPK : " + bbByEPIDPK +
       "\n    outputPK : " + outputPK +
@@ -96,10 +101,11 @@ case class BBbyEPID(
   }
 }
 
-object BBbyEPID extends ProcedureOutput with Logging {
+object BBbyEPID extends Logging {
 
   class BBbyEPIDTable(tag: Tag) extends Table[BBbyEPID](tag, "bbByEPID") {
 
+    //noinspection SpellCheckingInspection
     def bbByEPIDPK = column[Long]("bbByEPIDPK", O.PrimaryKey, O.AutoInc)
 
     def outputPK = column[Long]("outputPK")
@@ -122,10 +128,13 @@ object BBbyEPID extends ProcedureOutput with Logging {
 
     def epid3DZ_mm = column[Double]("epid3DZ_mm")
 
+    //noinspection SpellCheckingInspection
     def tableXlateral_mm = column[Double]("tableXlateral_mm")
 
+    //noinspection SpellCheckingInspection
     def tableYvertical_mm = column[Double]("tableYvertical_mm")
 
+    //noinspection SpellCheckingInspection
     def tableZlongitudinal_mm = column[Double]("tableZlongitudinal_mm")
 
     def bbStdDevMultiple = column[Double]("bbStdDevMultiple")
@@ -166,8 +175,7 @@ object BBbyEPID extends ProcedureOutput with Logging {
 
   val query = TableQuery[BBbyEPIDTable]
 
-  override val topXmlLabel = "BBbyEPID"
-
+  //noinspection SpellCheckingInspection
   def get(bbByEPIDPK: Long): Option[BBbyEPID] = {
     val action = for {
       inst <- BBbyEPID.query if inst.bbByEPIDPK === bbByEPIDPK
@@ -187,6 +195,7 @@ object BBbyEPID extends ProcedureOutput with Logging {
     list
   }
 
+  //noinspection SpellCheckingInspection
   def delete(bbByEPIDPK: Long): Int = {
     val q = query.filter(_.bbByEPIDPK === bbByEPIDPK)
     val action = q.delete
@@ -204,15 +213,8 @@ object BBbyEPID extends ProcedureOutput with Logging {
     Seq()
   }
 
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    val toInsert = xmlToList(elem, outputPK)
-    insertSeq(toInsert)
-    toInsert.size
-  }
-
   def insertSeq(list: Seq[BBbyEPID]): Unit = {
-    val ops = list.map { loc => BBbyEPID.query.insertOrUpdate(loc) }
-    Db.perform(ops)
+    list.foreach(_.insertOrUpdate())
   }
 
   case class BBbyEPIDHistory(date: Date, bbByEPID: BBbyEPID) {

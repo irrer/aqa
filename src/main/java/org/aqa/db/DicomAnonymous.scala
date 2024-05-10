@@ -31,7 +31,7 @@ import org.aqa.db.Db.driver.api._
 /**
   * Support the anonymization of DICOM by providing a way to store previously anonymized values in the database.
   *
-  * Note: All UID's are anonymized with the generic UID tag instead of their own (like 0008,0018:SOPInstanceUID or
+  * Note: All UIDs are anonymized with the generic UID tag instead of their own (like 0008,0018:SOPInstanceUID or
   * 0008,1155:ReferencedSOPInstanceUID).  This is because the same value is used by different attributes, and the
   * lookup is really under the context of UID.
   */
@@ -264,7 +264,7 @@ object DicomAnonymous extends Logging {
   def getByAttrAndValue(institutionPK: Long, attrList: Seq[Attribute]): Seq[DicomAnonymous] = {
     def tagSet = attrList.map(attr => formatAnonAttributeTag(attr.getTag)).toSet
     def valueSet = {
-      val trimmed = attrList.map(_.getSingleStringValueOrEmptyString.trim).toSet.toSeq
+      val trimmed = attrList.map(_.getSingleStringValueOrEmptyString.trim).distinct
       val extraBlank = trimmed.map(_ + " ")
       (trimmed ++ extraBlank).toSet
     }
@@ -277,7 +277,7 @@ object DicomAnonymous extends Logging {
     inList
   }
 
-  def getLastPk(): Long = {
+  def getLastPk: Long = {
     val lastPk =
       try {
         val action = DicomAnonymous.query.map(da => da.dicomAnonymousPK).max

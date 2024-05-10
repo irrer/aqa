@@ -17,7 +17,6 @@
 package org.aqa.db
 
 import org.aqa.db.Db.driver.api._
-import org.aqa.Config
 
 case class CentralAxis(
     centralAxisPK: Option[Long], // primary key
@@ -32,9 +31,9 @@ case class CentralAxis(
     result
   }
 
-  def insertOrUpdate = Db.run(CentralAxis.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(CentralAxis.query.insertOrUpdate(this))
 
-  override def toString: String = (maxLeafGap.toString).trim
+  override def toString: String = maxLeafGap.toString.trim
 }
 
 object CentralAxis {
@@ -42,9 +41,9 @@ object CentralAxis {
 
     def centralAxisPK = column[Long]("centralAxisPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
-    def maxLeafGap = column[Double]("maxLeafGap")
+    private def maxLeafGap = column[Double]("maxLeafGap")
 
-    def * = (centralAxisPK.?, outputPK, maxLeafGap) <> ((CentralAxis.apply _) tupled, CentralAxis.unapply _)
+    def * = (centralAxisPK.?, outputPK, maxLeafGap) <> (CentralAxis.apply _ tupled, CentralAxis.unapply)
   }
 
   val query = TableQuery[CentralAxisTable]
@@ -52,15 +51,15 @@ object CentralAxis {
   def get(centralAxisPK: Long): Option[CentralAxis] = {
     val action = for {
       inst <- CentralAxis.query if inst.centralAxisPK === centralAxisPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   /**
-    * Get a list of all centralAxiss.
+    * Get a list of all centralAxis.
     */
-  def list = Db.run(query.result)
+  def list: Seq[CentralAxis] = Db.run(query.result)
 
   def delete(centralAxisPK: Long): Int = {
     val q = query.filter(_.centralAxisPK === centralAxisPK)
@@ -74,13 +73,13 @@ object CentralAxis {
     Db.run(action)
   }
 
-  def getHistory(machinePK: Long, maxSize: Int, procedurePK: Long): Seq[Double] = {
-    val valid = DataValidity.valid.toString
+  /*
+  private def getHistory(machinePK: Long, maxSize: Int, procedurePK: Long): Seq[Double] = {
     val search = for {
       machine <- Machine.query if machine.machinePK === machinePK
       input <- Input.query if input.machinePK === machinePK
-      output <- Output.query if ((output.inputPK === input.inputPK) && (output.procedurePK === procedurePK)) //&& (output.dataValidity === valid)    TODO can we and?
-      centralAxis <- CentralAxis.query if (centralAxis.outputPK === output.outputPK)
+      output <- Output.query if (output.inputPK === input.inputPK) && (output.procedurePK === procedurePK)
+      centralAxis <- CentralAxis.query if centralAxis.outputPK === output.outputPK
     } yield (input.dataDate, centralAxis.maxLeafGap)
 
     val sorted = {
@@ -94,10 +93,11 @@ object CentralAxis {
   }
 
   def main(args: Array[String]): Unit = {
-    val valid = Config.validate
+    Config.validate
     DbSetup.init
     getHistory(2, 10, Procedure.ProcOfPhase2.get.procedurePK.get)
     //println("======== inst: " + get(5))
     //println("======== inst delete: " + delete(5))
   }
+   */
 }

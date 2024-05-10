@@ -18,11 +18,9 @@ package org.aqa.db
 
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
 import org.aqa.web.PatientProcedureXml
 
 import java.sql.Timestamp
-import scala.xml.Elem
 
 /**
   * Store the analysis results for one patient --> procedure association.
@@ -59,7 +57,7 @@ case class PatientProcedure(
       "    active : " + active
 }
 
-object PatientProcedure extends ProcedureOutput with Logging {
+object PatientProcedure extends Logging {
 
   class PatientProcedureTable(tag: Tag) extends Table[PatientProcedure](tag, "patientProcedure") {
 
@@ -88,8 +86,6 @@ object PatientProcedure extends ProcedureOutput with Logging {
 
   val query = TableQuery[PatientProcedureTable]
 
-  override val topXmlLabel = "PatientProcedure"
-
   /**
     * Given the public key, retrieve the given row.
     * @param patientProcedurePK Public key.
@@ -112,10 +108,6 @@ object PatientProcedure extends ProcedureOutput with Logging {
     val q = query.filter(_.patientProcedurePK === patientProcedurePK)
     val action = q.delete
     Db.run(action)
-  }
-
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    throw new RuntimeException("PatientProcedure: insert using Elem not supported")
   }
 
   /**

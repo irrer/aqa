@@ -109,7 +109,7 @@ object MachineWL {
   }
 
   /**
-    * Get the Winston Lutzlimits for the given machine.  If they do not exist, then get the default values.
+    * Get the Winston Lutz limits for the given machine.  If they do not exist, then get the default values.
     */
   def getMachineWLOrDefault(machinePK: Long): MachineWL = {
     MachineWL.get(machinePK) match {

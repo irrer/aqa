@@ -21,7 +21,6 @@ import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
 
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
@@ -30,6 +29,7 @@ import javax.vecmath.Point3d
 import scala.xml.Elem
 
 case class BBbyCBCT(
+    //noinspection SpellCheckingInspection
     bbByCBCTPK: Option[Long], // primary key
     outputPK: Long, // output primary key
     rtplanSOPInstanceUID: String, // UID of RTPLAN
@@ -42,12 +42,16 @@ case class BBbyCBCT(
     cbctX_mm: Double, // measured bb X position in CBCT
     cbctY_mm: Double, // measured bb Y position in CBCT
     cbctZ_mm: Double, // measured bb Z position in CBCT
+    //noinspection SpellCheckingInspection
     tableXlateral_mm: Double, // table position in X dimension / lateral
+    //noinspection SpellCheckingInspection
     tableYvertical_mm: Double, // table position in Y dimension / vertical
+    //noinspection SpellCheckingInspection
     tableZlongitudinal_mm: Double, // table position in Z dimension / longitudinal
     metadata_dcm_zip: Option[Array[Byte]]
-) { // DICOM without image for one slice from the CBCT's series
+) { // DICOM without image for one slice from the CBCTs series
 
+  //noinspection SpellCheckingInspection
   def insert: BBbyCBCT = {
     val insertQuery = BBbyCBCT.query returning BBbyCBCT.query.map(_.bbByCBCTPK) into ((bbByCBCT, bbByCBCTPK) => bbByCBCT.copy(bbByCBCTPK = Some(bbByCBCTPK)))
     val action = insertQuery += this
@@ -57,6 +61,7 @@ case class BBbyCBCT(
 
   def insertOrUpdate(): Int = Db.run(BBbyCBCT.query.insertOrUpdate(this))
 
+  //noinspection SpellCheckingInspection
   override def toString: String =
     "bbByCBCTPK : " + bbByCBCTPK +
       "\n    outputPK : " + outputPK +
@@ -83,10 +88,11 @@ case class BBbyCBCT(
   }
 }
 
-object BBbyCBCT extends ProcedureOutput {
+object BBbyCBCT {
 
   class BBbyCBCTTable(tag: Tag) extends Table[BBbyCBCT](tag, "bbByCBCT") {
 
+    //noinspection SpellCheckingInspection
     def bbByCBCTPK = column[Long]("bbByCBCTPK", O.PrimaryKey, O.AutoInc)
 
     def outputPK = column[Long]("outputPK")
@@ -111,10 +117,13 @@ object BBbyCBCT extends ProcedureOutput {
 
     def cbctZ_mm = column[Double]("cbctZ_mm")
 
+    //noinspection SpellCheckingInspection
     def tableXlateral_mm = column[Double]("tableXlateral_mm")
 
+    //noinspection SpellCheckingInspection
     def tableYvertical_mm = column[Double]("tableYvertical_mm")
 
+    //noinspection SpellCheckingInspection
     def tableZlongitudinal_mm = column[Double]("tableZlongitudinal_mm")
 
     def metadata_dcm_zip = column[Option[Array[Byte]]]("metadata_dcm_zip")
@@ -144,8 +153,7 @@ object BBbyCBCT extends ProcedureOutput {
 
   val query = TableQuery[BBbyCBCTTable]
 
-  override val topXmlLabel = "BBbyCBCT"
-
+  //noinspection SpellCheckingInspection
   def get(bbByCBCTPK: Long): Option[BBbyCBCT] = {
     val action = for {
       inst <- BBbyCBCT.query if inst.bbByCBCTPK === bbByCBCTPK
@@ -165,6 +173,7 @@ object BBbyCBCT extends ProcedureOutput {
     list
   }
 
+  //noinspection SpellCheckingInspection
   def delete(bbByCBCTPK: Long): Int = {
     val q = query.filter(_.bbByCBCTPK === bbByCBCTPK)
     val action = q.delete
@@ -182,15 +191,8 @@ object BBbyCBCT extends ProcedureOutput {
     Seq()
   }
 
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    val toInsert = xmlToList(elem, outputPK)
-    insertSeq(toInsert)
-    toInsert.size
-  }
-
   def insertSeq(list: Seq[BBbyCBCT]): Unit = {
-    val ops = list.map { loc => BBbyCBCT.query.insertOrUpdate(loc) }
-    Db.perform(ops)
+    list.foreach(_.insertOrUpdate())
   }
 
   case class BBbyCBCTHistory(date: Date, bbByCBCT: BBbyCBCT) {

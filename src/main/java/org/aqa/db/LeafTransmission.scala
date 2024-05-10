@@ -18,11 +18,6 @@ package org.aqa.db
 
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
-import org.aqa.webrun.LOCXml
-
-import scala.xml.Elem
-import scala.xml.Node
 
 case class LeafTransmission(
     leafTransmissionPK: Option[Long], // primary key
@@ -30,6 +25,7 @@ case class LeafTransmission(
     section: String, // arbitrary section name. May be used to associate this section with input data
     // such as UID
     leafIndex: Int, // leaf number
+    //noinspection SpellCheckingInspection
     transmission_fract: Double // transmission fraction
 ) {
 
@@ -44,16 +40,18 @@ case class LeafTransmission(
 
   def insertOrUpdate(): Int = Db.run(LeafTransmission.query.insertOrUpdate(this))
 
+  //noinspection SpellCheckingInspection
   override def toString: String = "leaf: " + leafIndex.formatted("%2d") + "    section: " + section + "    transmission_fract: " + transmission_fract.toString.trim
 }
 
-object LeafTransmission extends ProcedureOutput with Logging {
+object LeafTransmission extends Logging {
   class LeafTransmissionTable(tag: Tag) extends Table[LeafTransmission](tag, "leafTransmission") {
 
     def leafTransmissionPK = column[Long]("leafTransmissionPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
     def section = column[String]("section")
     def leafIndex = column[Int]("leafIndex")
+    //noinspection SpellCheckingInspection
     private def transmission_fract = column[Double]("transmission_fract")
 
     def * = (leafTransmissionPK.?, outputPK, section, leafIndex, transmission_fract) <> (LeafTransmission.apply _ tupled, LeafTransmission.unapply)
@@ -62,8 +60,6 @@ object LeafTransmission extends ProcedureOutput with Logging {
   }
 
   val query = TableQuery[LeafTransmissionTable]
-
-  override val topXmlLabel = "LeafTransmission"
 
   def get(leafTransmissionPK: Long): Option[LeafTransmission] = {
     val action = for {
@@ -99,30 +95,8 @@ object LeafTransmission extends ProcedureOutput with Logging {
     count
   }
 
-  def xmlToList(elem: Elem, outputPK: Long): Seq[LeafTransmission] = {
-    def leafNodeToTransList(leaf: Node): Seq[LeafTransmission] = {
-      val leafIndex = (leaf \ "leafIndex").head.text.toInt
-      (leaf \ "Value").map(n => LOCXml.textToDouble(n.text)).zipWithIndex.map(di => new LeafTransmission(None, outputPK, (di._2 + 1).toString, leafIndex, di._1))
-    }
-
-    val list = (elem \ topXmlLabel).headOption match {
-      case Some(node) => (node \ "LeafList" \ "Leaf").flatMap(leaf => leafNodeToTransList(leaf))
-      case None       => Seq[LeafTransmission]()
-    }
-    logger.info("Number of rows constructed: " + list.size)
-
-    list
-  }
-
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    val toInsert = xmlToList(elem, outputPK)
-    insertSeq(toInsert)
-    toInsert.size
-  }
-
   def insertSeq(list: Seq[LeafTransmission]): Unit = {
-    val ops = list.map { loc => LeafTransmission.query.insertOrUpdate(loc) }
-    Db.perform(ops)
+    list.foreach(_.insertOrUpdate())
   }
 
 }

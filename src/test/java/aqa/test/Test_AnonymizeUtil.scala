@@ -95,7 +95,7 @@ class Test_AnonymizeUtil extends FlatSpec with Matchers {
     a.get(tag).getSingleStringValueOrEmptyString.equals(b.get(tag).getSingleStringValueOrEmptyString)
   }
 
-  private val lastPK = DicomAnonymous.getLastPk()
+  private val lastPK = DicomAnonymous.getLastPk
 
   "standard anonymize" should "be anonymized" in {
 

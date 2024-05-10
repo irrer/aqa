@@ -58,7 +58,7 @@ object SystemModification extends Logging {
 
     def * =
       (systemModificationPK.?, date, userPK, summary, description) <>
-        ((SystemModification.apply _) tupled, SystemModification.unapply _)
+        (SystemModification.apply _ tupled, SystemModification.unapply)
     def userFK = foreignKey("SystemModification_userPKConstraint", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
   }
 

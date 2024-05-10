@@ -18,7 +18,6 @@ package org.aqa.db
 
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
 import org.aqa.Util
 
 import java.sql.Timestamp
@@ -108,7 +107,7 @@ case class WinstonLutz(
   def rightError_mm: Option[Double] = if (rightEdgePlanned_mm.isDefined) Some(rightEdge_mm - rightEdgePlanned_mm.get) else None
 }
 
-object WinstonLutz extends ProcedureOutput with Logging {
+object WinstonLutz extends Logging {
 
   class WinstonLutzTable(tag: Tag) extends Table[WinstonLutz](tag, "winstonLutz") {
     def winstonLutzPK = column[Long]("winstonLutzPK", O.PrimaryKey, O.AutoInc)
@@ -187,8 +186,6 @@ object WinstonLutz extends ProcedureOutput with Logging {
     override def toString: String = name + "    isX: " + isX + "    is1: " + bank + "    isJaw: " + isJaw
   }
 
-  override val topXmlLabel = "WinstonLutz"
-
   def get(winstonLutzPK: Long): Option[WinstonLutz] = {
     val action = for {
       inst <- WinstonLutz.query if inst.winstonLutzPK === winstonLutzPK
@@ -226,15 +223,8 @@ object WinstonLutz extends ProcedureOutput with Logging {
     Seq[WinstonLutz]()
   }
 
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    val toInsert = xmlToList(elem, outputPK)
-    insertSeq(toInsert)
-    toInsert.size
-  }
-
   def insertSeq(list: Seq[WinstonLutz]): Unit = {
-    val ops = list.map { loc => WinstonLutz.query.insertOrUpdate(loc) }
-    Db.perform(ops)
+    list.foreach(_.insertOrUpdate())
   }
 
   case class WinstonLutzHistory(output: Output, winstonLutz: WinstonLutz) {}

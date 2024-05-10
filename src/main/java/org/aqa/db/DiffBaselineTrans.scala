@@ -16,15 +16,7 @@
 
 package org.aqa.db
 
-import org.aqa.Config
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
-import org.aqa.webrun.LOCXml
-
-import java.io.File
-import scala.xml.Elem
-import scala.xml.Node
-import scala.xml.XML
 
 case class DiffBaselineTrans(
     diffBaselineTransPK: Option[Long], // primary key
@@ -48,14 +40,14 @@ case class DiffBaselineTrans(
   override def toString: String = "leaf: " + leafIndex.formatted("%2d") + "    section: " + section + "    diffBaselineTrans_mm: " + diffBaselineTrans_mm.toString.trim
 }
 
-object DiffBaselineTrans extends ProcedureOutput {
+object DiffBaselineTrans {
   class DiffBaselineTransTable(tag: Tag) extends Table[DiffBaselineTrans](tag, "diffBaselineTrans") {
 
     def diffBaselineTransPK = column[Long]("diffBaselineTransPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
     def section = column[String]("section")
     def leafIndex = column[Int]("leafIndex")
-    def diffBaselineTrans_mm = column[Double]("diffBaselineTrans_mm")
+    private def diffBaselineTrans_mm = column[Double]("diffBaselineTrans_mm")
 
     def * = (diffBaselineTransPK.?, outputPK, section, leafIndex, diffBaselineTrans_mm) <> (DiffBaselineTrans.apply _ tupled, DiffBaselineTrans.unapply)
 
@@ -63,8 +55,6 @@ object DiffBaselineTrans extends ProcedureOutput {
   }
 
   val query = TableQuery[DiffBaselineTransTable]
-
-  override val topXmlLabel = "LOCDifferenceFromBaselineTrans"
 
   def get(diffBaselineTransPK: Long): Option[DiffBaselineTrans] = {
     val action = for {
@@ -97,40 +87,7 @@ object DiffBaselineTrans extends ProcedureOutput {
     Db.run(action)
   }
 
-  private def xmlToList(elem: Elem, outputPK: Long): Seq[DiffBaselineTrans] = {
-    def leafNodeToLocList(leaf: Node): Seq[DiffBaselineTrans] = {
-      val leafIndex = (leaf \ "leafIndex").head.text.toInt
-      (leaf \ "Value").map(n => LOCXml.textToDouble(n.text)).zipWithIndex.map(di => new DiffBaselineTrans(None, outputPK, (di._2 + 1).toString, leafIndex, di._1))
-    }
-
-    (elem \ topXmlLabel).headOption match {
-      case Some(node) => (node \ "Leaf").flatMap(leaf => leafNodeToLocList(leaf))
-      case None       => Seq[DiffBaselineTrans]()
-    }
-  }
-
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    val toInsert = xmlToList(elem, outputPK)
-    insertSeq(toInsert)
-    toInsert.size
-  }
-
   def insertSeq(list: Seq[DiffBaselineTrans]): Unit = {
-    val ops = list.map { loc => DiffBaselineTrans.query.insertOrUpdate(loc) }
-    Db.perform(ops)
-  }
-
-  /** For testing only. */
-  def main(args: Array[String]): Unit = {
-    Config.validate
-    DbSetup.init
-    System.exit(99)
-    val elem = XML.loadFile(new File("""D:\tmp\aqa\tmp\output.xml"""))
-    val xmlList = xmlToList(elem, 134)
-    xmlList.foreach(loc => println("    outputPK: " + loc.outputPK + "     section: " + loc.section + "     leafIndex: " + loc.leafIndex + "     diffBaselineTrans_mm: " + loc.diffBaselineTrans_mm))
-    xmlList.map(loc => loc.insertOrUpdate())
-    println("DiffBaselineTrans.main done")
-    //println("======== inst: " + get(5))
-    //println("======== inst delete: " + delete(5))
+    list.foreach(_.insertOrUpdate())
   }
 }

@@ -38,7 +38,7 @@ case class EPID(
     result
   }
 
-  def insertOrUpdate = Db.run(EPID.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(EPID.query.insertOrUpdate(this))
 
   def toName: String = (manufacturer + " " + model + " " + hardwareVersion).trim
 }
@@ -56,7 +56,7 @@ object EPID {
     def height_cm = column[Double]("height_cm")
     def notes = column[String]("notes")
 
-    def * = (epidPK.?, manufacturer, model, hardwareVersion, pixelCountX, pixelCountY, width_cm, height_cm, notes) <> ((EPID.apply _) tupled, EPID.unapply _)
+    def * = (epidPK.?, manufacturer, model, hardwareVersion, pixelCountX, pixelCountY, width_cm, height_cm, notes) <> (EPID.apply _ tupled, EPID.unapply)
   }
 
   val query = TableQuery[EPIDTable]
@@ -64,9 +64,9 @@ object EPID {
   def get(epidPK: Long): Option[EPID] = {
     val action = for {
       inst <- EPID.query if inst.epidPK === epidPK
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   def get(manufacturer: String, model: String, hardwareVersion: String): Option[EPID] = {
@@ -74,15 +74,15 @@ object EPID {
       inst <- EPID.query if (inst.manufacturer.toLowerCase === manufacturer.toLowerCase) &&
         (inst.model.toLowerCase === model.toLowerCase) &&
         (inst.hardwareVersion.toLowerCase === hardwareVersion.toLowerCase)
-    } yield (inst)
+    } yield inst
     val list = Db.run(action.result)
-    if (list.isEmpty) None else Some(list.head)
+    list.headOption
   }
 
   /**
-    * Get a list of all epids.
+    * Get a list of all EPIDs.
     */
-  def list = Db.run(query.result)
+  def list: Seq[EPID] = Db.run(query.result)
 
   def delete(epidPK: Long): Int = {
     val q = query.filter(_.epidPK === epidPK)
@@ -91,7 +91,7 @@ object EPID {
   }
 
   def main(args: Array[String]): Unit = {
-    val valid = Config.validate
+    Config.validate
     DbSetup.init
   }
 }

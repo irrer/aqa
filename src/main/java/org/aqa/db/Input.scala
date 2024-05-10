@@ -47,7 +47,7 @@ case class Input(
     result
   }
 
-  def insertOrUpdate = Db.run(Input.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(Input.query.insertOrUpdate(this))
 
   def dir: File = WebServer.fileOfResultsPath(directory.get)
 
@@ -56,10 +56,10 @@ case class Input(
     * records updated, which should always be one.  If it is zero then it is probably because the object is not
     * in the database.
     */
-  def updateDirectory(inDir: File) = {
+  def updateDirectory(inDir: File): Int = {
     val dirName = WebServer.fileToResultsPath(inDir)
     if (inputPK.isEmpty) throw new RuntimeException("Attempting to search for an input using a null inputPK: " + this)
-    Db.run(Input.query.filter(_.inputPK === inputPK.get).map(i => (i.directory)).update((Some(dirName))))
+    Db.run(Input.query.filter(_.inputPK === inputPK.get).map(i => i.directory).update(Some(dirName)))
   }
 
   /**
@@ -70,7 +70,7 @@ case class Input(
     val zippedContent = FileUtil.readFileTreeToZipByteArray(Seq(inputDir), Seq[String](), outputDirList)
     InputFiles.deleteByInputPK(inputPK.get)
     val inputFiles = new InputFiles(inputPK.get, inputPK.get, zippedContent)
-    inputFiles.insert
+    inputFiles.insert()
     inputFiles
   }
 
@@ -99,7 +99,7 @@ object Input extends Logging {
     def patientId = column[Option[String]]("patientId") // patient ID for potential tracking
     def dataDate = column[Option[Timestamp]]("dataDate") // when data was generated
 
-    def * = (inputPK.?, directory, uploadDate, userPK, machinePK, patientId, dataDate) <> ((Input.apply _) tupled, Input.unapply _)
+    def * = (inputPK.?, directory, uploadDate, userPK, machinePK, patientId, dataDate) <> (Input.apply _ tupled, Input.unapply)
 
     def userFK = foreignKey("Input_userPKConstraint", userPK, User.query)(_.userPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Restrict)
     def machineFK = foreignKey("Input_machinePKConstraint", machinePK, Machine.query)(_.machinePK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Restrict)
@@ -110,7 +110,7 @@ object Input extends Logging {
   def get(inputPK: Long): Option[Input] = {
     val action = for {
       input <- query if input.inputPK === inputPK
-    } yield (input)
+    } yield input
     val list = Db.run(action.result)
     list.headOption
   }
@@ -121,7 +121,7 @@ object Input extends Logging {
   def getByMachine(machinePK: Long): Seq[Input] = {
     val action = for {
       input <- query if input.machinePK === machinePK
-    } yield (input)
+    } yield input
     val list = Db.run(action.result)
     list
   }
@@ -133,15 +133,15 @@ object Input extends Logging {
   def directoryOf(inputDir: File): String = {
     val resultsDirName = Config.resultsDirFile.getAbsolutePath
     val inputDirName = inputDir.getAbsolutePath
-    if (inputDirName.startsWith(resultsDirName)) inputDirName.substring(Config.resultsDirFile.getAbsolutePath.size)
+    if (inputDirName.startsWith(resultsDirName)) inputDirName.substring(Config.resultsDirFile.getAbsolutePath.length)
     else throw new RuntimeException("Input directory should be placed in results directory " + resultsDirName + " but is " + inputDirName)
   }
 
   /**
     * Find the input given the name of its directory.  This parameter must exactly match the <code>input.directory</code> field.
     */
-  def getByDirectory(dirName: String) = {
-    val action = for { input <- Input.query if input.directory === dirName } yield (input)
+  def getByDirectory(dirName: String): Option[Input] = {
+    val action = for { input <- Input.query if input.directory === dirName } yield input
     val list = Db.run(action.result)
     list.headOption
   }
@@ -149,7 +149,7 @@ object Input extends Logging {
   /**
     * Find the number of inputs that reference this user.
     */
-  def getUserRefernceCount(userPK: Long): Int = {
+  def getUserReferenceCount(userPK: Long): Int = {
     val action = Input.query.filter(input => input.userPK === userPK).size
     val count = Db.run(action.result)
     count
@@ -177,18 +177,18 @@ object Input extends Logging {
     * It is up to the caller to determine if the files need to be restored.
     *
     */
-  def getFilesFromDatabase(inputPK: Long, dir: File): Unit = {
+  def restoreFilesFromDatabase(inputPK: Long, dir: File): Unit = {
     // Steps are done on separate lines so that if there is an error/exception it can be precisely
     // tracked.  It is up to the caller to catch any exceptions and act accordingly.
     Util.mkdirs(dir)
     val inputFilesSeq = InputFiles.getByInputPK(inputPK)
-    inputFilesSeq.map(inFiles => FileUtil.writeByteArrayZipToFileTree(inFiles.zippedContent, dir))
+    inputFilesSeq.foreach(inFiles => FileUtil.writeByteArrayZipToFileTree(inFiles.zippedContent, dir))
   }
 
-  private def fixUp = {
+  private def fixUp(): Unit = {
 
     def getAllInputPK = {
-      val action = for { input <- Input.query } yield (input.inputPK)
+      val action = for { input <- Input.query } yield input.inputPK
       val list = Db.run(action.result)
       list
     }
@@ -207,7 +207,7 @@ object Input extends Logging {
   }
 
   def main(args: Array[String]): Unit = {
-    val valid = Config.validate
+    Config.validate
     DbSetup.init
 
     // val input = new Input(None, Some("input_dir"), new Timestamp(System.currentTimeMillis), Some(6), Some(2), None, None)
@@ -215,7 +215,7 @@ object Input extends Logging {
     // println("======== input: " + get(5))
     //println("======== input delete: " + delete(5))
 
-    fixUp
+    fixUp()
 
   }
 }

@@ -49,7 +49,7 @@ object BaselineContent extends Logging {
     def baselinePK = column[Long]("baselinePK")
     def content = column[Array[Byte]]("content")
 
-    def * = (baselineContentPK.?, baselinePK, content) <> ((BaselineContent.apply _) tupled, BaselineContent.unapply _)
+    def * = (baselineContentPK.?, baselinePK, content) <> (BaselineContent.apply _ tupled, BaselineContent.unapply)
 
     def baselineFK = foreignKey("BaselineContent_baselinePKConstraint", baselinePK, Baseline.query)(_.baselinePK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }

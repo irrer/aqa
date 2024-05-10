@@ -17,9 +17,6 @@
 package org.aqa.db
 
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
-
-import scala.xml.Elem
 
 case class CollimatorPosition(
     collimatorPositionPK: Option[Long], // primary key
@@ -75,7 +72,7 @@ case class CollimatorPosition(
   }
 }
 
-object CollimatorPosition extends ProcedureOutput {
+object CollimatorPosition {
   class CollimatorPositionTable(tag: Tag) extends Table[CollimatorPosition](tag, "collimatorPosition") {
 
     def collimatorPositionPK = column[Long]("collimatorPositionPK", O.PrimaryKey, O.AutoInc)
@@ -124,8 +121,6 @@ object CollimatorPosition extends ProcedureOutput {
 
   val query = TableQuery[CollimatorPositionTable]
 
-  override val topXmlLabel = "CollimatorPosition"
-
   def get(collimatorPositionPK: Long): Option[CollimatorPosition] = {
     val action = for {
       inst <- CollimatorPosition.query if inst.collimatorPositionPK === collimatorPositionPK
@@ -156,17 +151,11 @@ object CollimatorPosition extends ProcedureOutput {
   }
 
   def insert(list: Seq[CollimatorPosition]): Seq[Int] = {
-    val ops = list.map { imgId => CollimatorPosition.query.insertOrUpdate(imgId) }
-    Db.perform(ops)
-  }
-
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    throw new RuntimeException("CollimatorPosition.insert not implemented for Elem data.")
+    list.map(_.insertOrUpdate())
   }
 
   def insertSeq(list: Seq[CollimatorPosition]): Unit = {
-    val ops = list.map { loc => CollimatorPosition.query.insertOrUpdate(loc) }
-    Db.perform(ops)
+    list.foreach(_.insertOrUpdate())
   }
 
   case class ColPosHistory(output: Output, colCent: CollimatorPosition) {}

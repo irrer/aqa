@@ -19,11 +19,9 @@ package org.aqa.db
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
 import org.aqa.run.ProcedureStatus
 
 import java.sql.Timestamp
-import scala.xml.Elem
 
 /**
   * Encapsulate data from a single VMAT measurement.  Each beam analyzed will have several of these.
@@ -89,7 +87,7 @@ case class VMAT(
   }
 }
 
-object VMAT extends ProcedureOutput {
+object VMAT {
   class VMATTable(tag: Tag) extends Table[VMAT](tag, "vmat") {
 
     def vmatPK = column[Long]("vmatPK", O.PrimaryKey, O.AutoInc)
@@ -138,8 +136,6 @@ object VMAT extends ProcedureOutput {
 
   val query = TableQuery[VMATTable]
 
-  override val topXmlLabel = "VMAT"
-
   def get(vmatPK: Long): Option[VMAT] = {
     val action = for {
       inst <- VMAT.query if inst.vmatPK === vmatPK
@@ -167,20 +163,6 @@ object VMAT extends ProcedureOutput {
     val q = query.filter(_.outputPK === outputPK)
     val action = q.delete
     Db.run(action)
-  }
-
-  def insert(list: Seq[VMAT]): Seq[Int] = {
-    val ops = list.map { imgId => VMAT.query.insertOrUpdate(imgId) }
-    Db.perform(ops)
-  }
-
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    throw new RuntimeException("VMAT.insert not implemented for Elem parameter.")
-  }
-
-  def insertSeq(list: Seq[VMAT]): Unit = {
-    val ops = list.map { loc => VMAT.query.insertOrUpdate(loc) }
-    Db.perform(ops)
   }
 
   case class VMATHistory(output: Output, vmat: VMAT) {

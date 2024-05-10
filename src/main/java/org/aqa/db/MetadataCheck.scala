@@ -26,11 +26,9 @@ import org.aqa.DicomFile
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Db.driver.api._
-import org.aqa.procedures.ProcedureOutput
 import org.aqa.webrun.phase2.Phase2Util
 
 import java.io.File
-import scala.xml.Elem
 
 case class MetadataCheck(
     metadataCheckPK: Option[Long], // primary key
@@ -90,7 +88,7 @@ case class MetadataCheck(
   }
 }
 
-object MetadataCheck extends ProcedureOutput with Logging {
+object MetadataCheck extends Logging {
   class MetadataCheckTable(tag: Tag) extends Table[MetadataCheck](tag, "metadataCheck") {
 
     def metadataCheckPK = column[Long]("metadataCheckPK", O.PrimaryKey, O.AutoInc)
@@ -143,8 +141,6 @@ object MetadataCheck extends ProcedureOutput with Logging {
 
   val query = TableQuery[MetadataCheckTable]
 
-  override val topXmlLabel = "MetadataCheck"
-
   def get(metadataCheckPK: Long): Option[MetadataCheck] = {
     val action = for {
       inst <- MetadataCheck.query if inst.metadataCheckPK === metadataCheckPK
@@ -175,17 +171,11 @@ object MetadataCheck extends ProcedureOutput with Logging {
   }
 
   def insert(list: Seq[MetadataCheck]): Seq[Int] = {
-    val ops = list.map { imgId => MetadataCheck.query.insertOrUpdate(imgId) }
-    Db.perform(ops)
-  }
-
-  override def insert(elem: Elem, outputPK: Long): Int = {
-    throw new RuntimeException("Insert of MetadataCheck using Elem is not supported.")
+    list.map(_.insertOrUpdate())
   }
 
   def insertSeq(list: Seq[MetadataCheck]): Unit = {
-    val ops = list.map { loc => MetadataCheck.query.insertOrUpdate(loc) }
-    Db.perform(ops)
+    list.foreach(_.insertOrUpdate())
   }
 
   case class MetadataCheckHistory(output: Output, metadataCheck: MetadataCheck) {
@@ -260,7 +250,7 @@ object MetadataCheck extends ProcedureOutput with Logging {
 
       if (!inputDir.isDirectory) {
         println("Input directory does not exist.  Restoring from database...")
-        Input.getFilesFromDatabase(output.inputPK, inputDir.getParentFile)
+        Input.restoreFilesFromDatabase(output.inputPK, inputDir.getParentFile)
       }
 
       if (inputDir.isDirectory) {
