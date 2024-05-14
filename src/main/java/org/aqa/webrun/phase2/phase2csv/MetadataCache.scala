@@ -57,6 +57,8 @@ class MetadataCache {
 
   val gapSkewProcedurePK: Long = Procedure.ProcOfGapSkew.get.procedurePK.get
 
+  val focalSpotProcedurePK: Long = Procedure.ProcOfFocalSpot.get.procedurePK.get
+
   val noteMap: Map[Long, String] = OutputNote.list().map(n => (n.outputPK, n.contentAsText)).toMap
 }
 

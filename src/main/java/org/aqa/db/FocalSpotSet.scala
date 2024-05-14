@@ -18,6 +18,8 @@ package org.aqa.db
 
 import org.aqa.db.Db.driver.api._
 
+import scala.collection.immutable
+
 /**
  * Store and instance of all of the data for a single image of focal spot.
  */
@@ -144,7 +146,30 @@ object FocalSpotSet {
     Db.run(action)
   }
 
-  case class FocalSpotSetHistory(output: Output, focalSpotSet: FocalSpotSet) {}
+  case class FocalSpotSetHistory(output: Output, focalSpotSet: FocalSpotSet) {
+    private val focalSpots = FocalSpot.getSet(Set(focalSpotSet.jaw090PK, focalSpotSet.jaw270PK, focalSpotSet.mlc090PK, focalSpotSet.mlc270PK))
+
+  }
+
+
+  /**
+   * Provide static functions that can access the four images.
+   */
+  object FocalSpotSetHistory {
+
+    private def findFs(fsh: FocalSpotSetHistory, jaw: Boolean, colAngle: Int): FocalSpot = {
+      fsh.focalSpots.find(fs => (fs.isJaw == jaw) && fs.collimatorAngleRounded_deg == colAngle).get
+    }
+
+    def jaw090(focalSpotSetHistory: FocalSpotSetHistory): FocalSpot = findFs(focalSpotSetHistory, jaw = true, 90)
+
+    def jaw270(focalSpotSetHistory: FocalSpotSetHistory): FocalSpot = findFs(focalSpotSetHistory, jaw = true, 270)
+
+    def mlc090(focalSpotSetHistory: FocalSpotSetHistory): FocalSpot = findFs(focalSpotSetHistory, jaw = false, 90)
+
+    def mlc270(focalSpotSetHistory: FocalSpotSetHistory): FocalSpot = findFs(focalSpotSetHistory, jaw = false, 270)
+  }
+
 
   /**
    * Get the entire history of Focal Spot data for the given machine.
@@ -153,7 +178,7 @@ object FocalSpotSet {
    * @param procedurePK For this procedure.
    * @return List of history items sorted by data date.
    */
-  def history(machinePK: Long, procedurePK: Long): Seq[FocalSpotSetHistory] = {
+  def history(machinePK: Long, procedurePK: Long): immutable.Seq[FocalSpotSetHistory] = {
 
     val search = for {
       output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
@@ -162,7 +187,7 @@ object FocalSpotSet {
 
     val focalSpotSetList = Db.run(search.result).map(outFocal => FocalSpotSetHistory(outFocal._1, outFocal._2)).sortBy(_.output.dataDate.get.getTime)
 
-    focalSpotSetList
+    immutable.Seq(focalSpotSetList).flatten
   }
 
   /**

@@ -42,6 +42,7 @@ object Phase2CsvMakeAll extends Logging {
       new GapSkewCsv,
       new CollimatorCenteringCsv,
       new CollimatorPositionCsv,
+      new FocalSpotCsv,
       new LeafPositionCsv,
       new MetadataCheckCsv,
       new SymmetryAndFlatnessCsv,
@@ -53,7 +54,10 @@ object Phase2CsvMakeAll extends Logging {
     )
 
     for (institutionPK <- metadataCache.institutionNameMap.keys) {
-      val machineList = metadataCache.machineMap.values.filter(_.institutionPK == institutionPK).toSeq.sortBy(_.id.toUpperCase())
+      val machineList = {
+        val s = metadataCache.machineMap.values.filter(_.institutionPK == institutionPK).toSeq.sortBy(_.id.toUpperCase())
+        scala.collection.immutable.Seq(s).flatten
+      }
       val csvDir = Phase2Csv.institutionCsvDir(institutionPK)
       for (dt <- dataTypeList) {
         try {

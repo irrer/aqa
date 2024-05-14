@@ -74,7 +74,7 @@ case class FocalSpot(
 
   val beamLimiterName: String = if (isJaw) "Jaw" else "MLC"
 
-  val fluenceName: String = if (isFFF) "FFF" else "STD"
+  val fluenceName: String = if (isFFF) "FFF" else "Standard"
 
   override def toString: String = {
     s"""focalSpotPK: $focalSpotPK
@@ -186,6 +186,18 @@ object FocalSpot {
       inst <- FocalSpot.query if inst.focalSpotPK === focalSpotPK
     } yield inst
     Db.run(action.result).headOption
+  }
+
+  /**
+   * Get the rows with the given PKs.
+   * @param focalSpotPKSet Set of PKs.
+   * @return List of rows.
+   */
+  def getSet(focalSpotPKSet: Set[Long]): Seq[FocalSpot] = {
+    val action = for {
+      inst <- FocalSpot.query if inst.focalSpotPK.inSet(focalSpotPKSet)
+    } yield inst
+    Db.run(action.result)
   }
 
   /**
