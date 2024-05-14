@@ -22,7 +22,7 @@ import org.aqa.db.WedgePoint
 class WedgePointCsv extends Phase2Csv[WedgePoint.WedgePointHistory] {
 
   // abbreviation for the long name
-  type WH = WedgePoint.WedgePointHistory
+  private type WH = WedgePoint.WedgePointHistory
 
   override val dataName: String = "Wedge Point"
 
@@ -48,8 +48,8 @@ class WedgePointCsv extends Phase2Csv[WedgePoint.WedgePointHistory] {
 
   }
 
-  override protected def makeColList: Seq[CsvCol[WH]] = {
-    Seq(
+  override protected def makeColList: scala.collection.immutable.Seq[CsvCol[WH]] = {
+    scala.collection.immutable.Seq(
       CsvCol("Beam Name", "Common name of RTPLAN beam.", (wh: WH) => wh.wedgePoint.wedgeBeamName),
       CsvCol(
         "Baseline Designation",
@@ -72,15 +72,15 @@ class WedgePointCsv extends Phase2Csv[WedgePoint.WedgePointHistory] {
     * @param machinePK Machine to get data for.
     * @return List of data for the particular machine.
     */
-  override protected def getData(machinePK: Long): Seq[WH] = {
+  override protected def getData(machinePK: Long): scala.collection.immutable.Seq[WH] = {
     val wedgeList = WedgePoint.history(machinePK, MetadataCache.metadataCache.phase2ProcedurePK) ++ WedgePoint.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK)
-    wedgeList
+    scala.collection.immutable.Seq(wedgeList).flatten
   }
 
   override def getOutput(data: WH): Output = data.output
 
-  override def getSopUidList(data: WH): Seq[String] = Seq(data.wedgePoint.wedgeSOPInstanceUID, data.wedgePoint.backgroundSOPInstanceUID)
+  override def getSopUidList(data: WH): scala.collection.immutable.Seq[String] = scala.collection.immutable.Seq(data.wedgePoint.wedgeSOPInstanceUID, data.wedgePoint.backgroundSOPInstanceUID)
 
-  override protected val dicomHeaderPrefixList: Seq[String] = Seq("", "Background")
+  override protected val dicomHeaderPrefixList: scala.collection.immutable.Seq[String] = scala.collection.immutable.Seq("", "Background")
 
 }
