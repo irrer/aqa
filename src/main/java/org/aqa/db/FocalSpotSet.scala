@@ -174,14 +174,13 @@ object FocalSpotSet {
   /**
    * Get the entire history of Focal Spot data for the given machine.
    *
-   * @param machinePK   Machine to get data for.
-   * @param procedurePK For this procedure.
+   * @param machinePK Machine to get data for.
    * @return List of history items sorted by data date.
    */
-  def history(machinePK: Long, procedurePK: Long): immutable.Seq[FocalSpotSetHistory] = {
+  def history(machinePK: Long): immutable.Seq[FocalSpotSetHistory] = {
 
     val search = for {
-      output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
+      output <- Output.valid.filter(o => o.machinePK === machinePK)
       focalSpotSet <- FocalSpotSet.query.filter(w => w.outputPK === output.outputPK)
     } yield (output, focalSpotSet)
 

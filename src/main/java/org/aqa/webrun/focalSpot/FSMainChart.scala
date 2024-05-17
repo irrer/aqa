@@ -49,7 +49,7 @@ class FSMainChart(outputPK: Long) extends Logging {
   private val setList = {
 
     /** Focal spot sets. */
-    val history = FocalSpotSet.history(machine.machinePK.get, procedure.procedurePK.get)
+    val history = FocalSpotSet.history(machine.machinePK.get)
 
     val list = history.groupBy(_.output.outputPK.get).values.map(_.sortBy(f => "%020.2f".format(f.focalSpotSet.KVP_kv) + " " + f.focalSpotSet.isFFF)).toSeq
     val max = {

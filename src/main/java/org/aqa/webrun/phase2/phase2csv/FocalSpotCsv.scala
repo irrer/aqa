@@ -81,8 +81,7 @@ class FocalSpotCsv extends Phase2Csv[FocalSpotSet.FocalSpotSetHistory] {
     * @return List of data for the particular machine.
     */
   override protected def getData(machinePK: Long): Seq[FSH] = {
-    val list = FocalSpotSet.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK) ++
-      FocalSpotSet.history(machinePK, MetadataCache.metadataCache.focalSpotProcedurePK)
+    val list = FocalSpotSet.history(machinePK)
     list
   }
 
