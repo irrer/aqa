@@ -525,4 +525,22 @@ object Phase2Csv extends Logging {
     Util.writeFile(csvFile, csvContent)
     logger.info("Wrote " + csvFile.length() + " bytes to file " + csvFile.getAbsolutePath + " in " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
   }
+
+  /** List of an instance for each data type. */
+  val dataTypeList: Seq[Phase2Csv[_]] = Seq(
+    new CenterDoseCsv,
+    new GapSkewCsv,
+    new CollimatorCenteringCsv,
+    new CollimatorPositionCsv,
+    new FocalSpotCsv,
+    new LeafPositionCsv,
+    new MetadataCheckCsv,
+    new SymmetryAndFlatnessCsv,
+    new VMAT_T2_DR_GSCsv,
+    new VMAT_T2_DG_RSCsv,
+    new VMAT_T3MLCSpeedCsv,
+    new WedgePointCsv,
+    new WinstonLutzCsv
+  )
+
 }

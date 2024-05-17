@@ -37,29 +37,13 @@ object Phase2CsvMakeAll extends Logging {
 
     (new PopulateDicomCsv).populateAll() // Get the DICOM column data up to date.
 
-    val dataTypeList = Seq(
-      new CenterDoseCsv,
-      new GapSkewCsv,
-      new CollimatorCenteringCsv,
-      new CollimatorPositionCsv,
-      new FocalSpotCsv,
-      new LeafPositionCsv,
-      new MetadataCheckCsv,
-      new SymmetryAndFlatnessCsv,
-      new VMAT_T2_DR_GSCsv,
-      new VMAT_T2_DG_RSCsv,
-      new VMAT_T3MLCSpeedCsv,
-      new WedgePointCsv,
-      new WinstonLutzCsv
-    )
-
     for (institutionPK <- metadataCache.institutionNameMap.keys) {
       val machineList = {
         val s = metadataCache.machineMap.values.filter(_.institutionPK == institutionPK).toSeq.sortBy(_.id.toUpperCase())
         scala.collection.immutable.Seq(s).flatten
       }
       val csvDir = Phase2Csv.institutionCsvDir(institutionPK)
-      for (dt <- dataTypeList) {
+      for (dt <- Phase2Csv.dataTypeList) {
         try {
           dt.writeToFile(csvDir, machineList)
         } catch {
@@ -70,7 +54,7 @@ object Phase2CsvMakeAll extends Logging {
     }
 
     // write the documentation for each type of data
-    dataTypeList.foreach(dt => dt.writeDoc())
+    Phase2Csv.dataTypeList.foreach(dt => dt.writeDoc())
 
     MaintenanceCsv.writeDoc()
 
