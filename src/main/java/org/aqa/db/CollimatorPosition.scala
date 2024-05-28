@@ -158,7 +158,9 @@ object CollimatorPosition {
     list.foreach(_.insertOrUpdate())
   }
 
-  case class ColPosHistory(output: Output, colCent: CollimatorPosition) {}
+  case class ColPosHistory(output: Output, colCent: CollimatorPosition) extends HasOutput {
+    override def getOutput: Output = output
+  }
 
   /**
     * Get the entire history of collimator position data for the given machine.

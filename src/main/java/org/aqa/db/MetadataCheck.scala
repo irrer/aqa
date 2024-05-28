@@ -178,12 +178,14 @@ object MetadataCheck extends Logging {
     list.foreach(_.insertOrUpdate())
   }
 
-  case class MetadataCheckHistory(output: Output, metadataCheck: MetadataCheck) {
+  case class MetadataCheckHistory(output: Output, metadataCheck: MetadataCheck) extends HasOutput {
     override def toString: String = {
       "date: " + output.dataDate.get + "    " + metadataCheck
     }
 
     val ordering: String = output.dataDate.get.getTime + "  " + metadataCheck.beamName
+
+    override def getOutput: Output = output
   }
 
   /**

@@ -163,7 +163,9 @@ object CollimatorCentering {
     list.foreach(_.insertOrUpdate())
   }
 
-  case class ColCentHistory(output: Output, colCent: CollimatorCentering) {}
+  case class ColCentHistory(output: Output, colCent: CollimatorCentering) extends HasOutput {
+    override def getOutput: Output = output
+  }
 
   /**
     * Get the entire history of collimator centering data for the given machine.

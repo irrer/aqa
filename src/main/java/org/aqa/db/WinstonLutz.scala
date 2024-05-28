@@ -202,7 +202,7 @@ object WinstonLutz extends Logging {
       inst <- WinstonLutz.query if inst.outputPK === outputPK
     } yield inst
     val list = Db.run(action.result)
-    list
+    list.toIndexedSeq
   }
 
   def delete(winstonLutzPK: Long): Int = {
@@ -227,7 +227,9 @@ object WinstonLutz extends Logging {
     list.foreach(_.insertOrUpdate())
   }
 
-  case class WinstonLutzHistory(output: Output, winstonLutz: WinstonLutz) {}
+  case class WinstonLutzHistory(output: Output, winstonLutz: WinstonLutz) extends HasOutput {
+    override def getOutput: Output = output
+  }
 
 
   /**
@@ -259,7 +261,7 @@ object WinstonLutz extends Logging {
     val sr = sortedSearch.result
     val tsList = Db.run(sr).map(os => WinstonLutzHistory(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
 
-    tsList
+    tsList.toIndexedSeq
   }
 
 
@@ -286,7 +288,7 @@ object WinstonLutz extends Logging {
     val sr = search.result
     val tsList = Db.run(sr).map(os => WinstonLutzHistory(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
 
-    tsList
+    tsList.toIndexedSeq
   }
 
   /**
@@ -311,7 +313,7 @@ object WinstonLutz extends Logging {
     val sr = search.result
     val tsList = Db.run(sr).map(os => WinstonLutzHistory(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
 
-    tsList
+    tsList.toIndexedSeq
   }
 
   /**
@@ -331,7 +333,7 @@ object WinstonLutz extends Logging {
 
     val tsList = Db.run(search.result)
 
-    tsList
+    tsList.toIndexedSeq
   }
 
 }

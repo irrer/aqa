@@ -228,7 +228,9 @@ object SymmetryAndFlatness extends Logging {
     Db.run(action)
   }
 
-  case class SymmetryAndFlatnessHistory(output: Output, symmetryAndFlatness: SymmetryAndFlatness, baselineOutput: Output, baseline: SymmetryAndFlatness) {}
+  case class SymmetryAndFlatnessHistory(output: Output, symmetryAndFlatness: SymmetryAndFlatness, baselineOutput: Output, baseline: SymmetryAndFlatness) extends HasOutput {
+    override def getOutput: Output = output
+  }
 
   private case class OutputSymFlat(output: Output, sf: SymmetryAndFlatness) {}
 

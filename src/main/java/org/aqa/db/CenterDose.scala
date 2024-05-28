@@ -104,7 +104,7 @@ object CenterDose {
     list.foreach(_.insertOrUpdate())
   }
 
-  case class CenterDoseHistory(output: Output, centerDose: CenterDose) {
+  case class CenterDoseHistory(output: Output, centerDose: CenterDose) extends HasOutput {
     override def toString: String = {
       "date: " + output.dataDate.get + "    " + centerDose
     }
@@ -112,6 +112,8 @@ object CenterDose {
     val date: Timestamp = output.dataDate.get
 
     val getTime: Long = date.getTime
+
+    override def getOutput: Output = output
   }
 
   /**

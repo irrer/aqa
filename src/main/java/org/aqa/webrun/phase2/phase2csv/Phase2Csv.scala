@@ -99,7 +99,7 @@ abstract class Phase2Csv[T] extends Logging {
     * @param data Data associated with the output.
     * @return A DB output.
     */
-  protected def getOutput(data: T): Output
+  def getOutput(data: T): Output
 
   /**
     * Get the data for a particular machine.
@@ -108,6 +108,8 @@ abstract class Phase2Csv[T] extends Logging {
     * @return List of data for the particular machine.
     */
   protected def getData(machinePK: Long): Seq[T]
+
+  type DataType;
 
   /**
     * Used to name CSV file.
@@ -295,12 +297,22 @@ abstract class Phase2Csv[T] extends Logging {
     all
   }
 
+  case class DataAndText(data: T, text: String) {}
+
+  def machineToCustomCsv(csvSpec: CsvSpec): Seq[DataAndText] = {
+    val dataList = getData(csvSpec.machine.machinePK.get) // data for this machine
+    val machineRowList: Seq[DataAndText] = dataList.indices.map(dataIndex => {
+      DataAndText(dataList(dataIndex), makeCsvRow(dataList, dataIndex, csvSpec.machine, Seq()))
+    })
+    machineRowList.filter(_.text.nonEmpty)
+  }
+
   /**
     * Get the CSV content for all institutions.
     *
     * @return The CSV content as a single string.
     */
-  private def csvContent(machineSeq: Seq[Machine]): String = {
+  def csvContent(machineSeq: Seq[Machine]): String = {
     val machineList = machineSeq.sortBy(_.institutionPK)
     val content = machineList.map(machine => machineToCsv(machine)).filter(_.nonEmpty).mkString("\n\n")
     makeHeader() + "\n" + content

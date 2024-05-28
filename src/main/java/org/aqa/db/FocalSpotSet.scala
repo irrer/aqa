@@ -146,8 +146,10 @@ object FocalSpotSet {
     Db.run(action)
   }
 
-  case class FocalSpotSetHistory(output: Output, focalSpotSet: FocalSpotSet) {
+  case class FocalSpotSetHistory(output: Output, focalSpotSet: FocalSpotSet) extends HasOutput {
     private val focalSpots = FocalSpot.getSet(Set(focalSpotSet.jaw090PK, focalSpotSet.jaw270PK, focalSpotSet.mlc090PK, focalSpotSet.mlc270PK))
+
+    override def getOutput: Output = output
 
   }
 

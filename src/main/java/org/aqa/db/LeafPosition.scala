@@ -152,7 +152,7 @@ object LeafPosition extends Logging {
    * @param output     Output with which the data is associated.
    * @param leafPosSeq List of leaf positions.
    */
-  case class LeafPosHistory(output: Output, leafPosSeq: Seq[LeafPosition]) {
+  case class LeafPosHistory(output: Output, leafPosSeq: Seq[LeafPosition]) extends HasOutput {
     // Used for sorting instances of this class
     val ordering: String = output.dataDate.get.getTime + "  " + leafPosSeq.head.beamName
 
@@ -167,6 +167,8 @@ object LeafPosition extends Logging {
      * @return A leaf position entry.
      */
     def get(leafPositionIndex: Int, leafIndex: Int): Option[LeafPosition] = leafPosMap.get((leafPositionIndex, leafIndex))
+
+    override def getOutput: Output = output
   }
 
   /**

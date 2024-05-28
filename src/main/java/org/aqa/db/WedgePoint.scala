@@ -172,7 +172,10 @@ object WedgePoint {
     * Note that if the wedge point is a baseline, then output will be the same as baselineOutput, and
     * wedgePoint will be the same as baselineWedgePoint
     */
-  case class WedgePointHistory(output: Output, wedgePoint: WedgePoint, baselineOutput: Output, baselineWedgePoint: WedgePoint) {}
+  case class WedgePointHistory(output: Output, wedgePoint: WedgePoint, baselineOutput: Output, baselineWedgePoint: WedgePoint) extends HasOutput {
+
+    override def getOutput: Output = output
+  }
 
   private case class WPair(output: Output, wedgePoint: WedgePoint) {}
 

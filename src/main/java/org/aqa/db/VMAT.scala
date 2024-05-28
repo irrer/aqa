@@ -165,13 +165,15 @@ object VMAT {
     Db.run(action)
   }
 
-  case class VMATHistory(output: Output, vmat: VMAT) {
+  case class VMATHistory(output: Output, vmat: VMAT) extends HasOutput {
     override def toString: String = {
       "date: " + output.dataDate.get + "    " + vmat
     }
 
     val date: Timestamp = output.dataDate.get
     def getTime: Long = date.getTime
+
+    override def getOutput: Output = output
   }
 
   /**
