@@ -631,6 +631,69 @@ Note that when building a package for release, the Maven build process uses the 
             <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
             <BackgroundBeamName>Flood 6X</BackgroundBeamName>
         </WedgeBeam>
+
+        <!-- Experimental Wedge Beams -->
+
+        <WedgeBeam BeamName="J18C270EDW5">
+            <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+        </WedgeBeam>
+
+        <WedgeBeam BeamName="J18C270EDW05">
+            <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+        </WedgeBeam>
+
+        <WedgeBeam BeamName="J18C270EDW10">
+            <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+        </WedgeBeam>
+
+        <WedgeBeam BeamName="J18C270EDW15">
+            <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+        </WedgeBeam>
+
+        <WedgeBeam BeamName="J18C270EDW20">
+            <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+        </WedgeBeam>
+
+        <WedgeBeam BeamName="J18C270EDW25">
+            <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+        </WedgeBeam>
+
+        <WedgeBeam BeamName="J18C270EDW30">
+            <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+        </WedgeBeam>
+
+        <WedgeBeam BeamName="J18C270EDW35">
+            <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+        </WedgeBeam>
+
+        <WedgeBeam BeamName="J18C270EDW40">
+            <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+        </WedgeBeam>
+
+        <WedgeBeam BeamName="J18C270EDW45">
+            <BackgroundBeamName>J20G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>J18G0-6X</BackgroundBeamName>
+            <BackgroundBeamName>Flood 6X</BackgroundBeamName>
+        </WedgeBeam>
+
     </WedgeBeamList>
 
     <!-- Diameter of sample spots in mm. -->
