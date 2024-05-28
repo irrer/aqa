@@ -64,7 +64,7 @@ object CsvSpecDownload extends Logging {
 
     download(csvSpec, response)
 
-    val j = MetadataCache.metadataCache
+    MetadataCache.metadataCache.machineMap.size
     Trace.trace()
     Trace.trace()
   }
