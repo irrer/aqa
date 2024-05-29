@@ -109,8 +109,6 @@ abstract class Phase2Csv[T] extends Logging {
     */
   protected def getData(machinePK: Long): Seq[T]
 
-  type DataType;
-
   /**
     * Used to name CSV file.
     */
@@ -282,6 +280,7 @@ abstract class Phase2Csv[T] extends Logging {
 
     logger.info(prefix + "getting data")
     val dataList = getData(machine.machinePK.get) // data for this machine
+
     logger.info(prefix + "data size " + dataList.size)
 
     logger.info(prefix + "getting maintenance records")
@@ -327,6 +326,7 @@ abstract class Phase2Csv[T] extends Logging {
   def writeToFile(csvDir: File, machineSeq: Seq[Machine]): Unit = {
     Phase2Csv.writeToFile(csvDir, csvContent(machineSeq), dataName)
   }
+
 }
 
 object Phase2Csv extends Logging {

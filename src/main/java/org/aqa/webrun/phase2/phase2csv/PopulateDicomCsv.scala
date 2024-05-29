@@ -34,7 +34,7 @@ case class DicomInstance(SOPInstanceUID: String) {}
 class PopulateDicomCsv extends Phase2Csv[DicomInstance] with Logging {
 
   // abbreviation for the long name
-  type DI = DicomInstance
+  private type DI = DicomInstance
 
   override val dataName: String = "PopulateDicom"
 

@@ -22,7 +22,7 @@ import org.aqa.db.Output
 class CollimatorPositionCsv extends Phase2Csv[CollimatorPosition.ColPosHistory] {
 
   // abbreviation for the long name
-  type CP = CollimatorPosition.ColPosHistory
+  private type CP = CollimatorPosition.ColPosHistory
 
   override val dataName: String = "Collimator Position"
 

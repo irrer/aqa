@@ -24,7 +24,7 @@ abstract class VMATCsv extends Phase2Csv[Seq[VMAT.VMATHistory]] {
 
   // abbreviation for the long name
   //type VHS = VMATCsv.VHS
-  type VHS = Seq[VMAT.VMATHistory]
+  private type VHS = Seq[VMAT.VMATHistory]
 
   /** Name of MLC beam. */
   protected def beamNameMLC(): String
@@ -40,11 +40,11 @@ abstract class VMATCsv extends Phase2Csv[Seq[VMAT.VMATHistory]] {
   override protected def makeColList: Seq[CsvCol[VHS]] = makeVHColList(centerList_mm())
 
   /**
-    * Get the data for a particular machine.
-    *
-    * @param machinePK Machine to get data for.
-    * @return List of data for the particular machine.
-    */
+   * Get the data for a particular machine.
+   *
+   * @param machinePK Machine to get data for.
+   * @return List of data for the particular machine.
+   */
   override protected def getData(machinePK: Long): Seq[VHS] = {
     // @formatter:off
     val data = VMAT.history(machinePK, MetadataCache.metadataCache.phase2ProcedurePK) ++ VMAT.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK)
@@ -63,15 +63,16 @@ abstract class VMATCsv extends Phase2Csv[Seq[VMAT.VMATHistory]] {
   override def getOutput(data: VHS): Output = data.head.output
 
   /**
-    * Get the SOP of the DICOM for this data set.
-    *
-    * @param data Data using DICOM data.
-    * @return SOP instance UID.
-    */
+   * Get the SOP of the DICOM for this data set.
+   *
+   * @param data Data using DICOM data.
+   * @return SOP instance UID.
+   */
 
   override def getSopUidList(data: VHS): Seq[String] = Seq(data.head.vmat.SOPInstanceUIDMLC)
 
   override protected val dicomHeaderPrefixList: Seq[String] = Seq("", "Open")
+
   private def fmtCenter(center_mm: Double) = (center_mm / 10.0).toString.trim + " cm"
 
   def vmatValue(center: Double, vhs: VHS, h: VMAT.VMATHistory => Double): String = {
@@ -79,7 +80,7 @@ abstract class VMATCsv extends Phase2Csv[Seq[VMAT.VMATHistory]] {
     val vmatOf = vhs.find(history => (history.vmat.leftRtplan_mm < center) && (history.vmat.rightRtplan_mm > center))
     vmatOf match {
       case Some(history) => h(history).toString
-      case _             => "NA"
+      case _ => "NA"
     }
   }
 

@@ -22,7 +22,7 @@ import org.aqa.db.Output
 class CollimatorCenteringCsv extends Phase2Csv[CollimatorCentering.ColCentHistory] {
 
   // abbreviation for the long name
-  type CCH = CollimatorCentering.ColCentHistory
+  private type CCH = CollimatorCentering.ColCentHistory
 
   override val dataName: String = "Collimator Centering"
 

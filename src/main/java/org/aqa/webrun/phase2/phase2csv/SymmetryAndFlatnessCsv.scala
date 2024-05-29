@@ -23,7 +23,7 @@ import org.aqa.db.SymmetryAndFlatness
 class SymmetryAndFlatnessCsv extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFlatnessHistory] {
 
   // abbreviation for the long name
-  type SF = SymmetryAndFlatness.SymmetryAndFlatnessHistory
+  private type SF = SymmetryAndFlatness.SymmetryAndFlatnessHistory
 
   override val dataName: String = "Symmetry And Flatness"
 

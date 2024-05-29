@@ -28,7 +28,7 @@ class LeafPositionCsv extends Phase2Csv[LeafPosition.LeafPosHistory] {
   type LP = LeafPosition
 
   // abbreviation for the long name
-  type LPH = LeafPosition.LeafPosHistory
+  private type LPH = LeafPosition.LeafPosHistory
 
   /** Maximum number of leaves that any MLC has.  Machines that have an MLC with fewer leaves will show 'NA' for irrelevant values.*/
   private lazy val leafCount: Int = 52

@@ -22,7 +22,7 @@ import org.aqa.db.Output
 class CenterDoseCsv extends Phase2Csv[CenterDose.CenterDoseHistory] {
 
   // abbreviation for the long name
-  type CD = CenterDose.CenterDoseHistory
+  private type CD = CenterDose.CenterDoseHistory
 
   override val dataName: String = "Center Dose"
 

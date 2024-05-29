@@ -17,6 +17,7 @@
 package org.aqa.webrun.phase2.phase2csv
 
 import org.aqa.db.GapSkew
+import org.aqa.db.HasOutput
 import org.aqa.db.Output
 import org.aqa.webrun.gapSkew.ColAngle
 import org.aqa.webrun.gapSkew.GapOffsetSkew
@@ -25,7 +26,9 @@ import org.aqa.webrun.gapSkew.JawJaw
 
 import scala.Double.NaN
 
-case class GapOffsetSkewHistory(output: Output, gapOffsetSkew: GapOffsetSkew) {}
+case class GapOffsetSkewHistory(output: Output, gapOffsetSkew: GapOffsetSkew) extends HasOutput {
+  override def getOutput: Output = output
+}
 
 class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
 
@@ -41,11 +44,12 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
   override val dataName: String = "GapOffsetSkew"
 
   /**
-    * Given a field within a <code>ColAngle</code>, make a pair of column, one for
-    * each of the 90 and 270 degree MLC angles.
-    * @param field For this field.
-    * @return Pair of CSV columns.
-    */
+   * Given a field within a <code>ColAngle</code>, make a pair of column, one for
+   * each of the 90 and 270 degree MLC angles.
+   *
+   * @param field For this field.
+   * @return Pair of CSV columns.
+   */
   private def mlcToCsvCol(field: ColAngle => GosValue): Seq[CsvCol[GapOffsetSkewHistory]] = {
     val sg = GapSkewCsv.staticGapOffsetSkew
     val sf090 = field(sg.col090)
@@ -58,11 +62,12 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
   }
 
   /**
-    * Given a field within a <code>ColAngle</code>, make a pair of column, one for
-    * each of the 90 and 270 degree MLC angles.
-    * @param field For this field.
-    * @return Pair of CSV columns.
-    */
+   * Given a field within a <code>ColAngle</code>, make a pair of column, one for
+   * each of the 90 and 270 degree MLC angles.
+   *
+   * @param field For this field.
+   * @return Pair of CSV columns.
+   */
   private def jawToCsvCol(field: JawJaw => GosValue): Seq[CsvCol[GOSH]] = {
     val sg = GapSkewCsv.staticGapOffsetSkew
     val sf = field(sg.jawJaw)
@@ -97,11 +102,12 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
   }
 
   /**
-    * Given a field within a <code>ColAngle</code>, make a pair of column, one for
-    * each of the 90 and 270 degree MLC angles.
-    * @param field For this field.
-    * @return Pair of CSV columns.
-    */
+   * Given a field within a <code>ColAngle</code>, make a pair of column, one for
+   * each of the 90 and 270 degree MLC angles.
+   *
+   * @param field For this field.
+   * @return Pair of CSV columns.
+   */
   private def gapSkewCsvCol(name: String, description: String, field: GapSkew => Option[Double]): Seq[CsvCol[GOSH]] = {
 
     val C090A = CsvCol(
@@ -110,7 +116,7 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
       (gosh: GOSH) =>
         field(gosh.gapOffsetSkew.col090.bankA) match {
           case Some(d) => d.toString
-          case _       => "NA"
+          case _ => "NA"
         }
     )
 
@@ -120,7 +126,7 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
       (gosh: GOSH) =>
         field(gosh.gapOffsetSkew.col090.bankB) match {
           case Some(d) => d.toString
-          case _       => "NA"
+          case _ => "NA"
         }
     )
 
@@ -130,7 +136,7 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
       (gosh: GOSH) =>
         field(gosh.gapOffsetSkew.col270.bankA) match {
           case Some(d) => d.toString
-          case _       => "NA"
+          case _ => "NA"
         }
     )
 
@@ -140,7 +146,7 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
       (gosh: GOSH) =>
         field(gosh.gapOffsetSkew.col270.bankB) match {
           case Some(d) => d.toString
-          case _       => "NA"
+          case _ => "NA"
         }
     )
 
@@ -150,7 +156,7 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
       (gosh: GOSH) =>
         field(gosh.gapOffsetSkew.jawJaw.jawPair) match {
           case Some(d) => d.toString
-          case _       => "NA"
+          case _ => "NA"
         }
     )
 
@@ -215,11 +221,11 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
   }
 
   /**
-    * Get the data for a particular machine.
-    *
-    * @param machinePK Machine to get data for.
-    * @return List of data for the particular machine.
-    */
+   * Get the data for a particular machine.
+   *
+   * @param machinePK Machine to get data for.
+   * @return List of data for the particular machine.
+   */
   override protected def getData(machinePK: Long): Seq[GOSH] = {
     val data = GapSkew.historyByMachine(machinePK)
     // @formatter:off
@@ -233,7 +239,7 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
     def toGosh(list: Seq[GapSkew.GapSkewHistory]): Option[GOSH] = {
       GapOffsetSkew.makeGapOffsetSkew(list.map(_.gapSkew)) match {
         case Right(gos) => Some(GapOffsetSkewHistory(list.head.output, gos))
-        case _          => None
+        case _ => None
       }
     }
 

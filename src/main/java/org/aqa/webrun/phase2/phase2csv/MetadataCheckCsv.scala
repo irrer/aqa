@@ -22,7 +22,7 @@ import org.aqa.db.Output
 class MetadataCheckCsv extends Phase2Csv[MetadataCheck.MetadataCheckHistory] {
 
   // abbreviation for the long name
-  type MDC = MetadataCheck.MetadataCheckHistory
+  private type MDC = MetadataCheck.MetadataCheckHistory
 
   override val dataName: String = "Metadata Check"
 

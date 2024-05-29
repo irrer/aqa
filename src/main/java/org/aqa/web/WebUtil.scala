@@ -1219,7 +1219,6 @@ object WebUtil extends Logging {
         }
 
         val i3 = addAttributeMap(i2, htmlAttrMap)
-        i3
 
         val i4 = {
           if (id.isDefined)

@@ -58,7 +58,7 @@ case class CsvSpec(machine: Machine, dataType: Phase2Csv[_], beam: String, heade
     timeComparator.compare match {
       case TimeComparatorEnum.timeLE => list.dropRight(count.skip).takeRight(count.count)
       case TimeComparatorEnum.timeLT => list.dropRight(count.skip).takeRight(count.count)
-      case _ => list.slice(count.skip, count.skip + count.count)
+      case _                         => list.slice(count.skip, count.skip + count.count)
     }
   }
 }

@@ -23,7 +23,7 @@ import org.aqa.Util
 class WinstonLutzCsv extends Phase2Csv[WinstonLutz.WinstonLutzHistory] {
 
   // abbreviation for the long name
-  type WLH = WinstonLutz.WinstonLutzHistory
+  private type WLH = WinstonLutz.WinstonLutzHistory
 
   override val dataName: String = "Winston Lutz"
 
