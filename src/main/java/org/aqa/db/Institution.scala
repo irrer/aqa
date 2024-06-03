@@ -46,6 +46,10 @@ case class Institution(
   }
 
   def fileName: String = Institution.fileName(name)
+
+  def getRealName: String = {
+    AnonymizeUtil.decryptWithNonce(institutionPK.get, name_real.get)
+  }
 }
 
 object Institution extends Logging {
