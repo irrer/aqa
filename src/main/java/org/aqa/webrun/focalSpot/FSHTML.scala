@@ -27,7 +27,7 @@ object FSHTML {
     if (d.round == d)
       d.round.toString
     else
-      d.formatted("%10.2f").trim
+      d.formatted("%10.3f").trim
   }
 
   def fmtHi(d: Double): String = {
