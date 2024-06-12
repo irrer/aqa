@@ -29,21 +29,23 @@ case object ConvertDicomDevCustom extends Logging {
 
   private def setText(al: AttributeList, tag: AttributeTag, value: String): Unit = setTextList(al, tag, Seq(value))
 
-  private def setIntList(al: AttributeList, tag: AttributeTag, valueList: Seq[Int]): Unit = {
+  private def setText(al: AttributeList, tag: AttributeTag, value: Option[String]): Unit = if (value.isDefined) setTextList(al, tag, Seq(value.get))
+
+  private def setInt(al: AttributeList, tag: AttributeTag, valueList: Seq[Int]): Unit = {
     val attr = AttributeFactory.newAttribute(tag)
     valueList.foreach(attr.addValue)
     al.put(attr)
   }
 
-  private def setInt(al: AttributeList, tag: AttributeTag, value: Int): Unit = setIntList(al, tag, Seq(value))
+  private def setInt(al: AttributeList, tag: AttributeTag, value: Int): Unit = setInt(al, tag, Seq(value))
 
-  private def setDoubleList(al: AttributeList, tag: AttributeTag, valueList: Seq[Double]): Unit = {
+  private def setDouble(al: AttributeList, tag: AttributeTag, valueList: Seq[Double]): Unit = {
     val attr = AttributeFactory.newAttribute(tag)
     valueList.foreach(attr.addValue)
     al.put(attr)
   }
 
-  private def setDouble(al: AttributeList, tag: AttributeTag, value: Double): Unit = setDoubleList(al, tag, Seq(value))
+  private def setDouble(al: AttributeList, tag: AttributeTag, value: Double): Unit = setDouble(al, tag, Seq(value))
 
   /*
   private def getRtPlanUid(rtimageList: Seq[AttributeList], rtplan: Option[AttributeList]): String = {
@@ -56,9 +58,6 @@ case object ConvertDicomDevCustom extends Logging {
     }
   }
    */
-
-  // private val beamRefList = Seq(1, 2, 3, 4, 5, 6, 7, 8) // TODO should get from RTPLAN
-  val rtplanUid = "1.2.246.352.71.5.427549902257.1092044.20240207145418" // TODO should get from RTPLAN
 
   private def setTime(al: AttributeList, dateTag: AttributeTag, timeTag: AttributeTag, date: Date): Unit = {
     val dateAttr = AttributeFactory.newAttribute(dateTag)
@@ -80,10 +79,12 @@ case object ConvertDicomDevCustom extends Logging {
   private val hour_ms = 60 * minute_ms
 
   /**
-    * Set the dates and times for an image that vary for each image.
-    * @param al Image.
-    * @param date New date.
-    */
+   * Set the dates and times for an image that vary for each image.
+   *
+   * @param al   Image.
+   * @param date New date.
+   */
+  /*
   private def setImageTimes(al: AttributeList, date: Date): Unit = {
 
     val pairList = Seq(
@@ -94,12 +95,15 @@ case object ConvertDicomDevCustom extends Logging {
 
     pairList.foreach(pair => setTime(al, pair._1, pair._2, date))
   }
+  */
 
   /**
-    * Set all of the date + time values for the given series.
-    * @param alList Images for series sorted by time.
-    * @param index Series number.
-    */
+   * Set all of the date + time values for the given series.
+   *
+   * @param alList Images for series sorted by time.
+   * @param index  Series number.
+   */
+  /*
   private def setPerImageTime(alList: Seq[AttributeList], index: Int): Date = {
     // images sorted chronologically.
     val firstImageTime_ms = {
@@ -116,39 +120,86 @@ case object ConvertDicomDevCustom extends Logging {
 
     firstImageDate
   }
+  */
 
-  private def setImageAttr(al: AttributeList, SeriesInstanceUID: String, alIndex: Int, StudyInstanceUID: String, date: Date, machine: Machine, rtplan: AttributeList): Unit = {
 
-    val rtplanBeam = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)(alIndex)
+  /**
+   * Given the new beam captured in development mode, and a normal template beam, create a
+   * new beam with the pixel of the dev beam, and with most of the metadata of the templat
+   * beam, but with new UIDs and date/times.
+   *
+   * @param dev               Beam delivered in development mode.
+   * @param template          Beam delivered in normal production mode.
+   * @param SeriesInstanceUID Series UID to be used for series.
+   * @param index             Index of this beam (0 is the first one).
+   * @param StudyInstanceUID  Study UID to be used for series.
+   * @param instanceDate      Date/time for this instance.
+   * @param seriesDate        Date/time for the series.
+   * @param studyDate         Date/time for the study.
+   * @param machine           Mark new beam with this machine.  If not specified, then use the template's values.
+   * @param rtplan            Point to this RTPLAN.
+   */
+  // @formatter:off
+  private def setImageAttr(
+                            dev: AttributeList,
+                            template: AttributeList,
+                            SeriesInstanceUID: String,
+                            index: Int,
+                            StudyInstanceUID: String,
+                            instanceDate: Date,
+                            seriesDate: Date,
+                            studyDate: Date,
+                            machine: Option[Machine],
+                            rtplan: AttributeList)
+  // @formatter:on
+  : AttributeList = {
+
+    val newAl = DicomUtil.clone(template)
+
+    // ascertain values needed for new file
+
+    // val rtplanBeam = DicomUtil.seqToAttr(rtplan, TagByName.BeamSequence)(index)
 
     val SOPInstanceUID = UMROGUID.getUID
 
-    val InstitutionName = {
-      val inst = Institution.get(machine.institutionPK).get
-      inst.getRealName
-    }
-
-    val RadiationMachineName = {
-      machine.getRealTpsId match {
-        case Some(name) => name
-        case _          => machine.getRealId
+    val InstitutionName: Option[String] = {
+      if (machine.isDefined) {
+        val inst = Institution.get(machine.get.institutionPK).get
+        Some(inst.getRealName)
       }
+      else None
     }
 
-    val DeviceSerialNumber = machine.getRealDeviceSerialNumber.get
+    val RadiationMachineName: Option[String] = {
+      if (machine.isDefined) {
+        machine.get.getRealTpsId match {
+          case Some(name) => Some(name)
+          case _ => Some(machine.get.getRealId)
+        }
+      }
+      else
+        None
+    }
+
+    val DeviceSerialNumber: Option[String] = {
+      if (machine.isDefined)
+        machine.get.getRealDeviceSerialNumber
+      else
+        None
+    }
 
     val FrameOfReferenceUID = UMROGUID.getUID
 
-    def setRTImagePosition: Unit = {
+    val RTImagePosition: Seq[Double] = {
 
-      val ImagePlanePixelSpacing = al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues
-      val Rows = al.get(TagByName.Rows).getIntegerValues.head
-      val Columns = al.get(TagByName.Columns).getIntegerValues.head
+      val ImagePlanePixelSpacing = dev.get(TagByName.ImagePlanePixelSpacing).getDoubleValues
+      val Rows = dev.get(TagByName.Rows).getIntegerValues.head
+      val Columns = dev.get(TagByName.Columns).getIntegerValues.head
 
       val x = ((1 - Columns) / 2.0) * ImagePlanePixelSpacing(0)
       val y = ((Rows - 1) / 2.0) * ImagePlanePixelSpacing(1)
 
-      setDoubleList(al, TagByName.RTImagePosition, Seq(x, y)) // For TX4 this should be: -200.312, 150.136
+      Seq(x, y)
     }
 
     val planUid = Util.sopOfAl(rtplan)
@@ -162,73 +213,149 @@ case object ConvertDicomDevCustom extends Logging {
       rps
     }
 
-    val PatientName = rtplan.get(TagByName.PatientName).getSingleStringValueOrEmptyString()
-    val PatientID = rtplan.get(TagByName.PatientID).getSingleStringValueOrEmptyString()
+    // Use rows, columns, and pixel size from dev because image resolution can change with each delivery.
+    val Rows = dev.get(TagByName.Rows).getIntegerValues.head
+    val Columns = dev.get(TagByName.Columns).getIntegerValues.head
+    val ImagePlanePixelSpacing = dev.get(TagByName.ImagePlanePixelSpacing).getDoubleValues
 
-    val ReferencedBeamNumber = rtplanBeam.get(TagByName.BeamNumber).getIntegerValues.head
+    val WindowCenter = dev.get(TagByName.WindowCenter).getDoubleValues.head
+    val WindowWidth = dev.get(TagByName.WindowWidth).getDoubleValues.head
+    val RescaleSlope = dev.get(TagByName.RescaleSlope).getDoubleValues.head
+    val RescaleIntercept = dev.get(TagByName.RescaleIntercept).getDoubleValues.head
 
-    def setBeamLimitingDeviceAngle(): Unit = {
-      val BeamLimitingDeviceAngle = DicomUtil.findAllSingle(rtplanBeam, TagByName.BeamLimitingDeviceAngle).head.getDoubleValues.head
-      setDouble(al, TagByName.BeamLimitingDeviceAngle, BeamLimitingDeviceAngle)
-      val ExposureSequence = DicomUtil.seqToAttr(al, TagByName.ExposureSequence )
-      ExposureSequence.foreach(ex => setDouble(ex, TagByName.BeamLimitingDeviceAngle, BeamLimitingDeviceAngle))
+    val ContentTime = getContentDateTime(dev)
+
+    // val PatientName = rtplan.get(TagByName.PatientName).getSingleStringValueOrEmptyString()
+    // val PatientID = rtplan.get(TagByName.PatientID).getSingleStringValueOrEmptyString()
+
+    // val ReferencedBeamNumber = rtplanBeam.get(TagByName.BeamNumber).getIntegerValues.head
+
+    // -------- set various DICOM attributes --------
+
+    setText(newAl, TagByName.MediaStorageSOPInstanceUID, SOPInstanceUID)
+    // setText(newAl, TagByName.SpecificCharacterSet, "ISO_IR 192")
+    setText(newAl, TagByName.SOPInstanceUID, SOPInstanceUID)
+
+    setTime(newAl, TagByName.StudyDate, TagByName.StudyTime, studyDate)
+    setTime(newAl, TagByName.SeriesDate, TagByName.SeriesTime, seriesDate)
+    setTime(newAl, TagByName.AcquisitionDate, TagByName.AcquisitionTime, ContentTime)
+    setTime(newAl, TagByName.ContentDate, TagByName.ContentTime, ContentTime)
+    setTime(newAl, TagByName.InstanceCreationDate, TagByName.InstanceCreationTime, ContentTime)
+
+    setText(newAl, TagByName.InstitutionName, InstitutionName)
+    setText(newAl, TagByName.StationName, RadiationMachineName)
+    // setText(newAl, TagByName.StudyDescription, "Machine QA")
+    // setText(newAl, TagByName.OperatorsName, "NA")
+
+    // setText(newAl, TagByName.ManufacturerModelName, "On-Board Imager")
+    // setText(newAl, TagByName.PatientName, PatientName)
+    // setText(newAl, TagByName.PatientID, PatientID)
+    // setText(newAl, TagByName.PatientBirthDate, "18000101")
+    // setText(newAl, TagByName.PatientBirthTime, "000000")
+    // setText(newAl, TagByName.PatientSex, "O")
+    setText(newAl, TagByName.DeviceSerialNumber, DeviceSerialNumber)
+    // setText(newAl, TagByName.SoftwareVersions, "NA")
+    // setText(newAl, TagByName.PatientPosition, "HFS")
+    setText(newAl, TagByName.StudyInstanceUID, StudyInstanceUID)
+    setText(newAl, TagByName.SeriesInstanceUID, SeriesInstanceUID)
+
+
+
+
+    // setText(newAl, TagByName.StudyID, "NA")
+    // setInt(newAl, TagByName.SeriesNumber, 0)
+    setText(newAl, TagByName.FrameOfReferenceUID, FrameOfReferenceUID)
+
+    setInt(newAl, TagByName.Rows, Rows)
+    setInt(newAl, TagByName.Columns, Columns)
+    setDouble(newAl, TagByName.ImagePlanePixelSpacing, ImagePlanePixelSpacing)
+
+    setDouble(newAl, TagByName.WindowCenter, WindowCenter)
+    setDouble(newAl, TagByName.WindowWidth, WindowWidth)
+    setDouble(newAl, TagByName.RescaleSlope, RescaleSlope)
+    setDouble(newAl, TagByName.RescaleIntercept, RescaleIntercept)
+
+    // setText(newAl, TagByName.RTImageLabel, "NA")
+    // setText(newAl, TagByName.RTImageDescription, "NA")
+    // setIntList(newAl, TagByName.RTImageOrientation, Seq(1, 0, 0, 0, -1, 0))
+    setText(newAl, TagByName.RadiationMachineName, RadiationMachineName)
+    // setDouble(newAl, TagByName.GantryAngle, 0)
+    newAl.put(ReferencedRTPlanSequence)
+    setDouble(newAl, TagByName.RTImagePosition, RTImagePosition)
+    // setInt(newAl, TagByName.ReferencedBeamNumber, ReferencedBeamNumber)
+
+    if (System.currentTimeMillis() < 0) {
+      val devPix = dev.get(TagByName.PixelData)
+      val templatePix = template.get(TagByName.PixelData)
+      Trace.trace(devPix)
+      Trace.trace(templatePix)
+      val devShort = devPix.getShortValues
+      val templateShort = templatePix.getShortValues
+      Trace.trace(devShort.size)
+      Trace.trace(templateShort.size)
+      Trace.trace()
     }
+    newAl.put(dev.get(TagByName.PixelData))
 
-    setText(al, TagByName.MediaStorageSOPInstanceUID, SOPInstanceUID)
-    setText(al, TagByName.SpecificCharacterSet, "ISO_IR 192")
-    setText(al, TagByName.SOPInstanceUID, SOPInstanceUID)
-    setTime(al, TagByName.StudyDate, TagByName.StudyTime, date)
-    setTime(al, TagByName.SeriesDate, TagByName.SeriesTime, date)
-    setText(al, TagByName.InstitutionName, InstitutionName)
-    setText(al, TagByName.StationName, RadiationMachineName)
-    setText(al, TagByName.StudyDescription, "Machine QA")
-    setText(al, TagByName.OperatorsName, "NA")
-
-    setText(al, TagByName.ManufacturerModelName, "On-Board Imager")
-    setText(al, TagByName.PatientName, PatientName)
-    setText(al, TagByName.PatientID, PatientID)
-    setText(al, TagByName.PatientBirthDate, "18000101")
-    setText(al, TagByName.PatientBirthTime, "000000")
-    setText(al, TagByName.PatientSex, "O")
-    setText(al, TagByName.DeviceSerialNumber, DeviceSerialNumber)
-    setText(al, TagByName.SoftwareVersions, "NA")
-    setText(al, TagByName.PatientPosition, "HFS")
-    setText(al, TagByName.StudyInstanceUID, StudyInstanceUID)
-    setText(al, TagByName.SeriesInstanceUID, SeriesInstanceUID)
-    setText(al, TagByName.StudyID, "NA")
-    setInt(al, TagByName.SeriesNumber, 0)
-    setText(al, TagByName.FrameOfReferenceUID, FrameOfReferenceUID)
-    setText(al, TagByName.RTImageLabel, "NA")
-    setText(al, TagByName.RTImageDescription, "NA")
-    setIntList(al, TagByName.RTImageOrientation, Seq(1, 0, 0, 0, -1, 0))
-    setText(al, TagByName.RadiationMachineName, RadiationMachineName)
-    setDouble(al, TagByName.GantryAngle, 0) // TODO should get from RTPLAN
-    al.put(ReferencedRTPlanSequence)
-    setRTImagePosition
-    setInt(al, TagByName.ReferencedBeamNumber, ReferencedBeamNumber)
-
-    setBeamLimitingDeviceAngle()
-
+    newAl
   }
 
   private def processSeries(dir: File, index: Int, machine: Machine, rtplan: AttributeList): Unit = {
     Trace.trace(s"Reading directory ${dir.getAbsolutePath} ...")
-    val fileList = Util.listDirFiles(dir).filter(_.getName.endsWith(".dcm")).filterNot(_.getName.endsWith("_NEW.dcm")).map(f => DicomFile(f))
+    val j = Util.listDirFiles(dir).foreach(d => println(s"====== $d"))
+    val devFileList = Util.listDirFiles(dir).filter(_.getName.endsWith(".dcm")).filter(_.getName.endsWith("_NEW.dcm")).map(f => DicomFile(f))
+    val templateDir = new File("""D:\aqa\FocalSpot\FocalSpot_TX4\Focal_SpotPROCESS\FocalSpot_GoodHeaders""")
+    // val templateFileList = Util.listDirFiles(templateDir).filter(_.getName.endsWith(".dcm")).map(f => DicomFile(f))
+    val templateFileList = devFileList // Util.listDirFiles(templateDir).filter(_.getName.endsWith(".dcm")).map(f => DicomFile(f))
 
-    if (fileList.nonEmpty) {
+    def fmtAl(dicomFile: DicomFile): String = { // for debug only
+      val pix = dicomFile.attributeList.get.get(TagByName.PixelData).getShortValues
+      var crc: Long = 0
+      pix.foreach(p => {
+        crc = (crc << 1) ^ (p & 0xff).toLong
+      })
+      dicomFile.file.getAbsolutePath + " " + "%08x".format(crc)
+    }
 
-      val alList = fileList.flatMap(_.attributeList).sortBy(al => getContentDateTime(al).getTime)
+    if (devFileList.nonEmpty) {
 
-      if (true) { // TODO this is the way it should be
-        val SeriesInstanceUID = UMROGUID.getUID
-        val StudyInstanceUID = UMROGUID.getUID
-
-        val seriesDate = setPerImageTime(alList, index)
-
-        alList.indices.foreach(alIndex => setImageAttr(alList(alIndex), SeriesInstanceUID, alIndex, StudyInstanceUID, seriesDate, machine, rtplan))
-
-        // alList.indices.foreach(index => setInt(alList(index), TagByName.ReferencedBeamNumber, beamRefList(index))) // TODO should get these from RTPLAN
+      if (true) {
+        val j = devFileList.map(f => fmtAl(f)).mkString("\n    ==== ")
+        Trace.trace(s"\n==== devFileList:\n    ==== $j")
       }
+
+      val devList = devFileList.flatMap(_.attributeList).sortBy(al => getContentDateTime(al).getTime)
+
+      val templateList = templateFileList.flatMap(_.attributeList).sortBy(al => getContentDateTime(al).getTime)
+      if (true) {
+        val j = templateFileList.map(f => fmtAl(f)).mkString("\n==== ")
+        Trace.trace(s"\n==== templateFileList:\n    ==== $j")
+      }
+      println(s"====")
+      println(s"====")
+
+
+      val SeriesInstanceUID = UMROGUID.getUID
+      val StudyInstanceUID = UMROGUID.getUID
+
+      val seriesDate = getContentDateTime(devList.head)
+
+      val studyDate = DicomUtil.getTimeAndDate(templateList(index), TagByName.StudyDate, TagByName.StudyTime).get
+
+      val newAlList = devList.indices.map(index =>
+        setImageAttr(
+          dev = devList(index),
+          template = templateList(index),
+          SeriesInstanceUID = SeriesInstanceUID,
+          index = index,
+          StudyInstanceUID = StudyInstanceUID,
+          instanceDate = DicomUtil.getTimeAndDate(devList(index), TagByName.ContentDate, TagByName.ContentTime).get,
+          seriesDate = seriesDate,
+          studyDate = studyDate,
+          machine = Some(machine),
+          rtplan = rtplan
+        ))
+
 
       val outDir = new File(dir, "out2")
       Util.deleteFileTreeSafely(outDir)
@@ -236,16 +363,16 @@ case object ConvertDicomDevCustom extends Logging {
 
       Trace.trace(s"Saving files to directory ${outDir.getAbsolutePath}")
 
-      val Modality = alList.head.get(TagByName.Modality).getSingleStringValueOrEmptyString()
+      val Modality = newAlList.head.get(TagByName.Modality).getSingleStringValueOrEmptyString()
 
-      def writeDicom(index: Int): Unit = {
+      def writeDicom(al: AttributeList, index: Int): Unit = {
         val dcmFile = new File(outDir, Modality + (index + 1) + ".dcm")
-        Util.writeAttributeListToFile(alList(index), dcmFile, "AQA")
+        Util.writeAttributeListToFile(al, dcmFile)
         val txtFile = new File(outDir, Modality + (index + 1) + ".txt")
-        Util.writeFile(txtFile, DicomUtil.attributeListToString(alList(index)))
+        Util.writeFile(txtFile, DicomUtil.attributeListToString(al))
       }
 
-      alList.indices.foreach(writeDicom)
+      newAlList.zipWithIndex.foreach(ai => writeDicom(ai._1, ai._2))
       Trace.trace()
     }
 
@@ -273,4 +400,6 @@ case object ConvertDicomDevCustom extends Logging {
     Trace.trace("Done")
     System.exit(0)
   }
+
+
 }
