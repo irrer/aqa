@@ -38,6 +38,7 @@ import org.aqa.webrun.gapSkew.GapSkewLatestHtml
 import org.aqa.webrun.phase2.centerDose.CenterDoseChartHistoryRestlet
 import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringChartHistoryRestlet
 import org.aqa.webrun.phase2.phase2csv.Phase2CsvRestlet
+import org.aqa.webrun.phase2.phase2csv.CsvApi
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessHistoryRestlet
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessSubHTML
 import org.aqa.webrun.phase2.vmat.VMATChartHistoryRestlet
@@ -565,6 +566,7 @@ class WebServer extends Application with Logging {
         new FSHistoryRestlet,
         new Phase2CsvRestlet,
         new MachineLogXml,
+        new CsvApi,
         new WLUpdateRestlet,
         new OutputHeading,
         anonymousTranslate,

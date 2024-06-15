@@ -8,6 +8,7 @@ import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.HasOutput
 import org.aqa.db.Machine
+import org.aqa.web.WebUtil
 import org.restlet.Response
 import org.restlet.data.MediaType
 import org.restlet.data.Status
@@ -26,17 +27,20 @@ object CsvSpecDownload extends Logging {
     (new PopulateDicomCsv).populateAll() // Get the DICOM column data up to date.
 
     // @formatter:off
-    val list =
+    val list ={
       csvSpec.dataType.machineToCustomCsv(csvSpec)
         .filter(_.text.nonEmpty)
         .filter(l => csvSpec.timeComparator.ok(l.data.asInstanceOf[HasOutput].getOutput.dataDate.get))
+    }
     // @formatter:on
-
     val text = csvSpec.slice(list).map(_.text).mkString("\n")
 
-    Trace.trace("\n" + text) // TODO test this via browser
     response.setStatus(Status.SUCCESS_OK)
     response.setEntity(text, MediaType.TEXT_CSV)
+
+    // set the file name that the client sees
+    val fileName = "AQA" + Util.currentTimeAsFileName + ".csv"
+    WebUtil.setDownloadName(response, fileName)
 
     // ---------------------------------------------------------------------------------------------------
 
