@@ -43,6 +43,7 @@ import org.aqa.db.Procedure
 import org.aqa.db.User
 import org.restlet.Request
 import org.restlet.Response
+import org.restlet.data.Disposition
 import org.restlet.data.Form
 import org.restlet.data.MediaType
 import org.restlet.data.Method
@@ -1893,5 +1894,19 @@ object WebUtil extends Logging {
     </div>
 
   }
+
+
+  /**
+   * Set the name of the file that the web client will see when the perform a download.
+   * @param response Restlet response. Must have an entity.
+   * @param name Name of file for client.
+   */
+  def setDownloadName(response: Response, name: String): Unit = {
+    val disposition = new Disposition(Disposition.TYPE_ATTACHMENT)
+    val fileName = "AQA" + Util.currentTimeAsFileName + ".csv"
+    disposition.setFilename(fileName)
+    response.getEntity.setDisposition(disposition)
+  }
+
 
 }
