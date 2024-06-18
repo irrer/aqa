@@ -57,11 +57,10 @@ object Crypto extends Logging {
       val array = text.indices.filter(i => (i % 2) == 0).foldLeft(Array[Byte]())(oneByte)
       array
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         val msg = "unable to convert HEX string '" + text + "' to bytes: " + fmtEx(t)
         logger.error(msg)
         throw new IllegalArgumentException(msg)
-      }
     }
   }
 
@@ -74,7 +73,7 @@ object Crypto extends Logging {
     */
   def secureHash(data: Array[Byte]): Array[Byte] = {
     val md = HashFactory.getInstance(DIGEST_NAME)
-    md.update(data, 0, data.size)
+    md.update(data, 0, data.length)
     md.digest
   }
 
@@ -88,7 +87,7 @@ object Crypto extends Logging {
     */
   def randomSecureHash: String = {
     val rand = new Random
-    val words = (0 until 100).map(i => rand.nextLong.toString)
+    val words = (0 until 100).map(_ => rand.nextLong.toString)
     val text = words.foldLeft(System.currentTimeMillis.toString)((t, l) => t + l)
     secureHash(text)
   }
@@ -107,35 +106,24 @@ object Crypto extends Logging {
   /**
     * Create cipher that can be used to encrypt and decrypt.
     *
-    * @param key: Secret password, original value must be 32 characters long
+    * @param keyAsHex: Secret password, original value must be 32 characters long
     */
   def getCipher(keyAsHex: String): IBlockCipher = {
     import gnu.crypto.cipher.CipherFactory
     import gnu.crypto.cipher.IBlockCipher
 
-    import java.util.HashMap
-
     val key = hexToByteArray(keyAsHex)
-    if (key.size != cipherKeySize) throw new InvalidParameterException("Key must be " + cipherKeySize + " bytes but was actually " + key.size)
+    if (key.length != cipherKeySize) throw new InvalidParameterException("Key must be " + cipherKeySize + " bytes but was actually " + key.length)
 
     val cipher = CipherFactory.getInstance(cipherType)
 
-    val attributes = new HashMap[String, Object]()
+    val attributes = new java.util.HashMap[String, Object]()
     val size: Object = cipherBlockSize.asInstanceOf[Object]
     attributes.put(IBlockCipher.CIPHER_BLOCK_SIZE, size)
     attributes.put(IBlockCipher.KEY_MATERIAL, key)
     cipher.init(attributes)
 
     cipher
-  }
-
-  /**
-    * Copy all bytes from source into destination starting at the destination offset.
-    *
-    * This is necessarily mutable, but that is due to the support functions used.
-    */
-  private def byteCopy(src: Array[Byte], dest: Array[Byte], destOffset: Int) = {
-    src.indices.map(i => dest(destOffset + i) = src(i))
   }
 
   /**
@@ -152,24 +140,24 @@ object Crypto extends Logging {
   def encryptWithNonce(clearText: String, cipher: IBlockCipher): String = {
 
     // prepend the text with its length and a blank.
-    val fullText = clearText.size.toString.getBytes ++ " ".getBytes ++ clearText.getBytes
+    val fullText = clearText.length.toString.getBytes ++ " ".getBytes ++ clearText.getBytes
     val half = cipherBlockSize / 2 // characters per block
 
-    def crpt(in: Array[Byte]) = {
+    def crp(in: Array[Byte]) = {
       val out = emptyBlock
       cipher.encryptBlock(in, 0, out, 0)
       out
     }
 
-    val numBlock = (fullText.size / half) + 1
+    val numBlock = (fullText.length / half) + 1
     val out = new Array[Byte](numBlock * cipherBlockSize)
     rand.nextBytes(out)
 
-    val textChunks = (0 until numBlock).map(b => fullText.drop(half * b).take(half))
+    val textChunks = (0 until numBlock).map(b => fullText.slice(half * b, half * b + half))
 
     val chunkAndRand = textChunks.map(chunk => (chunk ++ makeRandBlock).take(cipherBlockSize))
 
-    val allChunksEncrypted = chunkAndRand.map(car => crpt(car)).flatten
+    val allChunksEncrypted = chunkAndRand.flatMap(car => crp(car))
 
     byteArrayToHex(allChunksEncrypted.toArray)
   }
@@ -184,25 +172,23 @@ object Crypto extends Logging {
 
     try {
       val encryptedText = hexToByteArray(encryptedTextAsHex)
-      val j = encryptedText.size
 
-      val clear = new Array[Byte](encryptedText.size)
-      val numBlock = encryptedText.size / cipherBlockSize
-      (0 until numBlock).map(b => cipher.decryptBlock(encryptedText, b * cipherBlockSize, clear, b * cipherBlockSize))
-      val justText = (0 until numBlock).map(b => clear.drop(b * cipherBlockSize).take(cipherBlockSize / 2)).flatten.toArray
+      val clear = new Array[Byte](encryptedText.length)
+      val numBlock = encryptedText.length / cipherBlockSize
+      (0 until numBlock).foreach(b => cipher.decryptBlock(encryptedText, b * cipherBlockSize, clear, b * cipherBlockSize))
+      val justText = (0 until numBlock).flatMap(b => clear.slice(b * cipherBlockSize, b * cipherBlockSize + cipherBlockSize / 2)).toArray
       val separator = justText.indexOf(' '.toByte)
       val intText = new String(justText.take(separator))
-      if (intText.matches("[0-9][0-9]*")) {
+      if (intText.matches("[0-9]+")) {
         val lengthOfOriginalText = intText.toInt
-        val originalText = justText.drop(separator + 1).take(lengthOfOriginalText)
+        val originalText = justText.slice(separator + 1, separator + 1 + lengthOfOriginalText)
         new String(originalText)
       } else
         "Could not decrypt"
     } catch {
-      case t: Throwable => {
+      case t: Throwable =>
         logger.warn("Failure to decrypt string: " + encryptedTextAsHex + " : " + fmtEx(t))
         "decryption failure"
-      }
     }
   }
 
@@ -212,13 +198,13 @@ object Crypto extends Logging {
   /**
     * Encrypt the given text (without nonce) and then calculate and return a secure hash of the result.
     */
-  def encryptAndHash(text: String, cipher: IBlockCipher): String = {
-    val numBlock = (text.size / cipherBlockSize) + 1
+  private def encryptAndHash(text: String, cipher: IBlockCipher): String = {
+    val numBlock = (text.length / cipherBlockSize) + 1
     val empty = new String(Array.fill(cipherBlockSize)(0.asInstanceOf[Byte]))
     val blocksConcatenated = (text + empty).take(numBlock * cipherBlockSize).getBytes
     val encrypted = Array.fill(numBlock * cipherBlockSize)(0.asInstanceOf[Byte])
 
-    (0 until numBlock).map(b => cipher.encryptBlock(blocksConcatenated, b * cipherBlockSize, encrypted, b * cipherBlockSize))
+    (0 until numBlock).foreach(b => cipher.encryptBlock(blocksConcatenated, b * cipherBlockSize, encrypted, b * cipherBlockSize))
 
     val hash = byteArrayToHex(secureHash(encrypted))
     hash
