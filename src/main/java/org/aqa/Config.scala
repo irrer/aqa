@@ -167,9 +167,10 @@ object Config extends Logging {
   private def getJavaKeyStorePasswordList: List[String] = {
     val name = "JavaKeyStorePassword"
     try {
-      val passwordList = (document \ name).map(n => n.head.text)
+      val passwordList = (document \ name).map(n => n.head.text.trim)
       logText(name, "[redacted]")
-      (passwordList ++ passwordList.map(pw => pw.trim)).distinct.toList
+      val list = passwordList.distinct.toList
+      list
     } catch {
       case _: Throwable =>
         logText(name, "[not configured]")
