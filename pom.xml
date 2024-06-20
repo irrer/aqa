@@ -18,9 +18,9 @@
 
     <dependencies>
         <dependency> <groupId>com.jsuereth</groupId>             <artifactId>scala-arm_2.12</artifactId>             <version>2.0</version>             </dependency>
-        <dependency> <groupId>com.mchange</groupId>              <artifactId>c3p0</artifactId>                       <version>0.9.5.5</version>         </dependency>
+        <dependency> <groupId>com.mchange</groupId>              <artifactId>c3p0</artifactId>                       <version>0.10.1</version>         </dependency>
         <dependency> <groupId>commons-fileupload</groupId>       <artifactId>commons-fileupload</artifactId>         <version>1.5</version>             </dependency>
-        <dependency> <groupId>commons-io</groupId>               <artifactId>commons-io</artifactId>                 <version>2.11.0</version>          </dependency>
+        <dependency> <groupId>commons-io</groupId>               <artifactId>commons-io</artifactId>                 <version>2.16.1</version>          </dependency>
         <dependency> <groupId>edu.umro</groupId>                 <artifactId>MSOfficeUtil</artifactId>               <version>0.0.3</version>           </dependency>
         <dependency> <groupId>edu.umro</groupId>                 <artifactId>RestletUtil_2.12</artifactId>           <version>0.1.2</version>           </dependency>
         <dependency> <groupId>edu.umro</groupId>                 <artifactId>ScalaUtil_2.12</artifactId>             <version>0.0.19</version>          </dependency>
@@ -29,11 +29,11 @@
         <dependency> <groupId>edu.umro</groupId>                 <artifactId>DicomDict</artifactId>                  <version>2.3</version>             </dependency>
         <dependency> <groupId>javax.servlet</groupId>            <artifactId>javax.servlet-api</artifactId>          <version>4.0.1</version>           </dependency>
 
-        <dependency> <groupId>org.apache.poi</groupId>           <artifactId>poi</artifactId>                        <version>5.2.3</version>           </dependency>
-        <dependency> <groupId>org.apache.poi</groupId>           <artifactId>poi-ooxml</artifactId>                  <version>5.2.3</version>           </dependency>
+        <dependency> <groupId>org.apache.poi</groupId>           <artifactId>poi</artifactId>                        <version>5.2.5</version>           </dependency>
+        <dependency> <groupId>org.apache.poi</groupId>           <artifactId>poi-ooxml</artifactId>                  <version>5.2.5</version>           </dependency>
 
         <dependency> <groupId>org.gnu</groupId>                  <artifactId>gnu-crypto</artifactId>                 <version>2.0.1</version>           </dependency>
-        <dependency> <groupId>org.postgresql</groupId>           <artifactId>postgresql</artifactId>                 <version>42.5.1</version>          </dependency>
+        <dependency> <groupId>org.postgresql</groupId>           <artifactId>postgresql</artifactId>                 <version>42.7.3</version>          </dependency>
         <dependency> <groupId>org.restlet.jee</groupId>          <artifactId>org.restlet.ext.fileupload</artifactId> <version>2.3.9</version>           </dependency>
         <dependency> <groupId>org.restlet.jse</groupId>          <artifactId>org.restlet.ext.crypto</artifactId>     <version>2.3.11</version>          </dependency>
         <dependency> <groupId>org.restlet.jse</groupId>          <artifactId>org.restlet.ext.httpclient</artifactId> <version>2.4.0</version>           </dependency>
@@ -47,10 +47,10 @@
         <dependency> <groupId>org.scalatest</groupId>            <artifactId>scalatest_2.12</artifactId>             <version>3.2.0-SNAP9</version>     <scope>test</scope></dependency>
 
         <dependency> <groupId>pixelmed</groupId>                 <artifactId>pixelmed</artifactId>                   <version>20221004</version>        </dependency>
-        <dependency> <groupId>com.google.inject</groupId>        <artifactId>guice</artifactId>                      <version>5.1.0</version>           </dependency>
+        <dependency> <groupId>com.google.inject</groupId>        <artifactId>guice</artifactId>                      <version>7.0.0</version>           </dependency>
         <dependency> <groupId>com.microsoft.sqlserver</groupId>  <artifactId>sqljdbc4</artifactId>                   <version>4.0</version>             </dependency>
         <dependency> <groupId>org.restlet.jee</groupId>          <artifactId>org.restlet.ext.html</artifactId>       <version>2.3.9</version>           </dependency>
-        <dependency> <groupId>org.apache.commons</groupId>       <artifactId>commons-csv</artifactId>                <version>1.9.0</version>           </dependency>
+        <dependency> <groupId>org.apache.commons</groupId>       <artifactId>commons-csv</artifactId>                <version>1.10.0</version>           </dependency>
 
         <dependency> <groupId>com.typesafe.play</groupId>        <artifactId>play-slick_2.12</artifactId>            <version>5.1.0</version>           </dependency>
         <dependency> <groupId>com.typesafe.slick</groupId>       <artifactId>slick-hikaricp_2.12</artifactId>        <version>3.4.1</version>           </dependency>
@@ -195,6 +195,13 @@
             </plugin>
         </plugins>
     </build>
+    <repositories>
+        <repository>
+            <id>maven_central</id>
+            <name>Maven Central</name>
+            <url>https://repo.maven.apache.org/maven2/</url>
+        </repository>
+    </repositories>
 
     <!-- Note: the C:\pfc\Maven\settings.xml contains a reference to the https://maven.restlet.talend.com repository. -->
 
