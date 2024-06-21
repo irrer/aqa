@@ -37,8 +37,8 @@ import org.aqa.webrun.gapSkew.GapSkewHistoryRestlet
 import org.aqa.webrun.gapSkew.GapSkewLatestHtml
 import org.aqa.webrun.phase2.centerDose.CenterDoseChartHistoryRestlet
 import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringChartHistoryRestlet
-import org.aqa.webrun.phase2.phase2csv.Phase2CsvRestlet
 import org.aqa.webrun.phase2.phase2csv.CsvApi
+import org.aqa.webrun.phase2.phase2csv.Phase2CsvRestlet
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessHistoryRestlet
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessSubHTML
 import org.aqa.webrun.phase2.vmat.VMATChartHistoryRestlet
@@ -241,6 +241,8 @@ class WebServer extends Application with Logging {
 
   private lazy val systemModificationUpdate = new SystemModificationUpdate
 
+  private lazy val csvApi = new CsvApi
+
   private lazy val webRunIndex = new WebRunIndex
 
   private lazy val outputList = new OutputList
@@ -300,7 +302,8 @@ class WebServer extends Application with Logging {
       case `termsOfUse`                     => UserRole.publik
       case `setPassword`                    => UserRole.guest
       case `systemModificationUpdate`       => UserRole.publik
-      case `resultsDirectoryRestlet`        => UserRole.guest
+      case `resultsDirectoryRestlet`        => UserRole.user
+      case `csvApi`                         => UserRole.guest
       case `webRunIndex`                    => UserRole.user
       case `getSeries`                      => UserRole.user
       case `viewOutput`                     => UserRole.user

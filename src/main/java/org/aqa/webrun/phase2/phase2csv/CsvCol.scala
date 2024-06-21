@@ -26,7 +26,7 @@ import scala.xml.Elem
   *                     represent.  Used for generating documentation.
   * @param toText Converts given data to text that will be put in the cell.
   */
-case class CsvCol[T](header: String, description: String = "", toText: T => Any) {
+case class CsvCol[T](header: String, description: String = "", toText: T => Any, isBeamName: Boolean = false) {
   // def this(header: String, toText: T => Any) = this(header, "", toText)
 
   private val alphabet = Seq("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z")

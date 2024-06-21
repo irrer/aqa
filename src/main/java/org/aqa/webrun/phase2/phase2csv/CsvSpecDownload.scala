@@ -14,6 +14,7 @@ import org.restlet.data.MediaType
 import org.restlet.data.Status
 
 import java.util.Date
+import scala.xml.Elem
 
 object CsvSpecDownload extends Logging {
 
@@ -33,16 +34,77 @@ object CsvSpecDownload extends Logging {
         .filter(l => csvSpec.timeComparator.ok(l.data.asInstanceOf[HasOutput].getOutput.dataDate.get))
     }
     // @formatter:on
-    val text = csvSpec.slice(list).map(_.text).mkString("\n")
 
-    response.setStatus(Status.SUCCESS_OK)
-    response.setEntity(text, MediaType.TEXT_CSV)
+    val headerLine: Seq[String] = {
+      if (csvSpec.header) {
+        Seq(csvSpec.dataType.makeHeader())
+      }
+      else
+        Seq()
+    }
 
-    // set the file name that the client sees
-    val fileName = "AQA" + Util.currentTimeAsFileName + ".csv"
-    WebUtil.setDownloadName(response, fileName)
+    val contentList = csvSpec.slice(list).map(_.text)
+
+    if (csvSpec.format.equalsIgnoreCase("csv")) {
+
+      val text = (headerLine ++ contentList).mkString("\n")
+
+      response.setStatus(Status.SUCCESS_OK)
+      response.setEntity(text, MediaType.TEXT_CSV)
+
+      // set the file name that the client sees
+      val fileName = "AQA" + Util.currentTimeAsFileName + ".csv"
+      WebUtil.setDownloadName(response, fileName)
+    }
+
+
+    if (csvSpec.format.equalsIgnoreCase("html")) {
+      response.setStatus(Status.SUCCESS_OK)
+
+      def contentRowToHtml(row: String): Elem = {
+        val colList = Util.csvToText(row).map(col =>
+          <td>
+            {col}
+          </td>)
+
+        <tr>
+          {colList}
+        </tr>
+      }
+
+
+      def headerRowToHtml(row: String): Elem = {
+        val colList = Util.csvToText(row).map(col =>
+          <th>
+            {col}
+          </th>)
+
+        <thead>
+          <tr>
+            {colList}
+          </tr>
+        </thead>
+      }
+
+
+      val headerHtml = headerLine.map(headerRowToHtml)
+      val contentHtml = contentList.map(contentRowToHtml)
+
+      val html = {
+        <div style="margin:20px;">
+          <table class="table table-bordered">
+            {headerHtml ++ contentHtml}
+          </table>
+        </div>
+      }
+
+      val text = WebUtil.wrapBody(html, "CSV API")
+
+      response.setEntity(text, MediaType.TEXT_HTML)
+    }
 
     // ---------------------------------------------------------------------------------------------------
+
 
     val elapsedText = Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start)
     logger.info("Done with CSV generation.  Elapsed time: " + elapsedText)
@@ -58,9 +120,9 @@ object CsvSpecDownload extends Logging {
 
     val machine = Machine.get(22).get
     val dataType = new WinstonLutzCsv
-    val csvSpec = CsvSpec(machine, dataType, beam = ".*", header = false,
+    val csvSpec = CsvSpec(machine, dataType, beam = ".*", header = false, format = "csv",
       //timeComparator = CsvSpec.defaultTimeComparator,
-      timeComparator = CsvSpec.TimeComparator(CsvSpec.TimeComparatorEnum.timeLE, new Date),
+      timeComparator = TimeComparator(TimeComparator.TimeComparatorEnum.TimeLE, new Date),
       //count = CsvCount(2,0)
       count = CsvSpec.CsvCount())
 

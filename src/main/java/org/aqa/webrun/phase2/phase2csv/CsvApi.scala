@@ -7,10 +7,10 @@ import org.aqa.web.WebUtil.SubUrlRoot
 import org.aqa.web.WebUtil.getValueMap
 import org.aqa.web.WebUtil.internalFailure
 import org.aqa.web.WebUtil.ValueMapT
-import org.aqa.Util
 import org.aqa.webrun.phase2.phase2csv.CsvSpec.CsvCount
-import org.aqa.webrun.phase2.phase2csv.CsvSpec.TimeComparator
-import org.aqa.webrun.phase2.phase2csv.CsvSpec.TimeComparatorEnum
+import org.aqa.webrun.phase2.phase2csv.TimeComparator.TimeComparatorEnum
+// import org.aqa.webrun.phase2.phase2csv.CsvSpec.TimeComparator
+// import org.aqa.webrun.phase2.phase2csv.CsvSpec.TimeComparatorEnum
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -29,8 +29,18 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
 
   private val headerTag = "header"
 
+  private val formatTag = "format"
+
   private val countTag = "count"
+
   private val skipTag = "skip"
+
+  private def caseInsensitiveGet(key: String, valueMap: ValueMapT): Option[String] = {
+    valueMap.keys.find(k => k.equalsIgnoreCase(key)) match {
+      case Some(k) => valueMap.get(k)
+      case _       => None
+    }
+  }
 
   /**
     * Get the machine to use.
@@ -42,14 +52,15 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
     val machineList: Seq[Machine] = if (user.isDefined) Machine.getForInstitution(user.get.institutionPK) else Seq()
     val machineNameList: Seq[String] = if (machineList.isEmpty) Seq() else machineList.map(_.getRealId)
     def choiceList: String = "Valid choices are:\n" + machineNameList.mkString("\n")
-    if (valueMap.contains(machineTag)) {
+    val value = caseInsensitiveGet(machineTag, valueMap)
+    if (value.isDefined) {
       WebUtil.getUser(valueMap) match {
         case Some(user) =>
-          val machine = machineList.find(m => m.getRealId.trim.equalsIgnoreCase(valueMap(machineTag).trim))
+          val machine = machineList.find(m => m.getRealId.trim.equalsIgnoreCase(value.get.trim))
           if (machine.isDefined)
             Right(machine.get)
           else
-            Left(s"""Could not find machine ${valueMap(machineTag)} . $choiceList""")
+            Left(s"""Could not find machine ${value.get} . $choiceList""")
         case _ =>
           Left("Invalid user.")
       }
@@ -66,9 +77,11 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
 
     val dataTypeChoiceList = Phase2Csv.dataTypeList.map(_.getDataName).mkString(", ")
 
-    if (valueMap.contains(dataTypeTag)) {
+    val value = caseInsensitiveGet(dataTypeTag, valueMap)
+
+    if (value.isDefined) {
       val name = {
-        val n = valueMap(dataTypeTag).trim
+        val n = value.get.trim
         URLDecoder.decode(n, "UTF-8")
       }
       val dataType = Phase2Csv.dataTypeList.find(dt => dt.getDataName.trim.equalsIgnoreCase(name))
@@ -83,12 +96,12 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
   /**
     * Get the beam name pattern to restrict the CSV rows.
     * @param valueMap HTML parameters.
-    * @return Either the user's pattern or the default.  If the tag was specieid
+    * @return Either the user's pattern or the default.  If the tag was specified.
     */
   private def getBeam(valueMap: ValueMapT): Either[String, String] = {
-    val containsTag = valueMap.contains(beamTag)
-    (containsTag, containsTag && (valueMap(beamTag) != null) && valueMap(beamTag).nonEmpty) match {
-      case (true, true) => Right(valueMap(beamTag))
+    val value = caseInsensitiveGet(beamTag, valueMap)
+    (value.isDefined, value.isDefined && (value.get != null) && value.get.nonEmpty) match {
+      case (true, true) => Right(value.get)
       case (false, _)   => Right(".*")
       case _            => Left("Empty string given for beam.")
     }
@@ -100,19 +113,43 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
     * @return Either boolean or error message.
     */
   private def getHeader(valueMap: ValueMapT): Either[String, Boolean] = {
-    if (valueMap.contains(headerTag)) {
+
+    val value = caseInsensitiveGet(headerTag, valueMap)
+
+    if (value.isDefined) {
       val trueText = "true"
       val falseText = "false"
 
-      val text = valueMap(headerTag).trim
+      val text = value.get.trim
 
       0 match {
         case _ if trueText.equalsIgnoreCase(text)  => Right(true)
         case _ if falseText.equalsIgnoreCase(text) => Right(false)
-        case _                                     => Left(s"""Invalid value for $headerTag .   Should be either ${trueText.head} or ${falseText.head} .""")
+        case _                                     => Left(s"""Invalid value for $headerTag .   Should be either $trueText or $falseText .""")
       }
     } else
       Right(false)
+  }
+
+  /**
+    * Get the format value (CSV or HTML).  If not specified then return default (CSV).
+    * @param valueMap HTML parameters.
+    * @return Either boolean or error message.
+    */
+  private def getFormat(valueMap: ValueMapT): Either[String, String] = {
+    val csvText = "csv"
+    val htmlText = "html"
+
+    val value = caseInsensitiveGet(formatTag, valueMap)
+
+    if (value.isDefined) {
+      0 match {
+        case _ if csvText.equalsIgnoreCase(value.get)  => Right("csv")
+        case _ if htmlText.equalsIgnoreCase(value.get) => Right("html")
+        case _                                         => Left(s"""Invalid value for $formatTag .   Should be either $csvText or $htmlText .""")
+      }
+    } else
+      Right(csvText)
   }
 
   /**
@@ -120,8 +157,8 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
     * @param valueMap HTML parameters.
     * @return Either time spec or error message.
     */
-  private def getTime(valueMap: ValueMapT): Either[String, CsvSpec.TimeComparator] = {
-    val timeTagSet = CsvSpec.TimeComparatorEnum.values.map(_.toString.toLowerCase())
+  private def getTime(valueMap: ValueMapT): Either[String, TimeComparator] = {
+    val timeTagSet = TimeComparatorEnum.values.map(_.toString.toLowerCase())
     val specifiedSet = valueMap.keySet.filter(t => timeTagSet.contains(t.toLowerCase()))
 
     specifiedSet.size match {
@@ -130,13 +167,14 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
         Right(CsvSpec.defaultTimeComparator)
 
       case 1 =>
-        val j = CsvSpec.TimeComparatorEnum.values.toList
-        val c = CsvSpec.TimeComparatorEnum.values.find(c => c.toString.equalsIgnoreCase(specifiedSet.head.toLowerCase())).get
-        val t = Util.parseDate(CsvSpec.TimeComparator.dateFormat, valueMap(specifiedSet.head))
-        Right(TimeComparator(c, t))
+        val c = TimeComparatorEnum.values.find(c => c.toString.equalsIgnoreCase(specifiedSet.head.toLowerCase())).get
+        TimeComparator.parseDate(valueMap(specifiedSet.head)) match {
+          case Right(t)           => Right(TimeComparator(c, t))
+          case Left(errorMessage) => Left(errorMessage)
+        }
 
       case _ => // more than one time given - ambiguous
-        val timeUsage = s"""To specify time, use one of: ${TimeComparatorEnum.values.mkString(", ")} with a time in standard date format.  Default: ${CsvSpec.TimeComparator} """
+        val timeUsage = s"""To specify time, use one of: ${TimeComparatorEnum.values.mkString(", ")} with a time in standard date format.  Default: ${TimeComparator} """
         Left(s"""More than one time specification given: ${specifiedSet.mkString(", ")} .   $timeUsage""")
 
     }
@@ -149,27 +187,28 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
     */
   private def getCount(valueMap: ValueMapT): Either[String, CsvCount] = {
 
+    val value = caseInsensitiveGet(countTag, valueMap)
+
     val count: Either[String, Int] = {
-      val key = valueMap.keys.find(k => k.equalsIgnoreCase(countTag.toLowerCase()))
-      if (key.isDefined) {
+      if (value.isDefined) {
         try {
-          val i = valueMap(key.get).toInt
+          val i = value.get.toInt
           Right(i)
         } catch {
-          case _: Throwable => Left(s"""Invalid integer given for count: ${valueMap(key.get)}""")
+          case _: Throwable => Left(s"""Invalid integer given for $countTag: ${value.get}""")
         }
       } else
         Right(1)
     }
 
     val skip: Either[String, Int] = {
-      val key = valueMap.keys.find(k => k.equalsIgnoreCase(skipTag.toLowerCase()))
-      if (key.isDefined) {
+      val value = caseInsensitiveGet(skipTag, valueMap)
+      if (value.isDefined) {
         try {
-          val i = valueMap(key.get).toInt
+          val i = value.get.toInt
           Right(i)
         } catch {
-          case _: Throwable => Left(s"""Invalid integer given for skip: ${valueMap(key.get)}""")
+          case _: Throwable => Left(s"""Invalid integer given for $skipTag: ${value.get}""")
         }
       } else
         Right(0)
@@ -202,14 +241,16 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
 
     val header = getHeader(valueMap)
 
+    val format = getFormat(valueMap)
+
     val timeComparator = getTime(valueMap)
 
     val count = getCount(valueMap)
 
-    val errorList = Seq(machine, dataType, beam, header, timeComparator, count).filter(_.isLeft)
+    val errorList = Seq(machine, dataType, beam, header, format, timeComparator, count).filter(_.isLeft)
 
     if (errorList.isEmpty) {
-      Right(CsvSpec(machine.right.get, dataType.right.get, beam.right.get, header.right.get, timeComparator.right.get, count.right.get))
+      Right(CsvSpec(machine.right.get, dataType.right.get, beam.right.get, header.right.get, format.right.get, timeComparator.right.get, count.right.get))
     } else {
       val errorText = errorList.filter(_.isLeft).map(_.left.get).mkString("\n").toString
       Left(errorText)
