@@ -1,0 +1,193 @@
+<div title="CSV API">
+    <!--
+    Copyright 2024 Regents of the University of Michigan
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    -->
+
+    <h2>@@title@@</h2>
+
+    <p>
+        The CSV API allows external programs to remotely download results in CSV format. It is designed to support
+        the export of data programmatically.
+    </p>
+
+    <p>
+        Using HTTPS makes the data available via all major programming languages, web browsers, and command line
+        utilities
+        such as <a href="https://en.wikipedia.org/wiki/CURL">CURL</a>.
+    </p>
+
+    <p>
+        Several columns of downloaded data are anonymized, including the institution and machine.
+    </p>
+
+
+    <h3>Parameters</h3>
+
+    <p>
+        Parameter names and values are case-insensitive.
+    </p>
+    <p>
+        If there are no values that satisfy the parameter specifications, then a zero length list will be returned.
+    </p>
+    <p>
+        If an invalid request is made, then a description of the error will be returned and the HTTP status will be 400.
+        Valid requests will return a 200 status.
+    </p>
+
+    <center><h4>Parameters</h4></center>
+    <table class="table table-bordered">
+        <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Required</th>
+            <th>Format</th>
+            <th>Example</th>
+            <th>Default</th>
+        </tr>
+        <tr>
+            <td><b>Type</b></td>
+            <td>Type of data</td>
+            <td>Yes</td>
+            <td>Must be one of:
+                <b>
+                    <ul>
+                        <li>Center Dose</li>
+                        <li>GapOffsetSkew</li>
+                        <li>Collimator Centering</li>
+                        <li>Collimator Position</li>
+                        <li>Focal Spot</li>
+                        <li>LeafPosition</li>
+                        <li>Metadata Check</li>
+                        <li>Symmetry And Flatness</li>
+                        <li>VMAT T2-DR-GS</li>
+                        <li>VMAT T2-DG-RS</li>
+                        <li>VMAT T3MLCSpeed</li>
+                        <li>Wedge Point</li>
+                        <li>Winston Lutz</li>
+                    </ul>
+                </b>
+            </td>
+            <td><b>Winston Lutz</b></td>
+            <td>NA</td>
+        </tr>
+
+        <tr>
+            <td><b>Machine</b></td>
+            <td>Name of treatment machine</td>
+            <td>Yes</td>
+            <td>Must be one of the <a href="/admin/MachineList">machine names listed for your institution</a>.</td>
+            <td><b>TB1</b></td>
+            <td>NA</td>
+        </tr>
+
+        <tr>
+            <td><b>Header</b></td>
+            <td>Indicates whether or no a header line should be shown.</td>
+            <td>No</td>
+            <td>Must be one of <b>true</b> or <b>false</b></td>
+            <td><b>true</b></td>
+            <td><b>false</b></td>
+        </tr>
+
+        <tr>
+            <td><b>Format</b></td>
+            <td>Indicates either CSV or HTML format. HTML is useful for quickly testing queries interactively in the
+                browser.
+            </td>
+            <td>No</td>
+            <td>Must be one of <b>CSV</b> or <b>HTML</b></td>
+            <td><b>HTML</b></td>
+            <td><b>CSV</b></td>
+        </tr>
+
+        <tr>
+            <td>
+                One of:
+                <ul>
+                    <li><b>TimeEQ</b> : Time EQual to given time.</li>
+                    <li><b>TimeGE</b> : Time Greater than or Equal to given time.</li>
+                    <li><b>TimeLE</b> : Time Less than or Equal to given time.</li>
+                    <li><b>TimeLT</b> : Time Less than given time.</li>
+                    <li><b>TimeGT</b> : Time Greater than to given time.</li>
+                </ul>
+            </td>
+            <td>Specifies time range of data acquisition at the treatment machine. If specified, only one may be
+                given.
+            </td>
+            <td>No</td>
+            <td>One of:
+                <ul>
+                    <b>TimeXX=yyyyMMddTHHmmss.SSS</b>
+                    <p style="margin-left:20px;">Digits specifying year, month, day, literal T, hour, minute, second,
+                        millisecond.</p>
+                </ul>
+                <ul>
+                    <b>TimeXX=yyyyMMddTHHmmss</b>
+                    <p style="margin-left:20px;">Milliseconds defaults to zero.</p>
+                </ul>
+                <ul>
+                    <b>TimeXX=yyyyMMddTHHmm</b>
+                    <p style="margin-left:20px;">Seconds defaults to zero.</p>
+                </ul>
+            </td>
+            <td><b>TimeGE=20240515T145221.419</b>
+                <p style="margin-left:20px;">Data acquired treatment machine on or after May 15, 2024 14:52:21.419</p>
+            </td>
+            <td><b>TimeGE=19700101T000000.000</b>
+                <p style="margin-left:20px;">Data acquired treatment machine on or after Jan 1, 1970</p></td>
+        </tr>
+        <tr>
+            <td><b>Count</b></td>
+            <td>Number of rows to be retrieved</td>
+            <td>No</td>
+            <td>Integer greater than 0</td>
+            <td><b>5</b></td>
+            <td><b>1</b></td>
+        </tr>
+        <tr>
+            <td><b>Skip</b></td>
+            <td>Number of rows to skip before retrieving the first row</td>
+            <td>No</td>
+            <td>Integer value 0 or greater</td>
+            <td><b>12</b></td>
+            <td><b>0</b></td>
+        </tr>
+    </table>
+
+
+    <h3>Examples</h3>
+
+    These may be copied and pasted into a browser.
+
+    <p style="margin-bottom:30px;">
+        Get the last record for Winston Lutz for machine TB5.
+        <b style="margin-left:20px;">https://test.automatedqualityassurance.org/CsvApi?machine=TB5&type=Winston%20Lutz&TimeLE=21000101T000000</b>
+    </p>
+
+    <p style="margin-bottom:30px;">
+        Get the second set of 4 Winston Lutz records for machine TB5:
+        <br/>
+        <b style="margin-left:20px;">https://test.automatedqualityassurance.org/CsvApi?machine=TB5&type=Winston%20Lutz&count=4&SKip=4</b>
+    </p>
+
+    <p style="margin-bottom:30px;">
+        Get the last two records for Winston Lutz for machine TB5 with header line in HTML.
+        <b style="margin-left:20px;">https://test.automatedqualityassurance.org/CsvApi?machine=TB5&type=Winston%20Lutz&TimeLE=21000101T000000&count=2&header=true&Format=HTML</b>
+    </p>
+
+    <p style="margin-bottom:100px;"></p>
+
+</div>
