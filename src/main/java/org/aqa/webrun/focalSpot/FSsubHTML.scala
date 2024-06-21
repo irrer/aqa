@@ -1,13 +1,17 @@
 package org.aqa.webrun.focalSpot
 
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.run.ProcedureStatus
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.Util
 import org.aqa.web.C3ChartHistory
 import org.aqa.Logging
+import org.aqa.web.WebUtil
 
 import java.io.File
+import java.text.SimpleDateFormat
 import scala.xml.Elem
 
 object FSsubHTML extends Logging {
@@ -57,15 +61,52 @@ object FSsubHTML extends Logging {
     def showImage(fsMeasure: FSMeasure): Elem = {
       val dir = FSHTML.focalSpotDir(extendedData)
       val typeName = if (fsMeasure.isJaw) "Jaw" else "MLC"
-      val imageId = typeName + fsMeasure.collimatorAngleRounded_deg.formatted("%03d")
-      val pngFileName = imageId + ".png"
+      val nomEnergy = fsMeasure.NominalBeamEnergy.round
+      val imageId = fsMeasure.fileNamePrefix
+      val pngFileName = fsMeasure.fileNamePrefix + ".png"
       val pngFile = new File(dir, pngFileName)
       Util.writePng(fsMeasure.bufferedImage, pngFile)
+
+      val title = nomEnergy + "MV " + typeName + " " + fsMeasure.collimatorAngleRounded_deg
+
+      val htmlFileName = fsMeasure.fileNamePrefix + ".html"
+      val htmlFile = new File(dir, htmlFileName)
+
+      val contentTimeText = {
+        val dateTime = DicomUtil.getTimeAndDate(fsMeasure.rtimage, TagByName.ContentDate, TagByName.ContentTime).get
+        val fmt = new SimpleDateFormat("H:mm:ss")
+        Util.formatDate(fmt, dateTime)
+      }
+
+      val ImageHashText = {
+        val dateTime = DicomUtil.getTimeAndDate(fsMeasure.rtimage, TagByName.ContentDate, TagByName.ContentTime).get
+
+        val fmt = new SimpleDateFormat("H:mm:ss")
+        Util.formatDate(fmt, dateTime)
+      }
+
+      val viewDicom = {
+        <div class="col-md-10 col-md-offset-1">
+          <center><h3>{title}</h3></center>
+          <center>{contentTimeText}</center>
+          <img src={pngFileName}/>
+          <p style="margin-top:20px;"> </p>
+          <pre>
+            {WebUtil.nl + DicomUtil.attributeListToString(fsMeasure.rtimage)}
+          </pre>
+          <p style="margin-top:80px;"> </p>
+        </div>
+      }
+
+      val htmlText = WebUtil.wrapBody(viewDicom, title)
+      Util.writeFile(htmlFile, htmlText)
+
       <td style="padding:12px;">
-        <a href={pngFileName}>
-          <center><h3>{typeName + " " + fsMeasure.collimatorAngleRounded_deg}</h3></center>
-          <div class="zoom" id={imageId}>
-            <img width="600" src={pngFileName}/>
+        <a href={htmlFileName}>
+          <center><h3>{title}</h3></center>
+          <center>{contentTimeText}</center>
+          <div class="zoom" id={fsMeasure.fileNamePrefix}>
+            <img width="500" src={pngFileName}/>
           </div>
         </a>
       </td>

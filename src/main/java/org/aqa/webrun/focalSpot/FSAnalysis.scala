@@ -85,17 +85,17 @@ object FSAnalysis extends Logging {
       val measureList: Seq[FSMeasure] = rtimageList.par.map(rtimage => FSMeasure(fsRunReq.rtplan, rtimage, outputPK)).toList
 
       // make sets of four based on energy and fluence mode
-      val fsSetList: Seq[FSSet] = {
+      val fsSetLisA: Seq[FSSet] = {
         val groupList = measureList.groupBy(m => m.NominalBeamEnergy + ":" + m.fluenceName).values.toSeq
         groupList.filter(isValidSet).map(toSet).sortBy(_.jaw090.NominalBeamEnergy)
       }
 
-      val NominalBeamEnergyList = fsSetList.map(_.jaw090.NominalBeamEnergy).mkString(", ")
-      logger.info(s"Found ${fsSetList.size} sets of focal spot data with nominal beam energies of $NominalBeamEnergyList.")
+      val NominalBeamEnergyList = fsSetLisA.map(_.jaw090.NominalBeamEnergy).mkString(", ")
+      logger.info(s"Found ${fsSetLisA.size} sets of focal spot data with nominal beam energies of $NominalBeamEnergyList.")
 
-      fsSetList.foreach(fsSet => storeToDb(fsSet, outputPK))
+      fsSetLisA.foreach(fsSet => storeToDb(fsSet, outputPK))
 
-      val sum = FSHTML.makeHtml(extendedData, fsRunReq, fsSetList)
+      val sum = FSHTML.makeHtml(extendedData, fsRunReq, fsSetLisA)
       val focalSpotResult = FocalSpotResult(sum, ProcedureStatus.done)
       logger.info(s"Finished processing of $subProcedureName")
       Right(focalSpotResult)

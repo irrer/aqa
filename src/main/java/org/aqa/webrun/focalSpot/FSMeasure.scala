@@ -9,11 +9,12 @@ import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.Util
 import org.aqa.db.FocalSpot
+import org.aqa.Logging
 
 import java.awt.Color
 import java.awt.image.BufferedImage
 
-case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Long) {
+case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Long) extends Logging {
 
   // val planned = PlannedRectangle(rtplan, rtimage)
   // val plannedTBLR = MeasureTBLREdges.TBLR(top = -planned.top, bottom = -planned.bottom, left = planned.left, right = planned.right)
@@ -45,7 +46,6 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
     }
     else
       new javax.vecmath.Point3d(0.0, 0.0, 0.0)
-
   }
 
   private val beam = Util.getBeamOfRtimage(plan = rtplan, rtimage).get
@@ -55,6 +55,15 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
   val collimatorAngleRounded_deg: Int = Util.angleRoundedTo90(Util.collimatorAngle(rtimage))
 
   def beamName: String = DicomUtil.getBeamNameOfRtimage(rtplan, rtimage).get
+
+  def beamNumber: Int = DicomUtil.findAllSingle(rtimage, TagByName.ReferencedBeamNumber).head.getIntegerValues.head
+
+  def fileNamePrefix: String = {
+    val typeName = if (isJaw) "Jaw" else "MLC"
+    val nomEnergy = NominalBeamEnergy.round
+    val name = nomEnergy + typeName + collimatorAngleRounded_deg.formatted("%03d")
+    name
+  }
 
   val NominalBeamEnergy: Double = DicomUtil.findAllSingle(beam, TagByName.NominalBeamEnergy).head.getDoubleValues.head
 
@@ -170,4 +179,8 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
   Util.addGraticules(analysisResult.bufferedImage, new IsoImagePlaneTranslator(rtimage), Color.GRAY)
   val bufferedImage: BufferedImage = analysisResult.bufferedImage
 
+}
+
+object FSMeasure extends Logging { // TODO rm
+  val j: Int = 17 + 4
 }

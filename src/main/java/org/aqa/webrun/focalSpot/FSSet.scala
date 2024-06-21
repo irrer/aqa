@@ -17,7 +17,7 @@ case class FSSet(jaw090: FSMeasure, jaw270: FSMeasure, mlc090: FSMeasure, mlc270
 
   val mvText: String = jaw090.mvText
 
-  private val measureList = Seq(jaw090, jaw270, mlc090, mlc270)
+  val measureList = Seq(jaw090, jaw270, mlc090, mlc270)
 
   // @formatter:off
   val jawXCenter: Double =
