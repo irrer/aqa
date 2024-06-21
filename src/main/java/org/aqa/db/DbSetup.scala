@@ -224,7 +224,7 @@ object DbSetup extends Logging {
             }
           }
           if (dir.isDirectory) {
-            dir.listFiles.filter(f => f.getName.endsWith("_Baseline.dcm")).flatMap(f => doFile(f)).toSeq
+            dir.listFiles.filter(f => f.getName.endsWith("_Baseline.dcm")).flatMap(f => doFile(f)).toSeq.toIndexedSeq
           } else empty
         }
         val allConfig = Config.machineConfigurationDirFile.listFiles.flatMap(d => doDir(d)).toSeq
@@ -297,7 +297,7 @@ object DbSetup extends Logging {
 
     retroactivelyFixLOCBaseline
     copyInput
-    copyOutput
+    copyOutput.toIndexedSeq
   }
 
   def main(args: Array[String]): Unit = {

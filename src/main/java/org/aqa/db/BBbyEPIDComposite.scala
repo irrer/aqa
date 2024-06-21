@@ -150,7 +150,9 @@ object BBbyEPIDComposite extends Logging {
 
     // Note that if the output row is deleted, then this row will be deleted through the reference to BBbyCBCT
     //noinspection SpellCheckingInspection
-    def bbByCBCTFK = foreignKey("BBbyEPIDComposite_bbByCBCTPKConstraint", bbByCBCTPK, BBbyCBCT.query)(_.bbByCBCTPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def bbByCBCTFK = {
+      foreignKey("BBbyEPIDComposite_bbByCBCTPKConstraint", bbByCBCTPK, BBbyCBCT.query)(_.bbByCBCTPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    }
   }
 
   val query = TableQuery[BBbyEPIDCompositeTable]
@@ -171,7 +173,7 @@ object BBbyEPIDComposite extends Logging {
       inst <- BBbyEPIDComposite.query if inst.outputPK === outputPK
     } yield inst
     val list = Db.run(action.result)
-    list
+    list.toIndexedSeq
   }
 
   def delete(bbByEPIDCompositePK: Long): Int = {
@@ -215,7 +217,7 @@ object BBbyEPIDComposite extends Logging {
       bbByEPIDComposite <- BBbyEPIDComposite.query.filter(c => (c.outputPK === output._1) && c.bbByCBCTPK.isDefined)
     } yield (output._2, bbByEPIDComposite)
     val result = Db.run(search.result).map(h => BBbyEPIDCompositeHistory(h._1.get, h._2)).sortWith((a, b) => a.date.getTime < b.date.getTime)
-    result
+    result.toIndexedSeq
   }
 
   /**
@@ -255,7 +257,7 @@ object BBbyEPIDComposite extends Logging {
     val list = Db.run(search.result)
     val dailyQA = list.groupBy(ga => ga._1.outputPK).values.map(g => DailyDataSetComposite(g.head._1, g.head._2, g.head._3, g.head._4, g.map(gg => gg._5), g.head._6))
     val dailyQASeq = dailyQA.toSeq
-    dailyQASeq
+    dailyQASeq.toIndexedSeq
   }
 
   /**
@@ -277,7 +279,7 @@ object BBbyEPIDComposite extends Logging {
 
     val list = Db.run(search.result)
     val dailyQA = list.groupBy(ga => ga._1.outputPK).values.map(g => DailyDataSetComposite(g.head._1, g.head._2, g.head._3, g.head._4, g.map(gg => gg._5), g.head._6))
-    dailyQA.toSeq
+    dailyQA.toSeq.toIndexedSeq
   }
 
 }
