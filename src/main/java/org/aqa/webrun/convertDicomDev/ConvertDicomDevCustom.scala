@@ -21,6 +21,15 @@ import java.util.Date
 
 case object ConvertDicomDevCustom extends Logging {
 
+
+  /**
+   * Specifies the information needed to change a dev beam into a normal beam.
+   *
+   * @param dev      Beam whose image should be used.
+   * @param template Beam delivered in normal/production mode whose metadata should be used as a template.
+   */
+  case class BeamConversion(dev: AttributeList, template: AttributeList) {}
+
   private def setTextList(al: AttributeList, tag: AttributeTag, valueList: Seq[String]): Unit = {
     val attr = AttributeFactory.newAttribute(tag)
     valueList.foreach(attr.addValue)
@@ -39,25 +48,13 @@ case object ConvertDicomDevCustom extends Logging {
 
   private def setInt(al: AttributeList, tag: AttributeTag, value: Int): Unit = setInt(al, tag, Seq(value))
 
-  private def setDouble(al: AttributeList, tag: AttributeTag, valueList: Seq[Double]): Unit = {
+  private def setDouble(al: AttributeList, tag: AttributeTag, valueList: Iterable[Double]): Unit = {
     val attr = AttributeFactory.newAttribute(tag)
     valueList.foreach(attr.addValue)
     al.put(attr)
   }
 
   private def setDouble(al: AttributeList, tag: AttributeTag, value: Double): Unit = setDouble(al, tag, Seq(value))
-
-  /*
-  private def getRtPlanUid(rtimageList: Seq[AttributeList], rtplan: Option[AttributeList]): String = {
-    if (rtplan.isDefined)
-      Util.sopOfAl(rtplan.get)
-    else {
-      val j = rtimageList.flatMap(Util.getRtplanSop).groupBy(uid => uid).maxBy(_._2.length)._1
-      ???
-
-    }
-  }
-   */
 
   private def setTime(al: AttributeList, dateTag: AttributeTag, timeTag: AttributeTag, date: Date): Unit = {
     val dateAttr = AttributeFactory.newAttribute(dateTag)
@@ -73,65 +70,15 @@ case object ConvertDicomDevCustom extends Logging {
     DicomUtil.getTimeAndDate(al, TagByName.ContentDate, TagByName.ContentTime).get
   }
 
-  private val minute_ms = 60 * 1000
-  private val imageTimeOffset_ms = minute_ms
-  private val seriesTimeOffset_ms = minute_ms * 10
-  private val hour_ms = 60 * minute_ms
-
-  /**
-   * Set the dates and times for an image that vary for each image.
-   *
-   * @param al   Image.
-   * @param date New date.
-   */
-  /*
-  private def setImageTimes(al: AttributeList, date: Date): Unit = {
-
-    val pairList = Seq(
-      (TagByName.AcquisitionDate, TagByName.AcquisitionTime),
-      (TagByName.ContentDate, TagByName.ContentTime),
-      (TagByName.InstanceCreationDate, TagByName.InstanceCreationTime)
-    )
-
-    pairList.foreach(pair => setTime(al, pair._1, pair._2, date))
-  }
-  */
-
-  /**
-   * Set all of the date + time values for the given series.
-   *
-   * @param alList Images for series sorted by time.
-   * @param index  Series number.
-   */
-  /*
-  private def setPerImageTime(alList: Seq[AttributeList], index: Int): Date = {
-    // images sorted chronologically.
-    val firstImageTime_ms = {
-      val first = getContentDateTime(alList.head)
-      val t = first.getTime + ((hour_ms * 4) - 1)
-      val s = t - (t % hour_ms)
-      val u = s + (seriesTimeOffset_ms * index)
-      u
-    }
-
-    val firstImageDate = new Date(firstImageTime_ms)
-
-    alList.indices.foreach(i => setImageTimes(alList(i), new Date(firstImageTime_ms + (i * imageTimeOffset_ms))))
-
-    firstImageDate
-  }
-  */
-
 
   /**
    * Given the new beam captured in development mode, and a normal template beam, create a
-   * new beam with the pixel of the dev beam, and with most of the metadata of the templat
+   * new beam with the pixel of the dev beam, and with most of the metadata of the template
    * beam, but with new UIDs and date/times.
    *
    * @param dev               Beam delivered in development mode.
    * @param template          Beam delivered in normal production mode.
    * @param SeriesInstanceUID Series UID to be used for series.
-   * @param index             Index of this beam (0 is the first one).
    * @param StudyInstanceUID  Study UID to be used for series.
    * @param instanceDate      Date/time for this instance.
    * @param seriesDate        Date/time for the series.
@@ -144,7 +91,6 @@ case object ConvertDicomDevCustom extends Logging {
                             dev: AttributeList,
                             template: AttributeList,
                             SeriesInstanceUID: String,
-                            index: Int,
                             StudyInstanceUID: String,
                             instanceDate: Date,
                             seriesDate: Date,
@@ -284,7 +230,7 @@ case object ConvertDicomDevCustom extends Logging {
     setDouble(newAl, TagByName.RTImagePosition, RTImagePosition)
     // setInt(newAl, TagByName.ReferencedBeamNumber, ReferencedBeamNumber)
 
-    if (System.currentTimeMillis() < 0) {
+    if (false) {
       val devPix = dev.get(TagByName.PixelData)
       val templatePix = template.get(TagByName.PixelData)
       Trace.trace(devPix)
@@ -295,88 +241,74 @@ case object ConvertDicomDevCustom extends Logging {
       Trace.trace(templateShort.size)
       Trace.trace()
     }
+    newAl.remove(TagByName.PixelData)
     newAl.put(dev.get(TagByName.PixelData))
 
     newAl
   }
 
-  private def processSeries(dir: File, index: Int, machine: Machine, rtplan: AttributeList): Unit = {
-    Trace.trace(s"Reading directory ${dir.getAbsolutePath} ...")
-    val j = Util.listDirFiles(dir).foreach(d => println(s"====== $d"))
-    val devFileList = Util.listDirFiles(dir).filter(_.getName.endsWith(".dcm")).filter(_.getName.endsWith("_NEW.dcm")).map(f => DicomFile(f))
-    val templateDir = new File("""D:\aqa\FocalSpot\FocalSpot_TX4\Focal_SpotPROCESS\FocalSpot_GoodHeaders""")
-    // val templateFileList = Util.listDirFiles(templateDir).filter(_.getName.endsWith(".dcm")).map(f => DicomFile(f))
-    val templateFileList = devFileList // Util.listDirFiles(templateDir).filter(_.getName.endsWith(".dcm")).map(f => DicomFile(f))
+  private def processSeries(beamConversionList: Seq[BeamConversion], machine: Machine, rtplan: AttributeList): Seq[AttributeList] = {
 
-    def fmtAl(dicomFile: DicomFile): String = { // for debug only
-      val pix = dicomFile.attributeList.get.get(TagByName.PixelData).getShortValues
+    val devList = beamConversionList.map(_.dev)
+    val templateList = beamConversionList.map(_.template)
+
+    def fmtAl(al: AttributeList): String = { // for debug only
+      val pix = al.get(TagByName.PixelData).getShortValues
       var crc: Long = 0
       pix.foreach(p => {
         crc = (crc << 1) ^ (p & 0xff).toLong
       })
-      dicomFile.file.getAbsolutePath + " " + "%08x".format(crc)
+      "%08x".format(crc)
     }
 
-    if (devFileList.nonEmpty) {
 
-      if (true) {
-        val j = devFileList.map(f => fmtAl(f)).mkString("\n    ==== ")
-        Trace.trace(s"\n==== devFileList:\n    ==== $j")
-      }
-
-      val devList = devFileList.flatMap(_.attributeList).sortBy(al => getContentDateTime(al).getTime)
-
-      val templateList = templateFileList.flatMap(_.attributeList).sortBy(al => getContentDateTime(al).getTime)
-      if (true) {
-        val j = templateFileList.map(f => fmtAl(f)).mkString("\n==== ")
-        Trace.trace(s"\n==== templateFileList:\n    ==== $j")
-      }
-      println(s"====")
-      println(s"====")
-
-
-      val SeriesInstanceUID = UMROGUID.getUID
-      val StudyInstanceUID = UMROGUID.getUID
-
-      val seriesDate = getContentDateTime(devList.head)
-
-      val studyDate = DicomUtil.getTimeAndDate(templateList(index), TagByName.StudyDate, TagByName.StudyTime).get
-
-      val newAlList = devList.indices.map(index =>
-        setImageAttr(
-          dev = devList(index),
-          template = templateList(index),
-          SeriesInstanceUID = SeriesInstanceUID,
-          index = index,
-          StudyInstanceUID = StudyInstanceUID,
-          instanceDate = DicomUtil.getTimeAndDate(devList(index), TagByName.ContentDate, TagByName.ContentTime).get,
-          seriesDate = seriesDate,
-          studyDate = studyDate,
-          machine = Some(machine),
-          rtplan = rtplan
-        ))
-
-
-      val outDir = new File(dir, "out2")
-      Util.deleteFileTreeSafely(outDir)
-      outDir.mkdirs()
-
-      Trace.trace(s"Saving files to directory ${outDir.getAbsolutePath}")
-
-      val Modality = newAlList.head.get(TagByName.Modality).getSingleStringValueOrEmptyString()
-
-      def writeDicom(al: AttributeList, index: Int): Unit = {
-        val dcmFile = new File(outDir, Modality + (index + 1) + ".dcm")
-        Util.writeAttributeListToFile(al, dcmFile)
-        val txtFile = new File(outDir, Modality + (index + 1) + ".txt")
-        Util.writeFile(txtFile, DicomUtil.attributeListToString(al))
-      }
-
-      newAlList.zipWithIndex.foreach(ai => writeDicom(ai._1, ai._2))
-      Trace.trace()
+    if (true) {
+      val j = devList.map(fmtAl).mkString("\n    ==== ")
+      Trace.trace(s"\n==== devFileList:\n    ==== $j")
     }
+
+    if (true) {
+      val j = templateList.map(f => fmtAl(f)).mkString("\n==== ")
+      Trace.trace(s"\n==== templateFileList:\n    ==== $j")
+    }
+    println(s"====")
+
+    // new UID for series
+    val SeriesInstanceUID = UMROGUID.getUID
+
+    // UID for study
+    val StudyInstanceUID = templateList.head.get(TagByName.StudyInstanceUID).getSingleStringValueOrEmptyString
+
+    // Use the content date of the first dev beam.  If there are no dev beams, then use the content
+    // date of the first non-dev beam.  A beam is dev if it does not reference a beam.
+    val seriesDate: Date = {
+      def referencesBeam(al: AttributeList): Boolean = al.get(TagByName.ReferencedBeamNumber) != null
+
+      val noBeam: Seq[Date] = devList.filterNot(referencesBeam).map(getContentDateTime).sorted
+      val hasBeam: Seq[Date] = devList.filter(referencesBeam).map(getContentDateTime).sorted
+      (noBeam ++ hasBeam).head
+    }
+
+    val studyDate = DicomUtil.getTimeAndDate(templateList.head, TagByName.StudyDate, TagByName.StudyTime).get
+
+    val newAlList = beamConversionList.map(bc =>
+      setImageAttr(
+        dev = bc.dev,
+        template = bc.template,
+        SeriesInstanceUID = SeriesInstanceUID,
+        StudyInstanceUID = StudyInstanceUID,
+        instanceDate = getContentDateTime(bc.dev),
+        seriesDate = seriesDate,
+        studyDate = studyDate,
+        machine = Some(machine),
+        rtplan = rtplan
+      ))
+
+
+    newAlList
 
   }
+
 
   def main(args: Array[String]): Unit = {
 
@@ -385,17 +317,66 @@ case object ConvertDicomDevCustom extends Logging {
 
     Trace.trace("Starting")
 
-    val dirList =
-      Util.listDirFiles(new File("""D:\aqa\FocalSpot\FocalSpot_TX4\Focal_SpotPROCESS""")).filter(_.isDirectory).filter(_.getName.matches("^FocalSpot.$")).sortBy(_.getName)
-
     val rtplan = {
       val al = new AttributeList
-      al.read("""D:\aqa\FocalSpot\FocalSpot_TX4\Focal_SpotPROCESS\RP.1.2.246.352.71.5.427549902257.1092044.20240207145418.dcm""")
+      al.read("""D:\aqa\FocalSpot\FocalSpot_TX4\tool\rtplan.dcm""")
       al
     }
 
-    dirList.indices.foreach(i => processSeries(dirList(i), i, machine, rtplan))
 
+    //val devDir = new File("""D:\aqa\FocalSpot\FocalSpot_TX4\tool\dev""")
+    val devDirList = Util.listDirFiles(new File("""D:\aqa\FocalSpot\FocalSpot_TX4\tool""")).filter(d => d.getName.matches("^dev[0-9]$"))
+    val templateDir = new File("""D:\aqa\FocalSpot\FocalSpot_TX4\tool\template""")
+
+
+    val templateList: Seq[AttributeList] = {
+      val templateFileList = Util.listDirFiles(templateDir).filter(_.getName.endsWith(".dcm")).map(f => DicomFile(f))
+      println
+      templateFileList.foreach(df => println("==== template file: " + df.file.getAbsolutePath))
+      val list = templateFileList.flatMap(_.attributeList).sortBy(getContentDateTime)
+      list.toIndexedSeq
+    }
+
+
+    devDirList.foreach(devDir => {
+      val devList: Seq[AttributeList] = {
+        val devFileList = Util.listDirFiles(devDir).filter(_.getName.endsWith(".dcm")).map(f => DicomFile(f))
+        println
+        devFileList.foreach(df => println("==== dev file: " + df.file.getAbsolutePath))
+        val list = devFileList.flatMap(_.attributeList).sortBy(getContentDateTime)
+        list.toIndexedSeq
+      }
+
+      if (true) {
+        templateList.foreach(al => println(s"==== Content: ${getContentDateTime(al)}   BeamRef: ${al.get(TagByName.ReferencedBeamNumber).getIntegerValues.head}"))
+      }
+
+      val beamConversionList: Seq[BeamConversion] = {
+        val indexMap = Seq(1, 2, 7, 8, 5, 6, 3, 4).map(_ - 1)
+        indexMap.indices.map(i => BeamConversion(devList(indexMap(i)), templateList(i)))
+      }
+
+      val newList = processSeries(beamConversionList, machine, rtplan)
+
+      val outDir = new File(devDir, "out")
+      Util.deleteFileTreeSafely(outDir)
+      outDir.mkdirs()
+
+      Trace.trace(s"Saving files to directory ${outDir.getAbsolutePath}")
+
+      val Modality = newList.head.get(TagByName.Modality).getSingleStringValueOrEmptyString()
+
+      def writeDicom(al: AttributeList, index: Int): Unit = {
+        val dcmFile = new File(outDir, Modality + (index + 1) + ".dcm")
+        Util.writeAttributeListToFile(al, dcmFile)
+        val txtFile = new File(outDir, Modality + (index + 1) + ".txt")
+        Util.writeFile(txtFile, DicomUtil.attributeListToString(al))
+      }
+
+      newList.zipWithIndex.foreach(ai => writeDicom(ai._1, ai._2))
+      Trace.trace()
+
+    })
     Thread.sleep(1000)
     Trace.trace("Done")
     System.exit(0)
