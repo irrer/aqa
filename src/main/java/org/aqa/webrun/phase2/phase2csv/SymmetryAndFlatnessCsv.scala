@@ -20,7 +20,7 @@ import org.aqa.Util
 import org.aqa.db.Output
 import org.aqa.db.SymmetryAndFlatness
 
-class SymmetryAndFlatnessCsv extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFlatnessHistory] {
+class SymmetryAndFlatnessCsv(metadataCache: MetadataCache) extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFlatnessHistory](metadataCache: MetadataCache) {
 
   // abbreviation for the long name
   private type SF = SymmetryAndFlatness.SymmetryAndFlatnessHistory
@@ -97,8 +97,8 @@ class SymmetryAndFlatnessCsv extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFl
     * @param machinePK Machine to get data for.
     * @return List of data for the particular machine.
     */
-  override protected def getData(machinePK: Long): Seq[SF] = {
-    val data = SymmetryAndFlatness.history(machinePK, MetadataCache.metadataCache.phase2ProcedurePK) ++ SymmetryAndFlatness.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK)
+  override protected def getData(metadataCache: MetadataCache, machinePK: Long): Seq[SF] = {
+    val data = SymmetryAndFlatness.history(machinePK, metadataCache.phase2ProcedurePK) ++ SymmetryAndFlatness.history(machinePK, metadataCache.phase3ProcedurePK)
     val symFlat = data.sortBy(h => h.output.dataDate.get.getTime + h.symmetryAndFlatness.beamName)
     symFlat
   }

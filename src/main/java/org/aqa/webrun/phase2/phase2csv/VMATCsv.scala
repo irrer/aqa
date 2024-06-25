@@ -20,7 +20,7 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Output
 import org.aqa.db.VMAT
 
-abstract class VMATCsv extends Phase2Csv[Seq[VMAT.VMATHistory]] {
+abstract class VMATCsv(metadataCache: MetadataCache) extends Phase2Csv[Seq[VMAT.VMATHistory]](metadataCache: MetadataCache) {
 
   // abbreviation for the long name
   //type VHS = VMATCsv.VHS
@@ -45,9 +45,9 @@ abstract class VMATCsv extends Phase2Csv[Seq[VMAT.VMATHistory]] {
    * @param machinePK Machine to get data for.
    * @return List of data for the particular machine.
    */
-  override protected def getData(machinePK: Long): Seq[VHS] = {
+  override protected def getData(metadataCache: MetadataCache, machinePK: Long): Seq[VHS] = {
     // @formatter:off
-    val data = VMAT.history(machinePK, MetadataCache.metadataCache.phase2ProcedurePK) ++ VMAT.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK)
+    val data = VMAT.history(machinePK, metadataCache.phase2ProcedurePK) ++ VMAT.history(machinePK, metadataCache.phase3ProcedurePK)
     val vmatList = data.                                   // get all history for this machine
       filter(_.vmat.beamNameMLC.equals(beamNameMLC())).    // only for this beam
       groupBy(_.vmat.SOPInstanceUIDMLC).                   // group all items for a given beam together

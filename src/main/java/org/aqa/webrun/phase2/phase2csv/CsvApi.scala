@@ -75,7 +75,9 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
     */
   private def getDataType(valueMap: ValueMapT): Either[String, Phase2Csv[_]] = {
 
-    val dataTypeChoiceList = Phase2Csv.dataTypeList.map(_.getDataName).mkString(", ")
+    val dataTypeList = Phase2Csv.makeDataTypeList(new MetadataCache)
+
+    val dataTypeChoiceList = dataTypeList.map(_.getDataName).mkString(", ")
 
     val value = caseInsensitiveGet(dataTypeTag, valueMap)
 
@@ -84,7 +86,7 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
         val n = value.get.trim
         URLDecoder.decode(n, "UTF-8")
       }
-      val dataType = Phase2Csv.dataTypeList.find(dt => dt.getDataName.trim.equalsIgnoreCase(name))
+      val dataType = dataTypeList.find(dt => dt.getDataName.trim.equalsIgnoreCase(name))
       if (dataType.isDefined)
         Right(dataType.get)
       else
@@ -174,7 +176,7 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
         }
 
       case _ => // more than one time given - ambiguous
-        val timeUsage = s"""To specify time, use one of: ${TimeComparatorEnum.values.mkString(", ")} with a time in standard date format.  Default: ${TimeComparator} """
+        val timeUsage = s"""To specify time, use one of: ${TimeComparatorEnum.values.mkString(", ")} with a time in standard date format.  Default: $TimeComparator """
         Left(s"""More than one time specification given: ${specifiedSet.mkString(", ")} .   $timeUsage""")
 
     }
@@ -252,7 +254,7 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
     if (errorList.isEmpty) {
       Right(CsvSpec(machine.right.get, dataType.right.get, beam.right.get, header.right.get, format.right.get, timeComparator.right.get, count.right.get))
     } else {
-      val errorText = errorList.filter(_.isLeft).map(_.left.get).mkString("\n").toString
+      val errorText = errorList.filter(_.isLeft).map(_.left.get).mkString("\n")
       Left(errorText)
     }
 
@@ -264,9 +266,9 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
       val valueMap = getValueMap(request)
       val csvSpec = parse(valueMap, response)
 
-      if (csvSpec.isRight)
-        CsvSpecDownload.download(csvSpec.right.get, response)
-      else {
+      if (csvSpec.isRight) {
+        CsvSpecDownload.download(csvSpec.right.get, response, new MetadataCache)
+      } else {
         // show error to user
         val errorText = csvSpec.left.get
         logger.info(s"Bad request from user: ${request.toString} :: $errorText")

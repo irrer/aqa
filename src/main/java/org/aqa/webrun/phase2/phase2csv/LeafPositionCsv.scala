@@ -22,7 +22,7 @@ import org.aqa.db.Output
 /**
   * Generate a CSV for leaf position data.
   */
-class LeafPositionCsv extends Phase2Csv[LeafPosition.LeafPosHistory] {
+class LeafPositionCsv(metadataCache: MetadataCache) extends Phase2Csv[LeafPosition.LeafPosHistory](metadataCache: MetadataCache) {
 
   // abbreviation for the long name
   type LP = LeafPosition
@@ -44,8 +44,8 @@ class LeafPositionCsv extends Phase2Csv[LeafPosition.LeafPosHistory] {
     * @param machinePK Machine to get data for.
     * @return List of data for the particular machine.
     */
-  override protected def getData(machinePK: Long): Seq[LPH] = {
-    val lpSeq = LeafPosition.history(machinePK, MetadataCache.metadataCache.phase2ProcedurePK) ++ LeafPosition.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK)
+  override protected def getData(metadataCache: MetadataCache, machinePK: Long): Seq[LPH] = {
+    val lpSeq = LeafPosition.history(machinePK, metadataCache.phase2ProcedurePK) ++ LeafPosition.history(machinePK, metadataCache.phase3ProcedurePK)
     lpSeq
   }
 

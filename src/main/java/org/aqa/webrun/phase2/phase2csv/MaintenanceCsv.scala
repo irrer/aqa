@@ -27,7 +27,7 @@ import java.io.File
   * maintenance records within another CSV file.
   */
 
-object MaintenanceCsv {
+class MaintenanceCsv(metadataCache: MetadataCache) {
 
   private val dataName = "Maintenance Record"
   // private val fileBaseName = Phase2Csv.fil
@@ -48,9 +48,9 @@ object MaintenanceCsv {
     CsvCol(
       "Institution",
       "Anonymous version of institution name.",
-      (mt: MaintenanceRecord) => MetadataCache.metadataCache.institutionNameMap(MetadataCache.metadataCache.machineMap(mt.machinePK).institutionPK)
+      (mt: MaintenanceRecord) => metadataCache.institutionNameMap(metadataCache.machineMap(mt.machinePK).institutionPK)
     ),
-    CsvCol("Machine", "Anonymous version of machine id.", (mt: MaintenanceRecord) => MetadataCache.metadataCache.machineMap(mt.machinePK).id),
+    CsvCol("Machine", "Anonymous version of machine id.", (mt: MaintenanceRecord) => metadataCache.machineMap(mt.machinePK).id),
     CsvCol("Effective Date", "Date and time of maintenance.", (mt: MaintenanceRecord) => Util.standardDateFormat.format(mt.creationTime)),
     CsvCol(
       "Maintenance Record Marker",
@@ -58,7 +58,7 @@ object MaintenanceCsv {
       (_: MaintenanceRecord) => "Maintenance Record"
     ),
     CsvCol("Maintenance Category", "Type of maintenance.", (mt: MaintenanceRecord) => mt.category),
-    CsvCol("Created by User", "Anonymous version of user id.", (mt: MaintenanceRecord) => MetadataCache.metadataCache.userMap(mt.userPK)),
+    CsvCol("Created by User", "Anonymous version of user id.", (mt: MaintenanceRecord) => metadataCache.userMap(mt.userPK)),
     CsvCol("Summary", "Short description of maintenance.", (mt: MaintenanceRecord) => replaceNewline(mt.summary)),
     CsvCol("Description", "Full description of maintenance.", (mt: MaintenanceRecord) => replaceNewline(mt.description))
   )

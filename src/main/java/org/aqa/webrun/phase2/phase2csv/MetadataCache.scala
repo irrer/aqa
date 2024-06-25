@@ -24,11 +24,16 @@ import org.aqa.db.MultileafCollimator
 import org.aqa.db.OutputNote
 import org.aqa.db.Procedure
 import org.aqa.db.User
+import org.aqa.Logging
+import org.aqa.Util
 
 /**
   * Container for getting names/ids of institutions and machine information.
   */
-class MetadataCache {
+class MetadataCache extends Logging {
+
+  logger.info("Creating MetadataCache ...")
+  private val start = System.currentTimeMillis()
 
   /** Map of machines by machinePK. */
   val machineMap: Map[Long, Machine] = Machine.list.sortBy(_.institutionPK).map(m => (m.machinePK.get, m)).toMap
@@ -60,8 +65,7 @@ class MetadataCache {
   val focalSpotProcedurePK: Long = Procedure.ProcOfFocalSpot.get.procedurePK.get
 
   val noteMap: Map[Long, String] = OutputNote.list().map(n => (n.outputPK, n.contentAsText)).toMap
-}
 
-object MetadataCache {
-  lazy val metadataCache = new MetadataCache
+  private val elapsed = System.currentTimeMillis() - start
+  logger.info("Created MetadataCache in " + Util.elapsedTimeHumanFriendly(elapsed))
 }

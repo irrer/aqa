@@ -35,7 +35,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import scala.xml.Elem
 
-abstract class Phase2Csv[T] extends Logging {
+abstract class Phase2Csv[T](metadataCache: MetadataCache) extends Logging {
 
   // ----------------------------------------------------------------------------
   // Override these functions for specific data types:
@@ -107,7 +107,7 @@ abstract class Phase2Csv[T] extends Logging {
     * @param machinePK Machine to get data for.
     * @return List of data for the particular machine.
     */
-  protected def getData(machinePK: Long): Seq[T]
+  protected def getData(metadataCache: MetadataCache, machinePK: Long): Seq[T]
 
   /**
     * Used to name CSV file.
@@ -117,8 +117,6 @@ abstract class Phase2Csv[T] extends Logging {
   def getDataName: String = dataName
 
   private val colList: Seq[CsvCol[T]] = makeColList
-
-  private val metadataCache = MetadataCache.metadataCache
 
   private val prefixCsv = new PrefixCsv(metadataCache)
   private val machineDescriptionCsv = new MachineDescriptionCsv(metadataCache)
@@ -179,7 +177,10 @@ abstract class Phase2Csv[T] extends Logging {
   }
 
   private def msOfData(dataSet: T): Long = getOutput(dataSet).dataDate.get.getTime
-  private def maintenanceListToCsv(maintenanceList: Seq[MaintenanceRecord]): Seq[String] = maintenanceList.map(MaintenanceCsv.toCsvText)
+  private def maintenanceListToCsv(maintenanceList: Seq[MaintenanceRecord]): Seq[String] = {
+    val maintenanceCsv = new MaintenanceCsv(metadataCache)
+    maintenanceList.map(maintenanceCsv.toCsvText)
+  }
 
   private def maintenanceBefore(dataSet: Option[T], mtMachList: Seq[MaintenanceRecord]): Seq[String] = {
     if (dataSet.isEmpty)
@@ -279,7 +280,7 @@ abstract class Phase2Csv[T] extends Logging {
     val mtMachList: Seq[MaintenanceRecord] = Seq() // MaintenanceRecord.getByMachine(machine.machinePK.get) // list of maintenance records for just this machine
 
     logger.info(prefix + "getting data")
-    val dataList = getData(machine.machinePK.get) // data for this machine
+    val dataList = getData(metadataCache, machine.machinePK.get) // data for this machine
 
     logger.info(prefix + "data size " + dataList.size)
 
@@ -299,7 +300,7 @@ abstract class Phase2Csv[T] extends Logging {
   case class DataAndText(data: T, text: String) {}
 
   def machineToCustomCsv(csvSpec: CsvSpec): Seq[DataAndText] = {
-    val dataList = getData(csvSpec.machine.machinePK.get) // data for this machine
+    val dataList = getData(metadataCache, csvSpec.machine.machinePK.get) // data for this machine
     val machineRowList: Seq[DataAndText] = dataList.indices.map(dataIndex => {
       DataAndText(dataList(dataIndex), makeCsvRow(dataList, dataIndex, csvSpec.machine, Seq()))
     })
@@ -336,7 +337,7 @@ object Phase2Csv extends Logging {
     */
   val consortiumCsvDir = new File(Config.resultsDirFile, "CSV")
 
-  val metadataCache: MetadataCache = MetadataCache.metadataCache
+  private val metadataCache: MetadataCache = new MetadataCache
 
   private def fileBaseName(dataName: String) = dataName.replaceAll(" ", "")
 
@@ -490,7 +491,7 @@ object Phase2Csv extends Logging {
   }
 
   def institutionCsvDir(institutionPK: Long): File = {
-    val d = new File(Config.resultsDirFile, MetadataCache.metadataCache.institutionNameMap(institutionPK))
+    val d = new File(Config.resultsDirFile, metadataCache.institutionNameMap(institutionPK))
     val dir = new File(d, "CSV")
     dir
   }
@@ -539,23 +540,25 @@ object Phase2Csv extends Logging {
   }
 
   /** List of an instance for each data type. */
-  val dataTypeList: Seq[Phase2Csv[_]] = Seq(
-    new CenterDoseCsv,
-    new GapSkewCsv,
-    new CollimatorCenteringCsv,
-    new CollimatorPositionCsv,
-    new FocalSpotCsv,
-    new LeafPositionCsv,
-    new MetadataCheckCsv,
-    new SymmetryAndFlatnessCsv,
-    new VMAT_T2_DR_GSCsv,
-    new VMAT_T2_DG_RSCsv,
-    new VMAT_T3MLCSpeedCsv,
-    new WedgePointCsv,
-    new WinstonLutzCsv
-  )
+  def makeDataTypeList(metadataCache: MetadataCache): Seq[Phase2Csv[_]] = {
+    Seq(
+      new CenterDoseCsv(metadataCache),
+      new GapSkewCsv(metadataCache),
+      new CollimatorCenteringCsv(metadataCache),
+      new CollimatorPositionCsv(metadataCache),
+      new FocalSpotCsv(metadataCache),
+      new LeafPositionCsv(metadataCache),
+      new MetadataCheckCsv(metadataCache),
+      new SymmetryAndFlatnessCsv(metadataCache),
+      new VMAT_T2_DR_GSCsv(metadataCache),
+      new VMAT_T2_DG_RSCsv(metadataCache),
+      new VMAT_T3MLCSpeedCsv(metadataCache),
+      new WedgePointCsv(metadataCache),
+      new WinstonLutzCsv(metadataCache)
+    )
+  }
 
-  def writeCsvColumnDefinitions(): Unit = {
+  def writeCsvColumnDefinitions(dataTypeList: Seq[Phase2Csv[_]]): Unit = {
 
     def typeToRow(csv: Phase2Csv[_]): Elem = {
 

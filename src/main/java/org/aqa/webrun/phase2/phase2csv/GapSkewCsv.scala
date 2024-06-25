@@ -30,7 +30,7 @@ case class GapOffsetSkewHistory(output: Output, gapOffsetSkew: GapOffsetSkew) ex
   override def getOutput: Output = output
 }
 
-class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
+class GapSkewCsv(metadataCache: MetadataCache) extends Phase2Csv[GapOffsetSkewHistory](metadataCache: MetadataCache) {
 
   // abbreviation for the long name
   type GOSH = GapOffsetSkewHistory
@@ -226,7 +226,7 @@ class GapSkewCsv extends Phase2Csv[GapOffsetSkewHistory] {
    * @param machinePK Machine to get data for.
    * @return List of data for the particular machine.
    */
-  override protected def getData(machinePK: Long): Seq[GOSH] = {
+  override protected def getData(metadataCache: MetadataCache, machinePK: Long): Seq[GOSH] = {
     val data = GapSkew.historyByMachine(machinePK)
     // @formatter:off
     val gapSkewGroupList = data.                                   // get all history for this machine

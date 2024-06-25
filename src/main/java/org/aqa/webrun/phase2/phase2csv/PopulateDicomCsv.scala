@@ -31,7 +31,7 @@ case class DicomInstance(SOPInstanceUID: String) {}
   *
   * This creates files in the cache directory for the creation of CSV files.
   */
-class PopulateDicomCsv extends Phase2Csv[DicomInstance] with Logging {
+class PopulateDicomCsv(metadataCache: MetadataCache) extends Phase2Csv[DicomInstance](metadataCache: MetadataCache) with Logging {
 
   // abbreviation for the long name
   private type DI = DicomInstance
@@ -50,7 +50,7 @@ class PopulateDicomCsv extends Phase2Csv[DicomInstance] with Logging {
     * @param machinePK Machine to get data for.
     * @return List of data for the particular machine.
     */
-  override protected def getData(machinePK: Long): Seq[DI] = {
+  override protected def getData(metadataCache: MetadataCache, machinePK: Long): Seq[DI] = {
     val seriesList = DicomSeries.getByMachine(machinePK)
     val sopUidList = seriesList.flatMap(s => s.sopInstanceUIDList.split(" ")).filter(_.nonEmpty)
     sopUidList.map(DicomInstance)
@@ -75,7 +75,7 @@ class PopulateDicomCsv extends Phase2Csv[DicomInstance] with Logging {
   def populateAll(): Unit = {
     {
       val start = System.currentTimeMillis()
-      val populateDicomCsv = new PopulateDicomCsv
+      val populateDicomCsv = new PopulateDicomCsv(metadataCache)
       val machineList = Machine.list
 
       def populate(m: Machine): Unit = {
@@ -108,6 +108,7 @@ class PopulateDicomCsv extends Phase2Csv[DicomInstance] with Logging {
 object PopulateDicomCsv extends Logging {
   def main(args: Array[String]): Unit = {
     DbSetup.init
-    (new PopulateDicomCsv).populateAll()
+    val metadataCache = new MetadataCache
+    new PopulateDicomCsv(metadataCache).populateAll()
   }
 }

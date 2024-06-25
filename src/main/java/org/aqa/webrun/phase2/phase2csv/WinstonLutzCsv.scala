@@ -20,7 +20,7 @@ import org.aqa.db.Output
 import org.aqa.db.WinstonLutz
 import org.aqa.Util
 
-class WinstonLutzCsv extends Phase2Csv[WinstonLutz.WinstonLutzHistory] {
+class WinstonLutzCsv(metadataCache: MetadataCache) extends Phase2Csv[WinstonLutz.WinstonLutzHistory](metadataCache: MetadataCache) {
 
   // abbreviation for the long name
   private type WLH = WinstonLutz.WinstonLutzHistory
@@ -56,7 +56,7 @@ class WinstonLutzCsv extends Phase2Csv[WinstonLutz.WinstonLutzHistory] {
     * @param machinePK Machine to get data for.
     * @return List of data for the particular machine.
     */
-  override protected def getData(machinePK: Long): Seq[WLH] = WinstonLutz.historyByMachine(machinePK)
+  override protected def getData(metadataCache: MetadataCache, machinePK: Long): Seq[WLH] = WinstonLutz.historyByMachine(machinePK)
 
   override def getOutput(data: WLH): Output = data.output
 

@@ -19,7 +19,7 @@ package org.aqa.webrun.phase2.phase2csv
 import org.aqa.db.CenterDose
 import org.aqa.db.Output
 
-class CenterDoseCsv extends Phase2Csv[CenterDose.CenterDoseHistory] {
+class CenterDoseCsv(metadataCache: MetadataCache) extends Phase2Csv[CenterDose.CenterDoseHistory](metadataCache: MetadataCache) {
 
   // abbreviation for the long name
   private type CD = CenterDose.CenterDoseHistory
@@ -40,8 +40,8 @@ class CenterDoseCsv extends Phase2Csv[CenterDose.CenterDoseHistory] {
     * @param machinePK Machine to get data for.
     * @return List of data for the particular machine.
     */
-  override protected def getData(machinePK: Long): Seq[CD] = {
-    val cdHistory = CenterDose.history(machinePK, MetadataCache.metadataCache.phase2ProcedurePK) ++ CenterDose.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK)
+  override protected def getData(metadataCache: MetadataCache, machinePK: Long): Seq[CD] = {
+    val cdHistory = CenterDose.history(machinePK, metadataCache.phase2ProcedurePK) ++ CenterDose.history(machinePK, metadataCache.phase3ProcedurePK)
     cdHistory
   }
 

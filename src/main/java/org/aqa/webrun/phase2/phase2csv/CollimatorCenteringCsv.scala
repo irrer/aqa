@@ -19,7 +19,7 @@ package org.aqa.webrun.phase2.phase2csv
 import org.aqa.db.CollimatorCentering
 import org.aqa.db.Output
 
-class CollimatorCenteringCsv extends Phase2Csv[CollimatorCentering.ColCentHistory] {
+class CollimatorCenteringCsv(metadataCache: MetadataCache) extends Phase2Csv[CollimatorCentering.ColCentHistory](metadataCache: MetadataCache) {
 
   // abbreviation for the long name
   private type CCH = CollimatorCentering.ColCentHistory
@@ -57,10 +57,10 @@ class CollimatorCenteringCsv extends Phase2Csv[CollimatorCentering.ColCentHistor
     * @param machinePK Machine to get data for.
     * @return List of data for the particular machine.
     */
-  override protected def getData(machinePK: Long): Seq[CCH] = {
+  override protected def getData(metadataCache: MetadataCache, machinePK: Long): Seq[CCH] = {
     val cchList = Seq(0, 90, 180, 270).flatMap(gantryAngle =>
-      CollimatorCentering.history(machinePK, Some(gantryAngle), MetadataCache.metadataCache.phase2ProcedurePK) ++
-        CollimatorCentering.history(machinePK, Some(gantryAngle), MetadataCache.metadataCache.phase3ProcedurePK)
+      CollimatorCentering.history(machinePK, Some(gantryAngle), metadataCache.phase2ProcedurePK) ++
+        CollimatorCentering.history(machinePK, Some(gantryAngle), metadataCache.phase3ProcedurePK)
     )
     cchList
   }

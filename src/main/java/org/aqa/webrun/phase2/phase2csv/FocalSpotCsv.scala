@@ -22,7 +22,7 @@ import org.aqa.db.Output
 
 import scala.collection.immutable.Seq
 
-class FocalSpotCsv extends Phase2Csv[FocalSpotSet.FocalSpotSetHistory] {
+class FocalSpotCsv(metadataCache: MetadataCache) extends Phase2Csv[FocalSpotSet.FocalSpotSetHistory](metadataCache: MetadataCache) {
 
   // abbreviation for the long name
   private type FSH = FocalSpotSet.FocalSpotSetHistory
@@ -80,7 +80,7 @@ class FocalSpotCsv extends Phase2Csv[FocalSpotSet.FocalSpotSetHistory] {
     * @param machinePK Machine to get data for.
     * @return List of data for the particular machine.
     */
-  override protected def getData(machinePK: Long): Seq[FSH] = {
+  override protected def getData(metadataCache: MetadataCache, machinePK: Long): Seq[FSH] = {
     val list = FocalSpotSet.history(machinePK)
     list
   }

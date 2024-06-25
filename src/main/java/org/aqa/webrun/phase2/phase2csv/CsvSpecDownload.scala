@@ -18,14 +18,14 @@ import scala.xml.Elem
 
 object CsvSpecDownload extends Logging {
 
-  def download(csvSpec: CsvSpec, response: Response): Unit = {
+  def download(csvSpec: CsvSpec, response: Response, metadataCache: MetadataCache): Unit = {
     val start = System.currentTimeMillis()
     logger.info("Starting custom CSV generation with spec: " + csvSpec)
     // val metadataCache = MetadataCache.metadataCache
 
     // ---------------------------------------------------------------------------------------------------
 
-    (new PopulateDicomCsv).populateAll() // Get the DICOM column data up to date.
+    new PopulateDicomCsv(metadataCache).populateAll() // Get the DICOM column data up to date.
 
     // @formatter:off
     val list ={
@@ -118,8 +118,10 @@ object CsvSpecDownload extends Logging {
     Trace.trace(FixedDateFormat.FixedFormat.ISO8601_BASIC_PERIOD.getPattern)
     Trace.trace()
 
+    val metadataCache = new MetadataCache
+
     val machine = Machine.get(22).get
-    val dataType = new WinstonLutzCsv
+    val dataType = new WinstonLutzCsv(metadataCache)
     val csvSpec = CsvSpec(machine, dataType, beam = ".*", header = false, format = "csv",
       //timeComparator = CsvSpec.defaultTimeComparator,
       timeComparator = TimeComparator(TimeComparator.TimeComparatorEnum.TimeLE, new Date),
@@ -128,9 +130,9 @@ object CsvSpecDownload extends Logging {
 
     val response: Response = null
 
-    download(csvSpec, response)
+    download(csvSpec, response, metadataCache)
 
-    MetadataCache.metadataCache.machineMap.size
+    (new MetadataCache).machineMap.size
     Trace.trace()
     Trace.trace()
   }

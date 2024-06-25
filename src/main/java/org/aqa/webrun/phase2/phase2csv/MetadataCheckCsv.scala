@@ -19,7 +19,7 @@ package org.aqa.webrun.phase2.phase2csv
 import org.aqa.db.MetadataCheck
 import org.aqa.db.Output
 
-class MetadataCheckCsv extends Phase2Csv[MetadataCheck.MetadataCheckHistory] {
+class MetadataCheckCsv(metadataCache: MetadataCache) extends Phase2Csv[MetadataCheck.MetadataCheckHistory](metadataCache: MetadataCache) {
 
   // abbreviation for the long name
   private type MDC = MetadataCheck.MetadataCheckHistory
@@ -58,8 +58,8 @@ class MetadataCheckCsv extends Phase2Csv[MetadataCheck.MetadataCheckHistory] {
     * @param machinePK Machine to get data for.
     * @return List of data for the particular machine.
     */
-  override protected def getData(machinePK: Long): Seq[MDC] = {
-    val mdcHistory = MetadataCheck.history(machinePK, MetadataCache.metadataCache.phase2ProcedurePK) ++ MetadataCheck.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK)
+  override protected def getData(metadataCache: MetadataCache, machinePK: Long): Seq[MDC] = {
+    val mdcHistory = MetadataCheck.history(machinePK, metadataCache.phase2ProcedurePK) ++ MetadataCheck.history(machinePK, metadataCache.phase3ProcedurePK)
     mdcHistory
   }
 

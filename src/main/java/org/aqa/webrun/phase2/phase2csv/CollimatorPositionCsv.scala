@@ -19,7 +19,7 @@ package org.aqa.webrun.phase2.phase2csv
 import org.aqa.db.CollimatorPosition
 import org.aqa.db.Output
 
-class CollimatorPositionCsv extends Phase2Csv[CollimatorPosition.ColPosHistory] {
+class CollimatorPositionCsv(metadataCache: MetadataCache) extends Phase2Csv[CollimatorPosition.ColPosHistory](metadataCache: MetadataCache) {
 
   // abbreviation for the long name
   private type CP = CollimatorPosition.ColPosHistory
@@ -50,8 +50,8 @@ class CollimatorPositionCsv extends Phase2Csv[CollimatorPosition.ColPosHistory] 
     * @param machinePK Machine to get data for.
     * @return List of data for the particular machine.
     */
-  override protected def getData(machinePK: Long): Seq[CP] = {
-    val cpHistory = CollimatorPosition.history(machinePK, MetadataCache.metadataCache.phase2ProcedurePK) ++ CollimatorPosition.history(machinePK, MetadataCache.metadataCache.phase3ProcedurePK)
+  override protected def getData(metadataCache: MetadataCache, machinePK: Long): Seq[CP] = {
+    val cpHistory = CollimatorPosition.history(machinePK, metadataCache.phase2ProcedurePK) ++ CollimatorPosition.history(machinePK, metadataCache.phase3ProcedurePK)
     cpHistory
   }
 

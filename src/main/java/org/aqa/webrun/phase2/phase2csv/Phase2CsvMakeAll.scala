@@ -33,35 +33,36 @@ object Phase2CsvMakeAll extends Logging {
     val start = System.currentTimeMillis()
     logger.info("Starting CSV generation.")
 
-    val metadataCache = MetadataCache.metadataCache
+    val metadataCache = new MetadataCache
+    val dataTypeList = Phase2Csv.makeDataTypeList(metadataCache)
 
-    (new PopulateDicomCsv).populateAll() // Get the DICOM column data up to date.
-
+    new PopulateDicomCsv(metadataCache).populateAll() // Get the DICOM column data up to date.
+    val maintenanceCsv = new MaintenanceCsv(metadataCache)
     for (institutionPK <- metadataCache.institutionNameMap.keys) {
       val machineList = {
         val s = metadataCache.machineMap.values.filter(_.institutionPK == institutionPK).toSeq.sortBy(_.id.toUpperCase())
         scala.collection.immutable.Seq(s).flatten
       }
       val csvDir = Phase2Csv.institutionCsvDir(institutionPK)
-      for (dt <- Phase2Csv.dataTypeList) {
+      for (dt <- dataTypeList) {
         try {
           dt.writeToFile(csvDir, machineList)
         } catch {
           case t: Throwable => logger.error("Unexpected exception writing " + dt.getDataName + " : " + fmtEx(t))
         }
       }
-      MaintenanceCsv.writeToFile(csvDir, machineList)
+      maintenanceCsv.writeToFile(csvDir, machineList)
     }
 
     // write the documentation for each type of data
-    Phase2Csv.dataTypeList.foreach(dt => dt.writeDoc())
+    dataTypeList.foreach(dt => dt.writeDoc())
 
-    MaintenanceCsv.writeDoc()
+    maintenanceCsv.writeDoc()
 
     // Write an index for each institution, regardless of whether or not it has data.
     metadataCache.institutionNameMap.keys.foreach(institutionPK => Phase2Csv.generateIndex(institutionPK))
 
-    Phase2Csv.writeCsvColumnDefinitions()
+    Phase2Csv.writeCsvColumnDefinitions(dataTypeList)
 
     logger.info("Done with CSV generation.  Elapsed time: " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
   }
