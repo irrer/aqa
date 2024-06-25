@@ -67,5 +67,5 @@ class MetadataCache extends Logging {
   val noteMap: Map[Long, String] = OutputNote.list().map(n => (n.outputPK, n.contentAsText)).toMap
 
   private val elapsed = System.currentTimeMillis() - start
-  logger.info("Created MetadataCache in " + Util.elapsedTimeHumanFriendly(elapsed))
+  logger.info("Created MetadataCache.  Elapsed time: " + Util.elapsedTimeHumanFriendly(elapsed))
 }
