@@ -38,6 +38,7 @@ import org.aqa.webrun.gapSkew.GapSkewLatestHtml
 import org.aqa.webrun.phase2.centerDose.CenterDoseChartHistoryRestlet
 import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringChartHistoryRestlet
 import org.aqa.webrun.phase2.phase2csv.CsvApi
+import org.aqa.webrun.phase2.phase2csv.Phase2Csv
 import org.aqa.webrun.phase2.phase2csv.Phase2CsvRestlet
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessHistoryRestlet
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessSubHTML
@@ -292,24 +293,31 @@ class WebServer extends Application with Logging {
     val templateRoute = router.getNext(request, response).asInstanceOf[TemplateRoute]
     val restlet = templateRoute.getNext
 
+    def isCsvDir: Boolean = {
+      val prefix = "/" + Config.resultsDirName + "/" + Phase2Csv.consortiumCsvDir.getName + "/"
+      val is = request.getOriginalRef.toString.drop(request.getHostRef.toString.length).startsWith(prefix)
+      is
+    }
+
     val role: UserRole.Value = restlet match {
-      case `staticDirRestlet`               => UserRole.publik
-      case `anonymousTranslate`             => UserRole.guest // tough lesson: This MUST be privileged to at least require a password.
-      case `mainIndex`                      => UserRole.publik
-      case `login`                          => UserRole.publik
-      case `notAuthorized`                  => UserRole.publik
-      case `notAuthenticated`               => UserRole.publik
-      case `termsOfUse`                     => UserRole.publik
-      case `setPassword`                    => UserRole.guest
-      case `systemModificationUpdate`       => UserRole.publik
-      case `resultsDirectoryRestlet`        => UserRole.user
-      case `csvApi`                         => UserRole.guest
-      case `webRunIndex`                    => UserRole.user
-      case `getSeries`                      => UserRole.user
-      case `viewOutput`                     => UserRole.user
-      case `outputList`                     => UserRole.user
-      case `tmpDirectoryRestlet`            => UserRole.user
-      case `machineConfigurationDirRestlet` => UserRole.user
+      case `staticDirRestlet`                    => UserRole.publik
+      case `anonymousTranslate`                  => UserRole.guest // tough lesson: This MUST be privileged to at least require a password.
+      case `mainIndex`                           => UserRole.publik
+      case `login`                               => UserRole.publik
+      case `notAuthorized`                       => UserRole.publik
+      case `notAuthenticated`                    => UserRole.publik
+      case `termsOfUse`                          => UserRole.publik
+      case `setPassword`                         => UserRole.guest
+      case `systemModificationUpdate`            => UserRole.publik
+      case `resultsDirectoryRestlet` if isCsvDir => UserRole.publik
+      case `resultsDirectoryRestlet`             => UserRole.user
+      case `csvApi`                              => UserRole.guest
+      case `webRunIndex`                         => UserRole.user
+      case `getSeries`                           => UserRole.user
+      case `viewOutput`                          => UserRole.user
+      case `outputList`                          => UserRole.user
+      case `tmpDirectoryRestlet`                 => UserRole.user
+      case `machineConfigurationDirRestlet`      => UserRole.user
       case _ =>
         logger.info("admin role requested by " + WebUtil.getUserIdOrDefault(request, "unknown"))
         UserRole.admin // default to most restrictive access for everything else

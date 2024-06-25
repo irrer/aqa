@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Phase2CsvMakeAll" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="org.aqa.webrun.phase2.phase2csv.Phase2CsvMakeAll" />
-    <module name="aqa" />
+    <module name="AQA" />
     <extension name="coverage">
       <pattern>
         <option name="PATTERN" value="org.aqa.webrun.phase2.phase2csv.*" />

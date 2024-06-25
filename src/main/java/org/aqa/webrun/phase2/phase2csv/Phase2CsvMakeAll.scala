@@ -28,7 +28,7 @@ object Phase2CsvMakeAll extends Logging {
   /**
     * Make all of the CSV content, overwriting old content.
     */
-  def makeAll(): Unit = {
+  private def makeAll(): Unit = {
 
     val start = System.currentTimeMillis()
     logger.info("Starting CSV generation.")
@@ -61,6 +61,8 @@ object Phase2CsvMakeAll extends Logging {
     // Write an index for each institution, regardless of whether or not it has data.
     metadataCache.institutionNameMap.keys.foreach(institutionPK => Phase2Csv.generateIndex(institutionPK))
 
+    Phase2Csv.writeCsvColumnDefinitions()
+
     logger.info("Done with CSV generation.  Elapsed time: " + Util.elapsedTimeHumanFriendly(System.currentTimeMillis() - start))
   }
 
@@ -88,7 +90,7 @@ object Phase2CsvMakeAll extends Logging {
     DbSetup.init
     makeAll()
     Thread.sleep(1000)
-    System.exit(0) // Note:
+    System.exit(0)
   }
 
 }

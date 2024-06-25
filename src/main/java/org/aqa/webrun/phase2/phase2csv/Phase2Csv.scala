@@ -555,4 +555,36 @@ object Phase2Csv extends Logging {
     new WinstonLutzCsv
   )
 
+  def writeCsvColumnDefinitions(): Unit = {
+
+    def typeToRow(csv: Phase2Csv[_]): Elem = {
+
+      val url = "/" + Config.resultsDirName + "/" + Phase2Csv.consortiumCsvDir.getName + "/" + csv.getDataName.replaceAll(" ", "") + ".html"
+      val row = <tr><td><a href={url}>{csv.getDataName}</a></td></tr>
+      row
+    }
+
+    val content = {
+      <div class="col-md-3 col-md-offset-4">
+        <h3>CSV Column Descriptions</h3>
+        <table class="table table-bordered" style="margin-top:30px;margin-bottom:80px;">
+          <thead>
+            <tr>
+              <th>Description of CSV Columns</th>
+            </tr>
+          </thead>
+          {dataTypeList.map(typeToRow)}
+        </table>
+        <p style="margin:40px;"> </p>
+      </div>
+    }
+    dataTypeList.map(dt => dt.dataName)
+
+    val file = new File(consortiumCsvDir, "index.html")
+
+    val text = WebUtil.wrapBody(content, "CSV Column Descriptions")
+
+    Util.writeFile(file, text)
+    logger.info("Wrote file " + file.getAbsolutePath)
+  }
 }
