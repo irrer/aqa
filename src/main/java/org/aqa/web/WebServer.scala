@@ -275,10 +275,11 @@ class WebServer extends Application with Logging {
       viewOutput,
       outputList,
       tmpDirectoryRestlet,
-      machineConfigurationDirRestlet
+      machineConfigurationDirRestlet,
+      csvApi
     )
 
-    val numNull = list.count(r => r == null)
+    val numNull = list.count(_ == null)
     numNull
   }
 
@@ -577,7 +578,7 @@ class WebServer extends Application with Logging {
         new FSHistoryRestlet,
         new Phase2CsvRestlet,
         new MachineLogXml,
-        new CsvApi,
+        csvApi,
         new WLUpdateRestlet,
         new OutputHeading,
         anonymousTranslate,
