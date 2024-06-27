@@ -310,7 +310,7 @@ case object ConvertDicomDevCustom extends Logging {
   }
 
 
-  def main(args: Array[String]): Unit = {
+  def mainFocalSpot(args: Array[String]): Unit = {
 
     Config.validate
     val machine = Machine.get(26).get
@@ -377,6 +377,79 @@ case object ConvertDicomDevCustom extends Logging {
       Trace.trace()
 
     })
+    Thread.sleep(1000)
+    Trace.trace("Done")
+    System.exit(0)
+  }
+
+
+  def main(args: Array[String]): Unit = {
+
+    def fileToAl(file: File): AttributeList = {
+      val al = new AttributeList
+      al.read(file)
+      al
+    }
+
+    Config.validate
+    val machine = Machine.get(26).get
+
+    Trace.trace("Starting")
+
+    val rtplan = {
+      val al = new AttributeList
+      al.read("""D:\aqa\sym\6X_symPROCESS\RP.1.2.246.352.71.5.427549902257.1092564.20240208125522.dcm""")
+      al
+    }
+
+    val dirList = {
+      val d6 = new File("""D:\aqa\sym\6X_symPROCESS""")
+      val list6 = Util.listDirFiles(d6).filter(_.getName.matches("Sym[0-9][0-9]"))
+
+      val d16 = new File("""D:\aqa\sym\16x_symPROCESS""")
+      val list16 = Util.listDirFiles(d16).filter(_.getName.matches("16xSym[0-9][0-9]"))
+
+      list6 ++ list16
+    }
+
+    def doDir(dir: File): Unit = {
+
+      val list = Util.listDirFiles(dir).filter(_.getName.matches("^SID[0-9]+_NEW.dcm$")).map(_.getName.replace("_NEW.dcm", "")).sorted
+      if (list.isEmpty) {
+        Trace.trace("Ignoring " + dir.getAbsolutePath)
+      }
+      else {
+        val devList = list.map(name => new File(dir, name + ".dcm")).filter(_.canRead).map(fileToAl)
+        val templateList = list.map(name => new File(dir, name + "_NEW.dcm")).filter(_.canRead).map(fileToAl)
+
+        if (devList.isEmpty || (devList.size != templateList.size)) {
+          Trace.trace("Ignoring badness in " + dir.getAbsolutePath)
+        }
+        else {
+
+          val beamConversionList = devList.zip(templateList).map(dt => BeamConversion(dt._1, dt._2))
+
+          val processedList = processSeries(beamConversionList, machine, rtplan)
+
+          val outDir = new File(dir, "PROCESSED")
+          Util.deleteFileTreeSafely(outDir)
+          outDir.mkdirs()
+
+          def writeDicom(name: String, al: AttributeList): Unit = {
+            val dcmFile = new File(outDir, name + ".dcm")
+            Util.writeAttributeListToFile(al, dcmFile)
+            val txtFile = new File(outDir, name + ".txt")
+            Util.writeFile(txtFile, DicomUtil.attributeListToString(al))
+            Trace.trace("wrote " + dcmFile.getAbsolutePath)
+          }
+
+          list.zip(processedList).foreach(nameAl => writeDicom(nameAl._1, nameAl._2))
+        }
+      }
+    }
+
+    dirList.foreach(doDir)
+
     Thread.sleep(1000)
     Trace.trace("Done")
     System.exit(0)
