@@ -216,23 +216,34 @@ object BadPixelAnalysis extends Logging {
           val centerDoseBeamNameList = Util.makeCenterDoseBeamNameList(runReq.rtplan)
           val symFlatConstBeamNameList = Util.makeSymFlatConstBeamNameList(runReq.rtplan)
 
-          <tr align="center">
-          <td style="text-align: center;" title="Click for DICOM metadata"><a href={dicomHref}>{beamName}</a></td>
-          <td style="text-align: center;" title="Click for full size image"><a href={Phase2Util.dicomViewImageHtmlHref(al, extendedData, runReq)}><img src={pngHref} width={smallImageWidth}/></a></td>
-          <td style="text-align: center;" title="Gantry Angle deg">{angleOf(TagByName.GantryAngle)}</td>
-          <td style="text-align: center;" title="Collimator Angle deg">{angleOf(TagByName.BeamLimitingDeviceAngle)}</td>
-          <td style="text-align: center;" title="Collimator opening in CM">{Phase2Util.jawDescription(al, runReq.rtplan)}</td>
-          <td style="text-align: center;" title="Time since first image capture (mm:ss)">{relativeTimeText}</td>
-          <td style="text-align: center;" title="Collimator Centering">{
-            boolToName("Col Cntr", collimatorCenteringBeamNameList.contains(beamName))
-          }</td>
-          <td style="text-align: center;" title="Center Dose">{boolToName("Cntr Dose", centerDoseBeamNameList.contains(beamName))}</td>
-          <td style="text-align: center;" title="Collimator Position">{boolToName("Col Posn", Config.CollimatorPositionBeamList.exists(cp => cp.beamName.equalsIgnoreCase(beamName)))}</td>
-          <td style="text-align: center;" title="Wedge">{boolToName("Wedge", Config.WedgeBeamList.exists(w => w.wedge.equals(beamName)))}</td>
-          <td style="text-align: center;" title="Symmetry and Flatness">{boolToName("Sym+Flat+Const", symFlatConstBeamNameList.contains(beamName))}</td>
-          <td style="text-align: center;" title="Leaf Position">{boolToName("Leaf Posn", Config.LeafPositionBeamNameList.contains(beamName))}</td>
-          <td style="text-align: center;" title="VMAT">{boolToName("VMAT", isVmat(beamName))}</td>
-        </tr>
+          val hash: Seq[Elem] = {
+            if (Config.ShowImageMD5Hash) {
+              val md5 = Util.imagePixelMD5Hash(al)
+              val content = {
+                <p title={"Full MD5 hash of pixels: " + md5} style="margin-top:12px;">
+                  {md5.take(10)}
+                </p>
+              }
+              Seq(content)
+            } else
+              Seq()
+          }
+
+          <tr>
+            <td title="Click for DICOM metadata"><a href={dicomHref}>{beamName}</a>{hash}</td>
+            <td title="Click for full size image"><a href={Phase2Util.dicomViewImageHtmlHref(al, extendedData, runReq)}><img src={pngHref} width={smallImageWidth}/></a></td>
+            <td title="Gantry Angle deg">{angleOf(TagByName.GantryAngle)}</td>
+            <td title="Collimator Angle deg">{angleOf(TagByName.BeamLimitingDeviceAngle)}</td>
+            <td title="Collimator opening in CM">{Phase2Util.jawDescription(al, runReq.rtplan)}</td>
+            <td title="Time since first image capture (mm:ss)">{relativeTimeText}</td>
+            <td title="Collimator Centering">{boolToName("Col Cntr", collimatorCenteringBeamNameList.contains(beamName))}</td>
+            <td title="Center Dose">{boolToName("Cntr Dose", centerDoseBeamNameList.contains(beamName))}</td>
+            <td title="Collimator Position">{boolToName("Col Posn", Config.CollimatorPositionBeamList.exists(cp => cp.beamName.equalsIgnoreCase(beamName)))}</td>
+            <td title="Wedge">{boolToName("Wedge", Config.WedgeBeamList.exists(w => w.wedge.equals(beamName)))}</td>
+            <td title="Symmetry and Flatness">{boolToName("Sym+Flat+Const", symFlatConstBeamNameList.contains(beamName))}</td>
+            <td title="Leaf Position">{boolToName("Leaf Posn", Config.LeafPositionBeamNameList.contains(beamName))}</td>
+          <td title="VMAT">{boolToName("VMAT", isVmat(beamName))}</td>
+         </tr>
         }
         (imageTime, elem)
       }
@@ -260,26 +271,26 @@ object BadPixelAnalysis extends Logging {
 
         val tableHead = {
           <thead>
-          <tr>
-            <th style="text-align: center;" title='Click to view DICOM metadata'>Beam<br/>Name</th>
-            <th style="text-align: center;" title='Click to view image'>Image</th>
-            <th style="text-align: center;" title='Gantry angle rounded to nearest 90 degrees'>Gantry Angle<br/>degrees</th>
-            <th style="text-align: center;" title='Collimator angle rounded to nearest 90 degrees'>Collimator Angle<br/>degrees</th>
-            <th style="text-align: center;" title='Width times height of field in cm'>Field Size<br/>cm</th>
-            <th style="text-align: center;" title='Time since first image capture (mm:ss)'>Acquisition<br/>Time</th>
-            <th style="text-align: center;" title='if used in Collimator Centering'>Collimator<br/>Centering</th>
-            <th style="text-align: center;" title='if used in Center Dose'>Center<br/>Dose</th>
-            <th style="text-align: center;" title='if used in Collimator Position'>Collimator<br/>Position</th>
-            <th style="text-align: center;" title='if used in Wedge'>Wedge</th>
-            <th style="text-align: center;" title='if used in Symmetry and Flatness'>Symmetry and Flatness</th>
-            <th style="text-align: center;" title='if used in Leaf Position (Picket Fence)'>Leaf Position</th>
-            <th style="text-align: center;" title='if used in VMAT (RapidArc)'>VMAT</th>
-          </tr>
-        </thead>
+            <tr>
+              <th style="text-align:center;" title='Click to view DICOM metadata'>Beam<br/>Name</th>
+              <th style="text-align:center;" title='Click to view image'>Image</th>
+              <th style="text-align:center;" title='Gantry angle rounded to nearest 90 degrees'>Gantry Angle<br/>degrees</th>
+              <th style="text-align:center;" title='Collimator angle rounded to nearest 90 degrees'>Collimator Angle<br/>degrees</th>
+              <th style="text-align:center;" title='Width times height of field in cm'>Field Size<br/>cm</th>
+              <th style="text-align:center;" title='Time since first image capture (mm:ss)'>Acquisition<br/>Time</th>
+              <th style="text-align:center;" title='if used in Collimator Centering'>Collimator<br/>Centering</th>
+              <th style="text-align:center;" title='if used in Center Dose'>Center<br/>Dose</th>
+              <th style="text-align:center;" title='if used in Collimator Position'>Collimator<br/>Position</th>
+              <th style="text-align:center;" title='if used in Wedge'>Wedge</th>
+              <th style="text-align:center;" title='if used in Symmetry and Flatness'>Symmetry and Flatness</th>
+              <th style="text-align:center;" title='if used in Leaf Position (Picket Fence)'>Leaf Position</th>
+              <th style="text-align:center;" title='if used in VMAT (RapidArc)'>VMAT</th>
+            </tr>
+          </thead>
         }
 
         val table = {
-          <table class="table table-bordered">
+          <table class="table table-bordered" style="text-align:center;">
           {tableHead}
           {allElem}
         </table>
