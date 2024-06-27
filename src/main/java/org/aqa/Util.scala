@@ -28,6 +28,7 @@ import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.util.Utility
+import edu.umro.ScalaUtil.RawByte
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVParser
 
@@ -1582,6 +1583,17 @@ object Util extends Logging {
       case 1 => fluenceList.head.getSingleStringValueOrEmptyString.trim.toUpperCase().equals("FFF")
       case _ => throw new RuntimeException("More than one beam specified in call to isFFF.")
     }
+  }
+
+  /**
+   * Make an MD5 hash of the pixels in a DICOM image.
+   * @param image For this image.
+   * @return Text version of MD5 hash.
+   */
+  def imagePixelMD5Hash(image: AttributeList): String = {
+    val byteArray = DicomUtil.PixelDataToByteArray(image)
+    val h = edu.umro.ScalaUtil.Crypto.hash(byteArray)
+    RawByte.formatByteArray(h)
   }
 
   def main(args: Array[String]): Unit = {
