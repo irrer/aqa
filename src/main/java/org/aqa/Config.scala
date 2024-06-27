@@ -424,6 +424,8 @@ object Config extends Logging {
 
   val TestMode: Boolean = logMainText("TestMode", "false").toLowerCase.trim.toBoolean
 
+  val ShowImageMD5Hash: Boolean = logMainText("ShowImageMD5Hash", "false").toLowerCase.trim.toBoolean
+
   /** True if in production (not test) mode. */
   val ProductionMode: Boolean = !TestMode
 

@@ -179,6 +179,12 @@ Note that when building a package for release, the Maven build process uses the 
     -->
     <TestMode>false</TestMode>
 
+    <!-- If true, show an MD5 hash of the images' pixels.  This can be useful in test development. When
+    image metadata is modified, the image can still be identified by its hash. MD5, while no longer
+    considered to be suitable for cryptographic security, is considered to be sufficient for
+    content integrity verification.  MD5 is also commonly available, and is not onerously long.  -->
+    <ShowImageMD5Hash>true</ShowImageMD5Hash>
+
     <!-- List of users that should have permissions to everything. -->
     <UserWhiteList>
         <User>admin</User>
