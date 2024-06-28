@@ -85,7 +85,7 @@ class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedur
 
   private val sfSelectionList = metaData.beamEnergyList.map(energy => SPFocalSpot.setEnergyOfSet(prototypeSet, energy))
 
-  override val usesCollimatorCentering: Boolean = true // false // Not sure if this is right.
+  override val usesCollimatorCentering: Boolean = false
 
   override def getBeamList: Seq[Beam] = initialSelectionList.flatMap(_.beamList)
 
