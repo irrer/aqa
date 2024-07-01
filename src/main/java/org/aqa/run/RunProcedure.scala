@@ -133,7 +133,11 @@ object RunProcedure extends Logging {
     val runButton = makeButton(runButtonName, primary = true, ButtonType.BtnDefault)
     val cancelButton = makeButton(cancelButtonName, primary = false, ButtonType.BtnDefault)
 
-    val form = new WebForm(runTrait.getProcedure.webUrl, Some(runTrait.getProcedure.fullName), List(List(noteField), List(machineSelector), List(runButton, cancelButton)), 10)
+    val action = runTrait.getProcedure.webUrl
+    val title = Some(runTrait.getProcedure.fullName)
+    val rowList: List[WebRow] = List(List(noteField), List(machineSelector), List(runButton, cancelButton))
+
+    val form = new WebForm(action, title, rowList, fileUpload = 10)
     form
   }
 
