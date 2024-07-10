@@ -725,8 +725,8 @@ object WebUtil extends Logging {
           val text: String = {
             s"""$nl
                |var $name = { name: '${file.getName}', size: ${file.length} };$nl
-               |${uploadFileLabel}.emit('addedfile', $name);$nl
-               |${uploadFileLabel}.emit('complete', $name);$nl
+               |$uploadFileLabel.emit('addedfile', $name);$nl
+               |$uploadFileLabel.emit('complete', $name);$nl
                |""".stripMargin.replaceAll("\r", "").replaceAll("\n", "")
           }
 
