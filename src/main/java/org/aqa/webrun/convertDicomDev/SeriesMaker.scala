@@ -1,6 +1,8 @@
 package org.aqa.webrun.convertDicomDev
 
 import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.db.CachedUser
@@ -15,11 +17,17 @@ import org.aqa.web.WebUtil.WebRow
 import org.aqa.web.WebUtil.dicomFilesInSession
 import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.Util
-import org.aqa.db.DicomSeries
+import org.aqa.web.WebUtil.WebPlainText
+import org.aqa.AnonymizeUtil
+import org.aqa.webrun.phase2.Phase2Util
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
 import org.restlet.data.Status
+
+import java.text.SimpleDateFormat
+import java.util.Date
+import scala.xml.Elem
 
 object SeriesMaker {
   private val path = new String((new SeriesMaker).pathOf)
@@ -28,6 +36,23 @@ object SeriesMaker {
 class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
   private val pageTitle = "Series Maker"
+
+  private val assignBeamsTag = "assignBeams"
+
+  private val elapsedFormat = new SimpleDateFormat("mm:ss")
+
+  private def colorList =
+    Seq(
+      "#39698C",
+      "#74a892",
+      "#008585",
+      "#c7522a",
+      "#8a508f",
+      "#bc5090",
+      "#ff6361",
+      "#ff8531",
+      "#ffa600"
+    )
 
   class FormButtonProcedure(name: String, val procedure: Option[Procedure]) extends FormButton(name, col = 2, offset = 0, subUrl = subUrl, pathOf, ButtonType.BtnPrimary) {}
 
@@ -39,62 +64,269 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
   private def nextButton = makeButton("Next", ButtonType.BtnDefault)
 
-  private def makeUploadForm(): WebForm = {
+  private def resetButton = makeButton("Reset", ButtonType.BtnDefault)
+
+  private val js = {
+    """
+      |console.log("Starting");
+      |
+      |function allowDrop(ev) {
+      |  ev.preventDefault();
+      |}
+      |
+      |function drag(ev) {
+      |  ev.dataTransfer.setData("text", ev.target.id);
+      |}
+      |
+      |function drop(ev) {
+      |  console.log("drop 1 ev: " + ev);
+      |  ev.preventDefault();
+      |  console.log("drop 2 ev: " + ev);
+      |  var data = ev.dataTransfer.getData("text");
+      |  console.log("drop 3 ev: " + ev);
+      |  ev.target.appendChild(document.getElementById(data));
+      |  console.log("drop 4 ev: " + ev);
+      |}
+      |
+      |""".stripMargin
+  }
+
+  /**
+    * Given a list of sorted RTIMAGES, put them into groups.  Files should be in the same group if they have the same series UID.
+    */
+  private def groupImages(list: Seq[AttributeList]): Seq[Seq[AttributeList]] = {
+
+    def timeOf(rtimage: AttributeList) = SeriesMakerReq.rtimageTimeDate(rtimage).getTime
+
+    val groupList = {
+      val gl = list.groupBy(_.get(TagByName.SeriesInstanceUID).getSingleStringValueOrEmptyString).values
+      gl.map(_.sortBy(timeOf)).toSeq.sortBy(g => timeOf(g.head))
+    }
+
+    groupList
+  }
+
+  private def getMachineName(rtimage: AttributeList, valueMap: ValueMapT): String = {
+
+    val noMachine = "Machine Not Available"
+
+    if (
+      (rtimage.get(TagByName.RadiationMachineName) != null) &&
+      rtimage.get(TagByName.RadiationMachineName).getSingleStringValueOrEmptyString.nonEmpty
+    ) {
+      val anonAttr = rtimage.get(TagByName.RadiationMachineName)
+      val user = WebUtil.getUser(valueMap).get
+
+      val j = AnonymizeUtil.deAnonymizeAttribute(user.institutionPK, anonAttr) // TODO rm
+      Trace.trace(j)
+      if (j.nonEmpty) {
+        val j1 = j.get.getSingleStringValueOrNull()
+        Trace.trace(j1)
+        Trace.trace()
+      }
+      Trace.trace()
+
+      AnonymizeUtil.deAnonymizeAttribute(user.institutionPK, anonAttr) match {
+        case Some(attr) =>
+          val m = attr.getSingleStringValueOrEmptyString.trim
+          if (m.isEmpty)
+            noMachine
+          else
+            m
+        case _ =>
+          noMachine
+      }
+    } else
+      noMachine
+  }
+
+  private def formatDraggable(color: String, id: String, content: Option[Elem]): Elem = {
+    val borderRadius = "border-radius:10px"
+    val width = "width:250px"
+    val height = "height:38px"
+    val border = s"border: 2px solid $color"
+
+    val inner: Seq[Elem] = {
+      if (content.isDefined)
+        Seq(<span id={id + "_drag"} draggable="true" ondragstart="drag(event)">{content.get}</span>)
+      else
+        Seq()
+    }
+
+    <div id={id} style={s"align:auto;$borderRadius;$border;$width;$height;"} ondrop="drop(event)" ondragover="allowDrop(event)">{inner}</div>
+  }
+
+  private def formatRtimage(color: String, id: String, elapsed_ms: Long, beamName: String): Elem = {
+    val timeText = Util.formatDate(elapsedFormat, new Date(elapsed_ms))
+    val index = (id.replaceAll(".*_", "").toInt + 1).toString
+    val content = {
+      <span>
+        <span class="badge badge-secondary" style={s"background: $color;margin:2px;"}>
+          <table>
+            <tr>
+              <td>
+                <span style="vertical-align:middle;font-size:2.0em;margin-right:12px;">{index}</span>
+              </td>
+              <td>
+                <span style="vertical-align:middle;font-size:1.0em;">{timeText}</span>
+              </td>
+            </tr>
+          </table>
+        </span>
+        <b> {beamName} </b>
+      </span>
+    }
+    formatDraggable(color, id, Some(content))
+  }
+
+  private def rtimageToHtml(color: String, id: String, first: Date, al: AttributeList, req: SeriesMakerReq): Elem = {
+
+    val beamName: String = {
+      val attr = al.get(TagByName.ReferencedBeamNumber)
+
+      0 match {
+        case _ if attr == null =>
+          "-- Beam Name NA --"
+        case _ if Phase2Util.getBeamNameOfRtimage(req.rtplan, al).isDefined => // get beam name from plan
+          Phase2Util.getBeamNameOfRtimage(req.rtplan, al).get
+        case _ => // have beam number, but no plan
+          attr.getIntegerValues.head.toString
+      }
+    }
+
+    val elapsed_ms = SeriesMakerReq.rtimageTimeDate(al).getTime - first.getTime
+
+    <tr>
+      <td>
+        {formatRtimage(color, id, elapsed_ms, beamName)}
+      </td>
+    </tr>
+  }
+
+  private def rtimageGroupToHtml(valueMap: ValueMapT, group: Seq[AttributeList], groupIndex: Int, color: String, req: SeriesMakerReq): Elem = {
+
+    val firstFormat = new SimpleDateFormat("YYYY EEE MMM d HH:mm")
+
+    val first = SeriesMakerReq.rtimageTimeDate(group.head)
+
+    val machineName = getMachineName(group.head, valueMap)
+
+    val headerText = Seq(machineName, Util.formatDate(firstFormat, first)).mkString(" :: ")
+
+    val content = {
+      <tr>
+        <td>
+          <table class="table table-bordered" foo="bar">
+            <thead>
+              <tr>
+                <th style="text-align:center;">
+                  {headerText}
+                </th>
+              </tr>
+            </thead>{group.indices.map(i => rtimageToHtml(color, s"RI_${groupIndex}_$i", first, group(i), req))}
+          </table>
+        </td>
+      </tr>
+    }
+    content
+  }
+
+  /**
+    * Create HTML that displays the list of RTIMAGES.
+    * @param valueMap HTML parameters.
+    * @return Displayable list of RTIMAGES.
+    */
+  private def rtimageListToHtml(valueMap: ValueMapT, req: SeriesMakerReq): WebUtil.WebPlainText = {
+
+    val groupList = groupImages(req.rtimageList)
+
+    // <th style="display:block; margin-left:auto;margin-right:auto;width:150px;">RTIMAGE List</th>
+    val content = {
+      <div>
+        <table style="width: 100%;" class="table table-bordered">
+          <thead>
+            <tr>
+              <th style="text-align:center;">RTIMAGE List</th>
+            </tr>
+          </thead>
+          {groupList.indices.map(groupIndex => rtimageGroupToHtml(valueMap, groupList(groupIndex), groupIndex, colorList(groupIndex % colorList.size), req))}
+        </table>
+      </div>
+    }
+    Trace.trace("content: " + content)
+    new WebPlainText(label = "Beams", showLabel = false, col = 3, offset = 1, _ => content)
+  }
+
+  /**
+    * Show the RTPLAN HTML if the plan can not be ascertained.
+    * @param req Requirements.
+    * @return Plan display.
+    */
+  private def rtplanToHtml(req: SeriesMakerReq): WebUtil.WebPlainText = {
+
+    val nameList = DicomUtil.findAllSingle(req.rtplan, TagByName.BeamName).map(_.getSingleStringValueOrEmptyString).sorted.map(name => Util.normalizeBeamName(name))
+
+    def toHtml(id: String, name: String): Elem = {
+      <tr>
+        <td>
+          <table>
+            <tr>
+              <td>
+                {formatDraggable("darkgrey", id, None)}
+              </td>
+              <td>
+                <span style="margin-left:20px; width:200px;"><b>{name}</b></span>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    }
+
+    val content = {
+      <table style="width: 100%;" class="table table-bordered">
+        <thead>
+          <tr>
+            <th style="text-align:center;">Plan Beams</th>
+          </tr>
+        </thead>
+        {nameList.indices.map(i => toHtml("Plan_" + i, nameList(i)))}
+      </table>
+    }
+
+    new WebPlainText(label = "Plan", showLabel = false, col = 4, offset = 1, _ => content)
+
+  }
+
+  private def makeUploadForm(valueMap: ValueMapT): WebForm = {
+
+    val dicomList = dicomFilesInSession(valueMap).flatMap(_.attributeList)
+
+    val req = SeriesMakerReq.makeRequirements(dicomList)
 
     val buttonRow = List(nextButton, cancelButton)
 
-    val action = SeriesMaker.path // TODO
+    val action = SeriesMaker.path
     val title = Some(pageTitle)
     val rowList: List[WebRow] = List(buttonRow)
 
-    val form = new WebForm(action = action, title = title, rowList = rowList, fileUpload = 10, runScript = None)
+    val form = new WebForm(action = action, title = title, rowList = rowList, fileUpload = 10, runScript = Some(js))
 
     form
   }
 
-  /**
-    * Find the RTPLAN to use.  Give first priority to the one uploaded, but if no RTPLAN was
-    * uploaded, then use the one referenced by the RTIMAGE file(s).
-    *
-    * If there was more than one RTPLAN uploaded or the RTIMAGE files reference more than
-    * one RTPLAN, then return an error.  Also return an error if an RTPLAN file can not be found.
-    *
-    * Note that a 'known' RTPLAN file means that it was one that is in the AQA database.
-    *
-    * @param alList List of DICOM files uploaded.
-    * @return The RTPLAN to use, or, an error message.
-    */
-  private def rtplanToUse(alList: Seq[AttributeList]): Either[String, AttributeList] = {
-    val rtplanList = alList.filter(al => Util.isRtplan(al))
-    0 match {
-      case _ if rtplanList.size == 1 => // User uploaded exactly one plan, so use it.
-        Right(rtplanList.head)
+  private def makeAssignForm(valueMap: ValueMapT, seriesMakerReq: SeriesMakerReq): WebForm = {
 
-      case _ if rtplanList.size > 1 => // User uploaded more than one plan, so it is ambiguous as to which should be used.
-        Left(s"More than one RTPLAN was uploaded.  You should either upload one or zero. \\n If zero, then one of the RTIMAGE files should reference a known RTPLAN.")
+    val buttonRow = List(resetButton, cancelButton)
+    val alRow = List(rtimageListToHtml(valueMap, seriesMakerReq), rtplanToHtml(seriesMakerReq))
 
-      case _ if rtplanList.isEmpty => // User did not upload a plan.  Look to see if any of the RTIMAGE files reference a plan that is in the database.
-        val rtimageList = alList.filter(al => Util.isRtimage(al))
-        val referencedRtplanUidList = rtimageList.flatMap(ri => Util.getRtplanSop(ri)).distinct
+    val action = SeriesMaker.path
+    val title = Some(pageTitle)
+    val rowList: List[WebRow] = List(buttonRow, alRow)
 
-        def getRtplanOfImage(rtplanUid: String): Option[AttributeList] = {
-          DicomSeries.getBySopInstanceUID(rtplanUid).flatMap(_.attributeListList).find(planAl => Util.sopOfAl(planAl).equals(rtplanUid))
-        }
+    val form = new WebForm(action = action, title = title, rowList = rowList, fileUpload = -1, runScript = Some(js))
 
-        // list of plans from the database that are referenced by the uploaded RTIMAGE files
-        val referencedRtplanList = referencedRtplanUidList.flatMap(getRtplanOfImage)
-
-        0 match {
-          case _ if referencedRtplanList.isEmpty => // RTIMAGE files did not reference any plans
-            Left("No RTPLAN was uploaded and none of the RTIMAGE files reference a known RTPLAN.")
-
-          case _ if referencedRtplanList.size == 1 => // RTIMAGE files referenced exactly one plan that was found in the database, so use it.
-            Right(referencedRtplanList.head) // SUCCESS!
-
-          case _ if referencedRtplanList.isEmpty => // RTIMAGE files referenced more than one plan that was found in the database, so this is ambiguous.
-            Left(s"No RTPLAN was uploaded and none of the RTIMAGE files reference ${referencedRtplanList.size} known RTPLANS.")
-        }
-    }
+    form
   }
 
   /**
@@ -102,29 +334,10 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     * @param alList All DICOM files.
     * @return RTIMAGE files.
     */
-  private def rtimageList(alList: Seq[AttributeList]): Seq[AttributeList] = alList.filter(al => Util.isRtimage(al))
+  private def rtimageList(alList: Seq[AttributeList]): Seq[AttributeList] = SeriesMakerReq.extractDistinctRtimageList(alList)
 
-  /**
-    * Determine if the uploaded files can be processed.  If so, return None, otherwise return a
-    * message for the user indicating the problem.
-    * @param valueMap List of parameters and values
-    * @param alList List of uploaded DICOM files.
-    * @return None if value, message if not valid.
-    */
-  private def isValidFileSet(valueMap: ValueMapT, alList: Seq[AttributeList]): Option[String] = {
-
-    val rtimagePresent: Boolean = alList.exists(al => Util.isRtimage(al))
-
-    val rtplan = rtplanToUse(alList)
-
-    0 match {
-      case _ if rtplan.isLeft =>
-        Some(rtplan.left.get)
-      case _ if !rtimagePresent =>
-        Some("No RTIMAGE files were uploaded.")
-      case _ => None
-    }
-
+  private def makeAssignBeamsForm(valueMap: ValueMapT, seriesMakerReq: SeriesMakerReq, response: Response): Unit = {
+    ???
   }
 
   /**
@@ -134,14 +347,19 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     * @param response HTTP response.
     */
   private def processNext(valueMap: ValueMapT, alList: Seq[AttributeList], response: Response): Unit = {
-    isValidFileSet(valueMap, alList) match {
-      case Some(errMsg) => // TODO set bad response
-        val form = makeUploadForm()
-        val errorMap = WebUtil.Error.make(WebUtil.uploadFileLabel, errMsg)
-        form.setFormResponse(valueMap, errorMap, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
 
-      case _ => // TODO go to new page
-        Trace.trace("TODO")
+    val seriesMakerReq = SeriesMakerReq.makeRequirements(alList)
+
+    if (seriesMakerReq.isLeft) {
+      val errMsg = seriesMakerReq.left.get
+      val form = makeUploadForm(valueMap: ValueMapT)
+      val errorMap = WebUtil.Error.make(WebUtil.uploadFileLabel, errMsg)
+      form.setFormResponse(valueMap, errorMap, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
+    } else {
+      val newValueMap = valueMap + (assignBeamsTag -> "true")
+      val form = makeAssignForm(newValueMap, seriesMakerReq.right.get)
+      form.setFormResponse(valueMap, WebUtil.styleNone, pageTitle, response, Status.SUCCESS_OK)
+      Trace.trace("TODO") // TODO
     }
   }
 
@@ -164,11 +382,11 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
         case _ if buttonIs(cancelButton) =>
           response.redirectSeeOther("/")
 
-        case _ if buttonIs(nextButton) =>
+        case _ if buttonIs(nextButton) || buttonIs(resetButton) =>
           processNext(valueMap, alList, response)
 
         case _ =>
-          val form = makeUploadForm()
+          val form = makeUploadForm(valueMap: ValueMapT)
           form.setFormResponse(valueMap, errorMap = WebUtil.styleNone, pageTitle, response, Status.SUCCESS_OK)
 
         // case _ if machine.isEmpty                                                                                => updateMach()

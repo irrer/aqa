@@ -15,12 +15,12 @@ import org.aqa.Util
 import org.aqa.db.Machine
 import org.aqa.Config
 import org.aqa.db.Institution
+import org.aqa.webrun.convertDicomDev.SeriesMakerReq.getContentDateTime
 
 import java.io.File
 import java.util.Date
 
 case object ConvertDicomDevCustom extends Logging {
-
 
   /**
    * Specifies the information needed to change a dev beam into a normal beam.
@@ -28,7 +28,7 @@ case object ConvertDicomDevCustom extends Logging {
    * @param dev      Beam whose image should be used.
    * @param template Beam delivered in normal/production mode whose metadata should be used as a template.
    */
-  case class BeamConversion(dev: AttributeList, template: AttributeList) {}
+  private case class BeamConversion(dev: AttributeList, template: AttributeList) {}
 
   private def setTextList(al: AttributeList, tag: AttributeTag, valueList: Seq[String]): Unit = {
     val attr = AttributeFactory.newAttribute(tag)
@@ -65,11 +65,6 @@ case object ConvertDicomDevCustom extends Logging {
     timeAttr.addValue(DicomUtil.dicomTimeFormat.format(date))
     al.put(timeAttr)
   }
-
-  private def getContentDateTime(al: AttributeList): Date = {
-    DicomUtil.getTimeAndDate(al, TagByName.ContentDate, TagByName.ContentTime).get
-  }
-
 
   /**
    * Given the new beam captured in development mode, and a normal template beam, create a
@@ -271,7 +266,7 @@ case object ConvertDicomDevCustom extends Logging {
       val j = templateList.map(f => fmtAl(f)).mkString("\n==== ")
       Trace.trace(s"\n==== templateFileList:\n    ==== $j")
     }
-    println(s"====")
+    Trace.trace(s"====")
 
     // new UID for series
     val SeriesInstanceUID = UMROGUID.getUID
@@ -323,32 +318,29 @@ case object ConvertDicomDevCustom extends Logging {
       al
     }
 
-
     //val devDir = new File("""D:\aqa\FocalSpot\FocalSpot_TX4\tool\dev""")
     val devDirList = Util.listDirFiles(new File("""D:\aqa\FocalSpot\FocalSpot_TX4\tool""")).filter(d => d.getName.matches("^dev[0-9]$"))
     val templateDir = new File("""D:\aqa\FocalSpot\FocalSpot_TX4\tool\template""")
 
-
     val templateList: Seq[AttributeList] = {
       val templateFileList = Util.listDirFiles(templateDir).filter(_.getName.endsWith(".dcm")).map(f => DicomFile(f))
-      println
-      templateFileList.foreach(df => println("==== template file: " + df.file.getAbsolutePath))
+      Trace.trace()
+      templateFileList.foreach(df => Trace.trace("==== template file: " + df.file.getAbsolutePath))
       val list = templateFileList.flatMap(_.attributeList).sortBy(getContentDateTime)
       list.toIndexedSeq
     }
 
-
     devDirList.foreach(devDir => {
       val devList: Seq[AttributeList] = {
         val devFileList = Util.listDirFiles(devDir).filter(_.getName.endsWith(".dcm")).map(f => DicomFile(f))
-        println
-        devFileList.foreach(df => println("==== dev file: " + df.file.getAbsolutePath))
+        Trace.trace()
+        devFileList.foreach(df => Trace.trace("==== dev file: " + df.file.getAbsolutePath))
         val list = devFileList.flatMap(_.attributeList).sortBy(getContentDateTime)
         list.toIndexedSeq
       }
 
       if (true) {
-        templateList.foreach(al => println(s"==== Content: ${getContentDateTime(al)}   BeamRef: ${al.get(TagByName.ReferencedBeamNumber).getIntegerValues.head}"))
+        templateList.foreach(al => Trace.trace(s"==== Content: ${getContentDateTime(al)}   BeamRef: ${al.get(TagByName.ReferencedBeamNumber).getIntegerValues.head}"))
       }
 
       val beamConversionList: Seq[BeamConversion] = {
@@ -454,6 +446,5 @@ case object ConvertDicomDevCustom extends Logging {
     Trace.trace("Done")
     System.exit(0)
   }
-
 
 }
