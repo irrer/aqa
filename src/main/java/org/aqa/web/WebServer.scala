@@ -31,6 +31,7 @@ import org.aqa.webrun.WebRun
 import org.aqa.webrun.bbByCBCT.BBbyCBCTChartHistoryRestlet
 import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryPartialRestlet
 import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryRestlet
+import org.aqa.webrun.convertDicomDev.SeriesMaker
 import org.aqa.webrun.dailyQA.DailyQASummary
 import org.aqa.webrun.focalSpot.FSHistoryRestlet
 import org.aqa.webrun.gapSkew.GapSkewHistoryRestlet
@@ -570,6 +571,7 @@ class WebServer extends Application with Logging {
         new WedgeChartHistoryRestlet,
         new SymmetryAndFlatnessHistoryRestlet,
         new WLHistoryRestlet,
+        new SeriesMaker,
         new DailyQASummary,
         new DataCollectionSummary,
         new SymmetryAndFlatnessSubHTML,
