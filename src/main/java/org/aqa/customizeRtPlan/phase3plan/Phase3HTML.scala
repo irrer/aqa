@@ -94,7 +94,10 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
         selList
       } else { // changed from checked to unchecked
         // make a list of beam without the ones specified by newly unchecked one
-        val beamList2 = beamList.filterNot(beam => clicked.get._1.beamList.exists(b => b.beamName.equals(beam.beamName)))
+        val sel = clicked.get._1
+        val keep = Set("M10G0C270", "M10G0C90", "Flood 6X") // TODO should be able to make plan without collimator centering or flood field.
+        val selBeamNameList = sel.beamList.map(_.beamName).filterNot(n => keep.contains(n))
+        val beamList2 = beamList.filterNot(beam => selBeamNameList.contains(beam.beamName))
         val selList = subProcedureList.getSelectionsFromBeams(beamList2)
         selList
       }
