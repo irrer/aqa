@@ -721,10 +721,15 @@ object WebUtil extends Logging {
         //noinspection SpellCheckingInspection
         def fileToText(file: File, index: Int): String = {
           val name = "preloadedFile" + index
-          val text =
-            "var " + name + " = { name : '" + file.getName + "', size : " + file.length + " };" + nl +
-              uploadFileLabel + ".emit('addedfile', " + name + ");" + nl +
-              uploadFileLabel + ".emit('complete', " + name + ");" + nl
+
+          val text: String = {
+            s"""$nl
+               |var $name = { name: '${file.getName}', size: ${file.length} };$nl
+               |${uploadFileLabel}.emit('addedfile', $name);$nl
+               |${uploadFileLabel}.emit('complete', $name);$nl
+               |""".stripMargin.replaceAll("\r", "").replaceAll("\n", "")
+          }
+
           text
         }
 
@@ -1898,8 +1903,9 @@ object WebUtil extends Logging {
 
   /**
    * Set the name of the file that the web client will see when the perform a download.
+   *
    * @param response Restlet response. Must have an entity.
-   * @param name Name of file for client.
+   * @param name     Name of file for client.
    */
   def setDownloadName(response: Response, name: String): Unit = {
     val disposition = new Disposition(Disposition.TYPE_ATTACHMENT)
