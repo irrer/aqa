@@ -100,15 +100,17 @@ case class SubProcedureList(metaData: SPMetaData, beamList: Seq[Beam]) {
     * @return List of selections.
     */
   def getSelectionsFromBeams(beamList: Iterable[Beam]): Seq[Selection] = {
-
-    def isSelected(beam: Beam) = beamList.exists(b => b.beamName.equals(beam.beamName))
+    def isSelected(beam: Beam) = {
+      val isSel = beamList.exists(b => b.beamName.equals(beam.beamName))
+      isSel
+    }
 
     def allBeamsSelected(sel: Selection): Boolean = {
       sel.beamList.map(isSelected).reduce(_ && _)
     }
 
-    subProcedureList.flatMap(_.selectionList).filter(allBeamsSelected)
-
+    val selectionList = subProcedureList.flatMap(_.selectionList).filter(allBeamsSelected)
+    selectionList
   }
 
 }
