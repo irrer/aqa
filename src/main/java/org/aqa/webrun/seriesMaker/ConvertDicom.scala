@@ -1,4 +1,4 @@
-package org.aqa.webrun.convertDicomDev
+package org.aqa.webrun.seriesMaker
 
 import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.AttributeList
@@ -15,12 +15,12 @@ import org.aqa.Util
 import org.aqa.db.Machine
 import org.aqa.Config
 import org.aqa.db.Institution
-import org.aqa.webrun.convertDicomDev.SeriesMakerReq.getContentDateTime
+import org.aqa.webrun.seriesMaker.SeriesMakerReq.getContentDateTime
 
 import java.io.File
 import java.util.Date
 
-case object ConvertDicomDevCustom extends Logging {
+object ConvertDicom extends Logging {
 
   /**
    * Specifies the information needed to change a dev beam into a normal beam.
@@ -28,7 +28,7 @@ case object ConvertDicomDevCustom extends Logging {
    * @param dev      Beam whose image should be used.
    * @param template Beam delivered in normal/production mode whose metadata should be used as a template.
    */
-  private case class BeamConversion(dev: AttributeList, template: AttributeList) {}
+  case class BeamConversion(dev: AttributeList, template: AttributeList) {}
 
   private def setTextList(al: AttributeList, tag: AttributeTag, valueList: Seq[String]): Unit = {
     val attr = AttributeFactory.newAttribute(tag)
@@ -38,7 +38,7 @@ case object ConvertDicomDevCustom extends Logging {
 
   private def setText(al: AttributeList, tag: AttributeTag, value: String): Unit = setTextList(al, tag, Seq(value))
 
-  private def setText(al: AttributeList, tag: AttributeTag, value: Option[String]): Unit = if (value.isDefined) setTextList(al, tag, Seq(value.get))
+  // private def setText(al: AttributeList, tag: AttributeTag, value: Option[String]): Unit = if (value.isDefined) setTextList(al, tag, Seq(value.get))
 
   private def setInt(al: AttributeList, tag: AttributeTag, valueList: Seq[Int]): Unit = {
     val attr = AttributeFactory.newAttribute(tag)
@@ -71,15 +71,19 @@ case object ConvertDicomDevCustom extends Logging {
    * new beam with the pixel of the dev beam, and with most of the metadata of the template
    * beam, but with new UIDs and date/times.
    *
-   * @param dev               Beam delivered in development mode.
-   * @param template          Beam delivered in normal production mode.
-   * @param SeriesInstanceUID Series UID to be used for series.
-   * @param StudyInstanceUID  Study UID to be used for series.
-   * @param instanceDate      Date/time for this instance.
-   * @param seriesDate        Date/time for the series.
-   * @param studyDate         Date/time for the study.
-   * @param machine           Mark new beam with this machine.  If not specified, then use the template's values.
-   * @param rtplan            Point to this RTPLAN.
+   * @param dev                  Beam delivered in development mode.
+   * @param template             Beam delivered in normal production mode.
+   * @param SeriesInstanceUID    Series UID to be used for series.
+   * @param StudyInstanceUID     Study UID to be used for series.
+   * @param instanceDate         Date/time for this instance.
+   * @param seriesDate           Date/time for the series.
+   * @param studyDate            Date/time for the study.
+   * @param RadiationMachineName Machine name
+   * @param DeviceSerialNumber   Device serial number
+   * @param PatientName          Patient name
+   * @param PatientID            Patient ID
+   * @param InstitutionName      : String,
+   * @param rtplan               Point to this RTPLAN.
    */
   // @formatter:off
   private def setImageAttr(
@@ -90,7 +94,11 @@ case object ConvertDicomDevCustom extends Logging {
                             instanceDate: Date,
                             seriesDate: Date,
                             studyDate: Date,
-                            machine: Option[Machine],
+                            RadiationMachineName: String,
+                            DeviceSerialNumber: String,
+                            PatientName: String,
+                            PatientID: String,
+                            InstitutionName : String,
                             rtplan: AttributeList)
   // @formatter:on
   : AttributeList = {
@@ -103,31 +111,6 @@ case object ConvertDicomDevCustom extends Logging {
 
     val SOPInstanceUID = UMROGUID.getUID
 
-    val InstitutionName: Option[String] = {
-      if (machine.isDefined) {
-        val inst = Institution.get(machine.get.institutionPK).get
-        Some(inst.getRealName)
-      }
-      else None
-    }
-
-    val RadiationMachineName: Option[String] = {
-      if (machine.isDefined) {
-        machine.get.getRealTpsId match {
-          case Some(name) => Some(name)
-          case _ => Some(machine.get.getRealId)
-        }
-      }
-      else
-        None
-    }
-
-    val DeviceSerialNumber: Option[String] = {
-      if (machine.isDefined)
-        machine.get.getRealDeviceSerialNumber
-      else
-        None
-    }
 
     val FrameOfReferenceUID = UMROGUID.getUID
 
@@ -189,8 +172,8 @@ case object ConvertDicomDevCustom extends Logging {
     // setText(newAl, TagByName.OperatorsName, "NA")
 
     // setText(newAl, TagByName.ManufacturerModelName, "On-Board Imager")
-    // setText(newAl, TagByName.PatientName, PatientName)
-    // setText(newAl, TagByName.PatientID, PatientID)
+    setText(newAl, TagByName.PatientName, PatientName)
+    setText(newAl, TagByName.PatientID, PatientID)
     // setText(newAl, TagByName.PatientBirthDate, "18000101")
     // setText(newAl, TagByName.PatientBirthTime, "000000")
     // setText(newAl, TagByName.PatientSex, "O")
@@ -242,7 +225,14 @@ case object ConvertDicomDevCustom extends Logging {
     newAl
   }
 
-  private def processSeries(beamConversionList: Seq[BeamConversion], machine: Machine, rtplan: AttributeList): Seq[AttributeList] = {
+  def processSeries(beamConversionList: Seq[BeamConversion],
+                    RadiationMachineName: String,
+                    DeviceSerialNumber: String,
+                    PatientName: String,
+                    PatientID: String,
+                    InstitutionName: String,
+                    rtplan: AttributeList
+                   ): Seq[AttributeList] = {
 
     val devList = beamConversionList.map(_.dev)
     val templateList = beamConversionList.map(_.template)
@@ -295,10 +285,13 @@ case object ConvertDicomDevCustom extends Logging {
         instanceDate = getContentDateTime(bc.dev),
         seriesDate = seriesDate,
         studyDate = studyDate,
-        machine = Some(machine),
+        RadiationMachineName: String,
+        DeviceSerialNumber: String,
+        PatientName = PatientName,
+        PatientID = PatientID,
+        InstitutionName: String,
         rtplan = rtplan
       ))
-
 
     newAlList
 
@@ -348,7 +341,15 @@ case object ConvertDicomDevCustom extends Logging {
         indexMap.indices.map(i => BeamConversion(devList(indexMap(i)), templateList(i)))
       }
 
-      val newList = processSeries(beamConversionList, machine, rtplan)
+      val newList = processSeries(
+        beamConversionList,
+        RadiationMachineName = machine.getRealTpsId.get,
+        DeviceSerialNumber = machine.getRealDeviceSerialNumber.get,
+        PatientName = "$" + machine.getRealId,
+        PatientID = "$" + machine.getRealId,
+        InstitutionName = "UMich",
+        rtplan
+      ): Seq[AttributeList]
 
       val outDir = new File(devDir, "out")
       Util.deleteFileTreeSafely(outDir)
@@ -368,10 +369,11 @@ case object ConvertDicomDevCustom extends Logging {
       newList.zipWithIndex.foreach(ai => writeDicom(ai._1, ai._2))
       Trace.trace()
 
+
+      Thread.sleep(1000)
+      Trace.trace("Done")
+      System.exit(0)
     })
-    Thread.sleep(1000)
-    Trace.trace("Done")
-    System.exit(0)
   }
 
 
@@ -421,7 +423,31 @@ case object ConvertDicomDevCustom extends Logging {
 
           val beamConversionList = devList.zip(templateList).map(dt => BeamConversion(dt._1, dt._2))
 
-          val processedList = processSeries(beamConversionList, machine, rtplan)
+          val InstitutionName: String = {
+            val inst = Institution.get(machine.institutionPK).get
+            inst.getRealName
+          }
+
+          val RadiationMachineName: String = {
+            machine.getRealTpsId match {
+              case Some(name) => name
+              case _ => machine.getRealId
+            }
+          }
+
+          val DeviceSerialNumber: String = machine.getRealDeviceSerialNumber.get
+
+          // @formatter:off
+          val processedList =
+            processSeries(
+              beamConversionList,
+              RadiationMachineName = RadiationMachineName,
+              DeviceSerialNumber = DeviceSerialNumber,
+              PatientName = "$" + RadiationMachineName,
+              PatientID= "$" + RadiationMachineName,
+              InstitutionName = InstitutionName,
+              rtplan)
+          // @formatter:on
 
           val outDir = new File(dir, "PROCESSED")
           Util.deleteFileTreeSafely(outDir)

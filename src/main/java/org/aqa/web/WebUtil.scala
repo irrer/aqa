@@ -691,7 +691,7 @@ object WebUtil extends Logging {
       "\");"
   }
 
-  private val sessionLabel = "session"
+  val sessionLabel = "session"
 
   class WebForm(action: String, title: Option[String], rowList: List[WebRow], fileUpload: Int, runScript: Option[String] = None) extends ToHtml {
 

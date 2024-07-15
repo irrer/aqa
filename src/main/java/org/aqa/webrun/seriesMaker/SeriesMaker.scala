@@ -1,6 +1,9 @@
-package org.aqa.webrun.convertDicomDev
+package org.aqa.webrun.seriesMaker
 
+import com.pixelmed.dicom.Attribute
+import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.AttributeTag
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
@@ -19,17 +22,23 @@ import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.Util
 import org.aqa.web.WebUtil.WebPlainText
 import org.aqa.AnonymizeUtil
+import org.aqa.db.DicomSeries
+import org.aqa.db.Machine
+import org.aqa.web.WebUtil.WebInputHidden
+import org.aqa.web.WebUtil.WebInputSelect
 import org.aqa.webrun.phase2.Phase2Util
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
+import org.restlet.data.MediaType
 import org.restlet.data.Status
+import org.restlet.representation.ByteArrayRepresentation
 
 import java.text.SimpleDateFormat
 import java.util.Date
 import scala.xml.Elem
 
-object SeriesMaker {
+object SeriesMaker extends Logging {
   private val path = new String((new SeriesMaker).pathOf)
 }
 
@@ -39,22 +48,38 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
   private val assignBeamsTag = "assignBeams"
 
+  private val beamAssignmentListTag = "beamAssignmentList"
+
   private val elapsedFormat = new SimpleDateFormat("mm:ss")
+
+  private val planColor = "#404040"
 
   private def colorList =
     Seq(
       "#39698C",
-      "#74a892",
       "#008585",
-      "#c7522a",
       "#8a508f",
       "#bc5090",
+      "#c7522a",
+      "#74a892",
       "#ff6361",
       "#ff8531",
       "#ffa600"
     )
 
-  class FormButtonProcedure(name: String, val procedure: Option[Procedure]) extends FormButton(name, col = 2, offset = 0, subUrl = subUrl, pathOf, ButtonType.BtnPrimary) {}
+  /**
+    * Provide convention for HTML ids.
+    *
+    * @param group Which group the item belongs to.
+    * @param beam  Item index within group.
+    */
+  private case class LocalHtmlId(group: Int, beam: Int) {
+    val beamId = s"RTIMAGE_${group}_$beam"
+    val planId = s"RTPLAN_$group"
+    val dragId = s"${beamId}_drag"
+  }
+
+  private class FormButtonProcedure(name: String, val procedure: Option[Procedure]) extends FormButton(name, col = 2, offset = 0, subUrl = subUrl, pathOf, ButtonType.BtnPrimary) {}
 
   private def makeButton(name: String, buttonType: ButtonType.Value): FormButton = {
     new FormButton(name, 2, 0, subUrl, pathOf, buttonType)
@@ -66,9 +91,30 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
   private def resetButton = makeButton("Reset", ButtonType.BtnDefault)
 
+  private def downloadButton = makeButton("Download", ButtonType.BtnDefault)
+
+  private def runButton = makeButton("Run", ButtonType.BtnDefault)
+
+  private def procedureSelection(procedurePK: Option[Long]): WebInputSelect = {
+    //noinspection ScalaUnusedSymbol
+    def list(response: Option[Response]): List[(String, String)] = {
+      val list: Seq[Procedure] = {
+        if (procedurePK.isDefined)
+          Seq(Procedure.get(procedurePK.get).get) // If the procedure is known, then only show that one.
+        else {
+          Procedure.list // procedure is not known.  Let the user pick it.
+        }
+      }
+
+      list.sortBy(_.fullName).map(p => (if (p.procedurePK.isDefined) p.procedurePK.get.toString else "0", p.fullName)).toList
+    }
+
+    val sel = new WebInputSelect("Procedure", false, 2, 0, list, false)
+    sel
+  }
+
   private val js = {
-    """
-      |console.log("Starting");
+    s"""
       |
       |function allowDrop(ev) {
       |  ev.preventDefault();
@@ -79,13 +125,27 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
       |}
       |
       |function drop(ev) {
-      |  console.log("drop 1 ev: " + ev);
       |  ev.preventDefault();
-      |  console.log("drop 2 ev: " + ev);
       |  var data = ev.dataTransfer.getData("text");
-      |  console.log("drop 3 ev: " + ev);
       |  ev.target.appendChild(document.getElementById(data));
-      |  console.log("drop 4 ev: " + ev);
+      |
+      |  // set the beam assignment list so that when queried, it shows which images are
+      |  // assigned to which beams.
+      |  var list = document.querySelectorAll('[id^="RTIMAGE"]');
+      |  var beamAssignmentList = document.getElementById("$beamAssignmentListTag");
+      |  beamAssignmentList.setAttribute("value", "");
+      |  var valueText = "";
+      |  var i = 0;
+      |  for (i = 0; i < list.length; i++) {
+      |    if (list[i].id.includes("drag")) {
+      |      var drag = list[i];
+      |      var parent = drag.parentElement;
+      |      if (parent.id.includes("RTPLAN")) {
+      |        valueText = valueText + " " + parent.id + ":" + drag.id;
+      |      }
+      |    }
+      |  }
+      |  beamAssignmentList.setAttribute("value", valueText);
       |}
       |
       |""".stripMargin
@@ -140,53 +200,57 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
       noMachine
   }
 
-  private def formatDraggable(color: String, id: String, content: Option[Elem]): Elem = {
+  private def formatDraggable(color: String, id: LocalHtmlId, content: Option[Elem]): Elem = {
     val borderRadius = "border-radius:10px"
-    val width = "width:250px"
+    val width = "width:280px"
     val height = "height:38px"
     val border = s"border: 2px solid $color"
 
     val inner: Seq[Elem] = {
       if (content.isDefined)
-        Seq(<span id={id + "_drag"} draggable="true" ondragstart="drag(event)">{content.get}</span>)
+        Seq(<span id={id.dragId} draggable="true" ondragstart="drag(event)">{content.get}</span>)
       else
         Seq()
     }
 
-    <div id={id} style={s"align:auto;$borderRadius;$border;$width;$height;"} ondrop="drop(event)" ondragover="allowDrop(event)">{inner}</div>
+    val outerId = if (content.isDefined) id.beamId else id.planId
+
+    <div id={outerId} style={s"align:auto;$borderRadius;$border;$width;$height;"} ondrop="drop(event)" ondragover="allowDrop(event)">{inner}</div>
   }
 
-  private def formatRtimage(color: String, id: String, elapsed_ms: Long, beamName: String): Elem = {
+  private def formatRtimage(color: String, id: LocalHtmlId, elapsed_ms: Long, beamName: String): Elem = {
     val timeText = Util.formatDate(elapsedFormat, new Date(elapsed_ms))
-    val index = (id.replaceAll(".*_", "").toInt + 1).toString
     val content = {
       <span>
         <span class="badge badge-secondary" style={s"background: $color;margin:2px;"}>
           <table>
             <tr>
               <td>
-                <span style="vertical-align:middle;font-size:2.0em;margin-right:12px;">{index}</span>
+                <span style="vertical-align:middle;font-size:2.0em;margin-right:12px;">{id.beam}</span>
               </td>
               <td>
                 <span style="vertical-align:middle;font-size:1.0em;">{timeText}</span>
               </td>
+              <td>
+                <span style="vertical-align:middle;font-size:1.5em;margin-left:12px;margin-right:5px;">{beamName}</span>
+              </td>
             </tr>
           </table>
         </span>
-        <b> {beamName} </b>
+        <b> {""} </b>
       </span>
     }
     formatDraggable(color, id, Some(content))
   }
 
-  private def rtimageToHtml(color: String, id: String, first: Date, al: AttributeList, req: SeriesMakerReq): Elem = {
+  private def rtimageToHtml(color: String, id: LocalHtmlId, first: Date, al: AttributeList, req: SeriesMakerReq): Elem = {
 
     val beamName: String = {
       val attr = al.get(TagByName.ReferencedBeamNumber)
 
       0 match {
         case _ if attr == null =>
-          "-- Beam Name NA --"
+          "Beam NA"
         case _ if Phase2Util.getBeamNameOfRtimage(req.rtplan, al).isDefined => // get beam name from plan
           Phase2Util.getBeamNameOfRtimage(req.rtplan, al).get
         case _ => // have beam number, but no plan
@@ -223,7 +287,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
                   {headerText}
                 </th>
               </tr>
-            </thead>{group.indices.map(i => rtimageToHtml(color, s"RI_${groupIndex}_$i", first, group(i), req))}
+            </thead>{group.indices.map(i => rtimageToHtml(color, LocalHtmlId(groupIndex, i), first, group(i), req))}
           </table>
         </td>
       </tr>
@@ -264,18 +328,22 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     */
   private def rtplanToHtml(req: SeriesMakerReq): WebUtil.WebPlainText = {
 
-    val nameList = DicomUtil.findAllSingle(req.rtplan, TagByName.BeamName).map(_.getSingleStringValueOrEmptyString).sorted.map(name => Util.normalizeBeamName(name))
+    def toHtml(rtimage: AttributeList): Elem = {
 
-    def toHtml(id: String, name: String): Elem = {
+      val beamNumber = rtimage.get(TagByName.ReferencedBeamNumber).getIntegerValues.head
+      val beamName = Phase2Util.getBeamNameOfRtimage(req.rtplan, rtimage).get
+
+      val id = LocalHtmlId(beamNumber, -1)
+
       <tr>
         <td>
           <table>
             <tr>
               <td>
-                {formatDraggable("darkgrey", id, None)}
+                {formatDraggable(planColor, id, None)}
               </td>
               <td>
-                <span style="margin-left:20px; width:200px;"><b>{name}</b></span>
+                <span style="margin-left:20px; width:200px;"><b>{beamName}</b></span>
               </td>
             </tr>
           </table>
@@ -290,7 +358,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
             <th style="text-align:center;">Plan Beams</th>
           </tr>
         </thead>
-        {nameList.indices.map(i => toHtml("Plan_" + i, nameList(i)))}
+        {req.templateList.map(toHtml)}
       </table>
     }
 
@@ -302,27 +370,36 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
     val dicomList = dicomFilesInSession(valueMap).flatMap(_.attributeList)
 
-    val req = SeriesMakerReq.makeRequirements(dicomList)
-
     val buttonRow = List(nextButton, cancelButton)
 
     val action = SeriesMaker.path
     val title = Some(pageTitle)
     val rowList: List[WebRow] = List(buttonRow)
 
-    val form = new WebForm(action = action, title = title, rowList = rowList, fileUpload = 10, runScript = Some(js))
+    val form = new WebForm(action = action, title = title, rowList = rowList, fileUpload = 10, runScript = None)
 
     form
   }
 
   private def makeAssignForm(valueMap: ValueMapT, seriesMakerReq: SeriesMakerReq): WebForm = {
 
-    val buttonRow = List(resetButton, cancelButton)
+    val procedurePK: Option[Long] = {
+      val rtplanSop = Util.sopOfAl(seriesMakerReq.rtplan)
+      val pk = DicomSeries.getBySopInstanceUID(rtplanSop).flatMap(_.procedurePK).headOption
+      pk
+    }
+
     val alRow = List(rtimageListToHtml(valueMap, seriesMakerReq), rtplanToHtml(seriesMakerReq))
+
+    val selectRow = List(procedureSelection(procedurePK))
+
+    val buttonRow = List(resetButton, downloadButton, runButton, cancelButton)
+
+    val beamAssignmentList = new WebInputHidden(beamAssignmentListTag)
 
     val action = SeriesMaker.path
     val title = Some(pageTitle)
-    val rowList: List[WebRow] = List(buttonRow, alRow)
+    val rowList: List[WebRow] = List(alRow, List(beamAssignmentList), selectRow, buttonRow)
 
     val form = new WebForm(action = action, title = title, rowList = rowList, fileUpload = -1, runScript = Some(js))
 
@@ -363,6 +440,136 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     }
   }
 
+  private def getAssignedBeams(valueMap: ValueMapT): Seq[(Int, LocalHtmlId)] = {
+
+    def makePair(text: String): (Int, LocalHtmlId) = {
+      val list = text.split(":").filter(_.nonEmpty)
+      def intOf(t: String): Seq[Int] = t.replaceAll("[^0-9]", " ").split(" ").filter(_.nonEmpty).map(_.toInt)
+      val plan = intOf(list.head).head
+      val group = intOf(list(1)).head
+      val imageIndex = intOf(list(1))(1)
+
+      (plan, LocalHtmlId(group, imageIndex))
+    }
+
+    val list: Seq[(Int, LocalHtmlId)] = valueMap.get(beamAssignmentListTag) match {
+      case Some(text) =>
+        Trace.trace(text)
+        Trace.trace(text.split(" "))
+        text.split(" ").filter(_.nonEmpty) map makePair
+      case _ => Seq()
+    }
+
+    list
+  }
+
+  private def attrText(attr: Attribute): Option[String] = {
+    if ((attr != null) && (attr.getSingleStringValueOrNull != null) && (attr.getSingleStringValueOrEmptyString.nonEmpty))
+      Some(attr.getSingleStringValueOrEmptyString)
+    else
+      None
+  }
+
+  private def attrIn(alList: Seq[AttributeList], tag: AttributeTag): Option[String] = {
+    alList.flatMap(al => DicomUtil.findAllSingle(al, tag)).flatMap(attrText).headOption
+  }
+
+  private def getDeviceSerialNumber(valueMap: ValueMapT, req: SeriesMakerReq, RadiationMachineName: String): String = {
+    val dsn = attrIn(req.rtimageList, TagByName.DeviceSerialNumber) match {
+      case Some(text) => text
+      case _ =>
+        val institutionPK = WebUtil.getUser(valueMap).get.institutionPK
+
+        val RadiationMachineNameReal = {
+          val attr = AttributeFactory.newAttribute(TagByName.RadiationMachineName)
+          attr.addValue(RadiationMachineName)
+          val text = AnonymizeUtil.deAnonymizeAttribute(institutionPK, attr).get.getSingleStringValueOrEmptyString
+          text
+        }
+
+        val machine = Machine.getForInstitution(institutionPK).find(m => m.tpsID_real.isDefined && m.tpsID_real.get.equals(RadiationMachineNameReal))
+        val realDsn = machine.get.getRealDeviceSerialNumber.get
+        val al = new AttributeList
+        val machineAttr = AttributeFactory.newAttribute(TagByName.DeviceSerialNumber)
+        machineAttr.addValue(realDsn)
+        al.put(machineAttr)
+        AnonymizeUtil.anonymizeDicom(institutionPK, al)
+        val dsn = al.get(TagByName.DeviceSerialNumber).getSingleStringValueOrEmptyString()
+        dsn
+    }
+    dsn
+  }
+
+  private def assembleSeries(valueMap: ValueMapT, beamAssignmentList: Seq[(Int, LocalHtmlId)], req: SeriesMakerReq): SeriesCache.Entry = {
+
+    val groupList = groupImages(req.rtimageList)
+
+    def putBeam(beamNumber: Int, beamRef: LocalHtmlId): ConvertDicom.BeamConversion = {
+      val rtimage = groupList(beamRef.group)(beamRef.beam)
+      val template = req.templateList.find(_.get(TagByName.ReferencedBeamNumber).getIntegerValues.head == beamNumber).get
+      ConvertDicom.BeamConversion(rtimage, template)
+    }
+
+    val list = beamAssignmentList.map(ri => putBeam(ri._1, ri._2))
+
+    def findFirst(tag: AttributeTag): Option[String] = {
+      val text = Seq(attrIn(req.rtimageList, tag), attrIn(Seq(req.rtplan), tag)).flatten.headOption
+      text
+    }
+
+    val PatientName = findFirst(TagByName.PatientName).get
+    val PatientID = findFirst(TagByName.PatientID).get
+
+    val RadiationMachineName = Seq(findFirst(TagByName.RadiationMachineName), findFirst(TagByName.TreatmentMachineName)).filter(_.nonEmpty).head.get
+
+    val InstitutionName: String = Seq(attrIn(Seq(req.rtplan), TagByName.InstitutionName), attrIn(Seq(req.rtplan), TagByName.InstitutionName)).flatten.head
+
+    val DeviceSerialNumber = getDeviceSerialNumber(valueMap, req, RadiationMachineName)
+
+    val alList: Seq[AttributeList] =
+      ConvertDicom.processSeries(
+        list,
+        RadiationMachineName = RadiationMachineName,
+        DeviceSerialNumber = DeviceSerialNumber,
+        PatientName = PatientName,
+        PatientID = PatientID,
+        InstitutionName = InstitutionName,
+        req.rtplan
+      )
+
+    val entry = SeriesCache.put(session = valueMap(WebUtil.sessionLabel), beamAssignmentList = valueMap(beamAssignmentListTag), alList, req.rtplan)
+
+    entry
+  }
+
+  private def processDownload(valueMap: ValueMapT, alList: Seq[AttributeList], response: Response): Unit = {
+    val seriesMakerReq = SeriesMakerReq.makeRequirements(alList)
+
+    val assignBeams = getAssignedBeams(valueMap)
+    Trace.trace(assignBeams.mkString("\n"))
+
+    if (assignBeams.isEmpty) {
+      val errMsg = "No beams have been assigned to the plan."
+      val form = makeAssignForm(valueMap, seriesMakerReq.right.get)
+      val errorMap = WebUtil.Error.make(WebUtil.uploadFileLabel, errMsg)
+      form.setFormResponse(valueMap, errorMap, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
+    } else {
+      /*
+      val newValueMap = valueMap + (assignBeamsTag -> "true")
+      val form = makeAssignForm(newValueMap, seriesMakerReq.right.get)
+      form.setFormResponse(valueMap, WebUtil.styleNone, pageTitle, response, Status.SUCCESS_OK)
+       */
+      val entry = assembleSeries(valueMap, assignBeams, seriesMakerReq.right.get)
+
+      val entity = new ByteArrayRepresentation(entry.content, MediaType.APPLICATION_ZIP)
+      response.setEntity(entity)
+      response.setStatus(Status.SUCCESS_OK)
+
+      val fileName = "AQASeries" + Util.timeAsFileName(new Date(entry.time))
+      WebUtil.setDownloadName(response, fileName)
+    }
+  }
+
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
     val valueMap = getValueMap(request)
@@ -385,18 +592,13 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
         case _ if buttonIs(nextButton) || buttonIs(resetButton) =>
           processNext(valueMap, alList, response)
 
+        case _ if buttonIs(downloadButton) || buttonIs(resetButton) =>
+          processDownload(valueMap, alList, response)
+
         case _ =>
           val form = makeUploadForm(valueMap: ValueMapT)
           form.setFormResponse(valueMap, errorMap = WebUtil.styleNone, pageTitle, response, Status.SUCCESS_OK)
 
-        // case _ if machine.isEmpty                                                                                => updateMach()
-        // case _ if (user.get.institutionPK != machine.get.institutionPK) && (!WebUtil.userIsWhitelisted(request)) => updateMach()
-        // case _ if buttonIs(valueMap, cancelButton)                                                               => updateMach()
-        // case _ if buttonIs(valueMap, backButton)                                                                 => updateMach()
-
-        // case _ if makeList.exists(make => valueMap.contains(make.makeButton.label)) => validateAndMake(valueMap, response)
-
-        // case _ => formSelect(valueMap, response, machine.get) // first time viewing the form.  Set defaults
       }
     } catch {
       case t: Throwable =>

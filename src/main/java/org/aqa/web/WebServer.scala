@@ -31,7 +31,7 @@ import org.aqa.webrun.WebRun
 import org.aqa.webrun.bbByCBCT.BBbyCBCTChartHistoryRestlet
 import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryPartialRestlet
 import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryRestlet
-import org.aqa.webrun.convertDicomDev.SeriesMaker
+import org.aqa.webrun.seriesMaker.SeriesMaker
 import org.aqa.webrun.dailyQA.DailyQASummary
 import org.aqa.webrun.focalSpot.FSHistoryRestlet
 import org.aqa.webrun.gapSkew.GapSkewHistoryRestlet

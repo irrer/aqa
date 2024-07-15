@@ -282,10 +282,21 @@ object DicomSeries extends Logging {
     list
   }
 
-  def getByReferencedRtplanUID(referencedRtplanUID: String): Seq[DicomSeries] = {
-    val action = for {
-      dicomSeries <- query if dicomSeries.referencedRtplanUID === referencedRtplanUID
-    } yield dicomSeries
+  /**
+    * Get the list of series that reference the given plan. Sort the results by
+    * number of slices in the series, with the largest one first.
+    *
+    * @param referencedRtplanUID UID of RTPLAN
+    * @param modality DICOM modality
+    * @param limit Only get at most this many.
+    * @return
+    */
+  def getByReferencedRtplanUID(referencedRtplanUID: String, modality: String, limit: Int = Int.MaxValue): Seq[DicomSeries] = {
+    val action = {
+      for {
+        dicomSeries <- query if (dicomSeries.referencedRtplanUID === referencedRtplanUID) && (dicomSeries.modality === modality)
+      } yield dicomSeries
+    }.sortBy(_.size.desc).take(limit)
     val list = Db.run(action.result)
     list
   }

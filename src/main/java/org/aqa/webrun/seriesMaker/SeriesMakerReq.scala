@@ -1,4 +1,4 @@
-package org.aqa.webrun.convertDicomDev
+package org.aqa.webrun.seriesMaker
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
@@ -6,21 +6,22 @@ import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Util
 import org.aqa.db.DicomSeries
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.Logging
 
 import java.util.Date
 
 /**
  * Required files for making a series.
  *
- * @param rtplan        RTPLAN to use
- * @param rtimageList   List of RTIMAGE files uploaded by user
- * @param prototypeList List of RTIMAGE files whose metadata can be used to make RTIMAGES.
+ * @param rtplan       RTPLAN to use
+ * @param rtimageList  List of RTIMAGE files uploaded by user
+ * @param templateList List of RTIMAGE files whose metadata can be used to make RTIMAGES.
  *
  */
 
-case class SeriesMakerReq(rtplan: AttributeList, rtimageList: Seq[AttributeList], prototypeList: Seq[AttributeList]) {}
+case class SeriesMakerReq(rtplan: AttributeList, rtimageList: Seq[AttributeList], templateList: Seq[AttributeList]) extends Logging {}
 
-object SeriesMakerReq {
+object SeriesMakerReq  extends Logging {
 
   /**
    * Get the content date+time of the given dicom.
@@ -39,7 +40,6 @@ object SeriesMakerReq {
       toSeq.sortBy(getContentDateTime)            // sort by content date+time
     // @formatter:on
   }
-
 
   /**
    * Find the RTPLAN to use.  Give first priority to the one uploaded, but if no RTPLAN was
@@ -117,6 +117,62 @@ object SeriesMakerReq {
     date
   }
 
+  private def getTemplateList(rtplan: Either[String, AttributeList], rtimageList: Seq[AttributeList]): Seq[AttributeList] = {
+    if (rtplan.isLeft)
+      Seq()
+    else {
+      val plan = rtplan.right.get
+      // list of RTIMAGES that point to this plan
+      val templateList = rtimageList.filter(ri => Phase2Util.referencedPlanUID(ri).nonEmpty)
+
+      // list of beams that are referenced by images
+      val referencedBeamList = templateList.flatMap(ri => DicomUtil.findAllSingle(ri, TagByName.ReferencedBeamNumber)).flatMap(_.getIntegerValues).distinct.sorted
+
+      // list of all beam numbers in plan
+      val planBeamList = DicomUtil.findAllSingle(plan, TagByName.BeamNumber).flatMap(_.getIntegerValues).distinct.sorted.toSeq
+
+      val list: Seq[AttributeList] = {
+        if (referencedBeamList == planBeamList)
+          templateList // the user uploaded template a image for each beam in the plan.
+        else {
+          // Get a previously processed series (that references this RTPLAN) from the database. This might be empty.
+          val dbRtimageList = DicomSeries.getByReferencedRtplanUID(Util.sopOfAl(plan), modality = "RTIMAGE", limit = 1)
+
+          /**
+           * Get the beam number of the given RTIMAGE.
+           *
+           * @param rtimage For this image.
+           * @return Beam number, if found.
+           */
+          def beamNumberOfRtimage(rtimage: AttributeList): Option[Int] = {
+            DicomUtil.findAllSingle(rtimage, TagByName.ReferencedBeamNumber).flatMap(_.getIntegerValues).headOption
+          }
+
+          // list of beam numbers from template-eligible files that were uploaded by the user
+          val userBeamNumberSet = templateList.flatMap(beamNumberOfRtimage).toSet
+
+          /**
+           * Return true if the image both has a ReferencedBeamNumber defined and that beam number is not in the template set uploaded by the user.
+           *
+           * @param rtimage For this image.
+           * @return
+           */
+          def hasBeamButNotInSet(rtimage: AttributeList): Boolean = {
+            val num = beamNumberOfRtimage(rtimage)
+            num.isDefined && (!userBeamNumberSet.contains(num.get))
+          }
+
+          // List of images from DB that have a beam number defined (should always be the case anyway) and whose beam number is not in the set uploaded by the user.
+          val dbList = dbRtimageList.flatMap(_.attributeListList).filter(hasBeamButNotInSet)
+
+          templateList ++ dbList
+        }
+      }
+
+      list
+    }
+  }
+
   /**
    * Make a set of required files for making a new series.  If valid, return the required files, otherwise return an error message.
    *
@@ -125,18 +181,21 @@ object SeriesMakerReq {
    */
   def makeRequirements(alList: Seq[AttributeList]): Either[String, SeriesMakerReq] = {
 
-    val rtImageList = extractDistinctRtimageList(alList)
+    val rtimageList = extractDistinctRtimageList(alList)
 
     val rtplan = rtplanToUse(alList)
+
+    def templateList = getTemplateList(rtplan, rtimageList)
 
     0 match {
       case _ if rtplan.isLeft =>
         Left(rtplan.left.get)
-      case _ if rtImageList.isEmpty =>
+      case _ if rtimageList.isEmpty =>
         Left("No RTIMAGE files were uploaded.")
+      case _ if templateList.isEmpty =>
+        Left("Could not find any RTIMAGES to use as templates for making beams.")
       case _ =>
-        val prototypeList = rtImageList.filter(ri => Phase2Util.referencedPlanUID(ri).nonEmpty)
-        Right(SeriesMakerReq(rtplan.right.get, rtImageList, prototypeList))
+        Right(SeriesMakerReq(rtplan.right.get, rtimageList, templateList))
     }
   }
 }
