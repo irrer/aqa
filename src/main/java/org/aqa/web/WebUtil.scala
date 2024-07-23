@@ -1897,22 +1897,18 @@ object WebUtil extends Logging {
       {details}
     </div>
     </div>
-
   }
-
 
   /**
    * Set the name of the file that the web client will see when the perform a download.
    *
    * @param response Restlet response. Must have an entity.
-   * @param name     Name of file for client.
+   * @param fileName Name of file for client.
    */
-  def setDownloadName(response: Response, name: String): Unit = {
+  def setDownloadName(response: Response, fileName: String): Unit = {
     val disposition = new Disposition(Disposition.TYPE_ATTACHMENT)
-    val fileName = "AQA" + Util.currentTimeAsFileName + ".csv"
     disposition.setFilename(fileName)
     response.getEntity.setDisposition(disposition)
   }
-
 
 }
