@@ -1,14 +1,12 @@
 package org.aqa.webrun.seriesMaker
 
 import com.pixelmed.dicom.Attribute
-import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
-import org.aqa.db.CachedUser
 import org.aqa.db.Procedure
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil.SubUrlRoot
@@ -23,7 +21,6 @@ import org.aqa.Util
 import org.aqa.web.WebUtil.WebPlainText
 import org.aqa.AnonymizeUtil
 import org.aqa.db.DicomSeries
-import org.aqa.db.Machine
 import org.aqa.web.WebUtil.WebInputHidden
 import org.aqa.web.WebUtil.WebInputSelect
 import org.aqa.webrun.phase2.Phase2Util
@@ -177,15 +174,6 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
       val anonAttr = rtimage.get(TagByName.RadiationMachineName)
       val user = WebUtil.getUser(valueMap).get
 
-      val j = AnonymizeUtil.deAnonymizeAttribute(user.institutionPK, anonAttr) // TODO rm
-      Trace.trace(j)
-      if (j.nonEmpty) {
-        val j1 = j.get.getSingleStringValueOrNull()
-        Trace.trace(j1)
-        Trace.trace()
-      }
-      Trace.trace()
-
       AnonymizeUtil.deAnonymizeAttribute(user.institutionPK, anonAttr) match {
         case Some(attr) =>
           val m = attr.getSingleStringValueOrEmptyString.trim
@@ -226,7 +214,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
           <table>
             <tr>
               <td>
-                <span style="vertical-align:middle;font-size:2.0em;margin-right:12px;">{id.beam}</span>
+                <span style="vertical-align:middle;font-size:2.0em;margin-right:12px;">{id.beam + 1}</span>
               </td>
               <td>
                 <span style="vertical-align:middle;font-size:1.0em;">{timeText}</span>
@@ -287,7 +275,8 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
                   {headerText}
                 </th>
               </tr>
-            </thead>{group.indices.map(i => rtimageToHtml(color, LocalHtmlId(groupIndex, i), first, group(i), req))}
+            </thead>
+            {group.indices.map(i => rtimageToHtml(color, LocalHtmlId(groupIndex, i), first, group(i), req))}
           </table>
         </td>
       </tr>
@@ -391,6 +380,8 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
     val alRow = List(rtimageListToHtml(valueMap, seriesMakerReq), rtplanToHtml(seriesMakerReq))
 
+    // val machineSelector = new WebInputSelect(label = "Machine" ,showLabel = true, col = 2, selectList = List(("", "")))
+
     val selectRow = List(procedureSelection(procedurePK))
 
     val buttonRow = List(resetButton, downloadButton, runButton, cancelButton)
@@ -425,7 +416,9 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     */
   private def processNext(valueMap: ValueMapT, alList: Seq[AttributeList], response: Response): Unit = {
 
-    val seriesMakerReq = SeriesMakerReq.makeRequirements(alList)
+    val institutionPK = WebUtil.getUser(valueMap).get.institutionPK
+
+    val seriesMakerReq = SeriesMakerReq.makeRequirements(institutionPK, alList)
 
     if (seriesMakerReq.isLeft) {
       val errMsg = seriesMakerReq.left.get
@@ -436,7 +429,6 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
       val newValueMap = valueMap + (assignBeamsTag -> "true")
       val form = makeAssignForm(newValueMap, seriesMakerReq.right.get)
       form.setFormResponse(valueMap, WebUtil.styleNone, pageTitle, response, Status.SUCCESS_OK)
-      Trace.trace("TODO") // TODO
     }
   }
 
@@ -464,43 +456,25 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
   }
 
   private def attrText(attr: Attribute): Option[String] = {
-    if ((attr != null) && (attr.getSingleStringValueOrNull != null) && (attr.getSingleStringValueOrEmptyString.nonEmpty))
+    if ((attr != null) && (attr.getSingleStringValueOrNull != null) && attr.getSingleStringValueOrEmptyString.nonEmpty)
       Some(attr.getSingleStringValueOrEmptyString)
     else
       None
   }
 
+  /**
+    * Get the text of the given attribute in the given DICOM if it exists.
+    * @param alList For this DICOM.
+    * @param tag For this attribute.
+    * @return Text of first attribute found, or None if not found.
+    */
   private def attrIn(alList: Seq[AttributeList], tag: AttributeTag): Option[String] = {
     alList.flatMap(al => DicomUtil.findAllSingle(al, tag)).flatMap(attrText).headOption
   }
 
-  private def getDeviceSerialNumber(valueMap: ValueMapT, req: SeriesMakerReq, RadiationMachineName: String): String = {
-    val dsn = attrIn(req.rtimageList, TagByName.DeviceSerialNumber) match {
-      case Some(text) => text
-      case _ =>
-        val institutionPK = WebUtil.getUser(valueMap).get.institutionPK
-
-        val RadiationMachineNameReal = {
-          val attr = AttributeFactory.newAttribute(TagByName.RadiationMachineName)
-          attr.addValue(RadiationMachineName)
-          val text = AnonymizeUtil.deAnonymizeAttribute(institutionPK, attr).get.getSingleStringValueOrEmptyString
-          text
-        }
-
-        val machine = Machine.getForInstitution(institutionPK).find(m => m.tpsID_real.isDefined && m.tpsID_real.get.equals(RadiationMachineNameReal))
-        val realDsn = machine.get.getRealDeviceSerialNumber.get
-        val al = new AttributeList
-        val machineAttr = AttributeFactory.newAttribute(TagByName.DeviceSerialNumber)
-        machineAttr.addValue(realDsn)
-        al.put(machineAttr)
-        AnonymizeUtil.anonymizeDicom(institutionPK, al)
-        val dsn = al.get(TagByName.DeviceSerialNumber).getSingleStringValueOrEmptyString()
-        dsn
-    }
-    dsn
-  }
-
   private def assembleSeries(valueMap: ValueMapT, beamAssignmentList: Seq[(Int, LocalHtmlId)], req: SeriesMakerReq): SeriesCache.Entry = {
+
+    val institutionPK = WebUtil.getUser(valueMap).get.institutionPK
 
     val groupList = groupImages(req.rtimageList)
 
@@ -520,11 +494,17 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     val PatientName = findFirst(TagByName.PatientName).get
     val PatientID = findFirst(TagByName.PatientID).get
 
-    val RadiationMachineName = Seq(findFirst(TagByName.RadiationMachineName), findFirst(TagByName.TreatmentMachineName)).filter(_.nonEmpty).head.get
+    val RadiationMachineName = req.machine.getRealTpsId.get
 
     val InstitutionName: String = Seq(attrIn(Seq(req.rtplan), TagByName.InstitutionName), attrIn(Seq(req.rtplan), TagByName.InstitutionName)).flatten.head
 
-    val DeviceSerialNumber = getDeviceSerialNumber(valueMap, req, RadiationMachineName)
+    val DeviceSerialNumber = req.machine.getRealDeviceSerialNumber.get
+
+    val rtplanUid = {
+      val attr = req.rtplan.get(TagByName.SOPInstanceUID)
+      val realAttr = AnonymizeUtil.deAnonymizeAttribute(institutionPK, attr)
+      realAttr.get.getSingleStringValueOrEmptyString()
+    }
 
     val alList: Seq[AttributeList] =
       ConvertDicom.processSeries(
@@ -534,7 +514,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
         PatientName = PatientName,
         PatientID = PatientID,
         InstitutionName = InstitutionName,
-        req.rtplan
+        rtplanUid
       )
 
     val entry = SeriesCache.put(session = valueMap(WebUtil.sessionLabel), beamAssignmentList = valueMap(beamAssignmentListTag), alList, req.rtplan)
@@ -543,7 +523,8 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
   }
 
   private def processDownload(valueMap: ValueMapT, alList: Seq[AttributeList], response: Response): Unit = {
-    val seriesMakerReq = SeriesMakerReq.makeRequirements(alList)
+    val institutionPK = WebUtil.getUser(valueMap).get.institutionPK
+    val seriesMakerReq = SeriesMakerReq.makeRequirements(institutionPK, alList)
 
     val assignBeams = getAssignedBeams(valueMap)
     Trace.trace(assignBeams.mkString("\n"))
@@ -565,14 +546,14 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
       response.setEntity(entity)
       response.setStatus(Status.SUCCESS_OK)
 
-      val fileName = "AQASeries" + Util.timeAsFileName(new Date(entry.time))
+      val fileName = "AQASeries" + Util.timeAsFileName(new Date(entry.time)) + ".zip"
       WebUtil.setDownloadName(response, fileName)
     }
   }
 
   override def handle(request: Request, response: Response): Unit = {
     super.handle(request, response)
-    val valueMap = getValueMap(request)
+    val valueMap = getValueMap(request, anonymizeFileNames = false)
 
     def buttonIs(button: FormButton): Boolean = {
       val value = valueMap.get(button.label)
@@ -580,7 +561,6 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     }
 
     try {
-      val user = CachedUser.get(request)
       val alList = dicomFilesInSession(valueMap).filter(_.attributeList.isDefined).map(_.attributeList.get)
 
       0 match {

@@ -7,6 +7,8 @@ import org.aqa.Util
 import org.aqa.db.DicomSeries
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.Logging
+import org.aqa.db.Machine
+import org.aqa.AnonymizeUtil
 
 import java.util.Date
 
@@ -19,9 +21,9 @@ import java.util.Date
  *
  */
 
-case class SeriesMakerReq(rtplan: AttributeList, rtimageList: Seq[AttributeList], templateList: Seq[AttributeList]) extends Logging {}
+case class SeriesMakerReq(rtplan: AttributeList, rtimageList: Seq[AttributeList], machine: Machine, templateList: Seq[AttributeList]) extends Logging {}
 
-object SeriesMakerReq  extends Logging {
+object SeriesMakerReq extends Logging {
 
   /**
    * Get the content date+time of the given dicom.
@@ -107,6 +109,56 @@ object SeriesMakerReq  extends Logging {
   }
 
   /**
+   * Get the machine referenced by the uploaded DICOM files.  Try getting it from the RTPLAN file first.
+   *
+   * @param institutionPK For this institution.
+   * @param rtplan        RTPLAN being used.
+   * @param rtimageList   List of uploaded RTIMAGE files.
+   * @return Either a machine or an error message.
+   */
+  private def machineOf(institutionPK: Long, rtplan: AttributeList, rtimageList: Seq[AttributeList]): Either[String, Machine] = {
+    val machineList: Seq[Machine] = Machine.getForInstitution(institutionPK).filter(machine => machine.getRealDeviceSerialNumber.isDefined && machine.getRealTpsId.isDefined)
+
+    // list of machines referenced by RTIMAGE files as RadiationMachineName
+    val machineListFromRtimageList: Seq[Machine] = {
+      // list of referenced machine names
+      val attrList = rtimageList.flatMap(ri => DicomUtil.findAllSingle(ri, TagByName.RadiationMachineName))
+
+      val deAnonSet = attrList.flatMap(attr => AnonymizeUtil.deAnonymizeAttribute(institutionPK, attr)).map(_.getSingleStringValueOrEmptyString()).distinct.filter(_.nonEmpty).toSet
+
+      val referencedMachineList = machineList.filter(machine => machine.getRealTpsId.isDefined && deAnonSet.contains(machine.getRealTpsId.get))
+      referencedMachineList
+    }
+
+    // list of machines referenced by RTPLAN as TreatmentMachineName
+    val machineListFromRtplan: Seq[Machine] = {
+      val machineNameSet = DicomUtil.findAllSingle(rtplan, TagByName.TreatmentMachineName).map(_.getSingleStringValueOrEmptyString).distinct.filter(_.nonEmpty).toSet
+
+
+      // val referencedMachineList = machineList.filter(machine => machine.getRealTpsId.isDefined && machineNameSet.contains(machine.getRealTpsId.get))
+      val referencedMachineList =
+        machineList.filter(machine => {
+          val j0 = machine.getRealTpsId.isDefined
+          val j1 = machine.getRealTpsId
+          val j2 = j0 && machineNameSet.contains(j1.get)
+
+          j2
+        })
+
+
+      referencedMachineList
+    }
+
+    val machine = (machineListFromRtplan ++ machineListFromRtimageList).headOption
+
+    if (machine.isDefined)
+      Right(machine.get)
+    else
+      Left("Could not find a reference to a treatment machine in the uploaded DICOM files.")
+  }
+
+
+  /**
    * Get the time and date of an RTIMAGE file.  Use the ContentDate and ContentTime.
    *
    * @param rtimage For this file.
@@ -117,6 +169,18 @@ object SeriesMakerReq  extends Logging {
     date
   }
 
+  /**
+   * Get beams that can be used as template beams (beams that were delivered in production mode (as
+   * opposed to dev mode) that have all of their fields filled in.
+   *
+   * Do this by first looking through the list of images that were uploaded, using any
+   * that were delivered in production mode.  If the plan defines other beams, then look
+   * for a previous instance of the plan being analyzed, get the beams, and use them.
+   *
+   * @param rtplan      RTPLAN to use.
+   * @param rtimageList Uploaded RTIMAGE list.
+   * @return
+   */
   private def getTemplateList(rtplan: Either[String, AttributeList], rtimageList: Seq[AttributeList]): Seq[AttributeList] = {
     if (rtplan.isLeft)
       Seq()
@@ -129,7 +193,7 @@ object SeriesMakerReq  extends Logging {
       val referencedBeamList = templateList.flatMap(ri => DicomUtil.findAllSingle(ri, TagByName.ReferencedBeamNumber)).flatMap(_.getIntegerValues).distinct.sorted
 
       // list of all beam numbers in plan
-      val planBeamList = DicomUtil.findAllSingle(plan, TagByName.BeamNumber).flatMap(_.getIntegerValues).distinct.sorted.toSeq
+      val planBeamList = DicomUtil.findAllSingle(plan, TagByName.BeamNumber).flatMap(_.getIntegerValues).distinct.sorted
 
       val list: Seq[AttributeList] = {
         if (referencedBeamList == planBeamList)
@@ -169,7 +233,9 @@ object SeriesMakerReq  extends Logging {
         }
       }
 
-      list
+      def referencedBeamNumber(rtimage: AttributeList): Int = DicomUtil.findAllSingle(rtimage, TagByName.ReferencedBeamNumber).flatMap(_.getIntegerValues).head
+
+      list.sortBy(referencedBeamNumber)
     }
   }
 
@@ -179,11 +245,18 @@ object SeriesMakerReq  extends Logging {
    * @param alList List of all DICOM files.
    * @return Requirements or error message.
    */
-  def makeRequirements(alList: Seq[AttributeList]): Either[String, SeriesMakerReq] = {
+  def makeRequirements(institutionPK: Long, alList: Seq[AttributeList]): Either[String, SeriesMakerReq] = {
 
     val rtimageList = extractDistinctRtimageList(alList)
 
     val rtplan = rtplanToUse(alList)
+
+    val machine: Either[String, Machine] = {
+      if (rtplan.isRight)
+        machineOf(institutionPK, rtplan.right.get, rtimageList)
+      else
+        Left("No RTPLAN")
+    }
 
     def templateList = getTemplateList(rtplan, rtimageList)
 
@@ -192,10 +265,12 @@ object SeriesMakerReq  extends Logging {
         Left(rtplan.left.get)
       case _ if rtimageList.isEmpty =>
         Left("No RTIMAGE files were uploaded.")
+      case _ if machine.isLeft =>
+        Left(machine.left.get)
       case _ if templateList.isEmpty =>
         Left("Could not find any RTIMAGES to use as templates for making beams.")
       case _ =>
-        Right(SeriesMakerReq(rtplan.right.get, rtimageList, templateList))
+        Right(SeriesMakerReq(rtplan.right.get, rtimageList, machine.right.get, templateList))
     }
   }
 }

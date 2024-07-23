@@ -47,7 +47,7 @@ object SeriesCache extends Logging {
   private def fileName(rtimage: AttributeList, rtplan: AttributeList): String = {
 
     val beamName: String = Phase2Util.getBeamNameOfRtimage(rtplan, rtimage) match {
-      case Some(bn) => FileUtil.replaceInvalidFileNameCharacters(bn, '_')
+      case Some(bn) => FileUtil.replaceInvalidFileNameCharacters(bn, '_').replaceAll(" ", "_")
       case _ =>
         val beamNumber = rtimage.get(TagByName.ReferencedBeamNumber).getIntegerValues.head
         beamNumber.toString

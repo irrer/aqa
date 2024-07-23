@@ -99,7 +99,7 @@ object ConvertDicom extends Logging {
                             PatientName: String,
                             PatientID: String,
                             InstitutionName : String,
-                            rtplan: AttributeList)
+                            rtplanUid: String)
   // @formatter:on
   : AttributeList = {
 
@@ -126,13 +126,11 @@ object ConvertDicom extends Logging {
       Seq(x, y)
     }
 
-    val planUid = Util.sopOfAl(rtplan)
-
     val ReferencedRTPlanSequence: SequenceAttribute = {
       val rps = AttributeFactory.newAttribute(TagByName.ReferencedRTPlanSequence).asInstanceOf[SequenceAttribute]
       val subAl = new AttributeList
       setText(subAl, TagByName.ReferencedSOPClassUID, SOPClass.RTPlanStorage)
-      setText(subAl, TagByName.ReferencedSOPInstanceUID, planUid)
+      setText(subAl, TagByName.ReferencedSOPInstanceUID, rtplanUid)
       rps.addItem(subAl)
       rps
     }
@@ -231,7 +229,7 @@ object ConvertDicom extends Logging {
                     PatientName: String,
                     PatientID: String,
                     InstitutionName: String,
-                    rtplan: AttributeList
+                    rtplanUid: String
                    ): Seq[AttributeList] = {
 
     val devList = beamConversionList.map(_.dev)
@@ -290,7 +288,7 @@ object ConvertDicom extends Logging {
         PatientName = PatientName,
         PatientID = PatientID,
         InstitutionName: String,
-        rtplan = rtplan
+        rtplanUid = rtplanUid
       ))
 
     newAlList
@@ -348,7 +346,7 @@ object ConvertDicom extends Logging {
         PatientName = "$" + machine.getRealId,
         PatientID = "$" + machine.getRealId,
         InstitutionName = "UMich",
-        rtplan
+        Util.sopOfAl(rtplan)
       ): Seq[AttributeList]
 
       val outDir = new File(devDir, "out")
@@ -446,7 +444,7 @@ object ConvertDicom extends Logging {
               PatientName = "$" + RadiationMachineName,
               PatientID= "$" + RadiationMachineName,
               InstitutionName = InstitutionName,
-              rtplan)
+            Util.sopOfAl(  rtplan))
           // @formatter:on
 
           val outDir = new File(dir, "PROCESSED")
