@@ -202,7 +202,7 @@ object WebUtil extends Logging {
    */
   private val writeUploadedFileDigits = 4
 
-  private case class UniquelyNamedFile(parentDir: File) {
+  private case class UniquelyNamedFile(parentDir: File, anonymizeFileNames: Boolean) {
     private val used = scala.collection.mutable.HashSet[String]()
 
     /**
@@ -210,8 +210,7 @@ object WebUtil extends Logging {
      *
      * @param suffix Suffix without '.'.
      */
-    def getUniquelyNamedFile(suffix: String): File = {
-      Util.mkdirs(parentDir)
+    def getUniquelyNamedFile(suffix: String, originalFile: File): File = {
 
       def pickBaseName: String = {
         lazy val fileList = parentDir.listFiles.map(f => f.getName.take(writeUploadedFileDigits)).toSet
@@ -226,11 +225,17 @@ object WebUtil extends Logging {
         tryName(1)
       }
 
-      val baseName = pickBaseName
-      used += baseName
-      val fullName = baseName + "." + suffix
-      val file = new File(parentDir, fullName)
-      file
+      Util.mkdirs(parentDir)
+
+      if (anonymizeFileNames || originalFile.canRead) {
+        val baseName = pickBaseName
+        used += baseName
+        val fullName = baseName + "." + suffix
+        val file = new File(parentDir, fullName)
+        file
+      }
+      else
+        originalFile
     }
   }
 
@@ -258,9 +263,9 @@ object WebUtil extends Logging {
   /**
    * Anonymize and write the given attribute list.
    */
-  private def writeAnonymizedDicom(al: AttributeList, unique: UniquelyNamedFile, request: Request): Unit = {
+  private def writeAnonymizedDicom(al: AttributeList, originalFile: File, unique: UniquelyNamedFile, request: Request): Unit = {
     val start = System.currentTimeMillis()
-    val anonFile = unique.getUniquelyNamedFile("dcm")
+    val anonFile = unique.getUniquelyNamedFile("dcm", originalFile)
     logger.info("Writing " + Util.modalityOfAl(al) + " DICOM file " + anonFile.getAbsolutePath)
     val user = CachedUser.get(request)
     val institution = user.get.institutionPK
@@ -275,9 +280,9 @@ object WebUtil extends Logging {
   /**
    * Anonymize and write the given XML.
    */
-  private def writeAnonymizedXml(xml: Elem, unique: UniquelyNamedFile, request: Request): Unit = {
+  private def writeAnonymizedXml(xml: Elem, originalFile: File, unique: UniquelyNamedFile, request: Request): Unit = {
     val start = System.currentTimeMillis()
-    val anonFile = unique.getUniquelyNamedFile("xml")
+    val anonFile = unique.getUniquelyNamedFile("xml", originalFile)
     logger.info("Writing " + " XML file " + anonFile.getAbsolutePath)
     val user = CachedUser.get(request)
     val institution = user.get.institutionPK
@@ -291,7 +296,7 @@ object WebUtil extends Logging {
   /**
    * Attempt to interpret as a zip file.  Return true on success.
    */
-  private def writeZip(data: Array[Byte], unique: UniquelyNamedFile, request: Request): Unit = {
+  private def writeZip(data: Array[Byte], originalFile: File, unique: UniquelyNamedFile, request: Request): Unit = {
     logger.info("Starting to unpack zipped content of " + data.length + " bytes")
     val start = System.currentTimeMillis()
     try {
@@ -329,7 +334,7 @@ object WebUtil extends Logging {
     Util.garbageCollect()
   }
 
-  private def saveData(data: Array[Byte], file: File, contentType: String, unique: UniquelyNamedFile, request: Request): Unit = {
+  private def saveData(data: Array[Byte], originalFile: File, contentType: String, unique: UniquelyNamedFile, request: Request): Unit = {
     def isZip: Boolean = {
       contentType.equalsIgnoreCase(MediaType.APPLICATION_ZIP.getName) ||
         contentType.equalsIgnoreCase(MediaType.APPLICATION_GNU_ZIP.getName) ||
@@ -347,16 +352,16 @@ object WebUtil extends Logging {
 
     (isZip, isDicom(data), isXml) match {
       case (true, _, _) =>
-        writeZip(data, unique, request)
+        writeZip(data, originalFile, unique, request)
       case (_, Some(al), _) =>
-        writeAnonymizedDicom(al, unique, request)
+        writeAnonymizedDicom(al, originalFile, unique, request)
         Trace.trace("wrote anonymized DICOM to file.")
       case (_, _, Some(xml)) =>
-        writeAnonymizedXml(xml, unique, request)
+        writeAnonymizedXml(xml, originalFile, unique, request)
         Trace.trace("wrote anonymized XML to file.")
       case _ =>
         // We don't know what kind of file this is.  Just save it.
-        val anonFile = unique.getUniquelyNamedFile(FileUtil.getFileSuffix(file.getName))
+        val anonFile = unique.getUniquelyNamedFile(FileUtil.getFileSuffix(originalFile.getName), originalFile)
         Util.writeBinaryFile(anonFile, data)
     }
   }
@@ -364,12 +369,12 @@ object WebUtil extends Logging {
   /**
    * Write the input stream to the file.
    */
-  private def saveFile(inputStream: InputStream, file: File, contentType: String, request: Request): Unit =
+  private def saveFile(inputStream: InputStream, file: File, contentType: String, request: Request, anonymizeFileNames: Boolean): Unit =
     writeUploadedFileDigits.synchronized {
       val parentDir = file.getParentFile
       Util.mkdirs(parentDir)
 
-      val unique = UniquelyNamedFile(parentDir)
+      val unique = UniquelyNamedFile(parentDir, anonymizeFileNames)
 
       val outputStream = new ByteArrayOutputStream
 
@@ -410,7 +415,7 @@ object WebUtil extends Logging {
     }
   }
 
-  private def saveFileList(request: Request): ValueMapT = {
+  private def saveFileList(request: Request, anonymizeFileNames: Boolean): ValueMapT = {
     val valueMap = ensureSessionId(parseOriginalReference(request))
 
     sessionDir(valueMap) match {
@@ -427,7 +432,7 @@ object WebUtil extends Logging {
           if (!ii.isFormField) {
             val file = new File(dir, ii.getName)
             logger.info("Uploading file from user " + userId + " to " + file.getAbsolutePath)
-            saveFile(ii.openStream, file, ii.getContentType, request)
+            saveFile(ii.openStream, file, ii.getContentType, request, anonymizeFileNames)
           }
         }
       case _ => throw new RuntimeException("Unexpected internal error. None in WebUtil.saveFileList")
@@ -476,9 +481,9 @@ object WebUtil extends Logging {
 
   val styleNone: Map[String, Style] = Map[String, Style]()
 
-  def getValueMap(request: Request): ValueMapT = {
+  def getValueMap(request: Request, anonymizeFileNames: Boolean = true): ValueMapT = {
     val vm = if (requestIsUpload(request)) {
-      val vm = saveFileList(request)
+      val vm = saveFileList(request, anonymizeFileNames)
       vm
     } else
       emptyValueMap
