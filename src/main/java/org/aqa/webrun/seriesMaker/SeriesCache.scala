@@ -72,13 +72,20 @@ object SeriesCache extends Logging {
       * Write an RTIMAGE to the zip stream.
       * @param rtimage File to write.
       */
-    def writeDicom(rtimage: AttributeList): Unit = {
+    def writeRtimage(rtimage: AttributeList): Unit = {
       val out = new ByteArrayOutputStream()
       DicomUtil.writeAttributeList(rtimage, out, "AQA")
       zip.write(out.toByteArray, fileName(rtimage, rtplan))
     }
 
-    rtimageList.foreach(writeDicom)
+    def writeRtplan(): Unit = {
+      val out = new ByteArrayOutputStream()
+      DicomUtil.writeAttributeList(rtplan, out, "AQA")
+      zip.write(out.toByteArray, "RTPLAN.dcm")
+    }
+
+    rtimageList.foreach(writeRtimage)
+    writeRtplan()
 
     val content = zip.finish()
 
