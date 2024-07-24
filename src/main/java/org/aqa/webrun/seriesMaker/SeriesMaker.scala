@@ -213,18 +213,18 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
       <span>
         <span class="badge badge-secondary" style={s"background: $color;margin:2px;"}>
           <table>
-            <tr>
+            <tr style="vertical-align:middle;">
               <td>
-                <span style="vertical-align:middle;font-size:2.0em;">{id.beam + 1}</span>
+                <span style="font-size:2.0em;">{id.beam + 1}</span>
               </td>
               <td style="width:1000px;text-align:left;">
-                <span style="vertical-align:middle;font-size:1.5em;margin-left:8px;">{beamName}</span>
+                <span style="font-size:1.5em;margin-left:8px;">{beamName}</span>
               </td>
               <td>
-                <span style="vertical-align:middle;font-size:1.0em;margin-left:8px;">{timeText}</span>
+                <span style="font-size:1.0em;margin-left:8px;">{timeText}</span>
               </td>
               <td>
-                <span style="vertical-align:middle;font-size:1.0em;margin-left:8px;">{fileName}</span>
+                <span style="font-size:1.0em;margin-left:8px;">{fileName}</span>
               </td>
             </tr>
           </table>
