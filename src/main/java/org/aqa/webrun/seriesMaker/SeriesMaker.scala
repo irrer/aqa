@@ -24,6 +24,7 @@ import org.aqa.db.DicomSeries
 import org.aqa.web.WebUtil.WebInputHidden
 import org.aqa.web.WebUtil.WebInputSelect
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.DicomFile
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -151,13 +152,13 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
   /**
     * Given a list of sorted RTIMAGES, put them into groups.  Files should be in the same group if they have the same series UID.
     */
-  private def groupImages(list: Seq[AttributeList]): Seq[Seq[AttributeList]] = {
+  private def groupImages(list: Seq[DicomFile]): Seq[Seq[DicomFile]] = {
 
     def timeOf(rtimage: AttributeList) = SeriesMakerReq.rtimageTimeDate(rtimage).getTime
 
     val groupList = {
-      val gl = list.groupBy(_.get(TagByName.SeriesInstanceUID).getSingleStringValueOrEmptyString).values
-      gl.map(_.sortBy(timeOf)).toSeq.sortBy(g => timeOf(g.head))
+      val gl = list.groupBy(_.al.get(TagByName.SeriesInstanceUID).getSingleStringValueOrEmptyString).values
+      gl.map(g => g.sortBy(df => timeOf(df.al))).toSeq.sortBy(g => timeOf(g.head.al))
     }
 
     groupList
@@ -190,7 +191,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
   private def formatDraggable(color: String, id: LocalHtmlId, content: Option[Elem]): Elem = {
     val borderRadius = "border-radius:10px"
-    val width = "width:280px"
+    val width = "width:425px"
     val height = "height:38px"
     val border = s"border: 2px solid $color"
 
@@ -206,7 +207,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     <div id={outerId} style={s"align:auto;$borderRadius;$border;$width;$height;"} ondrop="drop(event)" ondragover="allowDrop(event)">{inner}</div>
   }
 
-  private def formatRtimage(color: String, id: LocalHtmlId, elapsed_ms: Long, beamName: String): Elem = {
+  private def formatRtimage(color: String, id: LocalHtmlId, elapsed_ms: Long, beamName: String, fileName: String): Elem = {
     val timeText = Util.formatDate(elapsedFormat, new Date(elapsed_ms))
     val content = {
       <span>
@@ -214,13 +215,16 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
           <table>
             <tr>
               <td>
-                <span style="vertical-align:middle;font-size:2.0em;margin-right:12px;">{id.beam + 1}</span>
+                <span style="vertical-align:middle;font-size:2.0em;">{id.beam + 1}</span>
+              </td>
+              <td style="width:1000px;text-align:left;">
+                <span style="vertical-align:middle;font-size:1.5em;margin-left:8px;">{beamName}</span>
               </td>
               <td>
-                <span style="vertical-align:middle;font-size:1.0em;">{timeText}</span>
+                <span style="vertical-align:middle;font-size:1.0em;margin-left:8px;">{timeText}</span>
               </td>
               <td>
-                <span style="vertical-align:middle;font-size:1.5em;margin-left:12px;margin-right:5px;">{beamName}</span>
+                <span style="vertical-align:middle;font-size:1.0em;margin-left:8px;">{fileName}</span>
               </td>
             </tr>
           </table>
@@ -231,7 +235,9 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     formatDraggable(color, id, Some(content))
   }
 
-  private def rtimageToHtml(color: String, id: LocalHtmlId, first: Date, al: AttributeList, req: SeriesMakerReq): Elem = {
+  private def rtimageToHtml(color: String, id: LocalHtmlId, first: Date, rtimage: DicomFile, req: SeriesMakerReq): Elem = {
+
+    val al = rtimage.al
 
     val beamName: String = {
       val attr = al.get(TagByName.ReferencedBeamNumber)
@@ -246,22 +252,24 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
       }
     }
 
+    val fileName = rtimage.file.getName
+
     val elapsed_ms = SeriesMakerReq.rtimageTimeDate(al).getTime - first.getTime
 
     <tr>
       <td>
-        {formatRtimage(color, id, elapsed_ms, beamName)}
+        {formatRtimage(color, id, elapsed_ms, beamName, fileName)}
       </td>
     </tr>
   }
 
-  private def rtimageGroupToHtml(valueMap: ValueMapT, group: Seq[AttributeList], groupIndex: Int, color: String, req: SeriesMakerReq): Elem = {
+  private def rtimageGroupToHtml(valueMap: ValueMapT, group: Seq[DicomFile], groupIndex: Int, color: String, req: SeriesMakerReq): Elem = {
 
     val firstFormat = new SimpleDateFormat("YYYY EEE MMM d HH:mm")
 
-    val first = SeriesMakerReq.rtimageTimeDate(group.head)
+    val first = SeriesMakerReq.rtimageTimeDate(group.head.al)
 
-    val machineName = getMachineName(group.head, valueMap)
+    val machineName = getMachineName(group.head.al, valueMap)
 
     val headerText = Seq(machineName, Util.formatDate(firstFormat, first)).mkString(" :: ")
 
@@ -307,7 +315,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
       </div>
     }
     Trace.trace("content: " + content)
-    new WebPlainText(label = "Beams", showLabel = false, col = 3, offset = 1, _ => content)
+    new WebPlainText(label = "Beams", showLabel = false, col = 4, offset = 1, _ => content)
   }
 
   /**
@@ -332,7 +340,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
                 {formatDraggable(planColor, id, None)}
               </td>
               <td>
-                <span style="margin-left:20px; width:200px;"><b>{beamName}</b></span>
+                <span style="margin-left:20px; width:300px;"><b>{beamName}</b></span>
               </td>
             </tr>
           </table>
@@ -351,7 +359,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
       </table>
     }
 
-    new WebPlainText(label = "Plan", showLabel = false, col = 4, offset = 1, _ => content)
+    new WebPlainText(label = "Plan", showLabel = false, col = 5, offset = 1, _ => content)
 
   }
 
@@ -398,23 +406,12 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
   }
 
   /**
-    * Make a list of the RTIMAGE files that the user uploaded.
-    * @param alList All DICOM files.
-    * @return RTIMAGE files.
-    */
-  private def rtimageList(alList: Seq[AttributeList]): Seq[AttributeList] = SeriesMakerReq.extractDistinctRtimageList(alList)
-
-  private def makeAssignBeamsForm(valueMap: ValueMapT, seriesMakerReq: SeriesMakerReq, response: Response): Unit = {
-    ???
-  }
-
-  /**
     * Respond when the user clicks the 'Next' button.  Validate files.  If good, go to assign beams page.  If bad, show error message.
     * @param valueMap Web parameters.
     * @param alList List of DICOM files.
     * @param response HTTP response.
     */
-  private def processNext(valueMap: ValueMapT, alList: Seq[AttributeList], response: Response): Unit = {
+  private def processNext(valueMap: ValueMapT, alList: Seq[DicomFile], response: Response): Unit = {
 
     val institutionPK = WebUtil.getUser(valueMap).get.institutionPK
 
@@ -481,13 +478,13 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     def putBeam(beamNumber: Int, beamRef: LocalHtmlId): ConvertDicom.BeamConversion = {
       val rtimage = groupList(beamRef.group)(beamRef.beam)
       val template = req.templateList.find(_.get(TagByName.ReferencedBeamNumber).getIntegerValues.head == beamNumber).get
-      ConvertDicom.BeamConversion(rtimage, template)
+      ConvertDicom.BeamConversion(rtimage.al, template)
     }
 
     val list = beamAssignmentList.map(ri => putBeam(ri._1, ri._2))
 
     def findFirst(tag: AttributeTag): Option[String] = {
-      val text = Seq(attrIn(req.rtimageList, tag), attrIn(Seq(req.rtplan), tag)).flatten.headOption
+      val text = Seq(attrIn(req.rtimageList.map(_.al), tag), attrIn(Seq(req.rtplan), tag)).flatten.headOption
       text
     }
 
@@ -522,7 +519,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     entry
   }
 
-  private def processDownload(valueMap: ValueMapT, alList: Seq[AttributeList], response: Response): Unit = {
+  private def processDownload(valueMap: ValueMapT, alList: Seq[DicomFile], response: Response): Unit = {
     val institutionPK = WebUtil.getUser(valueMap).get.institutionPK
     val seriesMakerReq = SeriesMakerReq.makeRequirements(institutionPK, alList)
 
@@ -561,7 +558,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     }
 
     try {
-      val alList = dicomFilesInSession(valueMap).filter(_.attributeList.isDefined).map(_.attributeList.get)
+      val alList = dicomFilesInSession(valueMap).filter(_.attributeList.isDefined)
 
       0 match {
         // case _ if user.isEmpty                                                                                   => updateMach()

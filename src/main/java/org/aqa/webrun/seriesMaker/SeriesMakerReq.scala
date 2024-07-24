@@ -9,6 +9,7 @@ import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.Logging
 import org.aqa.db.Machine
 import org.aqa.AnonymizeUtil
+import org.aqa.DicomFile
 
 import java.util.Date
 
@@ -21,7 +22,7 @@ import java.util.Date
  *
  */
 
-case class SeriesMakerReq(rtplan: AttributeList, rtimageList: Seq[AttributeList], machine: Machine, templateList: Seq[AttributeList]) extends Logging {}
+case class SeriesMakerReq(rtplan: AttributeList, rtimageList: Seq[DicomFile], machine: Machine, templateList: Seq[AttributeList]) extends Logging {}
 
 object SeriesMakerReq extends Logging {
 
@@ -34,12 +35,12 @@ object SeriesMakerReq extends Logging {
   def getContentDateTime(dicom: AttributeList): Date = DicomUtil.getTimeAndDate(dicom, TagByName.ContentDate, TagByName.ContentTime).get
 
 
-  def extractDistinctRtimageList(dicomList: Seq[AttributeList]): Seq[AttributeList] = {
+  private def extractDistinctRtimageList(dicomList: Seq[DicomFile]): Seq[DicomFile] = {
     // @formatter:off
     dicomList.
-      filter(Util.isRtimage).                     // only RTIMAGE modality
-      groupBy(Util.sopOfAl).values.map(_.head).   // must be distinct by SOP instance UID
-      toSeq.sortBy(getContentDateTime)            // sort by content date+time
+      filter(df => Util.isRtimage(df.al)).                     // only RTIMAGE modality
+      groupBy(df => Util.sopOfAl(df.al)).values.map(_.head).   // must be distinct by SOP instance UID
+      toSeq.sortBy(df => getContentDateTime(df.al))            // sort by content date+time
     // @formatter:on
   }
 
@@ -55,19 +56,19 @@ object SeriesMakerReq extends Logging {
    * @param alList List of DICOM files uploaded.
    * @return The RTPLAN to use, or, an error message.
    */
-  private def rtplanToUse(alList: Seq[AttributeList]): Either[String, AttributeList] = {
+  private def rtplanToUse(alList: Seq[DicomFile]): Either[String, AttributeList] = {
 
-    val rtplanList = alList.filter(al => Util.isRtplan(al))
+    val rtplanList = alList.filter(df => Util.isRtplan(df.al))
     0 match {
       case _ if rtplanList.size == 1 => // User uploaded exactly one plan, so use it.
-        Right(rtplanList.head)
+        Right(rtplanList.head.al)
 
       case _ if rtplanList.size > 1 => // User uploaded more than one plan, so it is ambiguous as to which should be used.
         Left(s"More than one RTPLAN was uploaded.  You should either upload one or zero. \\n If zero, then one of the RTIMAGE files should reference a known RTPLAN.")
 
       case _ if rtplanList.isEmpty => // User did not upload a plan.  Look to see if any of the RTIMAGE files reference a plan that is in the database.
         val rtimageList = extractDistinctRtimageList(alList)
-        val referencedRtplanUidList = rtimageList.flatMap(ri => Util.getRtplanSop(ri)).distinct
+        val referencedRtplanUidList = rtimageList.flatMap(ri => Util.getRtplanSop(ri.al)).distinct
 
         def getRtplanOfImage(rtplanUid: String): Option[AttributeList] = {
           DicomSeries.getBySopInstanceUID(rtplanUid).flatMap(_.attributeListList).find(planAl => Util.sopOfAl(planAl).equals(rtplanUid))
@@ -116,13 +117,13 @@ object SeriesMakerReq extends Logging {
    * @param rtimageList   List of uploaded RTIMAGE files.
    * @return Either a machine or an error message.
    */
-  private def machineOf(institutionPK: Long, rtplan: AttributeList, rtimageList: Seq[AttributeList]): Either[String, Machine] = {
+  private def machineOf(institutionPK: Long, rtplan: AttributeList, rtimageList: Seq[DicomFile]): Either[String, Machine] = {
     val machineList: Seq[Machine] = Machine.getForInstitution(institutionPK).filter(machine => machine.getRealDeviceSerialNumber.isDefined && machine.getRealTpsId.isDefined)
 
     // list of machines referenced by RTIMAGE files as RadiationMachineName
     val machineListFromRtimageList: Seq[Machine] = {
       // list of referenced machine names
-      val attrList = rtimageList.flatMap(ri => DicomUtil.findAllSingle(ri, TagByName.RadiationMachineName))
+      val attrList = rtimageList.flatMap(ri => DicomUtil.findAllSingle(ri.al, TagByName.RadiationMachineName))
 
       val deAnonSet = attrList.flatMap(attr => AnonymizeUtil.deAnonymizeAttribute(institutionPK, attr)).map(_.getSingleStringValueOrEmptyString()).distinct.filter(_.nonEmpty).toSet
 
@@ -245,7 +246,7 @@ object SeriesMakerReq extends Logging {
    * @param alList List of all DICOM files.
    * @return Requirements or error message.
    */
-  def makeRequirements(institutionPK: Long, alList: Seq[AttributeList]): Either[String, SeriesMakerReq] = {
+  def makeRequirements(institutionPK: Long, alList: Seq[DicomFile]): Either[String, SeriesMakerReq] = {
 
     val rtimageList = extractDistinctRtimageList(alList)
 
@@ -258,7 +259,7 @@ object SeriesMakerReq extends Logging {
         Left("No RTPLAN")
     }
 
-    def templateList = getTemplateList(rtplan, rtimageList)
+    def templateList = getTemplateList(rtplan, rtimageList.map(_.al))
 
     0 match {
       case _ if rtplan.isLeft =>
