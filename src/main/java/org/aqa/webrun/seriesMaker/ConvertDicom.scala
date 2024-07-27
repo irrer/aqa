@@ -5,19 +5,12 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.SequenceAttribute
 import com.pixelmed.dicom.SOPClass
-import edu.umro.ScalaUtil.Trace
 import edu.umro.util.UMROGUID
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import org.aqa.DicomFile
 import org.aqa.Logging
-import org.aqa.Util
-import org.aqa.db.Machine
-import org.aqa.Config
-import org.aqa.db.Institution
 import org.aqa.webrun.seriesMaker.SeriesMakerReq.getContentDateTime
 
-import java.io.File
 import java.util.Date
 
 object ConvertDicom extends Logging {
@@ -82,8 +75,8 @@ object ConvertDicom extends Logging {
    * @param DeviceSerialNumber   Device serial number
    * @param PatientName          Patient name
    * @param PatientID            Patient ID
-   * @param InstitutionName      : String,
-   * @param rtplan               Point to this RTPLAN.
+   * @param InstitutionName      String,
+   * @param rtplanUid            Point to this RTPLAN UID.
    */
   // @formatter:off
   private def setImageAttr(
@@ -147,11 +140,6 @@ object ConvertDicom extends Logging {
 
     val ContentTime = getContentDateTime(dev)
 
-    // val PatientName = rtplan.get(TagByName.PatientName).getSingleStringValueOrEmptyString()
-    // val PatientID = rtplan.get(TagByName.PatientID).getSingleStringValueOrEmptyString()
-
-    // val ReferencedBeamNumber = rtplanBeam.get(TagByName.BeamNumber).getIntegerValues.head
-
     // -------- set various DICOM attributes --------
 
     setText(newAl, TagByName.MediaStorageSOPInstanceUID, SOPInstanceUID)
@@ -206,17 +194,6 @@ object ConvertDicom extends Logging {
     setDouble(newAl, TagByName.RTImagePosition, RTImagePosition)
     // setInt(newAl, TagByName.ReferencedBeamNumber, ReferencedBeamNumber)
 
-    if (false) {
-      val devPix = dev.get(TagByName.PixelData)
-      val templatePix = template.get(TagByName.PixelData)
-      Trace.trace(devPix)
-      Trace.trace(templatePix)
-      val devShort = devPix.getShortValues
-      val templateShort = templatePix.getShortValues
-      Trace.trace(devShort.size)
-      Trace.trace(templateShort.size)
-      Trace.trace()
-    }
     newAl.remove(TagByName.PixelData)
     newAl.put(dev.get(TagByName.PixelData))
 
@@ -234,27 +211,6 @@ object ConvertDicom extends Logging {
 
     val devList = beamConversionList.map(_.dev)
     val templateList = beamConversionList.map(_.template)
-
-    def fmtAl(al: AttributeList): String = { // for debug only
-      val pix = al.get(TagByName.PixelData).getShortValues
-      var crc: Long = 0
-      pix.foreach(p => {
-        crc = (crc << 1) ^ (p & 0xff).toLong
-      })
-      "%08x".format(crc)
-    }
-
-
-    if (true) {
-      val j = devList.map(fmtAl).mkString("\n    ==== ")
-      Trace.trace(s"\n==== devFileList:\n    ==== $j")
-    }
-
-    if (true) {
-      val j = templateList.map(f => fmtAl(f)).mkString("\n==== ")
-      Trace.trace(s"\n==== templateFileList:\n    ==== $j")
-    }
-    Trace.trace(s"====")
 
     // new UID for series
     val SeriesInstanceUID = UMROGUID.getUID
@@ -293,182 +249,6 @@ object ConvertDicom extends Logging {
 
     newAlList
 
-  }
-
-
-  def mainFocalSpot(args: Array[String]): Unit = {
-
-    Config.validate
-    val machine = Machine.get(26).get
-
-    Trace.trace("Starting")
-
-    val rtplan = {
-      val al = new AttributeList
-      al.read("""D:\aqa\FocalSpot\FocalSpot_TX4\tool\rtplan.dcm""")
-      al
-    }
-
-    //val devDir = new File("""D:\aqa\FocalSpot\FocalSpot_TX4\tool\dev""")
-    val devDirList = Util.listDirFiles(new File("""D:\aqa\FocalSpot\FocalSpot_TX4\tool""")).filter(d => d.getName.matches("^dev[0-9]$"))
-    val templateDir = new File("""D:\aqa\FocalSpot\FocalSpot_TX4\tool\template""")
-
-    val templateList: Seq[AttributeList] = {
-      val templateFileList = Util.listDirFiles(templateDir).filter(_.getName.endsWith(".dcm")).map(f => DicomFile(f))
-      Trace.trace()
-      templateFileList.foreach(df => Trace.trace("==== template file: " + df.file.getAbsolutePath))
-      val list = templateFileList.flatMap(_.attributeList).sortBy(getContentDateTime)
-      list.toIndexedSeq
-    }
-
-    devDirList.foreach(devDir => {
-      val devList: Seq[AttributeList] = {
-        val devFileList = Util.listDirFiles(devDir).filter(_.getName.endsWith(".dcm")).map(f => DicomFile(f))
-        Trace.trace()
-        devFileList.foreach(df => Trace.trace("==== dev file: " + df.file.getAbsolutePath))
-        val list = devFileList.flatMap(_.attributeList).sortBy(getContentDateTime)
-        list.toIndexedSeq
-      }
-
-      if (true) {
-        templateList.foreach(al => Trace.trace(s"==== Content: ${getContentDateTime(al)}   BeamRef: ${al.get(TagByName.ReferencedBeamNumber).getIntegerValues.head}"))
-      }
-
-      val beamConversionList: Seq[BeamConversion] = {
-        val indexMap = Seq(1, 2, 7, 8, 5, 6, 3, 4).map(_ - 1)
-        indexMap.indices.map(i => BeamConversion(devList(indexMap(i)), templateList(i)))
-      }
-
-      val newList = processSeries(
-        beamConversionList,
-        RadiationMachineName = machine.getRealTpsId.get,
-        DeviceSerialNumber = machine.getRealDeviceSerialNumber.get,
-        PatientName = "$" + machine.getRealId,
-        PatientID = "$" + machine.getRealId,
-        InstitutionName = "UMich",
-        Util.sopOfAl(rtplan)
-      ): Seq[AttributeList]
-
-      val outDir = new File(devDir, "out")
-      Util.deleteFileTreeSafely(outDir)
-      outDir.mkdirs()
-
-      Trace.trace(s"Saving files to directory ${outDir.getAbsolutePath}")
-
-      val Modality = newList.head.get(TagByName.Modality).getSingleStringValueOrEmptyString()
-
-      def writeDicom(al: AttributeList, index: Int): Unit = {
-        val dcmFile = new File(outDir, Modality + (index + 1) + ".dcm")
-        Util.writeAttributeListToFile(al, dcmFile)
-        val txtFile = new File(outDir, Modality + (index + 1) + ".txt")
-        Util.writeFile(txtFile, DicomUtil.attributeListToString(al))
-      }
-
-      newList.zipWithIndex.foreach(ai => writeDicom(ai._1, ai._2))
-      Trace.trace()
-
-
-      Thread.sleep(1000)
-      Trace.trace("Done")
-      System.exit(0)
-    })
-  }
-
-
-  def main(args: Array[String]): Unit = {
-
-    def fileToAl(file: File): AttributeList = {
-      val al = new AttributeList
-      al.read(file)
-      al
-    }
-
-    Config.validate
-    val machine = Machine.get(26).get
-
-    Trace.trace("Starting")
-
-    val rtplan = {
-      val al = new AttributeList
-      al.read("""D:\aqa\sym\6X_symPROCESS\RP.1.2.246.352.71.5.427549902257.1092564.20240208125522.dcm""")
-      al
-    }
-
-    val dirList = {
-      val d6 = new File("""D:\aqa\sym\6X_symPROCESS""")
-      val list6 = Util.listDirFiles(d6).filter(_.getName.matches("Sym[0-9][0-9]"))
-
-      val d16 = new File("""D:\aqa\sym\16x_symPROCESS""")
-      val list16 = Util.listDirFiles(d16).filter(_.getName.matches("16xSym[0-9][0-9]"))
-
-      list6 ++ list16
-    }
-
-    def doDir(dir: File): Unit = {
-
-      val list = Util.listDirFiles(dir).filter(_.getName.matches("^SID[0-9]+_NEW.dcm$")).map(_.getName.replace("_NEW.dcm", "")).sorted
-      if (list.isEmpty) {
-        Trace.trace("Ignoring " + dir.getAbsolutePath)
-      }
-      else {
-        val devList = list.map(name => new File(dir, name + ".dcm")).filter(_.canRead).map(fileToAl)
-        val templateList = list.map(name => new File(dir, name + "_NEW.dcm")).filter(_.canRead).map(fileToAl)
-
-        if (devList.isEmpty || (devList.size != templateList.size)) {
-          Trace.trace("Ignoring badness in " + dir.getAbsolutePath)
-        }
-        else {
-
-          val beamConversionList = devList.zip(templateList).map(dt => BeamConversion(dt._1, dt._2))
-
-          val InstitutionName: String = {
-            val inst = Institution.get(machine.institutionPK).get
-            inst.getRealName
-          }
-
-          val RadiationMachineName: String = {
-            machine.getRealTpsId match {
-              case Some(name) => name
-              case _ => machine.getRealId
-            }
-          }
-
-          val DeviceSerialNumber: String = machine.getRealDeviceSerialNumber.get
-
-          // @formatter:off
-          val processedList =
-            processSeries(
-              beamConversionList,
-              RadiationMachineName = RadiationMachineName,
-              DeviceSerialNumber = DeviceSerialNumber,
-              PatientName = "$" + RadiationMachineName,
-              PatientID= "$" + RadiationMachineName,
-              InstitutionName = InstitutionName,
-            Util.sopOfAl(  rtplan))
-          // @formatter:on
-
-          val outDir = new File(dir, "PROCESSED")
-          Util.deleteFileTreeSafely(outDir)
-          outDir.mkdirs()
-
-          def writeDicom(name: String, al: AttributeList): Unit = {
-            val dcmFile = new File(outDir, name + ".dcm")
-            Util.writeAttributeListToFile(al, dcmFile)
-            val txtFile = new File(outDir, name + ".txt")
-            Util.writeFile(txtFile, DicomUtil.attributeListToString(al))
-            Trace.trace("wrote " + dcmFile.getAbsolutePath)
-          }
-
-          list.zip(processedList).foreach(nameAl => writeDicom(nameAl._1, nameAl._2))
-        }
-      }
-    }
-
-    dirList.foreach(doDir)
-
-    Thread.sleep(1000)
-    Trace.trace("Done")
-    System.exit(0)
   }
 
 }

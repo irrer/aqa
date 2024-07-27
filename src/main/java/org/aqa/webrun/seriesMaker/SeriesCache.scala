@@ -66,43 +66,54 @@ object SeriesCache extends Logging {
     * @return contents
     */
   def put(session: String, beamAssignmentList: String, rtimageList: Seq[AttributeList], rtplan: AttributeList): Entry = {
-    val zip = new ToZipOutputStream
 
-    /**
-      * Write an RTIMAGE to the zip stream.
-      * @param rtimage File to write.
-      */
-    def writeRtimage(rtimage: AttributeList): Unit = {
-      val out = new ByteArrayOutputStream()
-      DicomUtil.writeAttributeList(rtimage, out, "AQA")
-      zip.write(out.toByteArray, fileName(rtimage, rtplan))
+    def makeEntry(key: String): Entry = {
+      val zip = new ToZipOutputStream
+
+      /**
+        * Write an RTIMAGE to the zip stream.
+        *
+        * @param rtimage File to write.
+        */
+      def writeRtimage(rtimage: AttributeList): Unit = {
+        val out = new ByteArrayOutputStream()
+        DicomUtil.writeAttributeList(rtimage, out, "AQA")
+        zip.write(out.toByteArray, fileName(rtimage, rtplan))
+      }
+
+      def writeRtplan(): Unit = {
+        val out = new ByteArrayOutputStream()
+        DicomUtil.writeAttributeList(rtplan, out, "AQA")
+        zip.write(out.toByteArray, "RTPLAN.dcm")
+      }
+
+      rtimageList.foreach(writeRtimage)
+      writeRtplan()
+
+      val content = zip.finish()
+
+      val entry = Entry(key, content)
+      entry
     }
-
-    def writeRtplan(): Unit = {
-      val out = new ByteArrayOutputStream()
-      DicomUtil.writeAttributeList(rtplan, out, "AQA")
-      zip.write(out.toByteArray, "RTPLAN.dcm")
-    }
-
-    rtimageList.foreach(writeRtimage)
-    writeRtplan()
-
-    val content = zip.finish()
 
     val key = makeKey(session, beamAssignmentList)
 
-    val entry = Entry(key, content)
-
-    SeriesCache.synchronized {
-      cache.put(key, Entry(key, content))
-      while (cache.size > cacheSizeLimit) {
-        val oldest = cache.values.minBy(_.time)
-        cache.remove(oldest.key)
-        logger.info(s"Removed cache entry $key")
+    val entry: Entry = SeriesCache.synchronized {
+      if (cache.contains(key)) {
+        cache(key)
+      } else {
+        val ent = makeEntry(key)
+        cache.put(key, ent)
+        while (cache.size > cacheSizeLimit) {
+          val oldest = cache.values.minBy(_.time)
+          cache.remove(oldest.key)
+          logger.info(s"Removed cache entry $key")
+        }
+        ent
       }
     }
 
-    logger.info(s"Put series to cache.  key: ${key}.take(36)   files: ${rtimageList.size} content size in bytes: ${content.length}")
+    logger.info(s"Put series to cache.  key: ${key.take(36)}   files: ${rtimageList.size} content size in bytes: ${entry.content.length}")
 
     entry
   }
