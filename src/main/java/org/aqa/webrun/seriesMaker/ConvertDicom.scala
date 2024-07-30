@@ -128,16 +128,6 @@ object ConvertDicom extends Logging {
       rps
     }
 
-    // Use rows, columns, and pixel size from dev because image resolution can change with each delivery.
-    val Rows = dev.get(TagByName.Rows).getIntegerValues.head
-    val Columns = dev.get(TagByName.Columns).getIntegerValues.head
-    val ImagePlanePixelSpacing = dev.get(TagByName.ImagePlanePixelSpacing).getDoubleValues
-
-    val WindowCenter = dev.get(TagByName.WindowCenter).getDoubleValues.head
-    val WindowWidth = dev.get(TagByName.WindowWidth).getDoubleValues.head
-    val RescaleSlope = dev.get(TagByName.RescaleSlope).getDoubleValues.head
-    val RescaleIntercept = dev.get(TagByName.RescaleIntercept).getDoubleValues.head
-
     val ContentTime = getContentDateTime(dev)
 
     // -------- set various DICOM attributes --------
@@ -169,21 +159,43 @@ object ConvertDicom extends Logging {
     setText(newAl, TagByName.StudyInstanceUID, StudyInstanceUID)
     setText(newAl, TagByName.SeriesInstanceUID, SeriesInstanceUID)
 
-
-
-
     // setText(newAl, TagByName.StudyID, "NA")
     // setInt(newAl, TagByName.SeriesNumber, 0)
     setText(newAl, TagByName.FrameOfReferenceUID, FrameOfReferenceUID)
 
-    setInt(newAl, TagByName.Rows, Rows)
-    setInt(newAl, TagByName.Columns, Columns)
-    setDouble(newAl, TagByName.ImagePlanePixelSpacing, ImagePlanePixelSpacing)
+    val metaFromDev: Seq[AttributeTag] = Seq(
+      TagByName.ImageComments,
+      TagByName.SamplesPerPixel,
+      TagByName.PhotometricInterpretation,
+      TagByName.Rows,
+      TagByName.Columns,
+      TagByName.BitsAllocated,
+      TagByName.BitsStored,
+      TagByName.HighBit,
+      TagByName.PixelRepresentation,
+      TagByName.WindowCenter,
+      TagByName.WindowWidth,
+      TagByName.RescaleIntercept,
+      TagByName.RescaleSlope,
+      TagByName.RescaleType,
+      TagByName.RTImageLabel,
+      TagByName.RTImageName,
+      TagByName.RTImageDescription,
+      TagByName.ReportedValuesOrigin,
+      TagByName.RTImagePlane,
+      TagByName.XRayImageReceptorTranslation,
+      TagByName.XRayImageReceptorAngle,
+      TagByName.ImagePlanePixelSpacing,
+      TagByName.RadiationMachineSAD,
+      TagByName.RTImageSID)
 
-    setDouble(newAl, TagByName.WindowCenter, WindowCenter)
-    setDouble(newAl, TagByName.WindowWidth, WindowWidth)
-    setDouble(newAl, TagByName.RescaleSlope, RescaleSlope)
-    setDouble(newAl, TagByName.RescaleIntercept, RescaleIntercept)
+    def copyFromDev(tag: AttributeTag): Unit = {
+      val attr = dev.get(tag)
+      if ((attr != null) && (attr.getSingleStringValueOrNull != null))
+        newAl.put(attr)
+    }
+
+    metaFromDev.foreach(copyFromDev)
 
     // setText(newAl, TagByName.RTImageLabel, "NA")
     // setText(newAl, TagByName.RTImageDescription, "NA")

@@ -5,8 +5,11 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.DicomInputStream
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.ImageText
+import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
+import edu.umro.ScalaUtil.RawByte
 import org.aqa.Logging
 import org.aqa.db.Procedure
 import org.aqa.web.WebUtil
@@ -36,6 +39,8 @@ import org.restlet.data.MediaType
 import org.restlet.data.Status
 import org.restlet.representation.ByteArrayRepresentation
 
+import java.awt.image.BufferedImage
+import java.awt.Color
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.InputStream
@@ -143,7 +148,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     */
   private def groupImages(list: Seq[DicomFile]): Seq[Seq[DicomFile]] = {
 
-    def timeOf(rtimage: AttributeList) = SeriesMakerReq.rtimageTimeDate(rtimage).getTime
+    def timeOf(rtimage: AttributeList) = SeriesMakerReq.getContentDateTime(rtimage).getTime
 
     val groupList = {
       val gl = list.groupBy(_.al.get(TagByName.SeriesInstanceUID).getSingleStringValueOrEmptyString).values
@@ -180,7 +185,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
   private def formatDraggable(color: String, id: LocalHtmlId, content: Option[Elem]): Elem = {
     val borderRadius = "border-radius:10px"
-    val width = "width:425px"
+    val width = "width:460px"
     val height = "height:47px"
     val border = s"border: 2px solid $color"
 
@@ -218,6 +223,14 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
   private def formatRtimage(color: String, id: LocalHtmlId, elapsed_ms: Long, beamName: String, dicomFile: DicomFile): Elem = {
 
     val fileName = dicomFile.file.getName
+
+    val abbrevFileName = {
+      val abbrevLen = 16
+      val f1 = if (fileName.toLowerCase.endsWith(".dcm")) fileName.dropRight(4) else fileName
+      val f2 = if (f1.length > abbrevLen) "..." + f1.takeRight(abbrevLen)
+      f2
+    }
+
     val timeText = Util.formatDate(elapsedFormat, new Date(elapsed_ms))
 
     val content = {
@@ -238,7 +251,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
                 <span style="font-size:1.0em;margin-left:8px;">{imageRef(dicomFile)}</span>
               </td>
               <td>
-                <span style="font-size:1.0em;margin-left:8px;">{fileName}</span>
+                <span style="font-size:1.0em;margin-left:8px;" title={fileName}>{abbrevFileName}</span>
               </td>
             </tr>
           </table>
@@ -258,7 +271,13 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
       0 match {
         case _ if attr == null =>
-          "Beam NA"
+          val g = Util.angleRoundedTo90(Util.gantryAngle(al))
+          val c = Util.angleRoundedTo90(Util.collimatorAngle(al))
+          val mv = {
+            val m = DicomUtil.findAllSingle(al, TagByName.KVP).head.getDoubleValues.head / 1000
+            if (m.round == m) m.round.toString else Util.fmtDbl(m)
+          }
+          s"** G:$g C:$c Mv:$mv"
         case _ if Phase2Util.getBeamNameOfRtimage(req.rtplan, al).isDefined => // get beam name from plan
           Phase2Util.getBeamNameOfRtimage(req.rtplan, al).get
         case _ => // have beam number, but no plan
@@ -266,7 +285,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
       }
     }
 
-    val elapsed_ms = SeriesMakerReq.rtimageTimeDate(al).getTime - first.getTime
+    val elapsed_ms = SeriesMakerReq.getContentDateTime(al).getTime - first.getTime
 
     <tr>
       <td>
@@ -279,7 +298,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
     val firstFormat = new SimpleDateFormat("YYYY EEE MMM d HH:mm")
 
-    val first = SeriesMakerReq.rtimageTimeDate(group.head.al)
+    val first = SeriesMakerReq.getContentDateTime(group.head.al)
 
     val machineName = getMachineName(group.head.al, valueMap)
 
@@ -400,6 +419,12 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     new WebUtil.WebInputText("PatientName", 3, 0, "Patient Name.")
   }
 
+  private val zipFileNameLabel = "Download File"
+
+  private def zipFileName(): WebUtil.WebInputText = {
+    new WebUtil.WebInputText(zipFileNameLabel, 3, 0, "Name of downloaded zip file.")
+  }
+
   private val machineLabel = "Machine"
   private val procedureLabel = "Procedure"
 
@@ -418,7 +443,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
           .toList
       }
 
-      val sel = new WebInputSelect(machineLabel, showLabel = true, 2, 0, list, false)
+      val sel = new WebInputSelect(machineLabel, showLabel = true, 3, 0, list, false)
       sel
     }
 
@@ -448,10 +473,10 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
     val alRow = List(rtimageListToHtml(valueMap, req), rtplanToHtml(req))
 
-    val selectRow = List(procedureSelection(procedurePK), machineSelection())
+    val selectRow = List( /* procedureSelection(procedurePK), */ machineSelection(), zipFileName()) // TODO put back procedure selection
     val textRow = List(patientNameText(), patientIdText())
 
-    val buttonRow = List(resetButton, downloadButton, runButton, cancelButton)
+    val buttonRow = List(resetButton, downloadButton, /* runButton, */ cancelButton) // TODO put back runButton
     val spacerRow = List(new WebPlainText("spacer", false, 1, 1, _ => <p style="margin:100px;"> </p>))
 
     val beamAssignmentList = new WebInputHidden(beamAssignmentListTag)
@@ -473,10 +498,33 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
   private def makePngImageFiles(valueMap: ValueMapT, req: SeriesMakerReq): Unit = {
     val dir = WebUtil.sessionDir(valueMap).get
 
+    def annotate(buf: BufferedImage, al: AttributeList): Unit = {
+
+      val gc = ImageUtil.getGraphics(buf)
+      gc.setColor(Color.black)
+      val byteArray = DicomUtil.PixelDataToByteArray(al)
+      val hash = edu.umro.ScalaUtil.Crypto.hash(byteArray)
+      val hashText = RawByte.formatByteArray(hash)
+
+      val text = s"Hash: $hashText"
+
+      val size = ImageText.getTextDimensions(gc, text)
+
+      val xCenter = al.get(TagByName.Columns).getIntegerValues.head / 2
+      val yCenter = {
+        val rows = al.get(TagByName.Rows).getIntegerValues.head
+        val margin = 0
+        rows - ((size.getHeight / 2).round + margin)
+      }
+
+      ImageText.drawTextCenteredAt(gc, xCenter, yCenter, text)
+    }
+
     def makeImage(al: AttributeList, baseFileName: String): Unit = {
       val image = new DicomImage(al)
-      val png = image.toDeepColorBufferedImage(0.01)
-      Util.writePng(png, new File(dir, baseFileName + ".png"))
+      val buf = image.toDeepColorBufferedImage(0.01)
+      annotate(buf, al)
+      Util.writePng(buf, new File(dir, baseFileName + ".png"))
     }
 
     val distinctBySop = (req.rtimageList.map(_.al) ++ req.templateList).groupBy(al => Util.sopOfAl(al)).values.map(_.head)
@@ -527,8 +575,10 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
       makePngImageFiles(valueMap, req)
 
-      val newValueMap = valueMap +
+      val newValueMap: ValueMapT = valueMap +
         (assignBeamsTag -> "true") +
+        (machineLabel -> req.machine.machinePK.get.toString) +
+        (zipFileNameLabel -> { "AQASeries" + Util.timeAsFileName(new Date()) }) +
         (patientIdText().label -> PatientID) +
         (patientNameText().label -> PatientName)
 
@@ -612,7 +662,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
     val alList: Seq[AttributeList] =
       ConvertDicom.processSeries(
-        list,
+        list.toIndexedSeq,
         RadiationMachineName = RadiationMachineName,
         DeviceSerialNumber = DeviceSerialNumber,
         PatientName = PatientName,
@@ -626,6 +676,12 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     entry
   }
 
+  /**
+    * Respond to the user's request for download by creating a zipped version of the modified DICOM files for download.
+    * @param valueMap User specified parameters.
+    * @param alList List of uploaded files.
+    * @param response HTML response.
+    */
   private def processDownload(valueMap: ValueMapT, alList: Seq[DicomFile], response: Response): Unit = {
     val institutionPK = WebUtil.getUser(valueMap).get.institutionPK
     val seriesMakerReq = SeriesMakerReq.makeRequirements(institutionPK, alList)
@@ -644,7 +700,10 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
       response.setEntity(entity)
       response.setStatus(Status.SUCCESS_OK)
 
-      val fileName = "AQASeries" + Util.timeAsFileName(new Date(entry.time)) + ".zip"
+      val fileName = {
+        val n = FileUtil.replaceInvalidFileNameCharacters(valueMap(zipFileNameLabel).trim, '_')
+        if (n.toLowerCase.endsWith(".zip")) n else n + ".zip"
+      }
       WebUtil.setDownloadName(response, fileName)
     }
   }
@@ -681,10 +740,10 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
       }
 
       list.foreach(nc => writeAl(nc._1, nc._2))
+
+      // TODO redirect to run procedure and test
+      response.setStatus(Status.SUCCESS_OK)
     }
-
-    response.setStatus(Status.SUCCESS_OK)
-
   }
 
   override def handle(request: Request, response: Response): Unit = {

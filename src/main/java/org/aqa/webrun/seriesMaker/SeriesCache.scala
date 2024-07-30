@@ -36,7 +36,17 @@ object SeriesCache extends Logging {
     * @param beamAssignmentList List of which images are assigned to which beams.
     * @return Unique key.
     */
-  private def makeKey(session: String, beamAssignmentList: String) = s"$session => $beamAssignmentList"
+  private def makeKey(session: String, beamAssignmentList: String, rtimage: AttributeList) = {
+    val tagList = Seq(
+      TagByName.PatientID,
+      TagByName.PatientName,
+      TagByName.DeviceSerialNumber,
+      TagByName.RadiationMachineName
+    )
+    val metadata = tagList.map(tag => rtimage.get(tag).getSingleStringValueOrEmptyString).mkString(" :: ")
+    val key = s"$session :: $metadata => $beamAssignmentList"
+    key
+  }
 
   /**
     * Make a file name for the given RTIMAGE.  Use the beam name if possible, otherwise use the beam number.
@@ -96,7 +106,7 @@ object SeriesCache extends Logging {
       entry
     }
 
-    val key = makeKey(session, beamAssignmentList)
+    val key = makeKey(session, beamAssignmentList, rtimageList.head)
 
     val entry: Entry = SeriesCache.synchronized {
       if (cache.contains(key)) {

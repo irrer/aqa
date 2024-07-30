@@ -37,7 +37,6 @@ object SeriesMakerReq extends Logging {
    */
   def getContentDateTime(dicom: AttributeList): Date = DicomUtil.getTimeAndDate(dicom, TagByName.ContentDate, TagByName.ContentTime).get
 
-
   /**
    * Get the anonymized RTPLAN SOPInstanceUID
    *
@@ -57,9 +56,8 @@ object SeriesMakerReq extends Logging {
   private def extractDistinctRtimageList(dicomList: Seq[DicomFile]): Seq[DicomFile] = {
     // @formatter:off
     dicomList.
-      filter(df => Util.isRtimage(df.al)).                     // only RTIMAGE modality
-      groupBy(df => Util.sopOfAl(df.al)).values.map(_.head).   // must be distinct by SOP instance UID
-      toSeq.sortBy(df => getContentDateTime(df.al))            // sort by content date+time
+      filter(df => Util.isRtimage(df.al)).         // only RTIMAGE modality
+      sortBy(df => getContentDateTime(df.al))      // sort by content date+time
     // @formatter:on
   }
 
@@ -80,7 +78,8 @@ object SeriesMakerReq extends Logging {
     val rtplanList = alList.filter(df => Util.isRtplan(df.al))
     0 match {
       case _ if rtplanList.size == 1 => // User uploaded exactly one plan, so use it.
-        Right(rtplanList.head.al)
+        val deAnon = AnonymizeUtil.deAnonymizeDicom(institutionPK, Seq(rtplanList.head.al)).head
+        Right(deAnon)
 
       case _ if rtplanList.size > 1 => // User uploaded more than one plan, so it is ambiguous as to which should be used.
         Left(s"More than one RTPLAN was uploaded.  You should either upload one or zero. \\n If zero, then one of the RTIMAGE files should reference a known RTPLAN.")
@@ -171,17 +170,6 @@ object SeriesMakerReq extends Logging {
       Left("Could not find a reference to a treatment machine in the uploaded DICOM files.")
   }
 
-
-  /**
-   * Get the time and date of an RTIMAGE file.  Use the ContentDate and ContentTime.
-   *
-   * @param rtimage For this file.
-   * @return Date.
-   */
-  def rtimageTimeDate(rtimage: AttributeList): Date = {
-    val date = DicomUtil.getTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get
-    date
-  }
 
   /**
    * Get beams that can be used as template beams (beams that were delivered in production mode (as
