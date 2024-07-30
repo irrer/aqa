@@ -184,15 +184,23 @@ object SeriesMakerReq extends Logging {
    * @return
    */
   private def getTemplateList(institutionPK: Long, rtplan: Either[String, AttributeList], rtimageList: Seq[AttributeList]): Seq[AttributeList] = {
+
+    def getReferencedBeamNumber(rtimage: AttributeList): Option[Int] = {
+      DicomUtil.findAllSingle(rtimage, TagByName.ReferencedBeamNumber).flatMap(_.getIntegerValues).sorted.headOption
+    }
+
     if (rtplan.isLeft)
       Seq()
     else {
       val plan = rtplan.right.get
-      // list of RTIMAGES that point to this plan
-      val templateList = rtimageList.filter(ri => Phase2Util.referencedPlanUID(ri).nonEmpty)
+      // list of RTIMAGES that point to this plan.  If there is more than one template per beam number, then use the one with the earlier date.
+      val templateList: Seq[AttributeList] = {
+        val list = rtimageList.filter(ri => getReferencedBeamNumber(ri).nonEmpty)
+        list.groupBy(ri => getReferencedBeamNumber(ri).get).map(_._2.minBy(getContentDateTime)).toSeq
+      }
 
       // list of beams that are referenced by images
-      val referencedBeamList = templateList.flatMap(ri => DicomUtil.findAllSingle(ri, TagByName.ReferencedBeamNumber)).flatMap(_.getIntegerValues).distinct.sorted
+      val referencedBeamList = templateList.flatMap(getReferencedBeamNumber).distinct.sorted
 
       // list of all beam numbers in plan
       val planBeamList = DicomUtil.findAllSingle(plan, TagByName.BeamNumber).flatMap(_.getIntegerValues).distinct.sorted

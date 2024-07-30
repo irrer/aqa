@@ -224,10 +224,10 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
     val fileName = dicomFile.file.getName
 
-    val abbrevFileName = {
-      val abbrevLen = 16
+    val abbrevFileName: String = {
+      val abbrevLen = 18
       val f1 = if (fileName.toLowerCase.endsWith(".dcm")) fileName.dropRight(4) else fileName
-      val f2 = if (f1.length > abbrevLen) "..." + f1.takeRight(abbrevLen)
+      val f2 = if (f1.length > abbrevLen) "..." + f1.takeRight(abbrevLen - 3) else f1
       f2
     }
 
