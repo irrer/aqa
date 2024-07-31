@@ -1,0 +1,185 @@
+<div title="Series Maker">
+    <!--
+    Copyright 2024 Regents of the University of Michigan
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    -->
+
+    <h2>@@title@@</h2>
+
+    <p>
+        Treatment machine dev (development) mode allows greater latitude in setting machine parameters. However, RTIMAGE
+        files
+        captured in dev mode lack some metadata (such as references to a plan, plan beam, and identity of the
+        treatment machine) that the AQA platform requires.
+    </p>
+    <p>
+        The Series Maker allows you to convert these files into fully defined DICOM series that can be analyzed on the
+        AQA platform.
+    </p>
+
+    <h3>Instructions</h3>
+
+    <p>
+        Before starting, jjjjjjj
+    </p>
+
+
+    <h4>Step 1: Navigate to the Interface</h4>
+    <p>
+        From the home page, click the <a href="/SeriesMaker" target="_blank">Series Maker</a> link.
+    </p>
+
+    <h4>Step 2: Upload Image Files</h4>
+    <p>
+        Drag and drop the RTIMAGE files to be converted into the "Drop files here to upload" area. These can be any
+        combination of files that were captured in dev mode or normal (production) mode. They can come from one or more
+        series. It is recommended that they come from the same machine, though the software permits converting files
+        from multiple machines.
+    </p>
+
+    <h4>Step 3: Specify a Plan</h4>
+    <p>
+        A plan must be specified. There are two ways to do this:
+    <ul>
+        <li>
+            <b>A: Upload a Plan</b>
+            <br/>
+            A plan file may be uploaded. If a single plan is uploaded, then it will be used to define the beams
+            regardless
+            of whether the image files reference a plan. If more than one plan is uploaded, then it is ambiguous as to
+            which
+            one to use, and the only option is to cancel and start over.
+        </li>
+        <li>
+            <b>B: Reference a Known Plan</b>
+            <br/>
+            If no plan file is uploaded, then the uploaded images will be checked for references to a plan. Note: Only
+            images delivered in production mode will have a reference to a plan. If exactly one plan is referenced, and
+            that
+            plan in the AQA system, then that will be used. If no plan is referenced, then an error will be shown. If
+            more
+            than one plan is referenced, then the plan specification is ambiguous, and the user must cancel and start
+            over.
+        </li>
+    </ul>
+
+    <h4>Step 4: Click 'Next'</h4>
+    <p>
+        The next screen will show something like the image below.
+    </p>
+
+    <p style="margin-top: 30px">
+        <a href="AfterNext.png" style="border:1px gray;margin:10px;" target="_blank">
+            <img src="AfterNext.png" style="margin:5px; border: 1px solid lightgray;width:1000px;"
+                 alt="Screen Shot of Interface"/>
+        </a>
+    </p>
+    <p>
+        Under 'RTIMAGE List' is the list of uploaded images, grouped by series. Each series is given a different color
+        for easier identification.
+    </p>
+    <p>
+        Within each series, the images are sorted in the order they were acquired. Each item represents an image and has
+        the following information:
+    <ul>
+        <li>
+            The number of the image within the series (ordered by acquisition time).
+        </li>
+        <li>
+            The beam name, or, for dev images, the gantry angle, collimator angle, and energy.
+        </li>
+        <li>
+            The capture time since the start of the series. The first will always have the time '00:00'.
+        </li>
+        <li>
+            A thumbnail image of the RTIMAGE. Hovering the mouse over this will display a full sized image. Each image
+            is annotated with an MD5 hash of the bytes of the image bytes. This can be useful for determining if two
+            images are the same or not.
+        </li>
+        <li>
+            The name of the file (minus any '.dcm' extension). For screen space reasons, long file names will be
+            abbreviated using only the last characters of the name. Hovering the mouse over the file name will display
+            the full name.
+        </li>
+    </ul>
+    <p>
+        Under 'Plan Beams', is a list of beams in the plan. Each entry will have a thumbnail preview and the name of the
+        beam.
+    </p>
+
+    <h4>Step 4: Assign Images</h4>
+    <p>
+        Drag and drop the image items into the 'Plan Beams' list. This will assign each image to act as the beams in the
+        plan. You do not need to assign images for all beams.
+    </p>
+
+    <!-- ======================================= -->
+
+    <div class="row">
+        <p style="margin:40px;"></p>
+        <div class="col-md-6" style="margin-left:auto; margin-right:auto; text-align:center;">
+            <a href="https://automatedqualityassurance.org" target="_blank"> https://automatedqualityassurance.org </a>
+            <br/>
+            <a href="https://automatedqualityassurance.org" target="_blank">
+                <img src="production.png" style="margin:30px;" width="200px;" alt="Production logo"/>
+            </a>
+        </div>
+
+        <div class="col-md-6" style="margin-left:auto; margin-right:auto; text-align:center;">
+            <a href="https://test.automatedqualityassurance.org" target="_blank">
+                https://test.automatedqualityassurance.org </a>
+            <br/>
+            <a href="https://test.automatedqualityassurance.org" target="_blank">
+                <img src="test.png" style="margin:30px;" width="200px;" alt="Sandbox logo"/>
+            </a>
+        </div>
+
+    </div>
+
+    <p>
+        The sandbox contains a copy of all the meta-data such as machine configurations and user accounts that were on
+        the production system (as of February 2024). This saves the effort of re-configuration. Note that because this
+        is a copy, changes made on one system will not automatically be made on the other.
+    </p>
+
+
+    <p>
+        The chief difference of the sandbox software is that it allows users to break the rules. In production, when
+        performing a test, the RTPLAN referenced by the RTIMAGE files is used. The sandbox allows uses to specify a
+        different RTPLAN.
+    </p>
+
+
+    <h3>Running a Test</h3>
+    <p>
+        To run a test with known errors:
+    </p>
+
+    <ul>
+        <li> Use a treatment planning system to modify an existing AQA RTPLAN (custom plan can be made by either
+            system). Introduce the desired known errors by changing jaw positions, collimator angles, etc.
+        </li>
+        <li> Deliver the modified plan. This creates images with known errors.</li>
+        <li> Upload the images to the sandbox via 'Run Procedure' with the original 'good' RTPLAN. This tells the
+            software to use this plan instead of the modified one that the images reference. Note: This will not work on
+            the production system.
+        </li>
+        <li> View the results.</li>
+    </ul>
+
+
+    <!-- xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx -->
+    <!-- xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx -->
+
+</div>
