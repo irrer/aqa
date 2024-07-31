@@ -104,8 +104,8 @@ object SeriesMakerReq extends Logging {
             val rtplan = AnonymizeUtil.deAnonymizeDicom(institutionPK, Seq(rtplanAnon)).head
             Right(rtplan)
 
-          case _ if referencedRtplanList.isEmpty => // RTIMAGE files referenced more than one plan that was found in the database, so this is ambiguous.
-            Left(s"No RTPLAN was uploaded and none of the RTIMAGE files reference ${referencedRtplanList.size} known RTPLANS.")
+          case _ => // RTIMAGE files referenced more than one plan that was found in the database, so this is ambiguous.
+            Left(s"The uploaded RTIMAGE files reference more than one RTPLAN (), which is ambiguous.")
         }
     }
   }
