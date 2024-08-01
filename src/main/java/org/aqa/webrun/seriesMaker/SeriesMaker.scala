@@ -705,6 +705,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
         if (n.toLowerCase.endsWith(".zip")) n else n + ".zip"
       }
       WebUtil.setDownloadName(response, fileName)
+      logger.info(s"Downloading SeriesMaker file $fileName ...")
     }
   }
 
@@ -762,7 +763,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
         // case _ if user.isEmpty                                                                                   => updateMach()
 
         case _ if buttonIs(cancelButton) =>
-          response.redirectSeeOther("/")
+          response.redirectSeeOther("/SeriesMaker")
 
         case _ if buttonIs(nextButton) || buttonIs(resetButton) =>
           processNext(valueMap, alList, response)

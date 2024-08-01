@@ -838,6 +838,7 @@ object Config extends Logging {
   val DeepColorPercentDrop: Double = logMainText("DeepColorPercentDrop", "0.2").toDouble
 
   val MaxProcedureDuration: Double = logMainText("MaxProcedureDuration", "120.0").toDouble
+  val MaxProcedureDuration_ms: Long = (MaxProcedureDuration * 60 * 1000).round
 
   /** Lookup table for finding DICOM attributes to be anonymized and how to anonymize them. */
   val ToBeAnonymizedList: Map[AttributeTag, ToBeAnonymized] = getToBeAnonymizedList
