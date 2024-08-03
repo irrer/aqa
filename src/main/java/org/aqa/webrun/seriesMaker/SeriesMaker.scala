@@ -31,7 +31,11 @@ import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.DicomFile
 import org.aqa.db.Machine
 import org.aqa.Config
+import org.aqa.run.RunProcedure
+import org.aqa.run.RunReqClass
+import org.aqa.run.RunTrait
 import org.aqa.web.Session
+import org.aqa.webrun.WebRun
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -473,10 +477,10 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
     val alRow = List(rtimageListToHtml(valueMap, req), rtplanToHtml(req))
 
-    val selectRow = List( /* procedureSelection(procedurePK), */ machineSelection(), zipFileName()) // TODO put back procedure selection
+    val selectRow = List(procedureSelection(procedurePK), machineSelection(), zipFileName())
     val textRow = List(patientNameText(), patientIdText())
 
-    val buttonRow = List(resetButton, downloadButton, /* runButton, */ cancelButton) // TODO put back runButton
+    val buttonRow = List(resetButton, downloadButton, runButton, cancelButton)
     val spacerRow = List(new WebPlainText("spacer", false, 1, 1, _ => <p style="margin:100px;"> </p>))
 
     val beamAssignmentList = new WebInputHidden(beamAssignmentListTag)
@@ -709,6 +713,33 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     }
   }
 
+  /**
+    * Unzip to the content to DICOM files, anonymize each, then return a list of named attribute lists.
+    *
+    * Note: The file names are preserved, not anonymized.  This is to help with debugging and diagnosing problems.
+    *
+    * @param content Bytes of DICOM content.
+    * @param institutionPK PK of institution for anonymizing.
+    */
+  private def contentToNamedAl(content: Array[Byte], institutionPK: Long): Seq[(String, AttributeList)] = {
+
+    val bis = new ByteArrayInputStream(content)
+
+    val list = FileUtil.writeZipToNamedByteArrays(bis.asInstanceOf[InputStream])
+
+    def writeAl(name: String, content: Array[Byte]): (String, AttributeList) = {
+      val al = new AttributeList
+      val bi = new ByteArrayInputStream(content)
+      val di = new DicomInputStream(bi)
+      al.read(di)
+
+      val anonAl = AnonymizeUtil.anonymizeDicom(institutionPK, al)
+      (name, anonAl)
+    }
+
+    list.map(nc => writeAl(nc._1, nc._2))
+  }
+
   private def processRun(valueMap: ValueMapT, alList: Seq[DicomFile], response: Response): Unit = {
     val institutionPK = WebUtil.getUser(valueMap).get.institutionPK
     val seriesMakerReq = SeriesMakerReq.makeRequirements(institutionPK, alList)
@@ -723,27 +754,28 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     } else {
       val entry = assembleSeries(valueMap, assignBeams, seriesMakerReq.right.get)
 
-      val runValueMap = Map((WebUtil.sessionLabel, Session.makeUniqueId))
-      val dir = WebUtil.sessionDir(runValueMap).get
+      val namedAlList = contentToNamedAl(entry.content, institutionPK)
 
-      val bis = new ByteArrayInputStream(entry.content)
-
-      val list = FileUtil.writeZipToNamedByteArrays(bis.asInstanceOf[InputStream])
-      def writeAl(name: String, content: Array[Byte]): Unit = {
-        val al = new AttributeList
-        val bi = new ByteArrayInputStream(content)
-        val di = new DicomInputStream(bi)
-        al.read(di)
-
-        val anonAl = AnonymizeUtil.anonymizeDicom(institutionPK, al)
-        val outFile = new File(dir, name)
-        DicomUtil.writeAttributeListToFile(anonAl, outFile, "AQA")
+      val runTrait = {
+        val procedurePK = valueMap(procedureLabel).toInt
+        val restlet = WebRun.get(procedurePK)
+        val r = restlet.right.get
+        r.asInstanceOf[RunTrait[RunReqClass]]
       }
 
-      list.foreach(nc => writeAl(nc._1, nc._2))
+      val runValueMap = Map((WebUtil.sessionLabel, Session.makeUniqueId), (WebUtil.userIdRealTag, valueMap(WebUtil.userIdRealTag)))
+      runTrait.validate(runValueMap, alList = namedAlList.map(_._2), xmlList = Seq()) match {
+        case Left(errorMap) =>
+          val form = makeAssignForm(valueMap, seriesMakerReq.right.get)
+          form.setFormResponse(valueMap, errorMap, pageTitle, response, Status.CLIENT_ERROR_BAD_REQUEST)
 
-      // TODO redirect to run procedure and test
-      response.setStatus(Status.SUCCESS_OK)
+        case Right(_) =>
+          val dir = WebUtil.sessionDir(runValueMap).get
+          dir.mkdirs()
+          def writeAl(nameAl: (String, AttributeList)): Unit = DicomUtil.writeAttributeListToFile(nameAl._2, new File(dir, nameAl._1), "AQA")
+          namedAlList.foreach(writeAl)
+          RunProcedure.runIfDataValid(runValueMap, response, runTrait, sync = false)
+      }
     }
   }
 

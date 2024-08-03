@@ -570,7 +570,7 @@ object RunProcedure extends Logging {
   /**
     * Respond to the 'Run' button.
     */
-  private def runIfDataValid(valueMap: ValueMapT, response: Response, runTrait: RunTrait[RunReqClass], sync: Boolean): Unit = {
+  def runIfDataValid(valueMap: ValueMapT, response: Response, runTrait: RunTrait[RunReqClass], sync: Boolean): Unit = {
 
     logger.info("Validating data")
     val form = makeForm(runTrait)

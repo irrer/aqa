@@ -19,8 +19,7 @@
 
     <p>
         Treatment machine dev (development) mode allows greater latitude in setting machine parameters. However, RTIMAGE
-        files
-        captured in dev mode lack some metadata (such as references to a plan, plan beam, and identity of the
+        files captured in dev mode lack some metadata (such as references to a plan, plan beam, and identity of the
         treatment machine) that the AQA platform requires.
     </p>
     <p>
@@ -31,9 +30,8 @@
     <h3>Using Series Maker</h3>
 
     <p>
-        From the home page, click the <!--suppress HtmlUnknownTarget -->
-        <a href="/SeriesMaker" target="_blank">Series Maker</a> link. This will show the
-        upload page:
+        From the home page, click the <!--suppress HtmlUnknownTarget --><a href="/SeriesMaker" target="_blank">Series Maker</a>
+        link. This will show the upload page:
     </p>
 
     <p style="margin-top: 30px">
@@ -75,7 +73,8 @@
     </p>
 
     <p>
-        <b>Note: </b>It is recommended that before making series, that at least one set of production images be
+        <b style="background:yellow;">Note: </b>It is recommended that before making series, that at least one set of
+        production images be
         delivered and analyzed. This provides a default set of template images for the subsequent dev images.
     </p>
 
@@ -118,17 +117,24 @@
         Change the patient name and ID if appropriate. Often these reflect the machine name.
     </p>
 
-    <h4>Step 4: Download</h4>
+    <h4>Step 4: Run</h4>
     <p>
-        Clicking the 'Download' button will make the series and download it to your computer as a zip file.
+        Clicking the 'Run' button will run the analysis.
     </p>
 
-    <h4>Step 5: Run (Optional)</h4>
+    <h4>Alternate Step 4: Download</h4>
     <p>
-        The zip file can be run on AQA directly (without extracting it). Click the <!--suppress HtmlUnknownTarget --><a
-            href="/run/WebRunIndex">Run
-        Procedure</a> link and then the appropriate procedure. You can then drag and drop the zip file into the web
-        interface and click 'Run'.
+        Clicking the 'Download' button will make the series and download it to your computer as a zip file. The zip file
+        can be extracted on your computer, or, can be uploaded (without unzipping) back to AQA via the
+        <!--suppress HtmlUnknownTarget --><a href="/run/WebRunIndex">Run Procedure</a> link.
+    </p>
+
+    <h4>Note Regarding Procedure Selection</h4>
+    <p>
+        If the referenced plan is known to AQA, and is associated with a procedure (e.g. Phase2), then the interface
+        will automatically choose that procedure. On the other hand, if the plan can not be associated with a procedure
+        (if the plan was made in the user's treatment planning system), then it is the user's responsibility to choose
+        the procedure.
     </p>
 
     <!-- ========================================================================================================== -->
