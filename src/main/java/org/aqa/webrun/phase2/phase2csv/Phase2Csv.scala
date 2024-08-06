@@ -337,8 +337,6 @@ object Phase2Csv extends Logging {
     */
   val consortiumCsvDir = new File(Config.resultsDirFile, "CSV")
 
-  private val metadataCache: MetadataCache = new MetadataCache
-
   private def fileBaseName(dataName: String) = dataName.replaceAll(" ", "")
 
   private def csvDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss")
@@ -370,7 +368,7 @@ object Phase2Csv extends Logging {
     }
   }
 
-  private def machineAliasTable(institutionPK: Long): Elem = {
+  private def machineAliasTable(institutionPK: Long, metadataCache: MetadataCache): Elem = {
     val machineSeq = metadataCache.machineMap.values.filter(m => m.institutionPK == institutionPK).toSeq
 
     def sortMach(a: Machine, b: Machine): Boolean = {
@@ -413,7 +411,7 @@ object Phase2Csv extends Logging {
     * Generate a user friendly web page to act as an index and write it as a file.  This
     * also creates the ZIP file which contains all the CSV files.
     */
-  def generateIndex(institutionPK: Long): Unit = {
+  def generateIndex(institutionPK: Long, metadataCache: MetadataCache): Unit = {
     val csvDir = institutionCsvDir(institutionPK)
     val csvList = Util.listDirFiles(csvDir).filter(_.getName.endsWith(".csv"))
 
@@ -474,7 +472,7 @@ object Phase2Csv extends Logging {
           <a href={zipFileName}>Download zipped version of all CSV files.</a>
         </center>
         <center>
-          {machineAliasTable(institutionPK)}
+          {machineAliasTable(institutionPK, metadataCache)}
         </center>
         {notesTag}
       </div>
@@ -491,7 +489,7 @@ object Phase2Csv extends Logging {
   }
 
   def institutionCsvDir(institutionPK: Long): File = {
-    val d = new File(Config.resultsDirFile, metadataCache.institutionNameMap(institutionPK))
+    val d = new File(Config.resultsDirFile, MetadataCache.get.institutionNameMap(institutionPK))
     val dir = new File(d, "CSV")
     dir
   }

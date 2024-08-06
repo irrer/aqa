@@ -73,9 +73,9 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
     * @param valueMap HTML parameters.
     * @return Either type of data or an error message.
     */
-  private def getDataType(valueMap: ValueMapT): Either[String, Phase2Csv[_]] = {
+  private def getDataType(valueMap: ValueMapT, metadataCache: MetadataCache): Either[String, Phase2Csv[_]] = {
 
-    val dataTypeList = Phase2Csv.makeDataTypeList(new MetadataCache)
+    val dataTypeList = Phase2Csv.makeDataTypeList(metadataCache)
 
     val dataTypeChoiceList = dataTypeList.map(_.getDataName).mkString(", ")
 
@@ -233,11 +233,11 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
     * @param response Report errors here.
     * @return Specification for getting CSV rows, or None on error.
     */
-  private def parse(valueMap: ValueMapT, response: Response): Either[String, CsvSpec] = {
+  private def parse(valueMap: ValueMapT, response: Response, metadataCache: MetadataCache): Either[String, CsvSpec] = {
 
     val machine = getMachine(valueMap)
 
-    val dataType = getDataType(valueMap)
+    val dataType = getDataType(valueMap, metadataCache)
 
     val beam = getBeam(valueMap)
 
@@ -264,10 +264,11 @@ class CsvApi extends Restlet with SubUrlRoot with Logging {
     try {
       super.handle(request, response)
       val valueMap = getValueMap(request)
-      val csvSpec = parse(valueMap, response)
+      val metadataCache = MetadataCache.get
+      val csvSpec = parse(valueMap, response, metadataCache)
 
       if (csvSpec.isRight) {
-        CsvSpecDownload.download(csvSpec.right.get, response, new MetadataCache)
+        CsvSpecDownload.download(csvSpec.right.get, response, MetadataCache.get)
       } else {
         // show error to user
         val errorText = csvSpec.left.get

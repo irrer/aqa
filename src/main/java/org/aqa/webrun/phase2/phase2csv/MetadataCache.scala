@@ -56,16 +56,65 @@ class MetadataCache extends Logging {
   /** Map of procedures. */
   val procedureMap: Map[Long, Procedure] = Procedure.list.map(p => (p.procedurePK.get, p)).toMap
 
-  val phase2ProcedurePK: Long = Procedure.ProcOfPhase2.get.procedurePK.get
+  /**
+   * Get the procedure PK in a safe way.
+   * @param procedure For this procedure.
+   * @return PK, or -1 on failure.
+   */
+  private def getProc(procedure: Option[Procedure]): Long = {
+    if (procedure.isDefined && procedure.get.procedurePK.isDefined)
+      procedure.get.procedurePK.get
+    else
+      -1
+  }
 
-  val phase3ProcedurePK: Long = Procedure.ProcOfPhase3.get.procedurePK.get
+  val phase2ProcedurePK: Long = getProc(Procedure.ProcOfPhase2)
 
-  val gapSkewProcedurePK: Long = Procedure.ProcOfGapSkew.get.procedurePK.get
+  val phase3ProcedurePK: Long = getProc(Procedure.ProcOfPhase3)
 
-  val focalSpotProcedurePK: Long = Procedure.ProcOfFocalSpot.get.procedurePK.get
+  val gapSkewProcedurePK: Long = getProc(Procedure.ProcOfGapSkew)
+
+  val focalSpotProcedurePK: Long = getProc(Procedure.ProcOfFocalSpot)
 
   val noteMap: Map[Long, String] = OutputNote.list().map(n => (n.outputPK, n.contentAsText)).toMap
 
   private val elapsed = System.currentTimeMillis() - start
   logger.info("Created MetadataCache.  Elapsed time: " + Util.elapsedTimeHumanFriendly(elapsed))
+}
+
+/**
+  * Keep an application-wide copy of the metadata.
+  */
+object MetadataCache extends Logging {
+
+  /** cache */
+  private val cache: scala.collection.mutable.ArrayBuffer[MetadataCache] = scala.collection.mutable.ArrayBuffer()
+
+  /** Invalidate the cache after this much time (in ms) to keep it up to date. */
+  private val timeoutInterval_ms: Long = 10 * 60 * 1000
+
+  /**
+    * Get the cache entry.  If it is empty, then construct it.
+    * @return cache
+    */
+  def get: MetadataCache = {
+    val timeout = System.currentTimeMillis() - timeoutInterval_ms
+    if (cache.nonEmpty && (cache.head.start > timeout)) {
+      cache.head
+    } else {
+      cache.clear
+      logger.info("refreshing MetadataCache cache.")
+      cache.append(new MetadataCache)
+      cache.head
+    }
+  }
+
+  /**
+    * Mark cache as invalid.
+    * TODO find all points in the application where the cache should be invalidated.  This would be better than a timeout.
+    */
+  def invalidate(): Unit = {
+    cache.clear
+  }
+
 }

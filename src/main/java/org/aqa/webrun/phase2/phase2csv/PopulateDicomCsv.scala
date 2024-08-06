@@ -67,7 +67,6 @@ class PopulateDicomCsv(metadataCache: MetadataCache) extends Phase2Csv[DicomInst
     * @param data   Data using DICOM data.
     * @return SOP instance UID.
     */
-
   override def getSopUidList(data: DI): Seq[String] = Seq(data.SOPInstanceUID)
 
   override protected val dicomHeaderPrefixList: Seq[String] = Seq("")
@@ -108,7 +107,6 @@ class PopulateDicomCsv(metadataCache: MetadataCache) extends Phase2Csv[DicomInst
 object PopulateDicomCsv extends Logging {
   def main(args: Array[String]): Unit = {
     DbSetup.init
-    val metadataCache = new MetadataCache
-    new PopulateDicomCsv(metadataCache).populateAll()
+    new PopulateDicomCsv(MetadataCache.get).populateAll()
   }
 }

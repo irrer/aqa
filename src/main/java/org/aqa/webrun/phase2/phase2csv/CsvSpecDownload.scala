@@ -118,7 +118,7 @@ object CsvSpecDownload extends Logging {
     Trace.trace(FixedDateFormat.FixedFormat.ISO8601_BASIC_PERIOD.getPattern)
     Trace.trace()
 
-    val metadataCache = new MetadataCache
+    val metadataCache = MetadataCache.get
 
     val machine = Machine.get(22).get
     val dataType = new WinstonLutzCsv(metadataCache)
@@ -132,7 +132,7 @@ object CsvSpecDownload extends Logging {
 
     download(csvSpec, response, metadataCache)
 
-    (new MetadataCache).machineMap.size
+    metadataCache.machineMap.size
     Trace.trace()
     Trace.trace()
   }

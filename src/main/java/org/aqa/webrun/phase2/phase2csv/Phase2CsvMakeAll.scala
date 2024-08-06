@@ -33,7 +33,8 @@ object Phase2CsvMakeAll extends Logging {
     val start = System.currentTimeMillis()
     logger.info("Starting CSV generation.")
 
-    val metadataCache = new MetadataCache
+    MetadataCache.invalidate()
+    val metadataCache = MetadataCache.get
     val dataTypeList = Phase2Csv.makeDataTypeList(metadataCache)
 
     new PopulateDicomCsv(metadataCache).populateAll() // Get the DICOM column data up to date.
@@ -60,7 +61,7 @@ object Phase2CsvMakeAll extends Logging {
     maintenanceCsv.writeDoc()
 
     // Write an index for each institution, regardless of whether or not it has data.
-    metadataCache.institutionNameMap.keys.foreach(institutionPK => Phase2Csv.generateIndex(institutionPK))
+    metadataCache.institutionNameMap.keys.foreach(institutionPK => Phase2Csv.generateIndex(institutionPK, metadataCache))
 
     Phase2Csv.writeCsvColumnDefinitions(dataTypeList)
 
