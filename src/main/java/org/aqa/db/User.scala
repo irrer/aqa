@@ -22,6 +22,7 @@ import org.aqa.Crypto
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.web.AnonymousTranslate
+import org.aqa.webrun.phase2.phase2csv.MetadataCache
 
 import java.sql.Timestamp
 
@@ -39,6 +40,7 @@ case class User(
 ) {
 
   def insert: User = {
+    MetadataCache.invalidate()
     val insertQuery = User.query returning User.query.map(_.userPK) into ((user, userPK) => user.copy(userPK = Some(userPK)))
     val action = insertQuery += this
     val result = Db.run(action)
@@ -47,6 +49,7 @@ case class User(
   }
 
   def insertOrUpdate(): Int = {
+    MetadataCache.invalidate()
     val count = Db.run(User.query.insertOrUpdate(this))
     AnonymousTranslate.clearCache(institutionPK)
     count
@@ -197,6 +200,7 @@ object User extends Logging {
   }
 
   def delete(userPK: Long): Int = {
+    MetadataCache.invalidate()
     val user = get(userPK)
     val q = query.filter(_.userPK === userPK)
     val action = q.delete

@@ -19,6 +19,7 @@ package org.aqa.db
 import org.aqa.db.Db.driver.api._
 import org.aqa.Config
 import org.aqa.Util
+import org.aqa.webrun.phase2.phase2csv.MetadataCache
 
 case class MachineBeamEnergy(
     machineBeamEnergyPK: Option[Long], // primary key
@@ -30,6 +31,7 @@ case class MachineBeamEnergy(
 ) {
 
   def insert: MachineBeamEnergy = {
+    MetadataCache.invalidate()
     val insertQuery = MachineBeamEnergy.query returning MachineBeamEnergy.query.map(_.machineBeamEnergyPK) into ((machineBeamEnergy, machineBeamEnergyPK) =>
       machineBeamEnergy.copy(machineBeamEnergyPK = Some(machineBeamEnergyPK))
     )
@@ -38,7 +40,10 @@ case class MachineBeamEnergy(
     result
   }
 
-  def insertOrUpdate(): Int = Db.run(MachineBeamEnergy.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = {
+    MetadataCache.invalidate()
+    Db.run(MachineBeamEnergy.query.insertOrUpdate(this))
+  }
 
   override def equals(o: Any): Boolean = {
     val other = o.asInstanceOf[MachineBeamEnergy]
@@ -100,12 +105,14 @@ object MachineBeamEnergy {
   def list: Seq[MachineBeamEnergy] = Db.run(query.result)
 
   def delete(machineBeamEnergyPK: Long): Int = {
+    MetadataCache.invalidate()
     val q = query.filter(_.machineBeamEnergyPK === machineBeamEnergyPK)
     val action = q.delete
     Db.run(action)
   }
 
   def deleteByMachinePK(machinePK: Long): Int = {
+    MetadataCache.invalidate()
     val q = query.filter(_.machinePK === machinePK)
     val action = q.delete
     Db.run(action)

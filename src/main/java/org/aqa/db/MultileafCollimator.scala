@@ -18,6 +18,7 @@ package org.aqa.db
 
 import org.aqa.db.Db.driver.api._
 import org.aqa.Config
+import org.aqa.webrun.phase2.phase2csv.MetadataCache
 
 case class MultileafCollimator(
     multileafCollimatorPK: Option[Long], // primary key
@@ -33,6 +34,7 @@ case class MultileafCollimator(
 ) {
 
   def insert: MultileafCollimator = {
+    MetadataCache.invalidate()
     val insertQuery = MultileafCollimator.query returning MultileafCollimator.query.map(_.multileafCollimatorPK) into ((multileafCollimator, multileafCollimatorPK) =>
       multileafCollimator.copy(multileafCollimatorPK = Some(multileafCollimatorPK))
     )
@@ -41,7 +43,10 @@ case class MultileafCollimator(
     result
   }
 
-  def insertOrUpdate(): Int = Db.run(MultileafCollimator.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = {
+    MetadataCache.invalidate()
+    Db.run(MultileafCollimator.query.insertOrUpdate(this))
+  }
 
   def toName: String = (manufacturer + " " + model + " " + version).trim
 }
@@ -101,6 +106,7 @@ object MultileafCollimator {
   def list: Seq[MultileafCollimator] = Db.run(query.result)
 
   def delete(multileafCollimatorPK: Long): Int = {
+    MetadataCache.invalidate()
     val q = query.filter(_.multileafCollimatorPK === multileafCollimatorPK)
     val action = q.delete
     Db.run(action)

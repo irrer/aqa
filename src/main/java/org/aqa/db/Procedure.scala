@@ -21,6 +21,7 @@ import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.Db.driver.api._
 import org.aqa.web.PatientProcedureXml
+import org.aqa.webrun.phase2.phase2csv.MetadataCache
 
 import java.io.File
 import java.sql.Date
@@ -41,6 +42,7 @@ case class Procedure(
 ) {
 
   def insert: Procedure = {
+    MetadataCache.invalidate()
     PatientProcedureXml.cacheClear(None)
     val insertQuery = Procedure.query returning Procedure.query.map(_.procedurePK) into ((procedure, procedurePK) => procedure.copy(procedurePK = Some(procedurePK)))
     val action = insertQuery += this
@@ -50,6 +52,7 @@ case class Procedure(
   }
 
   def insertOrUpdate(): Int = {
+    MetadataCache.invalidate()
     PatientProcedureXml.cacheClear(None)
     // if the procedure already exists, and the execution directory is being
     // changed (via a name or version change) then rename the execution directory on disk.
@@ -164,6 +167,7 @@ object Procedure {
   }
 
   def delete(procedurePK: Long): Int = {
+    MetadataCache.invalidate()
     PatientProcedureXml.cacheClear(None)
     val action = query.filter(_.procedurePK === procedurePK).delete
     Db.run(action)

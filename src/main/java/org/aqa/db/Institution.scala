@@ -22,6 +22,7 @@ import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.web.AnonymousTranslate
+import org.aqa.webrun.phase2.phase2csv.MetadataCache
 
 case class Institution(
     institutionPK: Option[Long], // primary key
@@ -32,6 +33,7 @@ case class Institution(
 ) {
 
   def insert: Institution = {
+    MetadataCache.invalidate()
     val insertQuery = Institution.query returning Institution.query.map(_.institutionPK) into ((institution, institutionPK) => institution.copy(institutionPK = Some(institutionPK)))
     val action = insertQuery += this
     val result = Db.run(action)
@@ -40,6 +42,7 @@ case class Institution(
   }
 
   def insertOrUpdate(): Int = {
+    MetadataCache.invalidate()
     val count = Db.run(Institution.query.insertOrUpdate(this))
     if (institutionPK.isDefined) AnonymousTranslate.clearCache(institutionPK.get)
     count
@@ -113,6 +116,7 @@ object Institution extends Logging {
   }
 
   def delete(institutionPK: Long): Int = {
+    MetadataCache.invalidate()
     val q = query.filter(_.institutionPK === institutionPK)
     val action = q.delete
     val count = Db.run(action)

@@ -18,6 +18,7 @@ package org.aqa.db
 
 import org.aqa.db.Db.driver.api._
 import org.aqa.Config
+import org.aqa.webrun.phase2.phase2csv.MetadataCache
 
 case class EPID(
     epidPK: Option[Long], // primary key
@@ -32,13 +33,17 @@ case class EPID(
 ) {
 
   def insert: EPID = {
+    MetadataCache.invalidate()
     val insertQuery = EPID.query returning EPID.query.map(_.epidPK) into ((epid, epidPK) => epid.copy(epidPK = Some(epidPK)))
     val action = insertQuery += this
     val result = Db.run(action)
     result
   }
 
-  def insertOrUpdate(): Int = Db.run(EPID.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = {
+    MetadataCache.invalidate()
+    Db.run(EPID.query.insertOrUpdate(this))
+  }
 
   def toName: String = (manufacturer + " " + model + " " + hardwareVersion).trim
 }
@@ -85,6 +90,7 @@ object EPID {
   def list: Seq[EPID] = Db.run(query.result)
 
   def delete(epidPK: Long): Int = {
+    MetadataCache.invalidate()
     val q = query.filter(_.epidPK === epidPK)
     val action = q.delete
     Db.run(action)

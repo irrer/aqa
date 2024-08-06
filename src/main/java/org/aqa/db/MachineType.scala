@@ -18,6 +18,7 @@ package org.aqa.db
 
 import org.aqa.db.Db.driver.api._
 import org.aqa.Config
+import org.aqa.webrun.phase2.phase2csv.MetadataCache
 
 case class MachineType(
     machineTypePK: Option[Long], // primary key
@@ -28,13 +29,17 @@ case class MachineType(
 ) {
 
   def insert: MachineType = {
+    MetadataCache.invalidate()
     val insertQuery = MachineType.query returning MachineType.query.map(_.machineTypePK) into ((machineType, machineTypePK) => machineType.copy(machineTypePK = Some(machineTypePK)))
     val action = insertQuery += this
     val result = Db.run(action)
     result
   }
 
-  def insertOrUpdate(): Int = Db.run(MachineType.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = {
+    MetadataCache.invalidate()
+    Db.run(MachineType.query.insertOrUpdate(this))
+  }
 
   def toName: String = (model + " " + version).trim
 
@@ -84,6 +89,7 @@ object MachineType {
   def list: Seq[MachineType] = Db.run(query.result)
 
   def delete(machineTypePK: Long): Int = {
+    MetadataCache.invalidate()
     val q = query.filter(_.machineTypePK === machineTypePK)
     val action = q.delete
     Db.run(action)

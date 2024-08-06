@@ -21,6 +21,7 @@ import org.aqa.db.DbSetup
 import org.aqa.db.DicomSeries
 import org.aqa.run.RunProcedure
 import org.aqa.web.WebServer
+import org.aqa.webrun.phase2.phase2csv.MetadataCache
 
 import java.util.Date
 
@@ -46,6 +47,8 @@ object AQA extends Logging {
         RunProcedure.cleanupRunningProcedures()
 
         new WebServer
+
+        MetadataCache.invalidate()
 
         // val webServer = new WebServer
         // monitorShutDownHttp(webServer)

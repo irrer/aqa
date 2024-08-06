@@ -33,6 +33,7 @@ import org.aqa.Util
 import org.aqa.db.Db.driver.api._
 import org.aqa.web.AnonymousTranslate
 import org.aqa.web.MachineXml
+import org.aqa.webrun.phase2.phase2csv.MetadataCache
 
 import java.io.File
 
@@ -80,16 +81,17 @@ case class Machine(
 ) extends Logging {
 
   def insert: Machine = {
+    MetadataCache.invalidate()
     val insertQuery = Machine.query returning Machine.query.map(_.machinePK) into ((machine, machinePK) => machine.copy(machinePK = Some(machinePK)))
     val action = insertQuery += this
     val result = Db.run(action)
     AnonymousTranslate.clearCache(institutionPK)
     MachineXml.clearCache(Some(institutionPK))
-
     result
   }
 
   def insertOrUpdate(): Int = {
+    MetadataCache.invalidate()
     val count = Db.run(Machine.query.insertOrUpdate(this))
     AnonymousTranslate.clearCache(institutionPK)
     MachineXml.clearCache(Some(institutionPK))
@@ -414,6 +416,7 @@ object Machine extends Logging {
     * Delete the machine from the database.  If that is successful, then also delete its configuration directory.
     */
   def delete(machinePK: Long): Int = {
+    MetadataCache.invalidate()
     val machine = get(machinePK)
     if (machine.isDefined) {
       val q = query.filter(_.machinePK === machinePK)

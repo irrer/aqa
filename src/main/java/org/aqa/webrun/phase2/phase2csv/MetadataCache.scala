@@ -57,10 +57,10 @@ class MetadataCache extends Logging {
   val procedureMap: Map[Long, Procedure] = Procedure.list.map(p => (p.procedurePK.get, p)).toMap
 
   /**
-   * Get the procedure PK in a safe way.
-   * @param procedure For this procedure.
-   * @return PK, or -1 on failure.
-   */
+    * Get the procedure PK in a safe way.
+    * @param procedure For this procedure.
+    * @return PK, or -1 on failure.
+    */
   private def getProc(procedure: Option[Procedure]): Long = {
     if (procedure.isDefined && procedure.get.procedurePK.isDefined)
       procedure.get.procedurePK.get
@@ -88,33 +88,42 @@ class MetadataCache extends Logging {
 object MetadataCache extends Logging {
 
   /** cache */
-  private val cache: scala.collection.mutable.ArrayBuffer[MetadataCache] = scala.collection.mutable.ArrayBuffer()
-
-  /** Invalidate the cache after this much time (in ms) to keep it up to date. */
-  private val timeoutInterval_ms: Long = 10 * 60 * 1000
+  private val metadataInMemoryCache: scala.collection.mutable.ArrayBuffer[MetadataCache] = scala.collection.mutable.ArrayBuffer()
 
   /**
     * Get the cache entry.  If it is empty, then construct it.
+    *
+    * This is synchronized so that if one thread has already started to update it, another thread will not update it again.
     * @return cache
     */
-  def get: MetadataCache = {
-    val timeout = System.currentTimeMillis() - timeoutInterval_ms
-    if (cache.nonEmpty && (cache.head.start > timeout)) {
-      cache.head
-    } else {
-      cache.clear
-      logger.info("refreshing MetadataCache cache.")
-      cache.append(new MetadataCache)
-      cache.head
+  def get: MetadataCache =
+    metadataInMemoryCache.synchronized {
+      if (metadataInMemoryCache.nonEmpty) {
+        metadataInMemoryCache.head
+      } else {
+        metadataInMemoryCache.clear
+        logger.info("refreshing MetadataCache cache.")
+        metadataInMemoryCache.append(new MetadataCache)
+        metadataInMemoryCache.head
+      }
     }
-  }
 
   /**
     * Mark cache as invalid.
-    * TODO find all points in the application where the cache should be invalidated.  This would be better than a timeout.
     */
-  def invalidate(): Unit = {
-    cache.clear
+  def invalidate(): Unit =
+    metadataInMemoryCache.synchronized {
+      logger.info("Invalidating MetadataCache")
+      metadataInMemoryCache.clear
+    }
+
+  import scala.concurrent.ExecutionContext.Implicits.global
+  import scala.concurrent.Future
+
+  /** After startup, initialize the cache. */
+  Future[Unit] {
+    Thread.sleep(30 * 1000)
+    get
   }
 
 }
