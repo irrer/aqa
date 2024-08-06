@@ -19,6 +19,7 @@ package org.aqa.webrun.bbByEpid
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import com.pixelmed.dicom.TagFromName
+import edu.umro.DicomDict.DicomDict
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.AngleType
@@ -34,6 +35,7 @@ import org.aqa.web.OutputHeading
 import org.aqa.web.ViewOutput
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
+import org.aqa.Logging
 
 import java.io.File
 import java.text.SimpleDateFormat
@@ -43,7 +45,7 @@ import scala.xml.Elem
 /**
   * Generate and write HTML for EPID BB analysis.
   */
-object BBbyEPIDHTML {
+object BBbyEPIDHTML extends Logging {
 
   private val closeUpImagePrefix = "CloseUp"
   private val fullImagePrefix = "Full"
@@ -274,7 +276,20 @@ object BBbyEPIDHTML {
         val al = bbByEPIDList.head.al
 
         /** Get double value, convert from mm to cm, and format to text. */
-        def db(tag: AttributeTag) = { Util.fmtDbl(al.get(tag).getDoubleValues.head / 10) }
+        def db(tag: AttributeTag) = {
+
+          val attr = al.get(tag)
+          try {
+            if ((attr != null) && (attr.getDoubleValues != null) && attr.getDoubleValues.nonEmpty)
+              Util.fmtDbl(al.get(tag).getDoubleValues.head / 10)
+            else
+              "NA"
+          } catch {
+            case _: Throwable =>
+              logger.error("Could not get attribute " + DicomDict.dict.getNameFromTag(tag) + " for SOP " + Util.sopOfAl(al))
+              "Not Available"
+          }
+        }
 
         val x = db(TagByName.TableTopLateralPosition) // table X lateral_mm
         val y = db(TagByName.TableTopVerticalPosition) // table Y vertical_mm
