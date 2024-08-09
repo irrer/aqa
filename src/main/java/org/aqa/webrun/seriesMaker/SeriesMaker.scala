@@ -51,6 +51,7 @@ import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import scala.xml.Elem
+import scala.xml.UnprefixedAttribute
 
 object SeriesMaker extends Logging {
   private val path = new String((new SeriesMaker).pathOf)
@@ -142,6 +143,60 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
       |    }
       |  }
       |  beamAssignmentList.setAttribute("value", valueText);
+      |
+      |  var pass = "#33FE6E";
+      |  var fail = "#FF3843"
+      |
+      |  var show_specs_list = document.querySelectorAll('[id^="RTPLAN_"]');
+      |  for (i = 0; i < show_specs_list.length; i++) {
+      |    var parent = show_specs_list[i].parentElement.parentElement;
+      |    
+      |    // ------------------------------------------------------------
+      |    
+      |    var txt = parent.querySelector("[GantryText]");
+      |    txt.style.backgroundColor = "white";
+      |
+      |    var gantry = parent.querySelectorAll("[Gantry]");
+      |    if (gantry.length == 2) {
+      |      if (gantry[0].getAttribute("Gantry") == gantry[1].getAttribute("Gantry")) {
+      |        txt.style.backgroundColor = pass;
+      |      }
+      |      else {
+      |        txt.style.backgroundColor = fail;
+      |      }
+      |    }
+      |
+      |    // ------------------------------------------------------------
+      |    
+      |    txt = parent.querySelector("[CollimatorText]");
+      |    txt.style.backgroundColor = "white";
+      |
+      |    var collimator = parent.querySelectorAll("[Collimator]");
+      |    if (collimator.length == 2) {
+      |      if (collimator[0].getAttribute("Collimator") == collimator[1].getAttribute("Collimator")) {
+      |        txt.style.backgroundColor = pass;
+      |      }
+      |      else {
+      |        txt.style.backgroundColor = fail;
+      |      }
+      |    }
+      |
+      |    // ------------------------------------------------------------
+      |    
+      |    txt = parent.querySelector("[MvText]");
+      |    txt.style.backgroundColor = "white";
+      |    
+      |    var mv = parent.querySelectorAll("[Mv]");
+      |    if (mv.length == 2) {
+      |      if (mv[0].getAttribute("Mv") == mv[1].getAttribute("Mv")) {
+      |        txt.style.backgroundColor = pass;
+      |      }
+      |      else {
+      |        txt.style.backgroundColor = fail;
+      |      }
+      |    }
+      |
+      |  }
       |}
       |
       |""".stripMargin
@@ -187,22 +242,70 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
       noMachine
   }
 
-  private def formatDraggable(color: String, id: LocalHtmlId, content: Option[Elem]): Elem = {
+  /**
+    * Add the gantry angle, collimator angle, and Mv as element tags to the given element.
+    * @param elem Add to this element.
+    * @param rtimage Get values from here.
+    * @return New element with tags added.
+    */
+  private def addRtimageSpecs(elem: Elem, rtimage: AttributeList): Elem = {
+
+    val gantryAngle = Util.angleRoundedTo90(Util.gantryAngle(rtimage)).toString
+    val collimatorAngle = Util.angleRoundedTo90(Util.collimatorAngle(rtimage)).toString
+    val mv = {
+      val d = DicomUtil.findAllSingle(rtimage, TagByName.KVP).head.getDoubleValues.head / 1000
+      if (d.round == d)
+        d.round.toString
+      else
+        d.toString
+    }
+
+    def makeAttr(name: String, value: String): UnprefixedAttribute = {
+      new scala.xml.UnprefixedAttribute(name, value, scala.xml.Null)
+    }
+
+    val gAtr = makeAttr("Gantry", gantryAngle)
+    val cAtr = makeAttr("Collimator", collimatorAngle)
+    val mvAtr = makeAttr("Mv", mv)
+
+    val newElem = ((elem % mvAtr) % cAtr) % gAtr
+    newElem
+  }
+
+  /**
+    * Format an RTIMAGE element that can be dragged.
+    * @param color Group's (series) color.
+    * @param id HTML id.
+    * @param content If defined, inner part that can be dragged.
+    * @param rtimage If defined, RTIMAGE being dragged.
+    * @return
+    */
+  private def formatDraggable(color: String, id: LocalHtmlId, content: Option[Elem], rtimage: AttributeList): Elem = {
     val borderRadius = "border-radius:10px"
     val width = "width:460px"
     val height = "height:47px"
     val border = s"border: 2px solid $color"
 
     val inner: Seq[Elem] = {
-      if (content.isDefined)
-        Seq(<span id={id.dragId} draggable="true" ondragstart="drag(event)">{content.get}</span>)
-      else
+      if (content.isDefined) {
+        val drag = <span id={id.dragId} draggable="true" ondragstart="drag(event)">{content.get}</span>
+        Seq(addRtimageSpecs(drag, rtimage))
+      } else
         Seq()
     }
 
     val outerId = if (content.isDefined) id.beamId else id.planId
 
-    <div id={outerId} style={s"align:auto;$borderRadius;$border;$width;$height;"} ondrop="drop(event)" ondragover="allowDrop(event)">{inner}</div>
+    val container = {
+      <div id={outerId} style={s"align:auto;$borderRadius;$border;$width;$height;"} ondrop="drop(event)" ondragover="allowDrop(event)">{inner}</div>
+    }
+
+    if (content.isDefined)
+      container
+    else {
+      addRtimageSpecs(container, rtimage)
+    }
+
   }
 
   /**
@@ -263,7 +366,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
         <b> {""} </b>
       </span>
     }
-    formatDraggable(color, id, Some(content))
+    formatDraggable(color, id, Some(content), dicomFile.attributeList.get)
   }
 
   private def rtimageToHtml(color: String, id: LocalHtmlId, first: Date, rtimage: DicomFile, req: SeriesMakerReq): Elem = {
@@ -349,7 +452,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
         </table>
       </div>
     }
-    new WebPlainText(label = "Beams", showLabel = false, col = 4, offset = 1, _ => content)
+    new WebPlainText(label = "Beams", showLabel = false, col = 4, offset = 0, _ => content)
   }
 
   /**
@@ -368,27 +471,40 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
       val sessionDirName = req.rtimageList.head.file.getParentFile.getName
 
-      <tr>
-        <td>
-          <table>
-            <tr>
-              <td>
-                {formatDraggable(planColor, id, None)}
-              </td>
-              <td>
-                <span style="margin-left:20px;">{imageRef(sessionDirName, Util.sopOfAl(rtimage) + ".png")}</span>
-              </td>
-              <td>
-                <span style="margin-left:20px; width:300px;"><b>{beamName}</b></span>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
+      val content = {
+        <tr>
+          <td>
+            <table>
+              <tr>
+                <td>
+                  {formatDraggable(planColor, id, None, rtimage)}
+                </td>
+                <td>
+                  <span style="margin-left:20px;">{imageRef(sessionDirName, Util.sopOfAl(rtimage) + ".png")}</span>
+                </td>
+                <td>
+                  <span style="margin-left:20px; width:300px;"><b>{beamName}</b></span>
+                  <br>
+                    <span style="margin-left:10px;">
+                      <span GantryText="" title="Green means that the gantry angle for the plan matches the RTIMAGE, red means they differ."> {WebUtil.nbsp} <b> G</b> {WebUtil.nbsp} </span>
+                      <span> {WebUtil.nbsp} </span>
+                      <span CollimatorText="" title="Green means that the collimator angle for the plan matches the RTIMAGE, red means they differ."> {WebUtil.nbsp} <b> C</b> {WebUtil.nbsp} </span>
+                      <span> {WebUtil.nbsp} </span>
+                      <span MvText="" title="Green means that the beam energy for the plan matches the RTIMAGE, red means they differ."> {WebUtil.nbsp} <b> Mv </b> {WebUtil.nbsp} </span>
+                    </span>
+                  </br>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      }
+
+      content
     }
 
     val content = {
-      <table style="width: 100%;" class="table table-bordered">
+      <table style="width: 100%;margin-left:50px;" class="table table-bordered">
         <thead>
           <tr>
             <th style="text-align:center;">Plan Beams</th>
@@ -398,7 +514,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
       </table>
     }
 
-    new WebPlainText(label = "Plan", showLabel = false, col = 5, offset = 1, _ => content)
+    new WebPlainText(label = "Plan", showLabel = false, col = 7, offset = 0, _ => content)
 
   }
 
