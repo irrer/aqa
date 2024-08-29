@@ -9,7 +9,6 @@ import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
-import edu.umro.ScalaUtil.RawByte
 import org.aqa.Logging
 import org.aqa.db.Procedure
 import org.aqa.web.WebUtil
@@ -622,9 +621,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
       val gc = ImageUtil.getGraphics(buf)
       gc.setColor(Color.black)
-      val byteArray = DicomUtil.PixelDataToByteArray(al)
-      val hash = edu.umro.ScalaUtil.Crypto.hash(byteArray)
-      val hashText = RawByte.formatByteArray(hash)
+      val hashText = Util.imagePixelMD5Hash(al)
 
       val text = s"Hash: $hashText"
 
