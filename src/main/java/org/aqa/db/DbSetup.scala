@@ -133,7 +133,8 @@ object DbSetup extends Logging {
     LeafPosition.query,
     VMAT.query,
     GapSkew.query,
-    WinstonLutz.query
+    WinstonLutz.query,
+    FloodField.query
   )
 
   /**

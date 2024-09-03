@@ -26,12 +26,16 @@ import org.aqa.web.WebUtil.StyleMapT
 import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.webrun.ExtendedData
 import org.aqa.Util
+import org.aqa.web.WebUtil.emptyValueMap
+import org.aqa.web.WebUtil.getValueMap
+import org.restlet.Request
 import org.restlet.Response
+import org.restlet.Restlet
 
 import java.sql.Timestamp
 import scala.xml.Elem
 
-trait RunTrait[RunReqClassType] extends Logging {
+trait RunTrait[RunReqClassType] extends Restlet with Logging {
 
   /** Run the actual analysis.  This must create a display.html file in the output directory. */
   def run(extendedData: ExtendedData, runReq: RunReqClassType, response: Response): ProcedureStatus.Value
@@ -96,10 +100,10 @@ trait RunTrait[RunReqClassType] extends Logging {
   }
 
   /**
-   * Utility for getting data date from uploaded RTIMAGE files.
-   * @param alList List of all uploaded DICOM files.
-   * @return Date when data was acquired.
-   */
+    * Utility for getting data date from uploaded RTIMAGE files.
+    * @param alList List of all uploaded DICOM files.
+    * @return Date when data was acquired.
+    */
   def getDataDateFromRtimageList(alList: Seq[AttributeList]): Option[Timestamp] = {
     val min = alList.filter(Util.isRtimage).map(Util.extractDateTimeAndPatientIdFromDicomAl).flatMap(dp => dp._1.map(_.getTime)).min
     Some(new Timestamp(min))
@@ -128,4 +132,18 @@ trait RunTrait[RunReqClassType] extends Logging {
     * @param outputPK: Output PK of old output.
     */
   def validateRedo(outputPK: Long): Option[String] = None
+
+  /**
+    * If the procedure requires the user to always specify the machine, then it should override this and set it to true.
+    * @return True if the user should always specify the machine.
+    */
+  def alwaysRequireMachine: Boolean = false
+
+  override def handle(request: Request, response: Response): Unit = {
+    super.handle(request, response)
+
+    val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
+    RunProcedure.handleInput(valueMap, response, this.asInstanceOf[RunTrait[RunReqClass]], authenticatedUserPK = None, sync = true)
+  }
+
 }

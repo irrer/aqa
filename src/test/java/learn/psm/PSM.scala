@@ -253,7 +253,6 @@ object PSM {
     }
 
     namedImageList.foreach(imageToPixText)
-
   }
 
   private def saveDicomAsText(dicomFile: DicomFile, name: String): Unit = {
@@ -309,6 +308,10 @@ object PSM {
       val pixelData = for (y <- 0 until wdImage.height) yield rowOf(y)
       new DicomImage(pixelData)
     }
+
+    /**
+     * normalize((ff * wd) / psm)
+     */
 
     val brImage = {
       val zero: Float = 0

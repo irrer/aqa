@@ -26,49 +26,48 @@ import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import javax.vecmath.Point2i
 
-case class PixelSensitivityMap(
-    pixelSensitivityMapPK: Option[Long], // primary key
+case class PixelSensitivityMatrix(
+    pixelSensitivityMatrixPK: Option[Long], // primary key
     outputPK: Long, // metadata
     psmType: String, // type of PSM
-    width_pix: Int, // number of pixels wide (columns)
-    height_pix: Int, // number of pixels tall (rows)
-    pixelSensitivityMap_array: Array[Byte], // Pixel sensitivity map.  One value for each pixel.
+    width: Int, // number of pixels wide (columns)
+    height: Int, // number of pixels tall (rows)
+    pixelSensitivityMatrix_array: Array[Byte], // Pixel sensitivity matrix.  One value for each pixel.
     wholeDetector_array: Array[Byte] // Whole detector, taken directly from the EPID.  One value for each pixel.
 
     /*
-        Naming:
-            WD = whole detector. This is the image directly from the EPID
-            FF =  flood field. This is the calibration image automatically applied by the LinAC to create the WD image.
-            WD*FF =Raw image. This is the EPID image with the flood field image removed.
-            PSM = the alternate calibration image to the flood field that we need for QA applications.
-            Raw image/PSM = BR (Beam Response). The BR image is the image that we require to perform our symmetry analysis on.
-
+      Naming:
+          WD = whole detector. This is the image directly from the EPID
+          FF =  flood field. This is the calibration image automatically applied by the LinAC to create the WD image.
+          WD*FF =Raw image. This is the EPID image with the flood field image removed.
+          PSM = the alternate calibration image to the flood field that we need for QA applications.
+          Raw image/PSM = BR (Beam Response). The BR image is the image that we require to perform our symmetry analysis on.
      */
 
 ) {
 
   def this(
-      pixelSensitivityMapPK: Option[Long],
+      pixelSensitivityMatrixPK: Option[Long],
       outputPK: Long,
       psmType: String,
       width_pix: Int,
       height_pix: Int,
-      pixelSensitivityMapDouble_array: Seq[Seq[Double]],
+      pixelSensitivityMatrixDouble_array: Seq[Seq[Double]],
       wholeDetectorDouble_array: Seq[Seq[Double]]
   ) =
     this(
-      pixelSensitivityMapPK,
+      pixelSensitivityMatrixPK,
       outputPK,
       psmType,
       width_pix,
       height_pix,
-      PixelSensitivityMap.double2dToByte1d(width_pix, height_pix, pixelSensitivityMapDouble_array),
-      PixelSensitivityMap.double2dToByte1d(width_pix, height_pix, wholeDetectorDouble_array)
+      PixelSensitivityMatrix.double2dToByte1d(width_pix, height_pix, pixelSensitivityMatrixDouble_array),
+      PixelSensitivityMatrix.double2dToByte1d(width_pix, height_pix, wholeDetectorDouble_array)
     )
 
-  def insert: PixelSensitivityMap = {
-    val insertQuery = PixelSensitivityMap.query returning PixelSensitivityMap.query.map(_.pixelSensitivityMapPK) into
-      ((PSM, pixelSensitivityMapPK) => PSM.copy(pixelSensitivityMapPK = Some(pixelSensitivityMapPK)))
+  def insert: PixelSensitivityMatrix = {
+    val insertQuery = PixelSensitivityMatrix.query returning PixelSensitivityMatrix.query.map(_.pixelSensitivityMatrixPK) into
+      ((PSM, pixelSensitivityMatrixPK) => PSM.copy(pixelSensitivityMatrixPK = Some(pixelSensitivityMatrixPK)))
 
     val action = insertQuery += this
     val result = Db.run(action)
@@ -77,25 +76,25 @@ case class PixelSensitivityMap(
 
   private def byte1dToDouble2d(byteArray: Array[Byte]): Seq[Seq[Double]] = {
     val in = new ObjectInputStream(new ByteArrayInputStream(byteArray))
-    def readRow: Seq[Double] = (0 until width_pix).map(_ => in.readDouble())
-    val matrix = (0 until height_pix).map(_ => readRow)
+    def readRow: Seq[Double] = (0 until width).map(_ => in.readDouble())
+    val matrix = (0 until height).map(_ => readRow)
     matrix
   }
 
-  private var pixelSensitivityMapAsDouble: Seq[Seq[Double]] = byte1dToDouble2d(pixelSensitivityMap_array)
+  private var pixelSensitivityMatrixAsDouble: Seq[Seq[Double]] = byte1dToDouble2d(pixelSensitivityMatrix_array)
 
   private var wholeDetectorAsDouble: Seq[Seq[Double]] = byte1dToDouble2d(wholeDetector_array)
 
-  def insertOrUpdate(): Int = Db.run(PixelSensitivityMap.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(PixelSensitivityMatrix.query.insertOrUpdate(this))
 
   override def toString: String = {
-    s"pixelSensitivityMapPK: $pixelSensitivityMapPK    outputPK: $outputPK    psmType: $psmType"
+    s"pixelSensitivityMatrixPK: $pixelSensitivityMatrixPK    outputPK: $outputPK    psmType: $psmType"
   }
 
   /** List of pixels that have a value of zero (invalid). */
   private val zeroPixelSet: Set[Point2i] = {
-    def isZero(x: Int, y: Int) = { (pixelSensitivityMapAsDouble(y)(x) == 0) || (wholeDetectorAsDouble(y)(x) == 0) }
-    val list = for (x <- 0 until width_pix; y <- 0 until height_pix; if isZero(x, y)) yield new Point2i(x, y)
+    def isZero(x: Int, y: Int) = { (pixelSensitivityMatrixAsDouble(y)(x) == 0) || (wholeDetectorAsDouble(y)(x) == 0) }
+    val list = for (x <- 0 until width; y <- 0 until height; if isZero(x, y)) yield new Point2i(x, y)
     list.toSet
   }
 
@@ -105,7 +104,7 @@ case class PixelSensitivityMap(
       wholeDetectorAsDouble(y).zip(dicomImage.pixelData(y)).map(wi => wi._1 * wi._2)
     }
 
-    val wdXimg = (0 until height_pix).map(doRow)
+    val wdXimg = (0 until height).map(doRow)
 
     wdXimg
   }
@@ -117,13 +116,13 @@ case class PixelSensitivityMap(
     */
   private def divByPsm(wdXimg: Seq[Seq[Double]]): Seq[Seq[Double]] = {
     val zeroSet = {
-      val list = for (x <- 0 until width_pix; y <- 0 until height_pix; if wdXimg(y)(x) == 0) yield new Point2i(x, y)
+      val list = for (x <- 0 until width; y <- 0 until height; if wdXimg(y)(x) == 0) yield new Point2i(x, y)
       list.toSet ++ zeroPixelSet
     }
 
     def divRow(y: Int): Seq[Double] = {
       val wdRow = wdXimg(y)
-      val psmRow = pixelSensitivityMapAsDouble(y)
+      val psmRow = pixelSensitivityMatrixAsDouble(y)
 
       def divPixel(x: Int): Double = {
         if (zeroSet.contains(new Point2i(x, y))) // avoid division by zero exception
@@ -132,15 +131,15 @@ case class PixelSensitivityMap(
           wdRow(x) / psmRow(x)
       }
 
-      (0 until width_pix).map(divPixel)
+      (0 until width).map(divPixel)
     }
 
-    (0 until height_pix).map(divRow)
+    (0 until height).map(divRow)
   }
 
   private def normalize(divByPsmImage: Seq[Seq[Double]], dicomImage: DicomImage): AttributeList = {
 
-    val sampleSize = height_pix * 2
+    val sampleSize = height * 2
 
     val divByPsmOrdered = divByPsmImage.flatten.sorted
     val divByPsmLoMean = divByPsmOrdered.slice(sampleSize, sampleSize + sampleSize).sum / sampleSize
@@ -172,19 +171,27 @@ case class PixelSensitivityMap(
 }
 
 //noinspection ScalaWeakerAccess
-object PixelSensitivityMap {
-  class PSMTable(tag: Tag) extends Table[PixelSensitivityMap](tag, "pixelSensitivityMap") {
+object PixelSensitivityMatrix {
+  class PSMTable(tag: Tag) extends Table[PixelSensitivityMatrix](tag, "pixelSensitivityMatrix") {
 
-    def pixelSensitivityMapPK = column[Long]("pixelSensitivityMapPK", O.PrimaryKey, O.AutoInc)
+    def pixelSensitivityMatrixPK = column[Long]("pixelSensitivityMatrixPK", O.PrimaryKey, O.AutoInc)
     def outputPK = column[Long]("outputPK")
     def psmType = column[String]("psmType")
     def width_pix = column[Int]("width_pix")
     def height_pix = column[Int]("height_pix")
-    def pixelSensitivityMap_array = column[Array[Byte]]("pixelSensitivityMap_array")
+    def pixelSensitivityMatrix_array = column[Array[Byte]]("pixelSensitivityMatrix_array")
     def wholeDetector_array = column[Array[Byte]]("wholeDetector_array")
 
     def * =
-      (pixelSensitivityMapPK.?, outputPK, psmType, width_pix, height_pix, pixelSensitivityMap_array, wholeDetector_array) <> (PixelSensitivityMap.apply _ tupled, PixelSensitivityMap.unapply)
+      (
+        pixelSensitivityMatrixPK.?,
+        outputPK,
+        psmType,
+        width_pix,
+        height_pix,
+        pixelSensitivityMatrix_array,
+        wholeDetector_array
+      ) <> (PixelSensitivityMatrix.apply _ tupled, PixelSensitivityMatrix.unapply)
 
     def outputFK =
       foreignKey("PSM_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
@@ -192,9 +199,9 @@ object PixelSensitivityMap {
 
   val query = TableQuery[PSMTable]
 
-  def get(pixelSensitivityMapPK: Long): Option[PixelSensitivityMap] = {
+  def get(pixelSensitivityMatrixPK: Long): Option[PixelSensitivityMatrix] = {
     val action = for {
-      inst <- PixelSensitivityMap.query if inst.pixelSensitivityMapPK === pixelSensitivityMapPK
+      inst <- PixelSensitivityMatrix.query if inst.pixelSensitivityMatrixPK === pixelSensitivityMatrixPK
     } yield inst
     Db.run(action.result).headOption
   }
@@ -202,15 +209,15 @@ object PixelSensitivityMap {
   /**
     * Get a list of all rows for the given output
     */
-  def getByOutput(outputPK: Long): Seq[PixelSensitivityMap] = {
+  def getByOutput(outputPK: Long): Seq[PixelSensitivityMatrix] = {
     val action = for {
-      inst <- PixelSensitivityMap.query if inst.outputPK === outputPK
+      inst <- PixelSensitivityMatrix.query if inst.outputPK === outputPK
     } yield inst
     Db.run(action.result)
   }
 
-  def delete(pixelSensitivityMapPK: Long): Int = {
-    val q = query.filter(_.pixelSensitivityMapPK === pixelSensitivityMapPK)
+  def delete(pixelSensitivityMatrixPK: Long): Int = {
+    val q = query.filter(_.pixelSensitivityMatrixPK === pixelSensitivityMatrixPK)
     val action = q.delete
     Db.run(action)
   }

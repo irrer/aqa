@@ -22,6 +22,7 @@ import org.aqa.webrun.LOC.LOCRun
 import org.aqa.webrun.LOCBaseline.LOCBaselineRun
 import org.aqa.webrun.bbByCBCT.BBbyCBCTRun
 import org.aqa.webrun.bbByEpid.BBbyEPIDRun
+import org.aqa.webrun.floodField.FloodRun
 import org.aqa.webrun.focalSpot.FSRun
 import org.aqa.webrun.gapSkew.GapSkewRun
 import org.aqa.webrun.machLog.MachLogRun
@@ -68,7 +69,8 @@ object WebRun {
     ("FocalSpot", procedure => new FSRun(procedure)),
     ("MachineLog", procedure => new MachLogRun(procedure)),
     ("LOC", procedure => new LOCRun(procedure)),
-    ("LOCBaseline", procedure => new LOCBaselineRun(procedure))
+    ("LOCBaseline", procedure => new LOCBaselineRun(procedure)),
+    ("FloodField", procedure => new FloodRun(procedure))
   )
 
   /** Possible choices for procedure interfaces. */
