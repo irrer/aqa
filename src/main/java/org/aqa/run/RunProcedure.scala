@@ -121,7 +121,12 @@ object RunProcedure extends Logging {
   def formError(msg: String): Left[Map[String, Error], Nothing] = Left(WebUtil.Error.make(WebUtil.uploadFileLabel, msg))
 
   private def makeForm(runTrait: RunTrait[RunReqClass]): WebForm = {
-    val machineSelector = new WebInputSelectMachine(machineSelectorLabel, 6, 0)
+    val machineSelector = {
+      if (runTrait.alwaysRequireMachine)
+        new WebInputAlwaysSelectMachine(machineSelectorLabel, 6, 0)
+      else
+        new WebInputSelectMachine(machineSelectorLabel, 6, 0)
+    }
 
     val noteField = new WebInputTextArea(noteFieldName, col = 6, offset = 0, placeholder = "Enter note (optional).", aqaAlias = false)
 
