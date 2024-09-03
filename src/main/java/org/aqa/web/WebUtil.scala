@@ -1209,6 +1209,67 @@ object WebUtil extends Logging {
     }
   }
 
+
+  /**
+   * Optionally show a selection list based on evaluating a function.
+   */
+  class WebInputAlwaysSelectMachine(override val label: String, col: Int, offset: Int) extends IsInput(label) with ToHtml {
+
+    override def toHtml(valueMap: ValueMapT, errorMap: StyleMapT, response: Option[Response], htmlAttrMap: Map[String, String] = Map()): Elem = {
+
+      val curValue: Option[String] = if (valueMap.contains(label)) valueMap.get(label) else None
+
+      def toOption(value: String, choice: String): Elem = {
+
+        val opt = if (curValue.isDefined && curValue.get.equals(value)) {
+          <option selected="selected" value={value}>
+            {choice}
+          </option>
+        } else {
+          <option value={value}>
+            {choice}
+          </option>
+        }
+        opt
+      }
+
+      val selectList: Seq[(String, String)] = {
+        if (response.isEmpty) Seq[(String, String)]()
+        else {
+          val machListAll =
+            if (userIsWhitelisted(response.get.getRequest))
+              Machine.list
+            else {
+              val user = CachedUser.get(response.get.getRequest)
+              Machine.listMachinesFromInstitution(user.get.institutionPK)
+            }
+
+          def machToDescription(m: Machine): String = {
+            val instName = AnonymizeUtil.decryptWithNonce(m.institutionPK, Institution.get(m.institutionPK).get.name_real.get)
+            val machId = AnonymizeUtil.decryptWithNonce(m.institutionPK, m.id_real.get)
+            instName + " : " + machId
+          }
+
+          val pair = machListAll.map(m => (m.machinePK.get.toString, machToDescription(m)))
+          pair
+        }
+      }
+
+      val html = {
+        val list = selectList.map(v => toOption(v._1, v._2))
+        val input = {
+          <select>
+            {list}
+          </select> % idNameClassValueAsAttr(label, valueMap)
+        }
+        wrapInput(label, showLabel = true, input, col, offset, errorMap)
+      }
+
+      html
+    }
+  }
+
+
   class WebInputCheckbox(override val label: String, val showLabel: Boolean, title: Option[String] = None, col: Int, offset: Int, htmlAttrMapP: Map[String, String] = Map(), id: Option[String] = None)
     extends IsInput(label) with ToHtml {
 
