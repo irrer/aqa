@@ -1251,7 +1251,9 @@ object WebUtil extends Logging {
           }
 
           val pair = machListAll.map(m => (m.machinePK.get.toString, machToDescription(m)))
-          pair
+          val notSelected = ("-1", "Select Machine")
+
+          notSelected +: pair
         }
       }
 
