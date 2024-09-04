@@ -1,6 +1,7 @@
 package org.aqa.webrun.floodField
 
 import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
@@ -177,7 +178,14 @@ object FloodHtml extends Logging {
 
     val title = "Flood Field"
 
-    val image = new DicomImage(runReq.floodField)
+    // A DicomImage with all of the pixels properly scaled.
+    val image: DicomImage = {
+      val unscaled = new DicomImage(runReq.floodField)
+      val RescaleSlope = runReq.floodField.get(TagByName.RescaleSlope).getDoubleValues.head.toFloat
+      val RescaleIntercept = runReq.floodField.get(TagByName.RescaleIntercept).getDoubleValues.head.toFloat
+      val scaledPixels = unscaled.pixelData.map(row => row.map(v => (v * RescaleSlope) + RescaleIntercept))
+      new DicomImage(scaledPixels)
+    }
 
     val hist = histogramHtml(image)
 
