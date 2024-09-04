@@ -1,0 +1,77 @@
+<div title="Flood Field">
+    <!--
+    Copyright 2024 Regents of the University of Michigan
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    -->
+
+    <h2>@@title@@</h2>
+
+    <p>
+        The flood field is used by AQA to create a PSM (Pixel Sensitivity Matrix). Treatment machines create a new flood
+        field when an EPID recalibration is performed. This procedure allows users to upload their latest flood field to
+        AQA.  This is often done as a prelude to uploading a PSM.
+    </p>
+    <p>
+        A flood field may also be uploaded with the PSM files.
+    </p>
+    <p>
+        The flood field consists of a single DICOM image with modality RTIMAGE. However, while RTIMAGE files generally
+        contain a DICOM <a
+            href="https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.12.html#table_C.7-18">Device
+        Serial Number (0018,1000)</a> the flood field does not. Because of this you must specify which machine the file
+        comes from.
+    </p>
+
+    <h3>Using Flood Field</h3>
+
+    <p>
+        From the home page, click the <!--suppress HtmlUnknownTarget --><a href="/run/WebRunIndex" target="_blank">Run
+        Procedure</a> link and then <em>Flood Field</em>. This will show the upload page.
+    </p>
+
+    <p style="margin-top: 30px">
+        <a href="Upload.png" style="border:1px gray;margin:10px;" target="_blank">
+            <img src="Upload.png" style="margin:5px; border: 1px solid lightgray;width:600px;"
+                 alt="Screen Shot of FloodField Interface"/>
+        </a>
+    </p>
+
+    <p>
+        Drag and drop a flood field file into the drop area, select the machine, and click Run.
+    </p>
+
+    <p>
+        A page similar to the one below will be shown. Note that the windowing/leveling of the image has been adjusted
+        to provide maximum contrast for the area that excludes the corners.
+    </p>
+
+    <p style="margin-top: 30px">
+        <a href="Results.png" style="border:1px gray;margin:10px;" target="_blank">
+            <img src="Results.png" style="margin:5px; border: 1px solid lightgray;width:600px;"
+                 alt="Screen Shot of Flood Field results"/>
+        </a>
+    </p>
+
+    <!-- ======================================= -->
+
+    <!-- End of page spacer. -->
+    <p style="margin:200px;">
+
+    </p>
+
+
+    <!-- xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx -->
+    <!-- xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx -->
+
+</div>
