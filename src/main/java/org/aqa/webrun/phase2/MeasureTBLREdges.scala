@@ -478,7 +478,8 @@ object MeasureTBLREdges extends Logging {
       bottomRect: Rectangle,
       rightRect: Rectangle,
       leftRect: Rectangle,
-      floodOffset: Point
+      floodOffset: Point,
+      markCenter: Boolean
   ): BufferedImage = {
     //val bufImg = image.toBufferedImage(imageColor)
     val bufImg = image.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
@@ -492,7 +493,8 @@ object MeasureTBLREdges extends Logging {
     annotateRightLeft(bufImg, graphics, measurementSet.left, names(2), transMeasurementSet.left, leftRect, floodOffset)
     annotateRightLeft(bufImg, graphics, measurementSet.right, names(3), transMeasurementSet.right, rightRect, floodOffset)
 
-    annotateCenter(bufImg, graphics, transMeasurementSet)
+    if (markCenter)
+      annotateCenter(bufImg, graphics, transMeasurementSet)
     bufImg
   }
 
@@ -536,7 +538,8 @@ object MeasureTBLREdges extends Logging {
       collimatorAngle: Double,
       annotate: DicomImage,
       floodOffset: Point,
-      thresholdPercent: Double
+      thresholdPercent: Double,
+      markCenter: Boolean = true
   ): AnalysisResult = {
     val threshold = calcPercentPixelValue(image, thresholdPercent)
 
@@ -567,7 +570,7 @@ object MeasureTBLREdges extends Logging {
     val measurementSet = TBLR(topEdge, bottomEdge, leftEdge, rightEdge)
     val transMeasurementSet = measurementSet.floodRelative(floodOffset).pix2iso(translator)
 
-    val bufferedImage = makeAnnotatedImage(annotate, measurementSet, transMeasurementSet, collimatorAngle, nsRect._1, nsRect._2, ewRect._1, ewRect._2, floodOffset)
+    val bufferedImage = makeAnnotatedImage(annotate, measurementSet, transMeasurementSet, collimatorAngle, nsRect._1, nsRect._2, ewRect._1, ewRect._2, floodOffset, markCenter)
     AnalysisResult(measurementSet, bufferedImage)
   }
 
