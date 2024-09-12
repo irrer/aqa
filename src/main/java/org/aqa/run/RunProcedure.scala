@@ -113,7 +113,7 @@ object RunProcedure extends Logging {
     }
   }
 
-  private val machineSelectorLabel = "Machine"
+  val machineSelectorLabel = "Machine"
 
   private val noteFieldName = "Note"
 
