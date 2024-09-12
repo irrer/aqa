@@ -148,6 +148,24 @@ object FloodField extends Logging {
     Db.run(action.result)
   }
 
+
+  /**
+   * Get a list of all rows for the given hash.  There should be either zero or one.
+   */
+  def getMostRecent(machinePK: Long, Rows: Int, Columns: Int): Option[FloodField] = {
+    val action = for {
+      output <- Output.query if output.machinePK === machinePK
+      ff <- FloodField.query if (ff.Rows === Rows) && (ff.Columns === Columns) && (ff.outputPK === output.outputPK)
+    } yield (output, ff)
+    val sorted = action.sortBy(_._1.dataDate.desc)
+    val flood = Db.run(sorted.result.headOption)
+
+    if (flood.isDefined)
+      Some(flood.get._2)
+    else
+      None
+  }
+
   def delete(floodFieldPK: Long): Int = {
     val q = query.filter(_.floodFieldPK === floodFieldPK)
     val action = q.delete
