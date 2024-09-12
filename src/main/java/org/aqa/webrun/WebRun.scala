@@ -28,6 +28,7 @@ import org.aqa.webrun.gapSkew.GapSkewRun
 import org.aqa.webrun.machLog.MachLogRun
 import org.aqa.webrun.phase2.Phase2
 import org.aqa.webrun.phase3.Phase3
+import org.aqa.webrun.psm.PSMRun
 import org.aqa.webrun.wl.WLRun
 import org.restlet.Request
 import org.restlet.Response
@@ -70,7 +71,8 @@ object WebRun {
     ("MachineLog", procedure => new MachLogRun(procedure)),
     ("LOC", procedure => new LOCRun(procedure)),
     ("LOCBaseline", procedure => new LOCBaselineRun(procedure)),
-    ("FloodField", procedure => new FloodRun(procedure))
+    ("FloodField", procedure => new FloodRun(procedure)),
+    ("PSM", procedure => new PSMRun(procedure))
   )
 
   /** Possible choices for procedure interfaces. */

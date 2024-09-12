@@ -27,19 +27,19 @@ import java.io.File
 import java.sql.Date
 
 /**
-  * A quality assurance procedure.
-  *
-  */
+ * A quality assurance procedure.
+ *
+ */
 case class Procedure(
-    procedurePK: Option[Long], // Primary key
-    name: String, // human readable identifier
-    version: String, // code version, should be in numeric+dot format, as in 1.2.3
-    timeout: Float, // For 'runaway' programs.  Timeout in minutes after which the procedure should be terminated
-    created: Date, // time that this record was last modified
-    supportingUserPK: Long, // id of user that supports this procedure, usually the author
-    webInterface: String, // Class name of Restlet for running procedure
-    notes: String // Additional information on usage, inputs, limitations, etc.
-) {
+                      procedurePK: Option[Long], // Primary key
+                      name: String, // human readable identifier
+                      version: String, // code version, should be in numeric+dot format, as in 1.2.3
+                      timeout: Float, // For 'runaway' programs.  Timeout in minutes after which the procedure should be terminated
+                      created: Date, // time that this record was last modified
+                      supportingUserPK: Long, // id of user that supports this procedure, usually the author
+                      webInterface: String, // Class name of Restlet for running procedure
+                      notes: String // Additional information on usage, inputs, limitations, etc.
+                    ) {
 
   def insert: Procedure = {
     MetadataCache.invalidate()
@@ -107,6 +107,7 @@ case class Procedure(
   final val isWinstonLutz = name.toLowerCase.contains("winston") && name.toLowerCase.contains("lutz")
   final val isFocalSpot = name.toLowerCase.contains("focal") && name.toLowerCase.contains("spot")
   final val isFloodField = name.toLowerCase.contains("flood")
+  final val isPSM = name.toLowerCase.contains("psm")
 
 }
 
@@ -174,16 +175,19 @@ object Procedure {
     Db.run(action)
   }
 
-  lazy val ProcOfBBbyCBCT: Option[Procedure] = list.filter(p => p.isBBbyCBCT).sortBy(_.version).lastOption
-  lazy val ProcOfBBbyEPID: Option[Procedure] = list.filter(p => p.isBBbyEPID).sortBy(_.version).lastOption
-  lazy val ProcOfPhase2: Option[Procedure] = list.filter(p => p.isPhase2).sortBy(_.version).lastOption
-  lazy val ProcOfPhase3: Option[Procedure] = list.filter(p => p.isPhase3).sortBy(_.version).lastOption
-  lazy val ProcOfLOC: Option[Procedure] = list.filter(p => p.isLOC).sortBy(_.version).lastOption
-  lazy val ProcOfLOCBaseline: Option[Procedure] = list.filter(p => p.isLOCBaseline).sortBy(_.version).lastOption
-  lazy val ProcOfGapSkew: Option[Procedure] = list.filter(p => p.isGapSkew).sortBy(_.version).lastOption
-  lazy val ProcOfWinstonLutz: Option[Procedure] = list.filter(p => p.isWinstonLutz).sortBy(_.version).lastOption
-  lazy val ProcOfFocalSpot: Option[Procedure] = list.filter(p => p.isFocalSpot).sortBy(_.version).lastOption
-  lazy val ProcOfFloodField: Option[Procedure] = list.filter(p => p.isFloodField).sortBy(_.version).lastOption
+  // @formatter:off
+  lazy val ProcOfBBbyCBCT    : Option[Procedure] = list.filter(p => p.isBBbyCBCT)    .sortBy(_.version).lastOption
+  lazy val ProcOfBBbyEPID    : Option[Procedure] = list.filter(p => p.isBBbyEPID)    .sortBy(_.version).lastOption
+  lazy val ProcOfPhase2      : Option[Procedure] = list.filter(p => p.isPhase2)      .sortBy(_.version).lastOption
+  lazy val ProcOfPhase3      : Option[Procedure] = list.filter(p => p.isPhase3)      .sortBy(_.version).lastOption
+  lazy val ProcOfLOC         : Option[Procedure] = list.filter(p => p.isLOC)         .sortBy(_.version).lastOption
+  lazy val ProcOfLOCBaseline : Option[Procedure] = list.filter(p => p.isLOCBaseline) .sortBy(_.version).lastOption
+  lazy val ProcOfGapSkew     : Option[Procedure] = list.filter(p => p.isGapSkew)     .sortBy(_.version).lastOption
+  lazy val ProcOfWinstonLutz : Option[Procedure] = list.filter(p => p.isWinstonLutz) .sortBy(_.version).lastOption
+  lazy val ProcOfFocalSpot   : Option[Procedure] = list.filter(p => p.isFocalSpot)   .sortBy(_.version).lastOption
+  lazy val ProcOfFloodField  : Option[Procedure] = list.filter(p => p.isFloodField)  .sortBy(_.version).lastOption
+  lazy val ProcOfPSM         : Option[Procedure] = list.filter(p => p.isPSM)         .sortBy(_.version).lastOption
+  // @formatter:on
 
   def main(args: Array[String]): Unit = {
     println("Starting Procedure.main")
