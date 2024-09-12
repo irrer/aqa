@@ -1007,6 +1007,10 @@ object Config extends Logging {
 
   // =================================================================================
 
+  val PSMRadius_mm : Double = logMainText("PSMRadius_mm", "5.0").toDouble
+
+  // =================================================================================
+
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true
 

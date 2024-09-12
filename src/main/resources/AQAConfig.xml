@@ -1229,4 +1229,10 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
+    <!-- Radius of circle in mm that defines how large of an area to sample from the center of each
+    PSM beam. Floating point value greater than 0, default is 5.0 -->
+    <PSMRadius_mm>5.0</PSMRadius_mm>
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
 </AQAConfig>
