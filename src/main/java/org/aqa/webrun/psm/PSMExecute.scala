@@ -3,41 +3,24 @@ package org.aqa.webrun.psm
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.webrun.ExtendedData
+import org.aqa.Logging
+import org.aqa.Util
 import org.restlet.Response
 
-import javax.vecmath.Point2i
+class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq, response: Response) extends Logging {
 
-class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq, response: Response) {
+  private val trans = new IsoImagePlaneTranslator(runReq.rtimageList.head)
 
-  val radius_mm = 5.0 // TODO make this a configuration parameter
+  private def timeOf(al: AttributeList) = Util.extractDateTimeAndPatientIdFromDicomAl(al)._1.head.getTime
 
-  val trans = new IsoImagePlaneTranslator(runReq.rtimageList.head)
+  private val rtplan: AttributeList = runReq.rtplan
 
-  /**
-    * Make a list of coordinates that are within a circle centered at 0,0.
-    */
-  val pointList: Seq[Point2i] = {
-    val xHi = (trans.iso2PixDistX(radius_mm) + 2).round.toInt
-    val xLo = -xHi
+  private val resultList = runReq.rtimageList.sortBy(timeOf).par.map(rtimage => PSMBeamAnalysis(rtplan, extendedData, trans, rtimage: AttributeList).measure()).toArray
 
-    val yHi = (trans.iso2PixDistY(radius_mm) + 2).round.toInt
-    val yLo = -xHi
+  private val insertedList = resultList.map(result => result.psmBeam.insert)
 
-    def nearCenter(x: Int, y: Int): Boolean = {
-      val xyIso = trans.pix2Iso(x, y)
-      val xIso = xyIso.getX
-      val yIso = xyIso.getY
-      val distance = Math.sqrt((xIso * xIso) + (yIso * yIso))
+  logger.info(s"Inserted ${insertedList.size} PSMBeam rows.")
 
-      distance <= radius_mm
-    }
-
-    val list = for (x <- xLo until xHi; y <- yLo until yHi; if nearCenter(x, y)) yield new Point2i()
-    list
-  }
-
-  val rtplan = runReq.rtplan
-
-  runReq.rtimageList.map(rtimage => PSMBeamAnalysis(rtplan, pointList, trans, rtimage: AttributeList).measure(extendedData.output.dir))
+  PSMHTML.makeHtml(extendedData, resultList)
 
 }

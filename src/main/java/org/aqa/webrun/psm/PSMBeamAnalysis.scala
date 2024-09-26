@@ -3,7 +3,6 @@ package org.aqa.webrun.psm
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomBeam
@@ -12,51 +11,24 @@ import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.Config
+import org.aqa.db.PSMBeam
+import org.aqa.webrun.ExtendedData
 
-import java.awt.Color
 import java.awt.Point
 import java.awt.geom.Point2D
 import java.awt.image.BufferedImage
 import java.awt.Rectangle
-import java.io.File
 import javax.vecmath.Point2i
 
 
 /**
  *
- * @param rtplan    DICOM RTPLAN for delivering beams.
- * @param pointList List of coordinates serving as a template for the circle in the center of the beam.
- * @param trans     For translating between pixel and isoplane coordinates.
- * @param rtimage   Beam image.
+ * @param rtplan       DICOM RTPLAN for delivering beams.
+ * @param extendedData Metadata
+ * @param trans        For translating between pixel and isoplane coordinates.
+ * @param rtimage      Beam image.
  */
-case class PSMBeamAnalysis(rtplan: AttributeList, pointList: Seq[Point2i], trans: IsoImagePlaneTranslator, rtimage: AttributeList) extends Logging {
-
-  def drawCircle(bufImage: BufferedImage, center_iso: Point2D.Double): Unit = {
-    val gc = ImageUtil.getGraphics(bufImage)
-
-    gc.setColor(Color.black)
-    val x_pix = trans.iso2PixCoordX(center_iso.getX - Config.PSMRadius_mm).toInt
-    val y_pix = trans.iso2PixCoordY(center_iso.getY - Config.PSMRadius_mm).toInt
-    val width_pix = trans.iso2PixDistX(Config.PSMRadius_mm * 2).toInt
-    val height_pix = trans.iso2PixDistY(Config.PSMRadius_mm * 2).toInt
-    gc.drawOval(x_pix, y_pix, width_pix, height_pix)
-  }
-
-  private def drawText(bufImage: BufferedImage, beamName: String, center_iso: Point2D.Double): Unit = {
-
-    val gc = ImageUtil.getGraphics(bufImage)
-    gc.setColor(Color.black)
-
-    val text = s"$beamName    Center: ${Util.fmtDbl(center_iso.getX)}, ${Util.fmtDbl(center_iso.getY)}  "
-    logger.info(s"Beam Result: $text")
-    ImageText.setFont(gc, "SansSerif", 30)
-    ImageText.drawTextCenteredAt(gc, bufImage.getWidth / 2, 40, text)
-  }
-
-  private def annotate(bufImage: BufferedImage, beamName: String, center_iso: Point2D.Double): Unit = {
-    drawCircle(bufImage, center_iso)
-    drawText(bufImage, beamName, center_iso)
-  }
+case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, trans: IsoImagePlaneTranslator, rtimage: AttributeList) extends Logging {
 
 
   /**
@@ -102,7 +74,7 @@ case class PSMBeamAnalysis(rtplan: AttributeList, pointList: Seq[Point2i], trans
       val yCenterCoarse_pix = findCenterOfProfile(dicomImage.rowSums)
 
       val coarseCenter_pix = new Point2D.Double(xCenterCoarse_pix.toDouble, yCenterCoarse_pix.toDouble)
-      msg.append(s"    coarse: ${fmtPoint(coarseCenter_pix)}    ")
+      msg.append(s"\n    coarse: ${fmtPoint(coarseCenter_pix)}    ")
       coarseCenter_pix
     }
 
@@ -113,27 +85,26 @@ case class PSMBeamAnalysis(rtplan: AttributeList, pointList: Seq[Point2i], trans
      * The rectangle must be narrow because some beams may have an artifact in the corner (when the
      * beam is in the corner), and the only way (I know of) to handle this is to stay away from it.
      *
-     * @param center_pix    Use this as the center of the AOI in pixel coordinates.
-     * @param thickness_iso Specifies how wide the rectangle should be in mm.
-     * @return
+     * @param center_pix   Use this as the center of the AOI in pixel coordinates.
+     * @param thickness_mm Specifies how wide the rectangle should be in mm.
+     * @return Center in pixel coordinates.
      */
-    def findFineCenter(center_pix: Point2D.Double, thickness_iso: Double): Point2D.Double = {
+    def findFineCenter_pix(center_pix: Point2D.Double, thickness_mm: Double): Point2D.Double = {
 
       val xC = center_pix.getX
       val yC = center_pix.getY
 
-
       // translate thickness to pixels and guarantee that it is at least one pixel wide or tall.
-      val vertThickness_pix = Math.max(trans.iso2PixDistY(thickness_iso).toInt, 1)
-      val horzThickness_pix = Math.max(trans.iso2PixDistX(thickness_iso).toInt, 1)
+      val vertThickness_pix = Math.max(trans.iso2PixDistY(thickness_mm).toInt, 1)
+      val horzThickness_pix = Math.max(trans.iso2PixDistX(thickness_mm).toInt, 1)
 
       // Width and height of area to measure.  This will span the entire beam plus the penumbra.
-      val xFieldSize_iso = (planBeam.x2Jaw.get - planBeam.x1Jaw.get) + Config.PenumbraThickness_mm
-      val yFieldSize_iso = (planBeam.y2Jaw.get - planBeam.y1Jaw.get) + Config.PenumbraThickness_mm
+      val xFieldSize_mm = (planBeam.x2Jaw.get - planBeam.x1Jaw.get) + Config.PenumbraThickness_mm
+      val yFieldSize_mm = (planBeam.y2Jaw.get - planBeam.y1Jaw.get) + Config.PenumbraThickness_mm
 
       // Convert to pix coordinates.
-      val xFieldSize_pix = trans.iso2PixDistX(xFieldSize_iso)
-      val yFieldSize_pix = trans.iso2PixDistY(yFieldSize_iso)
+      val xFieldSize_pix = trans.iso2PixDistX(xFieldSize_mm)
+      val yFieldSize_pix = trans.iso2PixDistY(yFieldSize_mm)
 
       // --------------------------------------------------------------------------------
 
@@ -166,27 +137,70 @@ case class PSMBeamAnalysis(rtplan: AttributeList, pointList: Seq[Point2i], trans
       // Shows how different the initial locatis from the new one.
       val dist = centerFine_pix.distance(center_pix)
       // Build a message for the log.
-      msg.append(s"      dist: ${"%f11.8".format(dist)}   ${fmtPoint(centerFine_pix)} ")
+      msg.append(s"\n      dist: ${"%f11.8".format(dist)}   ${fmtPoint(centerFine_pix)} ")
 
       centerFine_pix
     }
 
 
     // make a band of pixel this thick in mm.
-    val thickness_iso = 8.0
+    val thickness_mm = 8.0
 
     val coarseCenter_pix = findCoarseCenter() // start with the more robust but less accurate method.
-    val center1_pix = findFineCenter(coarseCenter_pix, thickness_iso / 4) // use a very narrow AOI to avoid possible artifacts.
-    val center2_pix = findFineCenter(center1_pix, thickness_iso / 2) // use a less narrow AOI because we're probably farther from an artifact.
-    val center3_pix = findFineCenter(center2_pix, thickness_iso) // use a less narrow AOI because we're probably farther from an artifact.
+    val center1_pix = findFineCenter_pix(coarseCenter_pix, thickness_mm / 4) // use a very narrow AOI to avoid possible artifacts.
+    val center2_pix = findFineCenter_pix(center1_pix, thickness_mm / 2) // use a less narrow AOI because we're probably farther from an artifact.
+    val center3_pix = findFineCenter_pix(center2_pix, thickness_mm) // use a less narrow AOI because we're probably farther from an artifact.
 
     logger.info(s"Beam centering progression: $msg")
 
     center3_pix
   }
 
+  /**
+   * Attempt to measure the position of each of the four edges.  This is not really necessary, but the data is
+   * available so we might as well analyze and save it in case there is a potential use.
+   *
+   * In some cases there are artifacts in the images which make them impossible to
+   *
+   * @param center_mm  Center in isoplane in mm.
+   * @param rtplanBeam Beam from RTPLAN.
+   * @param dicomImage Image pixels.
+   * @param beamName   Name of beam.
+   * @return
+   */
+  private def measureEdges(center_mm: Point2D.Double, rtplanBeam: DicomBeam, dicomImage: DicomImage, beamName: String): Option[MeasureTBLREdges.AnalysisResult] = {
+    // @formatter:off
+    val topPlanned_mm    = center_mm.getY - rtplanBeam.y2Jaw.get
+    val bottomPlanned_mm = center_mm.getY - rtplanBeam.y1Jaw.get
+    val leftPlanned_mm   = center_mm.getX + rtplanBeam.x1Jaw.get
+    val rightPlanned_mm  = center_mm.getX + rtplanBeam.x2Jaw.get
+    // @formatter:on
 
-  def measure(dir: File): Point2D.Double = {
+    val tblr = MeasureTBLREdges.TBLR(topPlanned_mm, bottomPlanned_mm, leftPlanned_mm, rightPlanned_mm)
+
+    val result = try {
+      val ar = MeasureTBLREdges.measure(
+        dicomImage,
+        translator = trans,
+        expected_mm = Some(tblr),
+        collimatorAngle = 0,
+        annotate = dicomImage,
+        floodOffset = new Point,
+        thresholdPercent = 0.5,
+        markCenter = false
+      )
+      Some(ar)
+    }
+    catch {
+      case t: Throwable =>
+        Trace.trace(s"Unable to find edges for beam $beamName: ${fmtEx(t)}")
+        None
+    }
+
+    result
+  }
+
+  def measure(): PSMBeamAnalysisResult = {
 
     // grab part of RTPLAN that specifies this beam
     val rtplanBeam = DicomBeam(rtplan, rtimage)
@@ -202,56 +216,48 @@ case class PSMBeamAnalysis(rtplan: AttributeList, pointList: Seq[Point2i], trans
 
     val dicomImage = new DicomImage(rtimage)
 
+    val RescaleSlope = rtimage.get(TagByName.RescaleSlope).getDoubleValues.head
+    val RescaleIntercept = rtimage.get(TagByName.RescaleIntercept).getDoubleValues.head
+
     val center_pix = findCenter_pix(dicomImage, rtplanBeam, beamName)
 
-    val pngFile = new File(dir, beamName + ".png")
+    val center_mm = trans.pix2Iso(center_pix)
 
-    val center_iso = trans.pix2Iso(center_pix)
+    def pixToCU(coordinate: Point2i): Double = ((dicomImage.get(coordinate.getX, coordinate.getY) * RescaleSlope) + RescaleIntercept)
 
+    val pixelList = PSMUtil.pixelCoordinatesWithinRadius(rtimage, center_pix).map(coord => (coord, pixToCU(coord))).toMap
 
-    if (false) {
-      // @formatter:off
-      val topPlanned_iso    = center_iso.getY - rtplanBeam.y2Jaw.get
-      val bottomPlanned_iso = center_iso.getY - rtplanBeam.y1Jaw.get
-      val leftPlanned_iso   = center_iso.getX + rtplanBeam.x1Jaw.get
-      val rightPlanned_iso  = center_iso.getX + rtplanBeam.x2Jaw.get
-      // @formatter:on
+    val mean_cu = pixelList.values.sum / pixelList.size
 
-      val tblr = MeasureTBLREdges.TBLR(topPlanned_iso, bottomPlanned_iso, leftPlanned_iso, rightPlanned_iso)
+    val stdDev_cu = ImageUtil.stdDev(pixelList.values.map(_.toFloat).toSeq)
 
-      val bi: Option[BufferedImage] = try {
-        val ar = MeasureTBLREdges.measure(
-          dicomImage,
-          translator = trans,
-          expected_mm = Some(tblr),
-          collimatorAngle = 0,
-          annotate = dicomImage,
-          floodOffset = new Point,
-          thresholdPercent = 0.5,
-          markCenter = false
-        )
-        Trace.trace(s" $beamName    ar: ${ar.measurementSet}")
-        Some(ar.bufferedImage)
+    val edges = measureEdges(center_mm, rtplanBeam, dicomImage, beamName)
+
+    val ms = if (edges.isDefined) Some(edges.get.measurementSet) else None
+
+    val psmBeam = PSMBeam(
+      psmBeamPK = None,
+      outputPK = extendedData.output.outputPK.get,
+      xCenter_mm = center_mm.getX,
+      yCenter_mm = center_mm.getY,
+      SOPInstanceUID = Util.sopOfAl(rtimage),
+      beamName = beamName,
+      mean_cu = mean_cu,
+      stdDev_cu = stdDev_cu,
+      top_mm = ms.map(_.top),
+      bottom_mm = ms.map(_.bottom),
+      left_mm = ms.map(_.left),
+      right_mm = ms.map(_.right)
+    )
+
+    val bufferedImage: BufferedImage = {
+      if (edges.isDefined)
+        edges.get.bufferedImage
+      else {
+        dicomImage.toDeepColorBufferedImage(0.05)
       }
-      catch {
-        case t: Throwable =>
-          Trace.trace(s"Badness $beamName: ${fmtEx(t)}")
-          None
-      }
-
-      val bufImage = {
-        if (bi.isEmpty)
-          dicomImage.toDeepColorBufferedImage(0.06)
-        else
-          bi.get
-      }
-
-      annotate(bufImage, beamName, center_iso)
-
-      Util.writePng(bufImage, pngFile)
-      logger.info(s"Wrote file $pngFile")
     }
 
-    center_iso
+    PSMBeamAnalysisResult(psmBeam, rtimage, bufferedImage, pixelList)
   }
 }
