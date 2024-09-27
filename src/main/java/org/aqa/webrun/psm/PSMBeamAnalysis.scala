@@ -134,7 +134,7 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
 
       val centerFine_pix = new Point2D.Double(xCenterOfMassFine_pix, yCenterOfMassFine_pix)
 
-      // Shows how different the initial locatis from the new one.
+      // Shows how different the initial location is from the new one.
       val dist = centerFine_pix.distance(center_pix)
       // Build a message for the log.
       msg.append(s"\n      dist: ${"%f11.8".format(dist)}   ${fmtPoint(centerFine_pix)} ")
@@ -223,9 +223,9 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
 
     val center_mm = trans.pix2Iso(center_pix)
 
-    def pixToCU(coordinate: Point2i): Double = ((dicomImage.get(coordinate.getX, coordinate.getY) * RescaleSlope) + RescaleIntercept)
+    def pixToCU(coordinate: Point2i): Double = (dicomImage.get(coordinate.getX, coordinate.getY) * RescaleSlope) + RescaleIntercept
 
-    val pixelList = PSMUtil.pixelCoordinatesWithinRadius(rtimage, center_pix).map(coord => (coord, pixToCU(coord))).toMap
+    val pixelList = PSMUtil.pixelCoordinatesWithinRadius(rtimage, center_pix).map(coordinate => (coordinate, pixToCU(coordinate))).toMap
 
     val mean_cu = pixelList.values.sum / pixelList.size
 

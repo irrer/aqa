@@ -125,7 +125,6 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
 
   /**
     * Get the flood field to be used with this data set.  Use the latest one, whether it was uploaded by the user, or, was in the database.
-    * @param valueMap Contains machine ID.
     * @param alList List of all uploaded DICOM files.
     * @param rtimageList List of all RTIMAGE files except for flood field.
     * @return
@@ -212,7 +211,7 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
           list3
         }
         val floodField = getFloodField(alList, rtimageList).get
-        val runReq = new PSMRunReq(rtplan = rtplan, wholeDetector = wholeDetector, rtimageList = imgList, floodField = floodField)
+        val runReq = PSMRunReq(rtplan = rtplan, wholeDetector = wholeDetector, rtimageList = imgList, floodField = floodField)
         Right(runReq)
     }
 
@@ -243,7 +242,7 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
     }
     val floodField = getFloodField(alList, rtimageList).get
 
-    val runReq = new PSMRunReq(rtplan = rtplan, wholeDetector = wholeDetector, rtimageList = imgList, floodField = floodField)
+    val runReq = PSMRunReq(rtplan = rtplan, wholeDetector = wholeDetector, rtimageList = imgList, floodField = floodField)
     runReq
   }
 

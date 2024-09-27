@@ -19,7 +19,7 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq, response: Respon
 
   private val insertedList = resultList.map(result => result.psmBeam.insert)
 
-  logger.info(s"Inserted ${insertedList.size} PSMBeam rows.")
+  logger.info(s"Inserted ${insertedList.length} PSMBeam rows.")
 
   PSMHTML.makeHtml(extendedData, resultList)
 
