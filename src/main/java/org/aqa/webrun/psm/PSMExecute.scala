@@ -21,6 +21,5 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq, response: Respon
 
   logger.info(s"Inserted ${insertedList.length} PSMBeam rows.")
 
-  PSMHTML.makeHtml(extendedData, resultList)
-
+  PSMHTML.makeHtml(extendedData, rtplan, resultList)
 }

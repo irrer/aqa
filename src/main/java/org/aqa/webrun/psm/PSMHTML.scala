@@ -1,5 +1,6 @@
 package org.aqa.webrun.psm
 
+import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageText
@@ -22,6 +23,8 @@ import scala.xml.Elem
 
 object PSMHTML extends Logging {
 
+  private def fmt(d: Double): String = d.formatted("%8.2f").trim
+
   /**
     * Annotate the image with the mean CU in the center of the beam.  Use the existing buffered image.
     * @param result For this beam result.
@@ -33,7 +36,7 @@ object PSMHTML extends Logging {
     val center_pix = trans.iso2Pix(result.psmBeam.xCenter_mm, result.psmBeam.yCenter_mm)
 
     val text1 = "Mean CU"
-    val text2 = Util.fmtDbl(result.psmBeam.mean_cu)
+    val text2 = fmt(result.psmBeam.mean_cu)
     val offset = ImageText.getTextDimensions(gc, text1).getHeight / 2
     ImageText.drawTextCenteredAt(gc, center_pix.getX, center_pix.getY - offset, text1)
     ImageText.drawTextCenteredAt(gc, center_pix.getX, center_pix.getY + offset, text2)
@@ -55,14 +58,14 @@ object PSMHTML extends Logging {
     val fontOffset = ImageText.getTextDimensions(gc, "123").getHeight / 2
 
     def annotateCU(result: PSMBeamAnalysisResult): Unit = {
-      val textCU = Util.fmtDbl(result.psmBeam.mean_cu)
+      val textCU = fmt(result.psmBeam.mean_cu)
       val x = trans.iso2PixCoordX(result.psmBeam.xCenter_mm)
       val y = trans.iso2PixCoordX(result.psmBeam.yCenter_mm - Config.PSMRadius_mm) - fontOffset
       ImageText.drawTextCenteredAt(gc, x, y, textCU)
     }
 
     def annotateLocation(result: PSMBeamAnalysisResult): Unit = {
-      val textCU = Util.fmtDbl(result.psmBeam.xCenter_mm) + ", " + Util.fmtDbl(result.psmBeam.yCenter_mm)
+      val textCU = fmt(result.psmBeam.xCenter_mm) + ", " + fmt(result.psmBeam.yCenter_mm)
       val x = trans.iso2PixCoordX(result.psmBeam.xCenter_mm)
       val y = trans.iso2PixCoordX(result.psmBeam.yCenter_mm + Config.PSMRadius_mm) + fontOffset + 2
       ImageText.drawTextCenteredAt(gc, x, y, textCU)
@@ -112,7 +115,7 @@ object PSMHTML extends Logging {
     val src = { beamDir.getName + "/" + pngFile.getName }
     <td style="text-align:center;">
       <a href={htmlLink}>
-        <h4>{result.psmBeam.beamName + " : " + Util.fmtDbl(result.psmBeam.mean_cu)}</h4>
+        <h4>{result.psmBeam.beamName + " : " + fmt(result.psmBeam.mean_cu)}</h4>
         <img src={src} width="120" alt="Full DICOM Image" class="center"/>
       </a>
     </td>
@@ -147,15 +150,15 @@ object PSMHTML extends Logging {
     }
 
     val bufImg = new DicomImage(pixelArray).toBufferedImage(Color.white)
+
     bufImg
   }
 
-
   /**
-   * Use bicubic spline to make a smooth image.
-   * @param resultList For these results.
-   * @return An image.
-   */
+    * Use bicubic spline to make a smooth image.
+    * @param resultList For these results.
+    * @return An image.
+    */
   private def makeSmoothCompositeImage(resultList: Seq[PSMBeamAnalysisResult]): BufferedImage = {
 
     val trans = new IsoImagePlaneTranslator(resultList.head.rtimage)
@@ -215,11 +218,11 @@ object PSMHTML extends Logging {
   }
 
   /**
-   * Make a web page for one result.
-   * @param extendedData metadata.
-   * @param result For this result.
-   * @return An HTML snippet that shows a thumbnail and links to the page.
-   */
+    * Make a web page for one result.
+    * @param extendedData metadata.
+    * @param result For this result.
+    * @return An HTML snippet that shows a thumbnail and links to the page.
+    */
   private def resultToHtml(extendedData: ExtendedData, result: PSMBeamAnalysisResult): Elem = {
 
     val beamDirName = "beams"
@@ -251,25 +254,59 @@ object PSMHTML extends Logging {
   }
 
   /**
-   * Write all of the HTML.
-   * @param extendedData Metadata.
-   * @param resultList List of results.
-   */
-  def makeHtml(extendedData: ExtendedData, resultList: Seq[PSMBeamAnalysisResult]): Unit = {
+    * Make a web page for viewing the RTPLAN and return an HTML snippet to navigate to it.
+    * @param extendedData Metadata.
+    * @param rtplan For this DICOM RTPLAN.
+    * @return HTML reference.
+    */
+  private def makeRtplanHtml(extendedData: ExtendedData, rtplan: AttributeList): Elem = {
+    val htmlFile = new File(extendedData.output.dir, "rtplan.html")
+    val content = {
+      <div class="row">
+        <div class="col-md-10 col-md-offset-1" >
+          <a href="display.html">Back to main</a>
+          <h3>RTPLAN for PSM</h3>
+          <pre style="margin-top: 10px;margin-bottom: 100px;">
+            {WebUtil.nl + DicomUtil.attributeListToString(rtplan)}
+          </pre>
+        </div>
+      </div>
+    }
+    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "PSM RTPLAN", runScript = None)
+    Util.writeFile(htmlFile, text)
+
+    val reference = {
+      <a href={htmlFile.getName}>View RTPLAN</a>
+    }
+    reference
+  }
+
+  /**
+    * Write all of the HTML.
+    * @param extendedData Metadata.
+    * @param resultList List of results.
+    */
+  def makeHtml(extendedData: ExtendedData, rtplan: AttributeList, resultList: Seq[PSMBeamAnalysisResult]): Unit = {
 
     val compositeImage = makeCompositeImage(resultList)
     annotateCompositeImage(compositeImage, resultList)
     val compositeFile = new File(extendedData.output.dir, "composite.png")
     Util.writePng(compositeImage, compositeFile)
 
-    // TODO would be nice to do the WHOLE image ...
+    // TODO would be nice to do the WHOLE image, but bicubic spline does not support that ...
     val smoothCompositeImage = makeSmoothCompositeImage(resultList)
     val smoothCompositeFile = new File(extendedData.output.dir, "smoothComposite.png")
     Util.writePng(smoothCompositeImage, smoothCompositeFile)
 
+    val planElem = makeRtplanHtml(extendedData, rtplan)
+
     val content = {
       // <div style="display:flex; align-items:center; justify-content:center; margin-bottom:200px;">
       <div>
+        <div class="row">
+            {planElem}
+        </div>
+
         <div class="row">
           <div class="col-md-10 col-md-offset-1" >
             <h4>Mean CU Readings for each beam center.</h4>
@@ -277,12 +314,14 @@ object PSMHTML extends Logging {
           </div>
         </div>
 
+        <!--
         <div class="row">
           <div class="col-md-10 col-md-offset-1" style="margin-top:25px; margin-bottom:25px;">
             <h4>Smoothed composite image.</h4>
             <img src={smoothCompositeFile.getName}/>
           </div>
         </div>
+        -->
         
         <div class="row">
           <div class="col-md-10 col-md-offset-1" >
