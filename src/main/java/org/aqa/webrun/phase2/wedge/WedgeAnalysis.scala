@@ -104,7 +104,7 @@ object WedgeAnalysis extends Logging {
   val subProcedureName = "Wedge"
 
   /**
-    * Use the center dose and flood CenterDose points to calculate the WedgePoints.
+    * Use the collimator centering points to calculate the WedgePoints.
     */
   private def analyze(extendedData: ExtendedData, runReq: RunReq, collimatorCenteringResource: CollimatorCenteringResource): Seq[WedgePoint] = {
 
