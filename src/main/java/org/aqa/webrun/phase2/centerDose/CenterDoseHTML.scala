@@ -43,59 +43,7 @@ object CenterDoseHTML extends Logging {
       <a title="View RT Plan DICOM file" href={planHref}>RT Plan</a>
     }
 
-    /**
-      * Get the history of results from previous runs of this procedure.  Exclude results that were run on this exact data.
-      */
-    //    val history = {
-    //      val uidSet = resultList.map(cd => cd.SOPInstanceUID).toSet
-    //      val j = CenterDose.recentHistory(Config.CenterDoseReportedHistoryLimit, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get, extendedData.output.dataDate).toArray
-    //      val j1 = j.size
-    //      val hist = CenterDose.recentHistory(Config.CenterDoseReportedHistoryLimit, extendedData.machine.machinePK.get, extendedData.procedure.procedurePK.get, extendedData.output.dataDate).
-    //        filter(cd => !uidSet.contains(cd.SOPInstanceUID))
-    //      hist
-    //    }
-    //
-    //    val resultListAsHistory = resultList.map(cd => new CenterDose.CenterDoseHistory(extendedData.output.dataDate.get, cd.beamName, cd.dose, cd.SOPInstanceUID))
-    //    val units = runReq.flood.attributeList.get.get(TagFromName.RescaleType).getSingleStringValueOrDefault("CU")
-
     val chart = new CenterDoseChart(extendedData.output.outputPK.get)
-
-    class Column(val title: String, columnName: String, val get: (CenterDose) => String) {
-      def toHeader = <th title={title}>{columnName}</th>
-      def toRow(cntrDose: CenterDose) = <td title={title}>{get(cntrDose)}</td>
-    }
-
-    def degree(diff: Double): String = diff.formatted("%6e")
-
-    def jaw(diff: Double): String = diff.formatted("%6e")
-
-    class ColumnBeamName(override val title: String, columnName: String, override val get: (CenterDose) => String) extends Column(title, columnName, get) {
-      override def toRow(centerDose: CenterDose) = {
-        val dicomFile = if (centerDose.beamName.equals(Config.FloodFieldBeamName)) runReq.flood else runReq.rtimageMap(centerDose.beamName)
-        val link = Phase2Util.dicomViewHref(dicomFile, extendedData, runReq)
-        val elem = { <td title={title + ".  Follow link to view DICOM"}><a href={link}>{get(centerDose)}</a></td> }
-        elem
-      }
-    }
-
-    class ColumnChart(override val title: String, columnName: String, override val get: (CenterDose) => String) extends Column(title, columnName, get) {
-      override def toHeader = <th title={title}>History</th>
-      override def toRow(cntrDose: CenterDose) = <td title={title} id={chart.chartIdOfBeam(cntrDose.beamName)}/>
-    }
-
-    val rowList = Seq(
-      new ColumnBeamName("Name of beam in plan", "Beam Name", (centerDose: CenterDose) => centerDose.beamName),
-      new Column("Dose", "Dose", (centerDose: CenterDose) => centerDose.dose.formatted("%f")),
-      new ColumnChart("History of recent values for this machine and beam", "History", (centerDose: CenterDose) => centerDose.dose.formatted("%f"))
-    )
-
-    def centerDoseTableHeader: Elem = {
-      <thead><tr>{rowList.map(row => row.toHeader)}</tr></thead>
-    }
-
-    def centerDoseToTableRow(centerDose: CenterDose): Elem = {
-      <tr>{rowList.map(row => row.toRow(centerDose))}</tr>
-    }
 
     val units: String = resultList.head.units
 
@@ -106,7 +54,7 @@ object CenterDoseHTML extends Logging {
       </div>
     }
 
-    val tbody = resultList.map(psnChk => centerDoseToTableRow(psnChk))
+    // val theBody = resultList.map(psnChk => centerDoseToTableRow(psnChk))
 
     val content = {
       <div>
