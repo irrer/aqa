@@ -282,6 +282,32 @@ object PSMHTML extends Logging {
   }
 
   /**
+   * Make a CSV as part of development.
+   * TODO: This should be either:
+   *     - be part of the other CSV downloads
+   *     - made  better to include metadata.
+   * @param extendedData Meta data.
+   * @param rtplan DICOM RTPLAN.
+   * @param resultList List of results.
+   */
+  def makeQuickCSV(extendedData: ExtendedData, rtplan: AttributeList, resultList: Seq[PSMBeamAnalysisResult]): Unit = {
+
+    val row1 = Seq("Beam Name", "X Center", "Y Center", "Mean CU")
+
+    def toRow(result: PSMBeamAnalysisResult): String = {
+      val beam = result.psmBeam
+      val list = Seq(beam.beamName, beam.xCenter_mm.toString, beam.yCenter_mm.toString, beam.mean_cu.toString)
+      list.mkString(",")
+    }
+
+    val text = (row1.mkString(",") +: resultList.map(toRow)).mkString("\n")
+
+    val csvFile = new File(extendedData.output.dir, "PSM.csv")
+
+    Util.writeFile(csvFile, text)
+  }
+
+  /**
     * Write all of the HTML.
     * @param extendedData Metadata.
     * @param resultList List of results.
@@ -292,6 +318,8 @@ object PSMHTML extends Logging {
     annotateCompositeImage(compositeImage, resultList)
     val compositeFile = new File(extendedData.output.dir, "composite.png")
     Util.writePng(compositeImage, compositeFile)
+
+    makeQuickCSV(extendedData, rtplan, resultList)
 
     // TODO would be nice to do the WHOLE image, but bicubic spline does not support that ...
     val smoothCompositeImage = makeSmoothCompositeImage(resultList)
