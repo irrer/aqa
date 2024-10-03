@@ -143,7 +143,7 @@ object Phase3JS extends Logging {
 
     val js = if (checkedSelectionList.nonEmpty) {
       //noinspection SpellCheckingInspection
-      val beamCount = checkedSelectionList.get.flatMap(_.beamList).size
+      val beamCount = checkedSelectionList.get.flatMap(_.beamList.map(_.beamName)).distinct.size
       s"""document.getElementById("${subProcedure.headerId}").style.background = "lightgreen";""" +
         s"""document.getElementById("${subProcedure.headerId}").innerHTML = "${subProcedure.abbreviation + " : " + beamCount}";"""
     } else {
