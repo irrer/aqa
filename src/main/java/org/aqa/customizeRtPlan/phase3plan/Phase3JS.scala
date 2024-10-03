@@ -28,6 +28,11 @@ import org.aqa.web.MachineUpdate
   */
 object Phase3JS extends Logging {
 
+  val colorOk = "white" // "lightgreen"
+  private val colorCaution = "white" // "yellow"
+  val colorInactive = "white"
+  private val colorDisabled = "lightgrey"
+
   val javaScript: String = {
     val machTag = MachineUpdate.machinePKTag
 
@@ -144,10 +149,10 @@ object Phase3JS extends Logging {
     val js = if (checkedSelectionList.nonEmpty) {
       //noinspection SpellCheckingInspection
       val beamCount = checkedSelectionList.get.flatMap(_.beamList.map(_.beamName)).distinct.size
-      s"""document.getElementById("${subProcedure.headerId}").style.background = "lightgreen";""" +
+      s"""document.getElementById("${subProcedure.headerId}").style.background = "$colorOk";""" +
         s"""document.getElementById("${subProcedure.headerId}").innerHTML = "${subProcedure.abbreviation + " : " + beamCount}";"""
     } else {
-      s"""document.getElementById("${subProcedure.headerId}").style.background = "lightgrey";""" +
+      s"""document.getElementById("${subProcedure.headerId}").style.background = "$colorDisabled";""" +
         s"""document.getElementById("${subProcedure.headerId}").innerHTML = "${subProcedure.abbreviation}";"""
     }
 
@@ -173,9 +178,9 @@ object Phase3JS extends Logging {
     def setAngleUse(angle: Int): String = {
 
       val color = (isCollimatorCenteredMap(angle), angleList.contains(angle)) match {
-        case (true, _)     => "lightgreen"
-        case (false, true) => "yellow"
-        case _             => "white"
+        case (true, _)     => colorOk
+        case (false, true) => colorCaution
+        case _             => colorInactive
       }
 
       s"""document.getElementById("${Phase3HtmlBeam.gantryAngleUsageId(angle)}").style.background = "$color";"""
@@ -186,16 +191,16 @@ object Phase3JS extends Logging {
   }
 
   /**
-   * Set HTML highlighting to show which selections are covered by collimator centering.  Note that if the
-   * procedure does not use collimator centering, then its selections are not highlighted.
-   *
-   * If a selection is selected, and uses collimator centering, but collimator centering is not being done
-   * for a gantry angle that it uses, then it will be highlighted with yellow.
-   *
-   * @param checkedSelectionList Selections that are selected.
-   * @param subProcedureList Metadata and sub-procedures.
-   * @return js to set highlighting.
-   */
+    * Set HTML highlighting to show which selections are covered by collimator centering.  Note that if the
+    * procedure does not use collimator centering, then its selections are not highlighted.
+    *
+    * If a selection is selected, and uses collimator centering, but collimator centering is not being done
+    * for a gantry angle that it uses, then it will be highlighted with colorCaution.
+    *
+    * @param checkedSelectionList Selections that are selected.
+    * @param subProcedureList Metadata and sub-procedures.
+    * @return js to set highlighting.
+    */
   private def selectionGantryAngleUseToJs(checkedSelectionList: Seq[Selection], subProcedureList: SubProcedureList): String = {
     // List of gantry angles for which collimator centering is being done.
     val centeredAngleSet = checkedSelectionList.filter(_.subProcedure.isInstanceOf[SPCollimatorCentering]).flatMap(_.beamList).map(_.gantryAngle_roundedDeg).distinct
@@ -216,9 +221,9 @@ object Phase3JS extends Logging {
     val uncheckedList = subProcedureList.subProcedureList.flatMap(_.selectionList).filterNot(sel => checkedSelectionList.exists(_.htmlId.equals(sel.htmlId)))
 
     Seq(
-      toJsStatement(okList, "lightgreen"),
-      toJsStatement(cautionList, "yellow"),
-      toJsStatement(uncheckedList, "white")
+      toJsStatement(okList, colorOk),
+      toJsStatement(cautionList, colorCaution),
+      toJsStatement(uncheckedList, colorInactive)
     ).mkString("\n")
 
   }

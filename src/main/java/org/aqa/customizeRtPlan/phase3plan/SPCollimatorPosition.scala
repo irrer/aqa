@@ -34,6 +34,8 @@ class SPCollimatorPosition(metaData: SPMetaData, beamList: Seq[Beam]) extends Su
 
   override def initialSelectionList: Seq[Selection] = colPosSelectionList
 
+  override val usesFlood: Boolean = false
+
   override def getBeamList: Seq[Beam] = initialSelectionList.flatMap(_.beamList)
 
 }

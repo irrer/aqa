@@ -49,10 +49,8 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
 
   /**
     * True if this procedure uses the flood field.
-    * Note: Currently this requires all plans to include a flood field.  Making the flood field optional
-    * would be an AQA steering committee group decision.
     */
-  private val usesFlood: Boolean = true
+  val usesFlood: Boolean = false
 
   private val colCenterBeamList = {
     beamList.filter(beam => Config.collimatorCenteringPhase3List.exists(_.equals(beam.beamName)))

@@ -54,11 +54,11 @@ object Phase3HtmlBeam extends Logging {
   /* Return the HTML attribute style for the given beam's use by a sub-procedure. */
   def subProcBeamStyle(checked: Boolean): String = {
     val color =
-      if (checked)
-        //noinspection SpellCheckingInspection
-        "lightgreen"
-      else
-        "white"
+      if (checked) {
+        Phase3JS.colorOk
+      } else
+        Phase3JS.colorInactive
+
     val style = s"border-left: 16px solid $color; margin:5px; line-height: 20%;"
     style
   }
@@ -199,7 +199,7 @@ object Phase3HtmlBeam extends Logging {
         "Collimator Centering is Optional",
         "",
         "The highlighted gantry angles indicate which gantry angles will be",
-        "visited by the selected beams.   If highlighted in green, then then",
+        "visited by the selected beams.   If highlighted in colorOk, then then",
         "collimator centering is being done at that gantry angle.  If yellow,",
         "then there is a test specified for that angle, but no collimator",
         "centering.",
