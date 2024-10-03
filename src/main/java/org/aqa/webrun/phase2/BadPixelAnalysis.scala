@@ -78,8 +78,8 @@ object BadPixelAnalysis extends Logging {
       })
       .toList
 
-    val floodSOPInstanceUID = runReq.flood.get(TagByName.SOPInstanceUID).getSingleStringValueOrNull
-    val floodBadPixelList = beamToBadPixels(Config.FloodFieldBeamName, floodSOPInstanceUID, runReq.floodBadPixelList, runReq.floodOriginalImage)
+    val floodSOPInstanceUID = if (runReq.flood.isDefined) Some(runReq.flood.get.get(TagByName.SOPInstanceUID).getSingleStringValueOrNull) else None
+    val floodBadPixelList = if (floodSOPInstanceUID.isDefined) beamToBadPixels(Config.FloodFieldBeamName, floodSOPInstanceUID.get, runReq.floodBadPixelList, runReq.floodOriginalImage.get) else Seq()
 
     val list = beamList ++ floodBadPixelList
     BadPixel.insert(list)
@@ -143,10 +143,12 @@ object BadPixelAnalysis extends Logging {
       DicomAccess.write(runReq.rtplan, "RTPLAN", viewDir, planBaseName, None, None, Seq[DicomImage.PixelRating]())
 
       //val floodLink = Phase2Util.dicomViewHref(runReq.flood, extendedData, runReq)
-      val floodBufImage = runReq.floodOriginalImage.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
-      Config.applyWatermark(floodBufImage)
-      val floodBaseName = Phase2Util.dicomViewBaseName(Config.FloodFieldBeamName, runReq.flood, runReq.rtplan)
-      DicomAccess.write(runReq.flood, Config.FloodFieldBeamName, viewDir, floodBaseName, Some(floodBufImage), Some(runReq.floodOriginalImage), runReq.floodBadPixelList).get
+      if (runReq.flood.isDefined) {
+        val floodBufImage = runReq.floodOriginalImage.get.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
+        Config.applyWatermark(floodBufImage)
+        val floodBaseName = Phase2Util.dicomViewBaseName(Config.FloodFieldBeamName, runReq.flood.get, runReq.rtplan)
+        DicomAccess.write(runReq.flood.get, Config.FloodFieldBeamName, viewDir, floodBaseName, Some(floodBufImage), Some(runReq.floodOriginalImage.get), runReq.floodBadPixelList).get
+      }
 
       runReq.rtimageMap.keys.par.map(beamName => (beamName, dicomView(beamName).get)).toList.toMap
 
@@ -175,7 +177,7 @@ object BadPixelAnalysis extends Logging {
       val elapsedTimeFormat = new SimpleDateFormat("m:ss")
 
       val allImageTimes = {
-        val allAttrLists = Seq(runReq.flood) ++ runReq.derivedMap.values.map(_.attributeList)
+        val allAttrLists = Seq(runReq.flood).flatten ++ runReq.derivedMap.values.map(_.attributeList)
         allAttrLists.flatMap(al => timeOf(al)).sorted
       }
 
@@ -229,21 +231,25 @@ object BadPixelAnalysis extends Logging {
               Seq()
           }
 
-          <tr>
-            <td title="Click for DICOM metadata"><a href={dicomHref}>{beamName}</a>{hash}</td>
-            <td title="Click for full size image"><a href={Phase2Util.dicomViewImageHtmlHref(al, extendedData, runReq)}><img src={pngHref} width={smallImageWidth}/></a></td>
-            <td title="Gantry Angle deg">{angleOf(TagByName.GantryAngle)}</td>
-            <td title="Collimator Angle deg">{angleOf(TagByName.BeamLimitingDeviceAngle)}</td>
-            <td title="Collimator opening in CM">{Phase2Util.jawDescription(al, runReq.rtplan)}</td>
-            <td title="Time since first image capture (mm:ss)">{relativeTimeText}</td>
-            <td title="Collimator Centering">{boolToName("Col Cntr", collimatorCenteringBeamNameList.contains(beamName))}</td>
-            <td title="Center Dose">{boolToName("Cntr Dose", centerDoseBeamNameList.contains(beamName))}</td>
-            <td title="Collimator Position">{boolToName("Col Posn", Config.CollimatorPositionBeamList.exists(cp => cp.beamName.equalsIgnoreCase(beamName)))}</td>
-            <td title="Wedge">{boolToName("Wedge", Config.WedgeBeamList.exists(w => w.wedge.equals(beamName)))}</td>
-            <td title="Symmetry and Flatness">{boolToName("Sym+Flat+Const", symFlatConstBeamNameList.contains(beamName))}</td>
-            <td title="Leaf Position">{boolToName("Leaf Posn", Config.LeafPositionBeamNameList.contains(beamName))}</td>
-          <td title="VMAT">{boolToName("VMAT", isVmat(beamName))}</td>
-         </tr>
+          //noinspection SpellCheckingInspection
+          val e = {
+            <tr>
+              <td title="Click for DICOM metadata"><a href={dicomHref}>{beamName}</a>{hash}</td>
+              <td title="Click for full size image"><a href={Phase2Util.dicomViewImageHtmlHref(al, extendedData, runReq)}><img src={pngHref} width={smallImageWidth}/></a></td>
+              <td title="Gantry Angle deg">{angleOf(TagByName.GantryAngle)}</td>
+              <td title="Collimator Angle deg">{angleOf(TagByName.BeamLimitingDeviceAngle)}</td>
+              <td title="Collimator opening in CM">{Phase2Util.jawDescription(al, runReq.rtplan)}</td>
+              <td title="Time since first image capture (mm:ss)">{relativeTimeText}</td>
+              <td title="Collimator Centering">{boolToName("Col Cntr", collimatorCenteringBeamNameList.contains(beamName))}</td>
+              <td title="Center Dose">{boolToName("Cntr Dose", centerDoseBeamNameList.contains(beamName))}</td>
+              <td title="Collimator Position">{boolToName("Col Posn", Config.CollimatorPositionBeamList.exists(cp => cp.beamName.equalsIgnoreCase(beamName)))}</td>
+              <td title="Wedge">{boolToName("Wedge", Config.WedgeBeamList.exists(w => w.wedge.equals(beamName)))}</td>
+              <td title="Symmetry and Flatness">{boolToName("Sym+Flat+Const", symFlatConstBeamNameList.contains(beamName))}</td>
+              <td title="Leaf Position">{boolToName("Leaf Posn", Config.LeafPositionBeamNameList.contains(beamName))}</td>
+            <td title="VMAT">{boolToName("VMAT", isVmat(beamName))}</td>
+           </tr>
+          }
+          e
         }
         (imageTime, elem)
       }
@@ -251,8 +257,8 @@ object BadPixelAnalysis extends Logging {
       val content = {
 
         val allElem = {
-          val rtimgRef = sortBeams.map(beamName => beamRef(beamName, runReq.rtimageMap(beamName)))
-          def cmpr(a: (Option[Long], Elem), b: (Option[Long], Elem)): Boolean = {
+          val rtimageRef = sortBeams.map(beamName => beamRef(beamName, runReq.rtimageMap(beamName)))
+          def compare(a: (Option[Long], Elem), b: (Option[Long], Elem)): Boolean = {
             (a._1, b._1) match {
               case (Some(ta), Some(tb)) => ta < tb
               case (Some(_), _)         => false
@@ -262,11 +268,15 @@ object BadPixelAnalysis extends Logging {
           }
           val list = {
             if (sortBeams.contains(Config.FloodFieldBeamName))
-              rtimgRef
-            else
-              rtimgRef :+ beamRef(Config.FloodFieldBeamName, runReq.flood)
+              rtimageRef
+            else {
+              if (runReq.flood.isDefined)
+                rtimageRef :+ beamRef(Config.FloodFieldBeamName, runReq.flood.get)
+              else
+                rtimageRef
+            }
           }
-          list.sortWith(cmpr).map(te => te._2)
+          list.sortWith(compare).map(te => te._2)
         }
 
         val tableHead = {
@@ -352,7 +362,10 @@ object BadPixelAnalysis extends Logging {
       logger.info("Finished analysis of BadPixel, generating Bad Pixel reports")
       makeDicomViews(extendedData, runReq, badPixelList)
 
-      val maxAllowedBadPixels = ((runReq.floodOriginalImage.Rows * runReq.floodOriginalImage.Columns) / 1000000.0) * Config.MaxAllowedBadPixelsPerMillion
+      val maxAllowedBadPixels = {
+        val dicomImage = new DicomImage(runReq.rtimageMap.values.head)
+        ((dicomImage.Rows * dicomImage.Columns) / 1000000.0) * Config.MaxAllowedBadPixelsPerMillion
+      }
       val pass = {
         val badPerImage = badPixelList.groupBy(b => b.SOPInstanceUID).values.map(list => list.size)
         badPerImage.isEmpty || badPerImage.max <= maxAllowedBadPixels

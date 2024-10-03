@@ -120,7 +120,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
   private def getAttributeList(beamName: String, runReq: RunReq): AttributeList = {
     val isFlood = beamName.equalsIgnoreCase(Config.FloodFieldBeamName)
-    if (isFlood) runReq.flood
+    if (isFlood && runReq.flood.isDefined) runReq.flood.get
     else runReq.derivedMap(beamName).attributeList
   }
 
@@ -313,7 +313,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       //val pass = resultList.map(r => r.symmetryAndFlatness.allPass(r.baseline)).reduce(_ && _)
       val pass = {
         val list = resultList.map(r => r.symmetryAndFlatness.allPass(r.baseline))
-        (list.size > 0) && list.reduce(_ && _)
+        list.nonEmpty && list.reduce(_ && _)
       }
       val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 

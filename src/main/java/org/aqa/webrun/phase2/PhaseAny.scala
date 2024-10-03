@@ -300,9 +300,11 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
 
     beamNotDefinedProblem(basicData) match {
       case Some(errorMessage)          => formErr(errorMessage)
-      case _ if flood.isEmpty          => formErr("Flood field beam is missing")
       case _ if colCentering.isDefined => formErr(colCentering.get)
-      case _                           => Right(RunReq(basicData.rtplan, rtimageMap, flood.last._2, Seq(), Seq())) // success
+      case _ => // success
+        val floodAl = if (flood.isEmpty) None else Some(flood.last._2)
+        Right(RunReq(basicData.rtplan, rtimageMap, floodAl, Seq(), Seq()))
+
     }
   }
 
@@ -477,7 +479,12 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
 
     val rtplan = getRtplan
     val rtimageMap = rtimageList.map(al => (Phase2Util.getBeamNameOfRtimage(rtplan, al).get, al)).toMap
-    val floodBeamName = rtimageMap.keys.find(_.toLowerCase.contains("flood")).get
+    val floodBeam = {
+      rtimageMap.keys.find(_.toLowerCase.contains("flood")) match {
+        case Some(name) => rtimageMap.get(name)
+        case _          => None
+      }
+    }
 
     val symmetryAndFlatnessBaselineRedoBeamList = {
       if (oldOutput.isEmpty)
@@ -498,7 +505,7 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
       }
     }
 
-    val runReq = RunReq(rtplan, rtimageMap, rtimageMap(floodBeamName), symmetryAndFlatnessBaselineRedoBeamList, wedgeBaselineRedoBeamList) // TODO add Wedge baseline list
+    val runReq = RunReq(rtplan, rtimageMap, floodBeam, symmetryAndFlatnessBaselineRedoBeamList, wedgeBaselineRedoBeamList)
     runReq
   }
 
@@ -533,8 +540,6 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
   }
 
   override def handle(request: Request, response: Response): Unit = {
-    super.handle(request, response)
-
     val valueMap: ValueMapT = getValueMap(request)
     RunProcedure.handleInput(valueMap, response, this.asInstanceOf[RunTrait[RunReqClass]], authenticatedUserPK = None, sync = true)
   }

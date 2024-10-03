@@ -35,38 +35,46 @@ import java.awt.image.BufferedImage
   * @param symmetryAndFlatnessBaselineRedoBeamList List of beams that were explicitly marked as baselines when this data was processed previously
   * @param wedgeBaselineRedoBeamList               List of beams that were explicitly marked as baselines when this data was processed previously
   */
-case class RunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList], flood: AttributeList, symmetryAndFlatnessBaselineRedoBeamList: Seq[String], wedgeBaselineRedoBeamList: Seq[String])
-    extends RunReqClass {
+case class RunReq(
+    rtplan: AttributeList,
+    rtimageMap: Map[String, AttributeList],
+    flood: Option[AttributeList],
+    symmetryAndFlatnessBaselineRedoBeamList: Seq[String],
+    wedgeBaselineRedoBeamList: Seq[String]
+) extends RunReqClass {
 
-  private val floodAttributeList = flood
-  val floodOriginalImage = new DicomImage(floodAttributeList)
+  val floodOriginalImage: Option[DicomImage] = if (flood.isDefined) Some(new DicomImage(flood.get)) else None
 
-  private val floodBadPixelRadius = Util.badPixelRadius(flood)
+  private val badPixelRadius: Int = Util.badPixelRadius(rtimageMap.values.head)
 
-  logger.info("Bad pixel radius (in pixels) for flood image of: " + floodBadPixelRadius)
+  logger.info("Bad pixel radius (in pixels) for flood image of: " + badPixelRadius)
 
-  val floodBadPixelList: Seq[DicomImage.PixelRating] = Phase2Util.identifyBadPixels(floodOriginalImage, floodBadPixelRadius)
+  val floodBadPixelList: Seq[DicomImage.PixelRating] = if (floodOriginalImage.isDefined) Phase2Util.identifyBadPixels(floodOriginalImage.get, badPixelRadius) else Seq()
 
-  private val floodCorrectedImage: DicomImage = floodOriginalImage.correctBadPixels(floodBadPixelList, floodBadPixelRadius)
+  private val floodCorrectedImage: Option[DicomImage] = if (floodOriginalImage.isDefined) Some(floodOriginalImage.get.correctBadPixels(floodBadPixelList, badPixelRadius)) else None
 
-  val imageSize = new Point(floodOriginalImage.width, floodOriginalImage.height)
+  /*
+  val imageSize = {
+    val img = new DicomImage(rtimageMap.values.head)
+    new Point(img.width, floodOriginalImage.img)
+  }
+   */
 
-  private val floodTranslator = new IsoImagePlaneTranslator(floodAttributeList)
+  private val floodTranslator: Option[IsoImagePlaneTranslator] = if (flood.isDefined) Some(new IsoImagePlaneTranslator(flood.get)) else None
 
   val treatmentMachineType: Option[DicomUtil.TreatmentMachineType.Value] = DicomUtil.TreatmentMachineType.attrListToTreatmentMachineType(rtplan)
 
-  private val floodExpected_mm = MeasureTBLREdges.imageCollimatorPositions(floodAttributeList, rtplan).toTBLR(Util.collimatorAngle(flood))
+  private val floodExpected_mm = if (flood.isDefined) Some(MeasureTBLREdges.imageCollimatorPositions(flood.get, rtplan).toTBLR(Util.collimatorAngle(flood.get))) else None
 
   private val floodMeasurementAndImage = {
     // The beam name check is a hack to let Focal Spot use Phase3 RunReq or focal spot RunReq
-    val beamName = Util.getBeamNameOfRtimage(rtplan, flood)
-    if (beamName.get.toLowerCase().contains("flood")) {
+    if (flood.isDefined) {
       MeasureTBLREdges.measure(
-        floodCorrectedImage,
-        floodTranslator,
-        Some(floodExpected_mm),
-        Util.collimatorAngle(floodAttributeList),
-        floodCorrectedImage,
+        floodCorrectedImage.get,
+        floodTranslator.get,
+        floodExpected_mm,
+        Util.collimatorAngle(flood.get),
+        floodCorrectedImage.get,
         new Point(0, 0),
         Config.PenumbraThresholdPercent / 100
       )
@@ -85,31 +93,36 @@ case class RunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList],
     * Rectangle in pixels (not mm) within an image that flood field floods.  Image analysis for other images should
     * be done within the confines of this rectangle.
     */
-  val floodRectangle: Rectangle = {
+  val floodRectangle: Option[Rectangle] = {
 
-    val pnX = floodTranslator.iso2PixDistX(Config.PenumbraThickness_mm / 2)
-    val pnY = floodTranslator.iso2PixDistY(Config.PenumbraThickness_mm / 2)
+    if (flood.isDefined) {
 
-    val x = Math.round(floodMeasurement.left + pnX).toInt
-    val y = Math.round(floodMeasurement.top + pnY).toInt
-    val width = Math.round((floodMeasurement.right - floodMeasurement.left) - (pnX * 2)).toInt
-    val height = Math.round((floodMeasurement.bottom - floodMeasurement.top) - (pnY * 2)).toInt
+      val pnX = floodTranslator.get.iso2PixDistX(Config.PenumbraThickness_mm / 2)
+      val pnY = floodTranslator.get.iso2PixDistY(Config.PenumbraThickness_mm / 2)
 
-    new Rectangle(x, y, width, height)
+      val x = Math.round(floodMeasurement.left + pnX).toInt
+      val y = Math.round(floodMeasurement.top + pnY).toInt
+      val width = Math.round((floodMeasurement.right - floodMeasurement.left) - (pnX * 2)).toInt
+      val height = Math.round((floodMeasurement.bottom - floodMeasurement.top) - (pnY * 2)).toInt
+
+      Some(new Rectangle(x, y, width, height))
+    } else
+      None
   }
 
-  val floodOffset: Point = floodRectangle.getLocation
-
-  private val floodPixelCorrectedAndCroppedImage: DicomImage = floodCorrectedImage.getSubimage(floodRectangle)
-
-  lazy val floodImage: BufferedImage = floodMeasurementAndImage.bufferedImage
+  private val floodPixelCorrectedAndCroppedImage: Option[DicomImage] =
+    if (floodCorrectedImage.isDefined && floodRectangle.isDefined) Some(floodCorrectedImage.get.getSubimage(floodRectangle.get)) else None
 
   case class Derived(al: AttributeList) {
     lazy val originalImage = new DicomImage(al)
     lazy val badPixels: Seq[DicomImage.PixelRating] = Phase2Util.identifyBadPixels(originalImage, Util.badPixelRadius(al))
     lazy val pixelCorrectedImage: DicomImage = originalImage.correctBadPixels(badPixels, Util.badPixelRadius(al))
-    private lazy val pixelCorrectedCroppedImage: DicomImage = pixelCorrectedImage.getSubimage(floodRectangle)
-    lazy val biasAndPixelCorrectedCroppedImage: DicomImage = pixelCorrectedCroppedImage.biasCorrect(floodPixelCorrectedAndCroppedImage)
+    private lazy val pixelCorrectedCroppedImage: Option[DicomImage] = if (floodRectangle.isDefined) Some(pixelCorrectedImage.getSubimage(floodRectangle.get)) else None
+    lazy val biasAndPixelCorrectedCroppedImage: Option[DicomImage] =
+      if (floodPixelCorrectedAndCroppedImage.isDefined && floodPixelCorrectedAndCroppedImage.isDefined)
+        Some(pixelCorrectedCroppedImage.get.biasCorrect(floodPixelCorrectedAndCroppedImage.get))
+      else
+        None
     val attributeList: AttributeList = al // convenience
   }
 
@@ -123,14 +136,20 @@ case class RunReq(rtplan: AttributeList, rtimageMap: Map[String, AttributeList],
     if (beamName.isDefined) beamName.get
     else {
       if (sop.equals(Util.sopOfAl(rtplan))) "RTPLAN"
-      else if (sop.equals(Util.sopOfAl(flood))) Config.FloodFieldBeamName
+      else if (flood.isDefined && sop.equals(Util.sopOfAl(flood.get))) Config.FloodFieldBeamName
       else "unknown"
     }
 
   }
 
   /** List of all attribute lists. */
-  private val attributeListSeq: Iterable[AttributeList] = derivedMap.values.map(_.attributeList) ++ Seq(flood, rtplan)
+  private val attributeListSeq: Iterable[AttributeList] = {
+    val list = derivedMap.values.map(_.attributeList) ++ Seq(rtplan)
+    if (flood.isDefined)
+      list ++ Seq(flood.get)
+    else
+      list
+  }
 
   private val sopToPatientIdMap: Map[String, String] = attributeListSeq.map(al => (Util.sopOfAl(al), Util.patientIdOfAl(al))).toMap
 

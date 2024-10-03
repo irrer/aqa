@@ -14,41 +14,34 @@
  * limitations under the License.
  */
 
-
 package aqa.test;
 
-import org.aqa.Util
-import org.scalatest.FlatSpec
-import org.scalatest.Matchers
-import org.aqa.webrun.phase2.collimatorPosition.CollimatorPositionAnalysis
-import java.awt.Point
-import java.io.File
-import org.aqa.DicomFile
-import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageUtil
-import org.aqa.Config
-import java.awt.Rectangle
-import org.aqa.run.ProcedureStatus
-import org.aqa.webrun.phase2.MeasureTBLREdges
-import com.pixelmed.dicom.TagFromName
-import edu.umro.ScalaUtil.Trace
-import edu.umro.ScalaUtil.DicomUtil
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
+import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.ImageUtil
+import org.aqa.webrun.phase2.collimatorPosition.CollimatorPositionAnalysis
+import org.aqa.Config
+import org.aqa.DicomFile
+import org.aqa.run.ProcedureStatus
+import org.aqa.webrun.phase2.MeasureTBLREdges
+import org.scalatest.FlatSpec
+import org.scalatest.Matchers
+
+import java.awt.Rectangle
+import java.io.File
 
 /**
- * Test the Config.
- *
- */
+  * Test the Config.
+  *
+  */
 
 class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers {
 
   Config.validate
 
   val dir = new File("""src\test\resources\TestCollimatorPositionAnalysis_measureImage""")
-  val fileNameList = Seq(
-    "TestCollimatorPositionAnalysis_measureImage1.dcm",
-    "TestCollimatorPositionAnalysis_measureImage2.dcm")
+  val fileNameList = Seq("TestCollimatorPositionAnalysis_measureImage1.dcm", "TestCollimatorPositionAnalysis_measureImage2.dcm")
 
   val outDir = new File("""target\TestCollimatorPositionAnalysis_measureImage""")
   outDir.mkdirs
@@ -75,9 +68,9 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
       val collimatorAngle = al.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
       println("collimatorAngle: " + collimatorAngle)
 
-      val floodOffset = new Point(0, 0)
-      val results = CollimatorPositionAnalysis.testMeasureImage(beamName, FloodCompensation, biasAndPixelCorrectedCroppedImage, pixelCorrectedImage,
-        al, originalImage, outputPK, floodOffset, rtplan)
+      val floodRectangle = new Rectangle(0, 0, 0, 0)
+      val results =
+        CollimatorPositionAnalysis.testMeasureImage(beamName, FloodCompensation, biasAndPixelCorrectedCroppedImage, pixelCorrectedImage, al, originalImage, outputPK, floodRectangle, rtplan)
 
       (results.isRight) should be(true)
 
@@ -102,8 +95,7 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
       val dicomFile = new DicomFile(file)
       val al = dicomFile.attributeList.get
       val dicomImage = new DicomImage(al)
-      val floodOffset = new Point(77, 100)
-      val floodRectangle = new Rectangle(floodOffset.x, floodOffset.y, dicomImage.width - (floodOffset.x * 2), dicomImage.height - (floodOffset.y * 2))
+      val floodRectangle = new Rectangle(77, 100, dicomImage.width - (77 * 2), dicomImage.height - (100 * 2))
       val biasAndPixelCorrectedCroppedImage = dicomImage.getSubimage(floodRectangle)
       val pixelCorrectedImage = dicomImage
       val originalImage = dicomImage
@@ -113,8 +105,8 @@ class TestCollimatorPositionAnalysis_measureImage extends FlatSpec with Matchers
       val collimatorAngle = al.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
       println("collimatorAngle: " + collimatorAngle)
 
-      val results = CollimatorPositionAnalysis.testMeasureImage(beamName, FloodCompensation, biasAndPixelCorrectedCroppedImage, pixelCorrectedImage,
-        al, originalImage, outputPK, floodOffset, rtplan)
+      val results =
+        CollimatorPositionAnalysis.testMeasureImage(beamName, FloodCompensation, biasAndPixelCorrectedCroppedImage, pixelCorrectedImage, al, originalImage, outputPK, floodRectangle, rtplan)
 
       (results.isRight) should be(true)
 
