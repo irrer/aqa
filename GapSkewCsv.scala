@@ -42,33 +42,19 @@ abstract class GapSkewCsv extends Phase2Csv[Seq[GapSkew.GapSkewHistory]] {
     Seq(
       CsvCol("Beam Name", "Name of beam in RTPLAN", (gsh: GSH) => gsh.gapSkew.beamName),
       CsvCol("Coll. Angle Rounded deg", "Collimator in degrees rounded to nearest 90", (gsh: GSH) => Util.angleRoundedTo90(gsh.gapSkew.collimatorAngle_deg),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GSH) => gsh.gapSkew.jjjjj),
-      CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GSH) => gsh.gapSkew.jjjjj),
+        CsvCol("jjjjjjjj", "jjjjjjjjjjjjjjjjjjjj", (gsh: GSH) => gsh.gapSkew.jjjjj), // TODO
         CsvCol("Coll Angle deg", "Collimator angle in degrees not rounded.", (gsh: GSH) => gsh.gapSkew.collimatorAngle_deg),
-      CsvCol("RTIMAGE UID", "UID of RTIMAGE", (gsh: GSH) => gsh.gapSkew.rtimageUID),
+        CsvCol("RTIMAGE UID", "UID of RTIMAGE", (gsh: GSH) => gsh.gapSkew.rtimageUID),
 
-    )
+      )
   }
 
   /**
-    * Get the data for a particular machine.
-    *
-    * @param machinePK Machine to get data for.
-    * @return List of data for the particular machine.
-    */
+   * Get the data for a particular machine.
+   *
+   * @param machinePK Machine to get data for.
+   * @return List of data for the particular machine.
+   */
   override protected def getData(machinePK: Long): Seq[GSH] = {
     val data = GapSkew.historyByMachine(machinePK)
     // @formatter:off
@@ -83,11 +69,11 @@ abstract class GapSkewCsv extends Phase2Csv[Seq[GapSkew.GapSkewHistory]] {
   override def getOutput(data: GSH): Output = data.output
 
   /**
-    * Get the SOP of the DICOM for this data set.
-    *
-    * @param data Data using DICOM data.
-    * @return SOP instance UID.
-    */
+   * Get the SOP of the DICOM for this data set.
+   *
+   * @param data Data using DICOM data.
+   * @return SOP instance UID.
+   */
   override protected def getSopUID(data: GSH): String = data.head.gapSkew.SOPInstanceUIDMLC
 
   override protected val dicom2HeaderPrefix: Option[String] = Some("Open")
@@ -101,7 +87,7 @@ abstract class GapSkewCsv extends Phase2Csv[Seq[GapSkew.GapSkewHistory]] {
     val gapSkewOf = vhs.find(history => (history.gapSkew.leftRtplan_mm < center) && (history.gapSkew.rightRtplan_mm > center))
     gapSkewOf match {
       case Some(history) => h(history).toString
-      case _             => "NA"
+      case _ => "NA"
     }
   }
 
@@ -148,7 +134,6 @@ abstract class GapSkewCsv extends Phase2Csv[Seq[GapSkew.GapSkewHistory]] {
       CsvCol("Beam Name MLC", "Name of RTPLAN MLC beam.", (vm: GSH) => vm.head.gapSkew.beamNameMLC),
       CsvCol("Beam Name Open", "Name of RTPLAN Open beam.", (vm: GSH) => vm.head.gapSkew.beamNameOpen)
     )
-
 
 
 }
