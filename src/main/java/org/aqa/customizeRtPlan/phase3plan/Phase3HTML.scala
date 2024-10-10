@@ -20,6 +20,7 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.web.WebUtil.SubUrlRoot
 import org.aqa.Logging
 import org.aqa.customizeRtPlan.phase3plan.Phase3HtmlForm._
+import org.aqa.customizeRtPlan.phase3plan.Phase3JS.createPlanTag
 import org.aqa.db.Machine
 import org.aqa.web.MachineUpdate
 import org.aqa.web.WebUtil
@@ -38,83 +39,71 @@ object Phase3HTML extends Restlet with SubUrlRoot with Logging {}
 
 class Phase3HTML extends Restlet with SubUrlRoot with Logging {
 
-  private def createPlan(valueMap: ValueMapT, response: Response, subProcedureList: SubProcedureList): Unit = {
-    Trace.trace("" + valueMap + response + subProcedureList) // gets rid of compiler warnings about unused parameters
-    ???
-  }
-
   /**
-    * Given a node, return the selection ID and whether it is checked or not.
+    * Make a list of all the checked beams.
     *
-    * @param node HTML description of checkbox.
-    * @return True if checked.
+    * @return List of checked beams.
     */
-  private def toCheckbox(node: Node, subProcedureList: SubProcedureList): (Selection, Boolean) = {
-    val id = (node \ "id").text
-    val value = (node \ "checked").text.toBoolean
-    (subProcedureList.findByHtmlId(id).get, value)
-  }
+  private def makeCheckedBeamList(doc: Elem, subProcedureList: SubProcedureList): Seq[Beam] = {
 
-  /**
-    * Make a list of all the checked selections.
-    *
-    * @return List of checked selections.
-    */
-  private def makeCheckedList(doc: Elem, subProcedureList: SubProcedureList): Seq[Selection] = {
-
-    def toSel(node: Node): Option[Selection] = {
+    def toBeam(node: Node): Option[Beam] = {
       if ((node \ "checked").text.toBoolean) {
-        val sel = subProcedureList.findByHtmlId((node \ "id").text)
-        sel
+        val id = (node \ "id").text
+        val beam = subProcedureList.beamList.find(b => b.beamName.equals(id))
+        beam
       } else
         None
     }
 
-    val list = (doc \ "Checkbox").flatMap(toSel)
-    list
+    val checkedBeamList = (doc \ "Checkbox").flatMap(toBeam)
+
+    checkedBeamList
+  }
+
+  private def createPlan(valueMap: ValueMapT, response: Response, uploadText: String, subProcedureList: SubProcedureList): Unit = {
+    Trace.trace("" + valueMap + response + subProcedureList) // gets rid of compiler warnings about unused parameters
+
+    val doc = XML.loadString(uploadText.trim)
+
+    /*
+    val list = makeCheckedList(doc, subProcedureList)
+
+    val beamList = {
+      val l = list.map(_.beamList)
+      val ii = l.indices
+
+      def nameOf(i: Int) = list(i).beamList.map(_.beamName).sorted.mkString(" @@ ")
+
+      def isRedundant(i: Int) = {
+        val name = list(i).beamList.map(_.beamName).sorted.mkString(" @@ ")
+
+        ???
+      }
+
+      val keep = ii.filterNot(isRedundant)
+
+    }
+
+    Trace.trace(beamList)
+     */
+
+    Trace.trace()
   }
 
   // true if the use clicked a checkbox
-  private def updateBeamStatus(uploadText: Option[String], response: Response, subProcedureList: SubProcedureList): Unit = {
+  private def updateBeamStatus(uploadText: String, response: Response, subProcedureList: SubProcedureList): Unit = {
 
-    val doc = XML.loadString(uploadText.get.trim)
+    val doc = XML.loadString(uploadText.trim)
 
-    // if the user clicked a checkbox, then this is it with the new state
-    val clicked = (doc \ "ClickedCheckbox").map(node => toCheckbox(node, subProcedureList)).headOption
+    val checkedBeamList = makeCheckedBeamList(doc, subProcedureList)
 
-    val init = makeCheckedList(doc, subProcedureList)
+    val selList = subProcedureList.getSelectionsFromBeams(checkedBeamList)
 
-    val checkedList = if (clicked.isDefined) {
-      // make list of beams that are selected due to checkboxes
-      val beamList = init.flatMap(_.beamList).groupBy(_.beamName).map(_._2.head)
-
-      if (clicked.get._2) { // changed from unchecked to checked
-        // make a new list of selection based on the beams
-        val selList = subProcedureList.getSelectionsFromBeams(beamList)
-        selList
-      } else { // changed from checked to unchecked
-        // make a list of beam without the ones specified by newly unchecked one
-        val sel = clicked.get._1
-        // val keep = Set("M10G0C270", "M10G0C90", "Flood 6X")  // doing it this was is the lesser of two evils in terms of intuitiveness
-        val selBeamNameList = sel.beamList.map(_.beamName) // .filterNot(n => keep.contains(n))
-        val beamList2 = beamList.filterNot(beam => selBeamNameList.contains(beam.beamName))
-        val selList = subProcedureList.getSelectionsFromBeams(beamList2)
-        selList
-      }
-    } else {
-      val beamList = init.flatMap(_.beamList).groupBy(_.beamName).map(_._2.head)
-      val selList = subProcedureList.getSelectionsFromBeams(beamList)
-      selList
-    }
-
-    val js = Phase3JS.toJs(checkedList, subProcedureList)
-    // Trace.trace(checkboxList.mkString("\n"))
-    // Trace.trace(js)
-
+    val js = Phase3JS.toJs(selList, checkedBeamList, subProcedureList)
     WebUtil.setResponse(js, response, Status.SUCCESS_OK)
   }
 
-  private def buttonIs(valueMap: ValueMapT, button: FormButton): Boolean = {
+  private def buttonIs(valueMap: ValueMapT, button: IsInput): Boolean = {
     val value = valueMap.get(button.label)
     value.isDefined && value.get.equals(button.label)
   }
@@ -130,6 +119,7 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
     val valueMap = getValueMap(request)
 
     try {
+
       val machine = Machine.get(valueMap(MachineUpdate.machinePKTag).toLong)
 
       def updateMach(): Unit =
@@ -139,18 +129,17 @@ class Phase3HTML extends Restlet with SubUrlRoot with Logging {
         case _ if buttonIs(valueMap, Phase3HtmlForm.cancelButton) =>
           updateMach()
 
+        case _ if valueMap.contains(createPlanTag) =>
+          val subProcedureList = SubProcedureList.makeSubProcedureList(SPMetaData(machine.get))
+          createPlan(valueMap, response, uploadText.get, subProcedureList)
+
         case _ if request.getMethod == Method.POST =>
           val subProcedureList = SubProcedureList.makeSubProcedureList(SPMetaData(machine.get))
-
-          updateBeamStatus(uploadText, response, subProcedureList)
-
-        case _ if buttonIs(valueMap, Phase3HtmlForm.createPlanButton) =>
-          val subProcedureList = SubProcedureList.makeSubProcedureList(SPMetaData(machine.get))
-          createPlan(valueMap, response, subProcedureList)
+          updateBeamStatus(uploadText.get, response, subProcedureList)
 
         case _ => // first time viewing the form.  Set defaults
           val subProcedureList = SubProcedureList.makeSubProcedureList(SPMetaData(machine.get))
-          formSelect(valueMap, response, subProcedureList)
+          formSelect(valueMap, response, subProcedureList, Seq())
       }
     } catch {
       case t: Throwable =>

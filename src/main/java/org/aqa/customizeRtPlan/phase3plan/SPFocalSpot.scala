@@ -104,10 +104,8 @@ class SPFocalSpot(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProcedur
   }
 
   override def initialSelectionList: Seq[Selection] = {
-    val j = sfSelectionList.map(beamSetToSelection)
-    val nameText = j.map(sel => sel.selectionName + " -> " + sel.beamList.map(_.beamName).mkString(" | ")).mkString(" |||| ")
-    Trace.trace(s"j size: ${j.size} : $nameText")
-    j
+    val list = sfSelectionList.map(beamSetToSelection)
+    list
   }
 
   override def consecutivelyDeliveredBeamSets: Seq[Seq[Beam]] = {

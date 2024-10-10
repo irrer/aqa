@@ -16,6 +16,8 @@ package org.aqa.customizeRtPlan.phase3plan
  * limitations under the License.
  */
 
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Logging
 import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.Config
@@ -64,7 +66,34 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
       * gantry angle. Do this by adding the appropriate collimator centering beams to the selection's beam list.
       */
     def requireColCent(selection: Selection): Selection = {
-      val gantryAngleSet = selection.beamList.filter(_.gantryAngleList_deg.distinct.size == 1).map(_.gantryAngle_roundedDeg).distinct.toSet
+      val gaSet = selection.beamList.filter(_.gantryAngleList_deg.distinct.size == 1).map(_.gantryAngle_roundedDeg).distinct.toSet
+
+      val gantryAngleSet: Set[Int] = {
+        if (gaSet.nonEmpty)
+          gaSet
+        else {
+
+          def calcMeanAngle(list: Seq[Double]): Double = {
+
+            val radList = list.map(angle => Math.toRadians(Util.modulo360(angle)))
+
+            val meanSin = radList.map(Math.sin).sum / list.size
+            val meanCos = radList.map(Math.cos).sum / list.size
+
+            val angle = Math.atan2(meanSin, meanCos)
+
+            angle
+          }
+
+          def meanGantryAngleOfBeam(beam: Beam): Double = {
+            val list = DicomUtil.findAllSingle(beam.prototypeBeam, TagByName.GantryAngle).flatMap(_.getDoubleValues)
+            calcMeanAngle(list)
+          }
+
+          val angleSet = selection.beamList.map(meanGantryAngleOfBeam).map(Util.angleRoundedTo90).toSet
+          angleSet
+        }
+      }
 
       val colCentBeamList = colCenterBeamList.filter(colCentBeam => gantryAngleSet.contains(colCentBeam.gantryAngle_roundedDeg))
 
@@ -135,7 +164,7 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
   final def headerId: String = Util.textToHtmlId("header_" + name)
 
   /**
-    * Get the list of all beams used by this subprocedure.
+    * Get the list of all beams used by this subProcedure.
     * @return The list of all beams used by this sub-procedure.
     */
   final def distinctBeamList: Seq[Beam] = selectionList.flatMap(_.beamList).groupBy(_.beamName).values.map(_.head).toSeq
@@ -146,4 +175,20 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
     * @return Sets of beams.
     */
   def consecutivelyDeliveredBeamSets: Seq[Seq[Beam]] = distinctBeamList.map(beam => Seq(beam))
+
+  override def toString: String = {
+    s"$name   ColCenter: $usesCollimatorCentering    flood: $usesFlood    Beams: ${getBeamList.map(_.beamName).mkString("  ")}"
+  }
+
+  /**
+    * Determine if this subProcedure will be run.
+    * @param checkedBeamList List of beams selected by user.
+    * @return True if active.
+    */
+  def subIsSelected(checkedBeamList: Seq[Beam]): Boolean = {
+    def subSubIsSelected(subSubProcedure: Selection): Boolean = subSubProcedure.beamList.map(beam => checkedBeamList.exists(b => b.beamName.equals(beam.beamName))).reduce(_ && _)
+
+    selectionList.map(subSubIsSelected).reduce(_ || _)
+  }
+
 }

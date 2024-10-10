@@ -30,9 +30,9 @@ case class SubProcedureList(metaData: SPMetaData, beamList: Seq[Beam]) {
       new SPSymFlatConst(metaData, beamList),
       new SPLeafPosition(metaData, beamList),
       new SPVmat(metaData, beamList),
-      new SPCollimatorPosition(metaData, beamList),
+      new SPWedge(metaData, beamList),
       new SPCenterDose(metaData, beamList),
-      new SPWedge(metaData, beamList)
+      new SPCollimatorPosition(metaData, beamList)
     )
 
     val claimed = list.flatMap(sub => sub.selectionList.flatMap(_.beamList)).map(_.beamName).toSet

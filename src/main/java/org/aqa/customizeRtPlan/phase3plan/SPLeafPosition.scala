@@ -22,7 +22,7 @@ class SPLeafPosition(metaData: SPMetaData, beamList: Seq[Beam]) extends SubProce
 
   override val name = "Leaf Position / Picket Fence"
 
-  override val abbreviation: String = "Leaf Pos"
+  override val abbreviation: String = "Picket"
 
   override def initialSelectionList: Seq[Selection] = {
     def toSelection(beam: Beam): Selection = Selection(this, beam.beamName, Seq(beam))
