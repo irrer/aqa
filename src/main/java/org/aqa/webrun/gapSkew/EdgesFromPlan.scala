@@ -19,7 +19,6 @@ package org.aqa.webrun.gapSkew
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.GapSkew
@@ -42,15 +41,7 @@ object EdgesFromPlan extends Logging {
   }
 
   /** Describe a pair of beam limits with their orientation in the image. */
-  case class OrientedEdgePair(topOrLeft: Option[BeamLimit], bottomOrRight: Option[BeamLimit]) {
-    private val all = Seq(topOrLeft, bottomOrRight).flatten
-
-    Trace.trace(all.map(_.toString).mkString("\n", "\n", "\n"))
-    if (all.map(_.edgeType.bank).distinct.size == 1)
-      Trace.trace("hey")
-    // def bank1 = all.find(_.edgeType.is1).get
-    // def bank2 = all.find(e => !e.edgeType.is1).get
-  }
+  case class OrientedEdgePair(topOrLeft: Option[BeamLimit], bottomOrRight: Option[BeamLimit]) {}
 
   private def getPos(beamLim: Seq[AttributeList], bankNumber: Int, nameList: Seq[String]): Option[Double] = {
     def bld(al: AttributeList): String = {

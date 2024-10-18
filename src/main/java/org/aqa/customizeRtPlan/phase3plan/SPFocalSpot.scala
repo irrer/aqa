@@ -60,8 +60,6 @@ object SPFocalSpot {
 
     def makeBeam(prototypeBeam: AttributeList): Beam = {
       val beamName = makeBeamName(machineBeamEnergy, prototypeBeam)
-      if (beamName.contains("loo"))
-        Trace.trace("hey")
       new Beam(prototypeBeam, beamName, machineBeamEnergy)
     }
 

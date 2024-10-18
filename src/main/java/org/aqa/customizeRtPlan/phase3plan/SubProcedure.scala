@@ -127,6 +127,10 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
       else
         list2
 
+    // remove selections that have the same exact list of beams (order does not matter).
+    def beamsAsText(sel: Selection) = sel.beamList.map(_.beamName).sorted.mkString(" @@@@ ")
+    val list4 = list3.groupBy(beamsAsText).map(_._2.head).toSeq
+
     def sortSignature(sel: Selection): String = {
       val energy = sel.beamList.head.beamEnergy
 
@@ -137,7 +141,7 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
       Seq(fffText, energyText, gantryText).mkString(" | ")
     }
 
-    list3.sortBy(sortSignature)
+    list4.sortBy(sortSignature)
   }
 
   /**

@@ -17,6 +17,7 @@ package org.aqa.customizeRtPlan.phase3plan
  */
 
 import org.aqa.Logging
+import org.aqa.customizeRtPlan.phase3plan.Phase3HtmlBeam.beamIsUsedBySubProcedure
 import org.aqa.web.MachineUpdate
 
 /**
@@ -29,7 +30,7 @@ object Phase3JS extends Logging {
 
   val colorBackground = "white"
   val colorSelected = "lightblue"
-  private val colorCaution = "white" // "yellow"
+  val colorCaution = "yellow"
   val colorInactive = "white"
 
   /* HTML id of hidden input indicating which selection changed. */
@@ -38,6 +39,7 @@ object Phase3JS extends Logging {
   val createPlanTag = "createPlan"
 
   val selectedBeamCountTag = "selectedBeamCount"
+  val unusedBeamCountTag = "unusedBeamCount"
 
   val javaScript: String = {
     val machTag = MachineUpdate.machinePKTag
@@ -219,8 +221,10 @@ object Phase3JS extends Logging {
     val js = if (checkedSelectionList.nonEmpty) {
       //noinspection SpellCheckingInspection
       val beamCount = checkedSelectionList.get.flatMap(_.beamList.map(_.beamName)).distinct.size
+      val selectionCount = checkedSelectionList.get.size
+      val text = beamCount + " - " + selectionCount
       s"""document.getElementById("${subProcedure.headerId}").style.background = "$colorSelected";""" +
-        s"""document.getElementById("${subProcedure.headerId}").innerHTML = "${subProcedure.abbreviation + " <br/> " + beamCount}";"""
+        s"""document.getElementById("${subProcedure.headerId}").innerHTML = "${subProcedure.abbreviation + " <br/> " + text}";"""
     } else {
       s"""document.getElementById("${subProcedure.headerId}").style.background = "$colorBackground";""" +
         s"""document.getElementById("${subProcedure.headerId}").innerHTML = "${subProcedure.abbreviation + " <p> </p> "}";"""
@@ -242,14 +246,24 @@ object Phase3JS extends Logging {
 
     val selText = selectionText(checkedBeamList, subProcedureList)
 
+    val unusedBeamCount = {
+      def usedByAnyBeam(beam: Beam): Boolean = subProcedureList.subProcedureList.exists(sp => beamIsUsedBySubProcedure(sp, beam, checkedBeamList))
+      checkedBeamList.count(beam => !usedByAnyBeam(beam))
+    }
+
     val selectedBeamCountText = s""" document.getElementById("${Phase3JS.selectedBeamCountTag}").innerHTML = "${checkedBeamList.size}"; """
+    val unusedBeamCountText = {
+      val color = if (unusedBeamCount == 0) colorBackground else colorCaution
+      s"""document.getElementById("${Phase3JS.unusedBeamCountTag}").innerHTML = "${unusedBeamCount}"; """ + "\n" +
+        s"""document.getElementById("${Phase3JS.unusedBeamCountTag}").style.background = "$color";"""
+    }
 
     val checkedSubProcedureNameMap = checkedSelectionList.groupBy(_.subProcedure.name)
     val subHeaderText = subProcedureList.subProcedureList.map(sub => subProcessHeaderToJs(checkedSubProcedureNameMap.get(sub.name), sub)).mkString("\n")
 
     val beamUsageBySubProcedure = Phase3HtmlBeam.setBeamUsageBySubProcedure(subProcedureList, checkedBeamList)
 
-    val js = Seq(selText, beamText, selectedBeamCountText, subHeaderText, beamUsageBySubProcedure).mkString("\n")
+    val js = Seq(selText, beamText, selectedBeamCountText, unusedBeamCountText, subHeaderText, beamUsageBySubProcedure).mkString("\n")
     js
   }
 

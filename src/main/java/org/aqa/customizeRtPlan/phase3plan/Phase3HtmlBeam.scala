@@ -19,8 +19,11 @@ package org.aqa.customizeRtPlan.phase3plan
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.customizeRtPlan.phase3plan.Phase3JS.colorBackground
+import org.aqa.customizeRtPlan.phase3plan.Phase3JS.colorCaution
 import org.aqa.customizeRtPlan.phase3plan.Phase3JS.colorSelected
 import org.aqa.customizeRtPlan.phase3plan.Phase3JS.selectedBeamCountTag
+import org.aqa.customizeRtPlan.phase3plan.Phase3JS.unusedBeamCountTag
+import org.aqa.web.C3Chart
 import org.aqa.web.WebUtil
 
 import scala.xml.Elem
@@ -62,11 +65,11 @@ object Phase3HtmlBeam extends Logging {
       else
         Phase3JS.colorBackground
 
-    val style = s"border-left: 16px solid $color; margin:5px; line-height: 20%; background:$color;"
+    val style = s"background:$color;"
     style
   }
 
-  private def beamIsUsedBySubProcedure(subProc: SubProcedure, beam: Beam, checkedBeamList: Seq[Beam]): Boolean = {
+  def beamIsUsedBySubProcedure(subProc: SubProcedure, beam: Beam, checkedBeamList: Seq[Beam]): Boolean = {
 
     val checkedBeamNameSet = checkedBeamList.map(_.beamName).toSet
 
@@ -85,7 +88,14 @@ object Phase3HtmlBeam extends Logging {
   /** Return an indicator as to whether the sub procedure uses the beam. */
   private def subProcUseOfBeam(subProc: SubProcedure, beam: Beam, checkedBeamList: Seq[Beam]): Elem = {
     val id = beamProcId(subProc, beam)
-    <span id={id} style={subProcBeamStyle(beamIsUsedBySubProcedure(subProc, beam, checkedBeamList))} title={subProc.name}>JJJJ</span>
+    <div id={id} style={subProcBeamStyle(beamIsUsedBySubProcedure(subProc, beam, checkedBeamList))} title={subProc.name}>
+      <p>
+        {WebUtil.nbsp}
+      </p>
+      <p>
+        {WebUtil.nbsp}
+      </p>
+    </div>
   }
 
   private def beamToHtml(beam: Beam, subProcedureList: SubProcedureList, checkedBeamList: Seq[Beam]): Elem = {
@@ -148,13 +158,24 @@ object Phase3HtmlBeam extends Logging {
             </td>
             <td>
               <h4>
-                {beam.beamName}
+                <table>
+                  <tr>
+                    <td>
+                      <input id={beam.beamName + "::" + C3Chart.makeUniqueChartIdTag.replace("Chart", "Beam")} onclick="phase3ClickHandler(this)" class="form-control" name="M10G180C270" type="checkbox" style="margin-right: 8px;"/>
+                    </td>
+                    <td>
+                      {beam.beamName}
+                    </td>
+                  </tr>
+                </table>
               </h4>{title}
             </td>
           </tr>
         </table>
       </div>
     }
+
+    val isUsedByAnyProcedure = subProcedureList.subProcedureList.exists(sp => beamIsUsedBySubProcedure(sp, beam, checkedBeamList))
 
     def toBeamUse(subProcedure: SubProcedure): Elem = {
 
@@ -163,8 +184,9 @@ object Phase3HtmlBeam extends Logging {
       </td>
     }
 
+
     <tr id={beam.beamName} style="display:none;">
-      <td style="text-align: center;">
+      <td style="text-align:center; horizontal-align:middle; vertical-align:middle;">
         {image}
       </td>{subProcedureList.subProcedureList.map(toBeamUse)}
     </tr>
@@ -182,18 +204,22 @@ object Phase3HtmlBeam extends Logging {
     val style = s"position: sticky; top: 0px; background: ${Phase3JS.colorBackground}; text-align: center;"
 
     def subToHeader(subProcedure: SubProcedure): Elem = {
-      <th style={style} title={subProcedure.name} id={subProcedure.headerId}>
+      <th style={style} title={subProcedure.name + WebUtil.titleNewline + "Number of beams used and number of tests to be performed."} id={subProcedure.headerId}>
         {subProcedure.abbreviation}
       </th>
     }
 
-    // @formatter:off
-    <thead style={style}>
-      <tr style="text-align: center;">
-        <th style={style}> </th>{subProcedureList.subProcedureList.map(subToHeader)}
-      </tr>
-    </thead>
+    val content = {
+      // @formatter:off
+      <thead style={style}>
+        <tr style="text-align: center;">
+          <th style={style}> </th>{subProcedureList.subProcedureList.map(subToHeader)}
+        </tr>
+      </thead>
     // @formatter:on
+    }
+
+    content
   }
 
 
@@ -261,8 +287,9 @@ object Phase3HtmlBeam extends Logging {
             <div class="col-md-3" title="List of beams that will be delivered by the plan.">
               Beam List
             </div>
-            <div class="col-md-3" title="Number of beams that will be delivered by the plan">
-              Selected: <span id={selectedBeamCountTag}>0</span>
+            <div class="col-md-6" title="Number of beams that will be delivered by the plan">
+              Selected: <span style="margin-right:40px;" id={selectedBeamCountTag}>0</span>
+              Unused: <span id={unusedBeamCountTag} style={s"background:$colorBackground"}>0</span>
             </div>
             <div class="col-md-6">
               {gantryAngleUsage()}
@@ -295,8 +322,14 @@ object Phase3HtmlBeam extends Logging {
       s"""document.getElementById("${beamProcId(subProcedure, beam)}").style.background = "$color";"""
     }
 
+
     def setBeamUse(beam: Beam): String = {
-      subProcedureList.subProcedureList.map(sp => used(sp, beam)).mkString("\n")
+      val usedByAnyBeam = subProcedureList.subProcedureList.exists(sp => beamIsUsedBySubProcedure(sp, beam, checkedBeamList))
+
+      if (usedByAnyBeam)
+        subProcedureList.subProcedureList.map(sp => used(sp, beam)).mkString("\n")
+      else
+        subProcedureList.subProcedureList.map(sp => s"""document.getElementById("${beamProcId(sp, beam)}").style.background = "$colorCaution";""").mkString("\n")
     }
 
     checkedBeamList.map(setBeamUse).mkString("\n")
