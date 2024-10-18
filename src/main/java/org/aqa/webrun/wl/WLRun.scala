@@ -121,8 +121,6 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
   override def getRadiationMachineNameList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = getRadiationMachineNameListFromRtimageUtil(alList, xmlList)
 
   override def handle(request: Request, response: Response): Unit = {
-    super.handle(request, response)
-
     val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
     RunProcedure.handleInput(valueMap, response, this.asInstanceOf[RunTrait[RunReqClass]], authenticatedUserPK = None, sync = true)
   }

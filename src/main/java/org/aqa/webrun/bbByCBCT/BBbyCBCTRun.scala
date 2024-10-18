@@ -276,8 +276,6 @@ class BBbyCBCTRun(procedure: Procedure) extends WebRunProcedure with RunTrait[BB
   }
 
   override def handle(request: Request, response: Response): Unit = {
-    super.handle(request, response)
-
     val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
     RunProcedure.handleInput(valueMap, response, this.asInstanceOf[RunTrait[RunReqClass]], authenticatedUserPK = None, sync = true)
   }

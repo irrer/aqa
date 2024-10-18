@@ -134,8 +134,6 @@ class LOCBaselineRun(procedure: Procedure) extends WebRunProcedure with RunTrait
   // override def postRun(extendedData: ExtendedData, runReq: LOC2RunReq): Unit = {}
 
   override def handle(request: Request, response: Response): Unit = {
-    super.handle(request, response)
-
     val valueMap: ValueMapT = emptyValueMap ++ getValueMap(request)
     RunProcedure.handleInput(valueMap, response, this.asInstanceOf[RunTrait[RunReqClass]], authenticatedUserPK = None, sync = true)
   }
