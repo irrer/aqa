@@ -386,9 +386,25 @@ object WebUtil extends Logging {
       saveData(data, file, contentType, unique, request)
     }
 
+  // TODO made changes to this function but not sure that they are needed ...
+  /*
   def sessionDir(valueMap: ValueMapT): Option[File] = {
     valueMap.get(sessionLabel) match {
       case Some(sessionId) => Some(Session.idToFile(sessionId))
+      case _ => None
+    }
+  }
+   */
+  def sessionDir(valueMap: ValueMapT): Option[File] = {
+    valueMap.get(sessionLabel) match {
+      case Some(sessionId) =>
+        val dir = Session.idToFile(sessionId)
+        Trace.trace(s"using session dir ${dir}")
+        if (!dir.exists())
+          dir.mkdirs()
+        else
+          Trace.trace(s"already made session dir ${dir}")
+        Some(dir)
       case _ => None
     }
   }
