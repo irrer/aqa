@@ -300,7 +300,7 @@ object BBbyEPID extends Logging {
     // case class OneDay(input: Input, output: Output, machine: Machine, dicomSeries: DicomSeries) {}
 
     val searchOutput = for {
-      output <- Output.query.filter(o => o.dataDate.isDefined && (o.dataDate >= beginDate) && (o.dataDate < endDate) && (o.procedurePK === epidProcPk))
+      output <- Output.query.filter(o => o.dataDate.isDefined && o.finishDate.isDefined && (o.dataDate >= beginDate) && (o.dataDate < endDate) && (o.procedurePK === epidProcPk))
       input <- Input.query.filter(i => i.inputPK === output.inputPK)
       machine <- Machine.query.filter(m => (m.machinePK === output.machinePK) && (m.institutionPK === institutionPK))
       dicomSeries <- DicomSeries.query.filter(ds => (ds.inputPK === input.inputPK) && (ds.modality === "RTIMAGE"))
