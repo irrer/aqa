@@ -237,7 +237,7 @@ object Phase3JS extends Logging {
     * Write js code that tells the client what to modify in the DOM.
     *
     * @param checkedSelectionList List of selections that the user has checked.
-    * @param subProcedureList Sub-procedures and meta data related to this machine.
+    * @param subProcedureList Sub-procedures and metadata related to this machine.
     * @return
     */
   def toJs(checkedSelectionList: Seq[Selection], checkedBeamList: Seq[Beam], subProcedureList: SubProcedureList): String = {
