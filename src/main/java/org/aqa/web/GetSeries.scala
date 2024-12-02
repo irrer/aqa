@@ -244,24 +244,47 @@ class GetSeries extends Restlet with SubUrlRoot with Logging {
         }
       }
 
-      val procedure = {
+      val procedure: Option[Elem] = {
         if (procedurePK.isDefined) Some(<Procedure>{nameOfProcedure(procedurePK.get)}</Procedure>)
         else None
       }
 
-      val status = {
+      val status: Option[Elem] = {
         if (output.isDefined) Some(<Status>{output.get.status}</Status>)
         else None
       }
 
-      val url = {
+      val url: Option[Elem] = {
         urlOfDicomSeries(dicomSeries) match {
           case Some(u) => Some(<URL>{u}</URL>)
           case _       => None
         }
       }
 
-      val elemList: Seq[Elem] = Seq(serInstUid, devSerNo, sopList, frmOfRef, mappedFrameOfReferenceUID, modality, sopClassUid, patId, referencedRtplanUID, url, procedure, status, startDate).flatten
+      val outputPK: Option[Elem] = {
+        if (output.isDefined && output.get.outputPK.isDefined)
+          Some(<outputPK>{output.get.outputPK.get}</outputPK>)
+        else
+          None
+      }
+
+      val elemList: Seq[Elem] =
+        Seq(
+          serInstUid, //
+          devSerNo, //
+          sopList, //
+          frmOfRef, //
+          mappedFrameOfReferenceUID, //
+          modality, //
+          sopClassUid, //
+          patId, //
+          referencedRtplanUID, //
+          url, //
+          procedure, //
+          status, //
+          startDate, //
+          outputPK
+        ).flatten
 
       val seriesXml = {
         <Series>
