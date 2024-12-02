@@ -26,7 +26,7 @@ import org.aqa.db.DbSetup
 object Phase2CsvMakeAll extends Logging {
 
   /**
-    * Make all of the CSV content, overwriting old content.
+    * Make all the CSV content, overwriting old content.
     */
   private def makeAll(): Unit = {
 
@@ -60,7 +60,7 @@ object Phase2CsvMakeAll extends Logging {
 
     maintenanceCsv.writeDoc()
 
-    // Write an index for each institution, regardless of whether or not it has data.
+    // Write an index for each institution, regardless of whether it has data.
     metadataCache.institutionNameMap.keys.foreach(institutionPK => Phase2Csv.generateIndex(institutionPK, metadataCache))
 
     Phase2Csv.writeCsvColumnDefinitions(dataTypeList)
