@@ -17,28 +17,40 @@
 package org.aqa
 
 import com.pixelmed.dicom.AttributeList
+import edu.umro.ScalaUtil.Trace
 
 /**
   * For classifying angles.
   */
-object AngleType extends Enumeration {
-  val horizontal = Value
-  val vertical = Value
+object AngleType extends Enumeration with Logging {
+  val horizontal: Value = Value
+  val vertical: Value = Value
 
   /**
     * Only allow angles that are within 5 degrees of right angles.
     */
   def classifyAngle(angle: Double): Option[AngleType.Value] = {
     val rounded = Util.angleRoundedTo90(angle)
-    val canonicalAngle = ((angle.round.toInt + 3600) % 360)
-    val angTyp = (((rounded - canonicalAngle).abs < 5), canonicalAngle) match {
-      case (true, 0)   => Some(AngleType.vertical)
-      case (true, 180) => Some(AngleType.vertical)
-      case (true, 90)  => Some(AngleType.horizontal)
-      case (true, 270) => Some(AngleType.horizontal)
-      case _           => None
+    val maxError = 5.0
+    val ok = {
+      val a = (rounded - ((angle + (360 * 10)) % 360.0)).abs
+      (a < maxError) || ((a - 360).abs < maxError)
     }
-    angTyp
+    if (ok) {
+      val angTyp = rounded match {
+        case 0   => Some(AngleType.vertical)
+        case 180 => Some(AngleType.vertical)
+        case 90  => Some(AngleType.horizontal)
+        case 270 => Some(AngleType.horizontal)
+        case _ =>
+          logger.warn(s"Unable to classify angle as vertical or horizontal: $angle")
+          None // should never happen
+      }
+      angTyp
+    } else {
+      logger.warn(s"Angle error exceeded tolerance of $maxError degrees: $angle")
+      None
+    }
   }
 
   /**
@@ -46,7 +58,7 @@ object AngleType extends Enumeration {
     */
   def isAngleType(angle: Double, angleType: AngleType.Value): Boolean = {
     classifyAngle(angle) match {
-      case Some(at) => at.toString.equals(angleType.toString())
+      case Some(at) => at.toString.equals(angleType.toString)
       case _        => false
     }
   }
@@ -56,6 +68,43 @@ object AngleType extends Enumeration {
     */
   def isAngleType(al: AttributeList, angleType: AngleType.Value): Boolean = isAngleType(Util.gantryAngle(al), angleType)
 
-  def isVert(angleType: AngleType.Value) = angleType.toString.equals(vertical.toString)
-  def isHorz(angleType: AngleType.Value) = !isVert(angleType)
+  def isVert(angleType: AngleType.Value): Boolean = angleType.toString.equals(vertical.toString)
+  def isHorz(angleType: AngleType.Value): Boolean = !isVert(angleType)
+
+  /**
+    * For testing only.  Try classifying a variety of angles.
+    * @param args not used.
+    */
+  def main(args: Array[String]): Unit = {
+    Trace.trace("Starting.")
+
+    var a = -730.0
+
+    val good = Set(0, 90, 180, 270)
+
+    while (a < 730) {
+      val aText = a.formatted("%8.2f")
+      val result = classifyAngle(a)
+      val resultText = result match {
+        case Some(AngleType.vertical)   => "V"
+        case Some(AngleType.horizontal) => "H"
+        case _                          => "N"
+      }
+
+      val ra = {
+        val ar = (a.round + 3600) % 360
+
+        if ((a.round == a) && good.contains(ar.toInt))
+          " == " + ar.formatted("%4d")
+        else
+          ""
+      }
+
+      println(s"$aText :: $resultText  $ra")
+      a = a + 0.25
+    }
+
+    Trace.trace("Done.")
+  }
+
 }
