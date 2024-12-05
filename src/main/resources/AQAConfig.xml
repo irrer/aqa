@@ -938,6 +938,9 @@ Note that when building a package for release, the Maven build process uses the 
     that it makes the readings less accurate.   Specified as floating point value in mm.-->
     <BBbyCBCTMaximumSliceThickness_mm>1.0</BBbyCBCTMaximumSliceThickness_mm>
 
+    <!-- Maximum allowed error in gantry angle for Daily QA BBbyEPID images.  Floating point in degrees, default is 1.0 . -->
+    <BBbyEPIDMaxAllowedGantryErrorFromOrthogonal_deg>0.5</BBbyEPIDMaxAllowedGantryErrorFromOrthogonal_deg>
+
     <!-- When making the zoomed version of the EPID images, make them this size of a square in mm.-->
     <EPIDZoomSize_mm>60.0</EPIDZoomSize_mm>
 

@@ -33,6 +33,7 @@ import org.aqa.run.ProcedureStatus
 import org.aqa.web.ViewOutput
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
+import org.aqa.AngleType
 
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
@@ -86,6 +87,7 @@ object DailyQAHTML extends Logging {
 
     val stylePass = "color: #000000; background: #1dc32b;"
     val styleFail = "color: #000000; background: #e00034;"
+    val styleFailText = "color: #e00034; background: #ffffff; font-weight: bold;"
     val styleNoData = "color: #000000; background: #888888;"
     val styleWarn = "color: #000000; background: yellow;"
     val styleInProgress = "color: #000000; background: white;"
@@ -379,6 +381,27 @@ object DailyQAHTML extends Logging {
 
         def cbctBBNotFound(cOut: Output): Boolean = !machineCbctResults.exists(c => c.output.outputPK.get == cOut.outputPK.get)
 
+        def badAngleList(output: Output): String = {
+          val sameOutputList = allEpidSeqWithErrors.filter(_.output.outputPK.get == output.outputPK.get)
+
+          def gantryAngle(result: BBbyEPID.DailyDataSetEPID): Double = {
+            if (result.data.isLeft)
+              Util.gantryAngle(result.data.left.get)
+            else
+              result.data.right.get.gantryAngle_deg
+          }
+
+          val list = sameOutputList.map(gantryAngle).filter(angle => AngleType.orthogonalAngleError(angle) > Config.BBbyEPIDMaxAllowedGantryErrorFromOrthogonal_deg)
+
+          val text =
+            if (list.isEmpty)
+              ""
+            else
+              s" One or more EPID images have a gantry angle out of tolerance (${Config.BBbyEPIDMaxAllowedGantryErrorFromOrthogonal_deg} deg) : ${list.mkString(", ")}"
+
+          text
+        }
+
         /**
           * True if this EPID output has data for horizontal gantry angle.
           */
@@ -416,7 +439,7 @@ object DailyQAHTML extends Logging {
               }
               <p>
                 <a href={url} title={title}>
-                  {text}<span style={styleFail}>BB not found</span>
+                  {text}<span style={styleFailText}>BB not found</span>
                 </a>
               </p>
             }
@@ -430,7 +453,7 @@ object DailyQAHTML extends Logging {
               }
               <p>
                 <a href={url} title={title}>
-                  {text}<span style={styleFail}>No horizontal gantry angle image with BB found</span>
+                  {text}<span style={styleFailText}>No horizontal gantry angle image with BB found. {badAngleList(o)}</span>
                 </a>
               </p>
             }
@@ -444,10 +467,10 @@ object DailyQAHTML extends Logging {
                   "position. The scan must be re-done. Click to view details of EPID."
               }
               <p>
-                <a href={url} title={title}>
-                  {text}<span style={styleFail}>No vertical gantry angle image with BB found</span>
-                </a>
-              </p>
+                  <a href={url} title={title}>
+                    {text}<span style={styleFailText}>No vertical gantry angle image with BB found. {badAngleList(o)}</span>
+                  </a>
+                </p>
             }
 
             def scanOk = {

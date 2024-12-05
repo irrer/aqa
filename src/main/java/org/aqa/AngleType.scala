@@ -27,16 +27,24 @@ object AngleType extends Enumeration with Logging {
   val vertical: Value = Value
 
   /**
+    * Calculate the error from this angle to the nearest orthogonal angle in degrees.
+    * @param angle Angle in degrees.
+    * @return Absolute value of difference.
+    */
+  def orthogonalAngleError(angle: Double): Double = {
+    val rounded = Util.angleRoundedTo90(angle)
+    val a = (rounded - ((angle + (360 * 10)) % 360.0)).abs
+    val b = (a - 360).abs
+    Math.min(a, b)
+  }
+
+  /**
     * Only allow angles that are within 5 degrees of right angles.
     */
   def classifyAngle(angle: Double): Option[AngleType.Value] = {
-    val rounded = Util.angleRoundedTo90(angle)
-    val maxError = 5.0
-    val ok = {
-      val a = (rounded - ((angle + (360 * 10)) % 360.0)).abs
-      (a < maxError) || ((a - 360).abs < maxError)
-    }
-    if (ok) {
+
+    if (orthogonalAngleError(angle) < Config.BBbyEPIDMaxAllowedGantryErrorFromOrthogonal_deg) {
+      val rounded = Util.angleRoundedTo90(angle)
       val angTyp = rounded match {
         case 0   => Some(AngleType.vertical)
         case 180 => Some(AngleType.vertical)
@@ -48,7 +56,7 @@ object AngleType extends Enumeration with Logging {
       }
       angTyp
     } else {
-      logger.warn(s"Angle error exceeded tolerance of $maxError degrees: $angle")
+      logger.warn(s"Angle error exceeded tolerance of ${Config.BBbyEPIDMaxAllowedGantryErrorFromOrthogonal_deg} degrees from orthogonal: $angle")
       None
     }
   }
@@ -88,7 +96,7 @@ object AngleType extends Enumeration with Logging {
       val resultText = result match {
         case Some(AngleType.vertical)   => "V"
         case Some(AngleType.horizontal) => "H"
-        case _                          => "N"
+        case _                          => " "
       }
 
       val ra = {
