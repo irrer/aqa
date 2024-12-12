@@ -17,6 +17,7 @@ import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil.emptyValueMap
 import org.aqa.web.WebUtil.getValueMap
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.webrun.wl.wlXlsx.WLXlsx
 import org.restlet.Request
 import org.restlet.Response
 
@@ -37,14 +38,24 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
   private def getRtimageList(alList: Seq[AttributeList]) = alList.filter(al => Util.isRtimage(al)).sortBy(dateTime)
 
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
-    // Process in parallel for speed.  Afterwards, sort by data time.
+    // Process in parallel for speed.  After that, sort by data time.
     val results = runReq.epidList.zipWithIndex.par.map(rtimageIndex => new WLProcessImage(extendedData, rtimageIndex._1, rtimageIndex._2, runReq).process).toList
     //val results = runReq.epidList.zipWithIndex.map(rtimageIndex => new WLProcessImage(extendedData, rtimageIndex._1, rtimageIndex._2, runReq).process).toList // Use this to run non-parallel
 
     val resultHasData = results.filter(r => WLImageStatus.hasResult(r.imageStatus))
 
-    resultHasData.map(_.toWinstonLutz).map(_.insert)
+    val dbList = resultHasData.map(_.toWinstonLutz)
+    dbList.map(_.insert)
     logger.info(s"Inserted ${resultHasData.size} WinstonLutz rows into database.")
+
+    if (false) { // TODO enable when code is finished
+      try {
+        val monthlyFile = WLXlsx.make(extendedData, runReq, dbList)
+      } catch {
+        case t: Throwable => logger.error(s"monthly badness: ${fmtEx(t)}")
+      }
+    }
+
     val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, results, runReq)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, mainHtmlText)

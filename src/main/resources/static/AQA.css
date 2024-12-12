@@ -26,6 +26,23 @@ input[type="radio"] {
     height: 20px;
 }
 
+.CSSIndex {
+    text-align:center;
+    background-color:#f0f0f0;
+    color:black;
+    font-size:11pt;
+}
+
+.CSSData {
+    text-align:left;
+    background-color:#d9d9d9;
+    color:black;
+    font-size:11pt;
+    white-space:nowrap;
+}
+
+
+
 /* Supports tooltip.js file (#tooltip, #preview, #screenshot) */
 #tooltip {
   position: absolute;
