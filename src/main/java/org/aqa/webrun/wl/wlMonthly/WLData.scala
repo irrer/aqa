@@ -1,10 +1,9 @@
-package org.aqa.webrun.wl.wlXlsx
+package org.aqa.webrun.wl.wlMonthly
 
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.apache.poi.ss.usermodel.BorderStyle
 import org.apache.poi.ss.usermodel.CellStyle
 import org.apache.poi.ss.usermodel.FillPatternType
@@ -18,30 +17,30 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.WLRunReq
 import org.aqa.Util
 import org.aqa.db.MachineWL
-import org.aqa.webrun.wl.wlXlsx.WLXlsxUtil.addStringCell
-import org.aqa.webrun.wl.wlXlsx.WLXlsxUtil.cssData
-import org.aqa.webrun.wl.wlXlsx.WLXlsxUtil.makeAlphaRow
-import org.aqa.webrun.wl.wlXlsx.WLXlsxUtil.makeRowIndex
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.addStringCell
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssData
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.makeAlphaRow
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.makeRowIndex
 import org.aqa.AnonymizeUtil
-import org.aqa.webrun.wl.wlXlsx.WLXlsxUtil.addNumericCell
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.addNumericCell
 import org.aqa.Logging
-import org.aqa.webrun.wl.wlXlsx.WLXlsxUtil.getLastColumnNumber
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.getLastColumnNumber
 
 import java.util.Date
 import scala.xml.Elem
 
 case class WLData(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[WinstonLutz], workbook: SXSSFWorkbook) extends WLSheetMaker with Logging {
 
-  private def acquistion(al: AttributeList): Date = DicomUtil.getTimeAndDate(al, TagByName.AcquisitionDate, TagByName.AcquisitionTime).get
+  private def acquisition(al: AttributeList): Date = DicomUtil.getTimeAndDate(al, TagByName.AcquisitionDate, TagByName.AcquisitionTime).get
 
   // get the date+time of the first slice
-  private val firstDateTime: Date = runReq.epidList.map(acquistion).min
+  private val firstDateTime: Date = runReq.epidList.map(acquisition).min
 
   private def fieldNameOf(al: AttributeList): String = {
     val gantry = Util.angleRoundedTo90(Util.gantryAngle(al)).formatted("%03d")
     val collimator = Util.angleRoundedTo90(Util.collimatorAngle(al)).formatted("%03d")
 
-    val elapsed_ms = acquistion(al).getTime - firstDateTime.getTime
+    val elapsed_ms = acquisition(al).getTime - firstDateTime.getTime
 
     val minute = (" " + ((elapsed_ms / (60 * 1000)) % 60).formatted("%d")).takeRight(2)
     val second = ((elapsed_ms / 1000) % 60).formatted("%02d")
@@ -51,6 +50,8 @@ case class WLData(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[Wins
   }
 
   override val sheetName: String = "Data"
+
+  private val sheet: SXSSFSheet = workbook.createSheet(sheetName)
 
   private val dataStyle: CellStyle = {
 
@@ -104,7 +105,7 @@ case class WLData(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[Wins
     style
   }
 
-  private def addTitleRow(sheet: SXSSFSheet): Elem = {
+  private def addTitleRow(): Elem = {
     val row: SXSSFRow = sheet.createRow(sheet.getLastRowNum + 1)
 
     addStringCell(row, "Winston-Lutz Field Data")
@@ -215,7 +216,7 @@ case class WLData(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[Wins
    *
    * @param sheet For this sheet.
    */
-  private def addHeaderRow(sheet: SXSSFSheet): Elem = {
+  private def addHeaderRow(): Elem = {
 
     val row = sheet.createRow(sheet.getLastRowNum + 1)
 
@@ -229,7 +230,7 @@ case class WLData(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[Wins
 
   }
 
-  private def addContentRow(sheet: SXSSFSheet, wl: WinstonLutz, al: AttributeList): Elem = {
+  private def addContentRow(wl: WinstonLutz, al: AttributeList): Elem = {
     val row = sheet.createRow(sheet.getLastRowNum + 1)
 
     def makeElem(col: Col): Elem = {
@@ -249,7 +250,7 @@ case class WLData(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[Wins
     elemRow
   }
 
-  private def addContentRowList(sheet: SXSSFSheet): Seq[Elem] = {
+  private def addContentRowList(): Seq[Elem] = {
     def acquisitionDateTime(al: AttributeList): Date = {
       DicomUtil.getTimeAndDate(al, TagByName.AcquisitionDate, TagByName.AcquisitionTime).get
     }
@@ -263,12 +264,12 @@ case class WLData(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[Wins
 
     val wlList = alList.map(al => (wlOfAl(al), al)).filter(_._1.isDefined)
 
-    val elemList = wlList.map(wlAl => addContentRow(sheet, wlAl._1.get, wlAl._2))
+    val elemList = wlList.map(wlAl => addContentRow(wlAl._1.get, wlAl._2))
 
     elemList
   }
 
-  private def makeCbct(sheet: SXSSFSheet): Unit = {
+  private def makeCbct(): Unit = {
     def fillRemainingCells(row: SXSSFRow): Unit = {
       (row.getLastCellNum until columnList.size).foreach(_ => addStringCell(row, "").setCellStyle(plainStyle))
     }
@@ -325,17 +326,15 @@ case class WLData(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[Wins
   }
 
   override def make(): Elem = {
-    val sheet: SXSSFSheet = workbook.createSheet(sheetName)
 
     // turn on auto sizing for all columns
     (0 to (columnList.size + 1)).foreach(i => sheet.trackColumnForAutoSizing(i))
 
     val rowList =
-      Seq(addTitleRow(sheet), addHeaderRow(sheet)) ++
-        addContentRowList(sheet) ++
+      Seq(addTitleRow(), addHeaderRow()) ++
+        addContentRowList() ++
         new WLDataCBCT(sheet, dataStyle, columnList.size).make()
 
-    val indexRow = makeAlphaRow(sheet)
     // fill the remainder of the top row with empty cells.  This is required to make auto-sizing work.
     val lastColumnNumber = getLastColumnNumber(sheet)
     val topRow = sheet.getRow(0)
@@ -343,13 +342,12 @@ case class WLData(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[Wins
 
     (0 until getLastColumnNumber(sheet)).foreach(i => {
       sheet.setDefaultColumnStyle(i, dataStyle)
-      Trace.trace(i)
       sheet.autoSizeColumn(i)
     })
 
     val elem = {
       <table class="table table-bordered">
-        {indexRow}{rowList}
+        {makeAlphaRow(sheet)}{rowList}
       </table>
     }
 
@@ -357,15 +355,3 @@ case class WLData(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[Wins
   }
 }
 
-object WLData {
-
-  // Replace with your Excel file path and the desired HTML file path
-  private val excelFilePath = """D:\tmp\wl\2024_WinstonLutz_TB5_2024-10-15.xls"""
-  private val htmlFilePath = """D:\tmp\wl\html\WL.html"""
-
-  def main(args: Array[String]): Unit = {
-    Trace.trace()
-
-    Trace.trace()
-  }
-}
