@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl.wlXlsx
+package org.aqa.webrun.wl.wlMonthly
 
 import org.apache.poi.ss.usermodel.BorderStyle
 import org.apache.poi.ss.usermodel.CellStyle
@@ -7,10 +7,10 @@ import org.apache.poi.ss.usermodel.HorizontalAlignment
 import org.apache.poi.ss.usermodel.IndexedColors
 import org.apache.poi.xssf.streaming.SXSSFRow
 import org.apache.poi.xssf.streaming.SXSSFSheet
-import org.aqa.webrun.wl.wlXlsx.WLXlsxUtil.addNumericCell
-import org.aqa.webrun.wl.wlXlsx.WLXlsxUtil.addStringCell
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.addNumericCell
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.addStringCell
 import org.aqa.Logging
-import org.aqa.webrun.wl.wlXlsx.WLXlsxUtil.cssData
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssData
 
 import scala.xml.Elem
 

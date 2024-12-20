@@ -17,7 +17,7 @@ import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil.emptyValueMap
 import org.aqa.web.WebUtil.getValueMap
 import org.aqa.webrun.phase2.Phase2Util
-import org.aqa.webrun.wl.wlXlsx.WLXlsx
+import org.aqa.webrun.wl.wlMonthly.WLRunMonthly
 import org.restlet.Request
 import org.restlet.Response
 
@@ -48,15 +48,19 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
     dbList.map(_.insert)
     logger.info(s"Inserted ${resultHasData.size} WinstonLutz rows into database.")
 
-    if (false) { // TODO enable when code is finished
+    // If there are images to do a monthly analysis, then do it and add links to the web page
+    val monthly: Elem = {
       try {
-        val monthlyFile = WLXlsx.make(extendedData, runReq, dbList)
+        val elem = WLRunMonthly.run(extendedData, runReq, dbList)
+        elem // This will be a trivial HTML snippet if this data set does not have monthly data.
       } catch {
-        case t: Throwable => logger.error(s"monthly badness: ${fmtEx(t)}")
+        case t: Throwable =>
+          logger.error(s"Error analyzing monthly data: ${fmtEx(t)}")
+          <span> </span>
       }
     }
 
-    val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, results, runReq)
+    val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, results, runReq, monthly)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, mainHtmlText)
     logger.info("Wrote main HTML file " + file.getAbsolutePath)

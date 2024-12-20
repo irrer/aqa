@@ -17,7 +17,6 @@
 package org.aqa.webrun.dailyQA
 
 import com.pixelmed.dicom.TagFromName
-import edu.umro.ScalaUtil.Trace
 import org.aqa.AnonymizeUtil
 import org.aqa.Config
 import org.aqa.Logging
@@ -582,7 +581,6 @@ object DailyQAHTML extends Logging {
         }
 
         val haveCbct = machineCbctResults.size == 1
-        Trace.trace("machine: " + AnonymizeUtil.decryptWithNonce(mach.institutionPK, mach.id_real.get) + " : " + mach.id + "    machineCbctResults.size: " + machineCbctResults.size)
 
         val onePassedCbct = haveCbct && (ProcedureStatus.pass.toString.equals(machineCbctResults.head.output.status) || ProcedureStatus.warning.toString.equals(machineCbctResults.head.output.status))
         val oneFailedCbct = haveCbct && ProcedureStatus.fail.toString.equals(machineCbctResults.head.output.status)

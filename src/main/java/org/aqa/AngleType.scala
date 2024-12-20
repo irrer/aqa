@@ -17,7 +17,6 @@
 package org.aqa
 
 import com.pixelmed.dicom.AttributeList
-import edu.umro.ScalaUtil.Trace
 
 /**
   * For classifying angles.
@@ -84,7 +83,6 @@ object AngleType extends Enumeration with Logging {
     * @param args not used.
     */
   def main(args: Array[String]): Unit = {
-    Trace.trace("Starting.")
 
     var a = -730.0
 
@@ -112,7 +110,6 @@ object AngleType extends Enumeration with Logging {
       a = a + 0.25
     }
 
-    Trace.trace("Done.")
   }
 
 }

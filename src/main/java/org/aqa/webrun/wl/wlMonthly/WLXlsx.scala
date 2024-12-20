@@ -1,37 +1,29 @@
-package org.aqa.webrun.wl.wlXlsx
+package org.aqa.webrun.wl.wlMonthly
 
-import org.apache.poi.xssf.streaming.SXSSFWorkbook
-import org.aqa.db.WinstonLutz
-import org.aqa.web.C3Chart
-import org.aqa.web.WebUtil
-import org.aqa.webrun.wl.WLRunReq
-import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
-import org.aqa.Util
-
-import java.io.File
-import java.io.FileOutputStream
-import java.text.SimpleDateFormat
-import scala.xml.Elem
 
 object WLXlsx extends Logging {
 
+  /*
   def make(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[WinstonLutz]): File = {
 
     val workbook = new SXSSFWorkbook
 
     val spreadSheetList = Seq(
       // SSSncImport(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[WinstonLutz]),
-      WLData(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[WinstonLutz], workbook)
+      // WLData(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[WinstonLutz], workbook),
+      WLPreprocess(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[WinstonLutz], workbook)
     )
 
     case class Tab(sheetMaker: WLSheetMaker) {
-      val name: String = sheetMaker.sheetName
-      val content: Elem = sheetMaker.make()
-      val id: String = C3Chart.makeUniqueChartIdTag
+      private val name: String = sheetMaker.sheetName
+      private val content: Elem = sheetMaker.make()
+      private val id: String = C3Chart.makeUniqueChartIdTag
+
+      private val isFirst: Boolean = name.equals(spreadSheetList.head.sheetName)
 
       def toListItem: Elem = {
-        <li class="active" style="">
+        <li class={if (isFirst) "active" else ""} style="">
           <a data-toggle="tab" href={s"#$id"} style="text-align:center;">
             {name}
           </a>
@@ -40,7 +32,7 @@ object WLXlsx extends Logging {
 
       def toContent: Elem = {
         val cls = {
-          if (name.equals(spreadSheetList.head.sheetName))
+          if (isFirst)
             "tab-pane fade in active"
           else
             "tab-pane fade"
@@ -51,10 +43,6 @@ object WLXlsx extends Logging {
         </div>
       }
     }
-
-
-
-
 
     val tabList = spreadSheetList.map(Tab)
 
@@ -93,5 +81,6 @@ object WLXlsx extends Logging {
 
     htmlFile
   }
+   */
 
 }

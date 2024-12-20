@@ -15,7 +15,7 @@ import scala.xml.Elem
 
 object WLMainHtml extends Logging {
 
-  def generateGroupHtml(extendedData: ExtendedData, resultList: Seq[WLImageResult], runReq: WLRunReq): String = {
+  def generateGroupHtml(extendedData: ExtendedData, resultList: Seq[WLImageResult], runReq: WLRunReq, monthly: Elem): String = {
     val wlParameters = MachineWL.getMachineWLOrDefault(extendedData.machine.machinePK.get)
 
     val passStyle = s"color: #000000; background: #${Config.WLPassColor};"
@@ -335,6 +335,9 @@ object WLMainHtml extends Logging {
             </td>
             <td>
               {rtplanView}
+            </td>
+            <td>
+              {monthly}
             </td>
             <td>
               {passFailBanner}

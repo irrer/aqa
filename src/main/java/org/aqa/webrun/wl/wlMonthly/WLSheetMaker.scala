@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl.wlXlsx
+package org.aqa.webrun.wl.wlMonthly
 
 import scala.xml.Elem
 

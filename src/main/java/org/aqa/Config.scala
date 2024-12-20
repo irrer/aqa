@@ -1006,9 +1006,12 @@ object Config extends Logging {
     list
   }
 
+  private val WLMonthlyTemplateFileName: String = logMainText("WLMonthlyTemplateFileName", "WLMonthlyTemplateFileName.xlsx")
+  val WLMonthlyTemplateFile: File = new File(staticDirFile, WLMonthlyTemplateFileName)
+
   // =================================================================================
 
-  val PSMRadius_mm : Double = logMainText("PSMRadius_mm", "5.0").toDouble
+  val PSMRadius_mm: Double = logMainText("PSMRadius_mm", "5.0").toDouble
 
   // =================================================================================
 
