@@ -73,7 +73,7 @@ case class Output(
   def updateData(zippedContent: Array[Byte]): OutputFiles = {
     OutputFiles.deleteByOutputPK(outputPK.get)
     val outputFiles = new OutputFiles(outputPK.get, outputPK.get, zippedContent)
-    outputFiles.insert
+    outputFiles.insert()
     outputFiles
   }
 
@@ -479,7 +479,7 @@ object Output extends Logging {
   }
 
   /**
-    * Get the number of outputs from the the given institution and procedure.
+    * Get the number of outputs from the given institution and procedure.
     * @param institutionPK Must match this institution.
     * @param procedurePK Must match this procedure.
     * @return Number of outputs.
@@ -494,7 +494,7 @@ object Output extends Logging {
   }
 
   /**
-    * Get the list of outputs sorted by data data for the given machine and procedure.
+    * Get the list of outputs sorted by data for the given machine and procedure.
     * @param machinePK   Machine to match.
     * @param procedurePK Procedure to match.
     * @return List of outputs, sorted by data date.
