@@ -10,6 +10,7 @@ import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
 import org.aqa.web.WebUtil.SubUrlRoot
 import org.aqa.Config
+import org.aqa.db.CachedUser
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -33,10 +34,42 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
   private val nextButton = makeButton("Next Page > ", primary = false, ButtonType.BtnDefault)
   private val oldestButton = makeButton(" Oldest >> ", primary = true, ButtonType.BtnDefault)
 
-  // class WebInputText(override val label: String, showLabel: Boolean, col: Int, offset: Int, placeholder: String, aqaAlias: Boolean) extends IsInput(label) with ToHtml {
-  private val rowsPerPageField = new WebInputText(label = "Rows/Page", showLabel = true, col = 1, offset = 0, placeholder = Config.WLRowsPerPageDefault.toString, aqaAlias = false)
+  private val rowsPerPageField = new WebInputText(label = "Items/Page", showLabel = true, col = 1, offset = 0, placeholder = Config.WLRowsPerPageDefault.toString, aqaAlias = false)
 
-  private val datePicker = new WebInputDatePicker(label = "Date", col = 6, offset = 0, showLabel = false, submitOnChange = true)
+  private val datePicker = new WebInputDatePicker(label = "Show items on or before:", col = 4, offset = 0, showLabel = true, submitOnChange = true)
+
+  private def makeMachineList(response: Option[Response]): Seq[(String, String)] = {
+    val allSelector = Seq(("0", "All Machines"))
+
+    if (response.isDefined) {
+      try {
+        val institutionPK = CachedUser.get(response.get).get.institutionPK
+
+        val machineList: Seq[(String, String)] = {
+          val sorted = Machine.listMachinesFromInstitution(institutionPK).sortWith(Machine.orderMachine)
+          val textList = sorted.map(m => (m.machinePK.get.toString, m.getRealId))
+          textList
+        }
+
+        val list = allSelector ++ machineList
+
+        list
+      } catch {
+        case _: Throwable => allSelector
+      }
+    } else
+      allSelector
+  }
+
+  private val machineSelector = new WebInputSelect(
+    label = "Machine:", //
+    showLabel = true, //
+    col = 2, //
+    offset = 0, //
+    makeMachineList, //
+    aqaAlias = false, //
+    submitOnChange = true
+  ) //
 
   private def list = new WebUtil.WebPlainText(label = "Winston Lutz Results", showLabel = false, col = 10, offset = 0, html = makeList)
 
@@ -45,7 +78,7 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
     new WebForm(
       pathOf,
       title = None,
-      rowList = List(List(newestButton, prevButton, nextButton, oldestButton, rowsPerPageField), List(datePicker), List(list)),
+      rowList = List(List(newestButton, prevButton, nextButton, oldestButton, rowsPerPageField), List(machineSelector, datePicker), List(list)),
       fileUpload = -1,
       runScript = Some(WLUpdateRestlet.makeJS)
     )
@@ -55,7 +88,7 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
     try {
       Procedure.ProcOfWinstonLutz.get.procedurePK.get
     } catch {
-      case t: Throwable =>
+      case _: Throwable =>
         logger.error("Unable to get Winston-Lutz procedure key.  This is a configuration problem.")
         -1
     }
@@ -64,7 +97,7 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
   /* shows the small WL icon. */
   private val imageElem = <img height="16px" src="/static/images/WL_EPID.png"/>
 
-  /* Number of ms in a 24 hour day. */
+  /* Number of ms in a 24-hour day. */
   private val day_ms = 24 * 60 * 60 * 1000
 
   private def rowsPerPage(valueMap: ValueMapT) = {
@@ -90,7 +123,13 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
     val user = getUser(valueMap)
     val machineList = Machine.listMachinesFromInstitution(user.get.institutionPK)
 
-    val dataList = Output.getOutputChunk(institutionPK = user.get.institutionPK, date = new Timestamp(ms + day_ms), count = rowsPerPage(valueMap), procedurePK = wlProcedurePK)
+    val machinePK: Option[Long] = {
+      if (valueMap.contains(machineSelector.label) && (valueMap(machineSelector.label).toLong > 0)) {
+        Some(valueMap(machineSelector.label).toLong)
+      } else
+        None
+    }
+    val dataList = Output.getOutputChunk(institutionPK = user.get.institutionPK, date = new Timestamp(ms + day_ms), count = rowsPerPage(valueMap), procedurePK = wlProcedurePK, machinePK = machinePK)
 
     val dateFormat = new SimpleDateFormat("EEE MMM d YYYY HH:mm")
 
@@ -100,7 +139,7 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
       * Convert one output row to a line in the HTML table.
       *
       * @param output For this output.
-      * @return HTML tr
+      * @return HTML
       */
     def toRow(output: Output): Elem = {
 
