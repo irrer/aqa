@@ -418,23 +418,34 @@ object Output extends Logging {
     * @param procedurePK Only for this procedure.
     * @return List of outputs, sorted by date, most recent first.
     */
-  def getOutputChunk(institutionPK: Long, date: Timestamp, count: Int, procedurePK: Long): Seq[Output] = {
+  def getOutputChunk(institutionPK: Long, date: Timestamp, count: Int, procedurePK: Long, machinePK: Option[Long] = None): Seq[Output] = {
 
-    val search = for {
-      machPK <- Machine.query.filter(m => m.institutionPK === institutionPK).map(m => m.machinePK)
-      output <- Output.query.filter(o =>
-        (o.machinePK === machPK) &&
-          o.dataDate.isDefined &&
-          (o.procedurePK === procedurePK) &&
-          (o.machinePK === machPK)
-      )
-    } yield output
+    val search1 = {
+      for {
+        machPK <- Machine.query.filter(m => m.institutionPK === institutionPK).map(m => m.machinePK)
+        output <- Output.query.filter(o =>
+          (o.machinePK === machPK) &&
+            o.dataDate.isDefined &&
+            (o.procedurePK === procedurePK) &&
+            (o.machinePK === machPK)
+        )
+      } yield output
+    }
+
+    // if a machine was specified, then only get outputs for that machine
+    val search2 = {
+      if (machinePK.isDefined)
+        search1.filter(_.machinePK === machinePK.get)
+      else
+        search1
+    }
+
     if (count > 0) {
-      val chunk = search.filter(o => o.dataDate <= date).sortBy(_.dataDate.desc).take(count)
+      val chunk = search2.filter(o => o.dataDate <= date).sortBy(_.dataDate.desc).take(count)
       val seq = Db.run(chunk.result)
       seq
     } else {
-      val chunk = search.filter(o => o.dataDate > date).sortBy(_.dataDate.asc).take(-count)
+      val chunk = search2.filter(o => o.dataDate > date).sortBy(_.dataDate.asc).take(-count)
       val seq = Db.run(chunk.result).reverse
       seq
     }
