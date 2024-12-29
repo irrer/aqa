@@ -61,7 +61,8 @@ object SSHtml extends Logging {
 
     val sheetList: Seq[SSSheet] = Seq(
       // SNCImport
-      new SSData(extendedData: ExtendedData, pairList)
+      new SSData(extendedData: ExtendedData, pairList),
+      new SSPreprocess(extendedData: ExtendedData, pairList)
       // Preprocess
       // Analysis
       // Collimator

@@ -18,23 +18,14 @@ import scala.xml.Elem
 
 object WLXlsxUtil extends Logging {
 
-  case class CSS(name: String, style: String) {
-    def toCss: String = "." + name + "{" + style + "}"
-
-    override def toString: String = name
-  }
-
-  val cssIndex: CSS = CSS("CSSIndex", "text-align:center;background-color:#f0f0f0;color:black;font-size:12pt;")
-  val cssData: CSS = CSS("CSSData", "text-align:left;background-color:#d9d9d9;color:black;font-size:12pt;")
-
-  val cssStyle: String = {
-    Seq(cssIndex, cssData)
-      .map(_.toCss)
-      .mkString("\n")
-  }
+  val cssIndex: String = "CSSIndex"
+  val cssDataLeft: String = "CSSDataLeft"
+  val cssDataRight: String = "CSSDataRight"
+  val cssPreprocessLeft: String = "CSSPreprocessLeft"
+  val cssPreprocessRight: String = "CSSPreprocessRight"
 
   def makeRowIndex(index: Int): Elem = {
-    <td class={cssIndex.name}>{index}</td>
+    <td class={cssIndex}>{index}</td>
   }
 
   /**
@@ -118,7 +109,7 @@ object WLXlsxUtil extends Logging {
 
     val columnList = blank +: (0 until columns).map(makeAlphaColumn)
 
-    <tr class={cssIndex.name}>{columnList}</tr>
+    <tr class={cssIndex}>{columnList}</tr>
   }
 
   /**

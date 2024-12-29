@@ -5,7 +5,10 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.wlMonthly.WLColumn
 import org.aqa.webrun.wl.wlMonthly.WLPairDbAl
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil
-import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssData
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssDataLeft
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssDataRight
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssPreprocessLeft
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssPreprocessRight
 
 import scala.xml.Elem
 
@@ -20,14 +23,16 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLPairDbAl]) extends SSSh
 
   val columnList: Seq[WLColumn] = org.aqa.webrun.wl.wlMonthly.WLColumnList(extendedData.machine, pairList.head.acquisition).columnList
 
-  private def toPlainHtml(text: String): Elem = {
-    <td>
+  private def toPlainHtml(text: String, alignLeft: Boolean = true): Elem = {
+    val a = if (alignLeft) cssPreprocessLeft else cssPreprocessRight
+    <td class={a}>
       {text}
     </td>
   }
 
-  private def toHtml(text: String): Elem = {
-    <td class={cssData.name}>
+  private def toHtml(text: String, alignLeft: Boolean = true): Elem = {
+    val a = if (alignLeft) cssDataLeft else cssDataRight
+    <td class={a}>
       {text}
     </td>
   }
@@ -42,7 +47,7 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLPairDbAl]) extends SSSh
 
     <tr>
       {WLXlsxUtil.makeRowIndex(1)}
-      {Seq(title, dataDateText, analysisDateText).map(toHtml)}
+      {Seq(title, dataDateText, analysisDateText).map(text => toHtml(text))}
     </tr>
   }
 
@@ -58,7 +63,7 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLPairDbAl]) extends SSSh
     val pair = pairList(index)
 
     def colToHtml(col: WLColumn): Elem = {
-      <td class={cssData.name}>{col.toText(pair.wl, pair.al)}</td>
+      toHtml(col.toText(pair.wl, pair.al), col.alignLeft)
     }
 
     <tr>
@@ -93,18 +98,18 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLPairDbAl]) extends SSSh
   private def zeroRow(index: Int): Elem = {
     <tr>
       {WLXlsxUtil.makeRowIndex(index)}
-      {toPlainHtml("0")}
-      {toPlainHtml("0")}
-      {toPlainHtml("0")}
+      {toPlainHtml("0", alignLeft = false)}
+      {toPlainHtml("0", alignLeft = false)}
+      {toPlainHtml("0", alignLeft = false)}
     </tr>
   }
 
   private def zeroDataRow(index: Int, name: String): Elem = {
     <tr>
       {WLXlsxUtil.makeRowIndex(index)}
-      {toHtml("0")}
-      {toHtml("0")}
-      {toHtml("0")}
+      {toHtml("0", alignLeft = false)}
+      {toHtml("0", alignLeft = false)}
+      {toHtml("0", alignLeft = false)}
       {toHtml(name)}
     </tr>
   }

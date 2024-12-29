@@ -16,6 +16,11 @@ abstract case class WLColumn( //
 ) {
 
   /**
+    * If true, align text left in each HTML cell, otherwise align right.
+    */
+  val alignLeft: Boolean
+
+  /**
     * Get the name of the column.
     * @return The name of the column.
     */
@@ -28,6 +33,14 @@ abstract case class WLColumn( //
     * @return Text to show user.
     */
   def toText(wl: WinstonLutz, al: AttributeList): String
+
+  /**
+    * Format the value as text.
+    * @param wl Using this value from database.
+    * @param al Using this value from DICOM.
+    * @return Text to show user in Preprocess sheet.
+    */
+  def toPreprocessText(wl: WinstonLutz, al: AttributeList): String
 
   /**
     * Update the given spreadsheet cell's content.
@@ -50,7 +63,12 @@ abstract case class WLColumn( //
   * @param toVal Convert data to text.
   */
 class WLColumnText(name: String, toVal: (WinstonLutz, AttributeList) => String) extends WLColumn(name) {
+
+  override val alignLeft: Boolean = true
+
   override def toText(wl: WinstonLutz, al: AttributeList): String = toVal(wl, al)
+
+  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toText(wl, al)
 
   override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = cell.setCellValue(toText(wl, al))
 }
@@ -63,9 +81,60 @@ class WLColumnText(name: String, toVal: (WinstonLutz, AttributeList) => String) 
   * @param tag Indicates what DICOM tag to extract the data from.
   */
 class WLColumnAlNumeric(name: String, tag: AttributeTag) extends WLColumn(name) {
+
+  override val alignLeft: Boolean = false
+
   private def toVal(al: AttributeList): Double = DicomUtil.findAllSingle(al, tag).head.getDoubleValues.head
 
+  def toRoundedVal(al: AttributeList): Double = (toVal(al) * 100).round / 100.0
+
   override def toText(wl: WinstonLutz, al: AttributeList): String = toVal(al).toString
+
+  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toVal(al).formatted("%12.2f").trim
+
+  override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = cell.setCellValue(toVal(al))
+}
+
+// ---------------------------------------------------------------------------------------------------
+
+/**
+  * Handle columns that have an angle value to be extracted from the DICOM (AttributeList).
+  * @param name Column name.
+  * @param tag Indicates what DICOM tag to extract the data from.
+  */
+class WLColumnAlAngle(name: String, tag: AttributeTag) extends WLColumn(name) {
+
+  override val alignLeft: Boolean = false
+
+  private def toVal(al: AttributeList): Double = DicomUtil.findAllSingle(al, tag).head.getDoubleValues.head
+
+  private def toRoundedVal(al: AttributeList): Int = WLXlsxUtil.angleRounded(toVal(al))
+
+  override def toText(wl: WinstonLutz, al: AttributeList): String = toVal(al).toString
+
+  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toRoundedVal(al).toString
+
+  override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = cell.setCellValue(toVal(al))
+}
+
+// ---------------------------------------------------------------------------------------------------
+
+/**
+  * Handle columns that have an angle value to be extracted from the DICOM (AttributeList) and then negated.
+  * @param name Column name.
+  * @param tag Indicates what DICOM tag to extract the data from.
+  */
+class WLColumnAlNegAngle(name: String, tag: AttributeTag) extends WLColumn(name) {
+
+  override val alignLeft: Boolean = false
+
+  private def toVal(al: AttributeList): Double = DicomUtil.findAllSingle(al, tag).head.getDoubleValues.head
+
+  private def toRoundedVal(al: AttributeList): Int = (360 - WLXlsxUtil.angleRounded(toVal(al))) % 360
+
+  override def toText(wl: WinstonLutz, al: AttributeList): String = toVal(al).toString
+
+  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toRoundedVal(al).toString
 
   override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = cell.setCellValue(toVal(al))
 }
@@ -78,7 +147,12 @@ class WLColumnAlNumeric(name: String, tag: AttributeTag) extends WLColumn(name) 
   * @param toVal Extract value from database object.
   */
 class WlColumnWlNumeric(name: String, toVal: WinstonLutz => Double) extends WLColumn(name) {
+
+  override val alignLeft: Boolean = false
+
   override def toText(wl: WinstonLutz, al: AttributeList): String = toVal(wl).toString
+
+  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toVal(wl).formatted("%12.2f").trim
 
   override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = cell.setCellValue(toVal(wl))
 }
@@ -92,6 +166,8 @@ class WlColumnWlNumeric(name: String, toVal: WinstonLutz => Double) extends WLCo
   */
 class WLColumnAlAnonText(name: String, tag: AttributeTag, institutionPK: Long) extends WLColumn(name) {
 
+  override val alignLeft: Boolean = true
+
   override def toText(wl: WinstonLutz, al: AttributeList): String = {
     val text = AnonymizeUtil.deAnonymizeAttribute(institutionPK, al.get(tag)) match {
       case Some(attr) => attr.getSingleStringValueOrEmptyString
@@ -99,6 +175,8 @@ class WLColumnAlAnonText(name: String, tag: AttributeTag, institutionPK: Long) e
     }
     text
   }
+
+  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toText(wl, al)
 
   override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = {
     cell.setCellValue(toText(wl, al))

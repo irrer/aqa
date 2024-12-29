@@ -10,7 +10,9 @@ import org.apache.poi.xssf.streaming.SXSSFSheet
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.addNumericCell
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.addStringCell
 import org.aqa.Logging
-import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssData
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssDataRight
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssPreprocessLeft
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssPreprocessRight
 
 import scala.xml.Elem
 
@@ -66,7 +68,7 @@ class WLDataCBCT(sheet: SXSSFSheet, dataStyle: CellStyle, columnListSize: Int) e
     fillRemainingCells(row)
     <tr>
       {WLXlsxUtil.makeRowIndex(row)}
-      <td>ballCBCT</td>
+      <td class={cssPreprocessLeft}>ballCBCT</td>
       {fillRemainingElem(1)}
     </tr>
   }
@@ -79,9 +81,9 @@ class WLDataCBCT(sheet: SXSSFSheet, dataStyle: CellStyle, columnListSize: Int) e
     fillRemainingCells(row)
     <tr>
       {WLXlsxUtil.makeRowIndex(row)}
-      <td>x (mm)</td>
-      <td>y (mm)</td>
-      <td>z (mm)</td>
+      <td class={cssPreprocessLeft}>x (mm)</td>
+      <td class={cssPreprocessLeft}>y (mm)</td>
+      <td class={cssPreprocessLeft}>z (mm)</td>
       {fillRemainingElem(3)}
     </tr>
   }
@@ -92,9 +94,9 @@ class WLDataCBCT(sheet: SXSSFSheet, dataStyle: CellStyle, columnListSize: Int) e
     fillRemainingCells(row)
     <tr>
       {WLXlsxUtil.makeRowIndex(row)}
-      <td>0</td>
-      <td>0</td>
-      <td>0</td>
+      <td class={cssPreprocessRight}>0</td>
+      <td class={cssPreprocessRight}>0</td>
+      <td class={cssPreprocessRight}>0</td>
       {fillRemainingElem(3)}
     </tr>
   }
@@ -106,9 +108,9 @@ class WLDataCBCT(sheet: SXSSFSheet, dataStyle: CellStyle, columnListSize: Int) e
     fillRemainingCells(row)
     <tr>
       {WLXlsxUtil.makeRowIndex(row)}
-      <td class={cssData.name}>0</td>
-      <td class={cssData.name}>0</td>
-      <td class={cssData.name}>0</td>
+      <td class={cssDataRight}>0</td>
+      <td class={cssDataRight}>0</td>
+      <td class={cssDataRight}>0</td>
       <td>AcqIsocenter</td>
       {fillRemainingElem(4)}
     </tr>
@@ -122,9 +124,9 @@ class WLDataCBCT(sheet: SXSSFSheet, dataStyle: CellStyle, columnListSize: Int) e
     (0 until 5).foreach(_ => addBlankRow())
     <tr>
       {WLXlsxUtil.makeRowIndex(row)}
-      <td class={cssData.name}>0</td>
-      <td class={cssData.name}>0</td>
-      <td class={cssData.name}>0</td>
+      <td class={cssDataRight}>0</td>
+      <td class={cssDataRight}>0</td>
+      <td class={cssDataRight}>0</td>
       <td>Ball</td>
     </tr>
   }

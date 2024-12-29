@@ -1,11 +1,9 @@
 package org.aqa.webrun.wl.wlMonthly
 
-import org.aqa.db.WinstonLutz
 import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.wl.WLRunReq
 
 case class WLTable(
-    // @formatter:off
+                    // @formatter:off
                  extendedData: ExtendedData,
                  T300: WLBeam,
                  T330: WLBeam,
@@ -21,13 +19,10 @@ object WLTable {
    * Determine if all the data is present to construct a WL Table data set.  If so, make one and return it.
    *
    * @param extendedData Metadata.
-   * @param runReq       List of incoming DICOM.
-   * @param dbList       Processed data.
+   * @param pairList     List of incoming DICOM and results.
    * @return Table data set or None.
    */
-  def make(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[WinstonLutz]): Option[WLTable] = {
-
-    val pairList = WLPairDbAl.makePairList(runReq, dbList)
+  def make(extendedData: ExtendedData, pairList: Seq[WLPairDbAl]): Option[WLTable] = {
 
     val machine = extendedData.machine
 

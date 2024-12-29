@@ -21,8 +21,7 @@ object WLMonthly extends Logging {
    * Determine if all the data is present to construct a WL Monthly data set.  If so, make one and return it.
    *
    * @param extendedData Metadata.
-   * @param runReq       List of incoming DICOM.
-   * @param dbList       Processed data.
+   * @param pairList     List of incoming DICOM and results.
    * @return Monthly data set or None.
    */
   def make(extendedData: ExtendedData, pairList: Seq[WLPairDbAl] ): Option[WLMonthly] = {

@@ -11,9 +11,9 @@ import org.aqa.webrun.wl.WLRunReq
 import java.util.Date
 
 case class WLPairDbAl(wl: WinstonLutz, al: AttributeList) extends Logging {
-  private val gantryAngle: Int = WLXlsxUtil.angleRounded(Util.gantryAngle(al))
-  private val collimatorAngle: Int = WLXlsxUtil.angleRounded(Util.collimatorAngle(al))
-  private val tableAngle: Int = WLXlsxUtil.angleRounded(DicomUtil.findAllSingle(al, TagByName.PatientSupportAngle).head.getDoubleValues.head)
+  val gantryAngle: Int = WLXlsxUtil.angleRounded(Util.gantryAngle(al))
+  val collimatorAngle: Int = WLXlsxUtil.angleRounded(Util.collimatorAngle(al))
+  val tableAngle: Int = WLXlsxUtil.angleRounded(DicomUtil.findAllSingle(al, TagByName.PatientSupportAngle).head.getDoubleValues.head)
   val acquisition: Date = WLXlsxUtil.acq(al)
 
   def matches(gantry: Int, collimator: Int, table: Int): Boolean = {

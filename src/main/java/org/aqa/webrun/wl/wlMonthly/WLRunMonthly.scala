@@ -22,9 +22,10 @@ object WLRunMonthly {
     val pairList = WLPairDbAl.makePairList(runReq, dbList)
 
     val monthly = WLMonthly.make(extendedData, pairList)
+    val table = WLTable.make(extendedData, pairList)
 
     // only do this if the required data is there.
-    if (monthly.isDefined) {
+    if (monthly.isDefined && table.isDefined) {
 
       val ssFileName = WLData.makeSpreadsheet(extendedData, runReq, pairList)
       val htmlFileName = SSHtml.make(extendedData, pairList)
