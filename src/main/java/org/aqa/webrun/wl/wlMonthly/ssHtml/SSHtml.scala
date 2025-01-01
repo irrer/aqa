@@ -5,7 +5,9 @@ import org.aqa.Util
 import org.aqa.web.C3Chart
 import org.aqa.web.WebUtil
 import org.aqa.Logging
-import org.aqa.webrun.wl.wlMonthly.WLPairDbAl
+import org.aqa.webrun.wl.wlMonthly.WLBeam
+import org.aqa.webrun.wl.wlMonthly.WLMonthly
+import org.aqa.webrun.wl.wlMonthly.WLTable
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil
 
 import java.io.File
@@ -57,13 +59,13 @@ object SSHtml extends Logging {
     * @param pairList List of images with analysis.
     * @return name of HTML file.
     */
-  def make(extendedData: ExtendedData, pairList: Seq[WLPairDbAl]): String = {
+  def make(extendedData: ExtendedData, pairList: Seq[WLBeam], monthly: WLMonthly, table: WLTable): String = {
 
     val sheetList: Seq[SSSheet] = Seq(
       // SNCImport
       new SSData(extendedData: ExtendedData, pairList),
-      new SSPreprocess(extendedData: ExtendedData, pairList)
-      // Preprocess
+      new SSPreprocess(extendedData: ExtendedData, pairList),
+      new SSAnalysis(extendedData: ExtendedData, monthly)
       // Analysis
       // Collimator
       // Report

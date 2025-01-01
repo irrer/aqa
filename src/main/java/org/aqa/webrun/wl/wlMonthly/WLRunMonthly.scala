@@ -19,7 +19,7 @@ object WLRunMonthly {
     */
   def run(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[WinstonLutz]): Elem = {
 
-    val pairList = WLPairDbAl.makePairList(runReq, dbList)
+    val pairList = WLBeam.makePairList(runReq, dbList)
 
     val monthly = WLMonthly.make(extendedData, pairList)
     val table = WLTable.make(extendedData, pairList)
@@ -28,7 +28,7 @@ object WLRunMonthly {
     if (monthly.isDefined && table.isDefined) {
 
       val ssFileName = WLData.makeSpreadsheet(extendedData, runReq, pairList)
-      val htmlFileName = SSHtml.make(extendedData, pairList)
+      val htmlFileName = SSHtml.make(extendedData, pairList, monthly.get, table.get)
 
       val elem = {
 

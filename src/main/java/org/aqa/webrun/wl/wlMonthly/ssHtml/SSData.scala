@@ -3,7 +3,7 @@ package org.aqa.webrun.wl.wlMonthly.ssHtml
 import org.aqa.Util
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.wlMonthly.WLColumn
-import org.aqa.webrun.wl.wlMonthly.WLPairDbAl
+import org.aqa.webrun.wl.wlMonthly.WLBeam
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssDataLeft
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssDataRight
@@ -17,7 +17,7 @@ import scala.xml.Elem
   * @param extendedData Metadata
   * @param pairList WL data
   */
-class SSData(extendedData: ExtendedData, pairList: Seq[WLPairDbAl]) extends SSSheet {
+class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SSSheet {
 
   override val name: String = "Data"
 

@@ -20,7 +20,7 @@ object WLData extends Logging {
   /** Last row of Data sheet content (inclusive). */
   private val lastRowNum = 17
 
-  def makeSpreadsheet(extendedData: ExtendedData, runReq: WLRunReq, pairList: Seq[WLPairDbAl]): String = {
+  def makeSpreadsheet(extendedData: ExtendedData, runReq: WLRunReq, pairList: Seq[WLBeam]): String = {
 
     val workbook = new XSSFWorkbook(Config.WLMonthlyTemplateFile)
 
@@ -44,7 +44,7 @@ object WLData extends Logging {
       analysisDateCell.setCellValue(s"Data Date: $analysisDateText")
     }
 
-    def updateContentRow(rowNum: Int, pair: WLPairDbAl): Unit = {
+    def updateContentRow(rowNum: Int, pair: WLBeam): Unit = {
       val row = sheet.getRow(rowNum - 1) // subtracting 1 converts a row number to a 0-relative row index
 
       columnList.indices.foreach(i => columnList(i).updateCell(row.getCell(i), pair.wl, pair.al))
