@@ -45,12 +45,12 @@ case class WLMonthly( // @formatter:off
                       // @formatter:on
                     ) extends Logging {
 
-  val collXG__0: Double = rnd((G__0_C_90_T__0.wl.errorX_mm + G__0_C270_T__0.wl.errorX_mm) / 2) // Analysis I  3
-  val collXG180: Double = rnd((G180_C_90_T__0.wl.errorX_mm + G180_C270_T__0.wl.errorX_mm) / 2) // Analysis I  8
+  val collXG__0: Double = rnd((G__0_C_90_T__0.caX.get + G__0_C270_T__0.caX.get) / 2) // Analysis I  3
+  val collXG180: Double = rnd((G180_C_90_T__0.caX.get + G180_C270_T__0.caX.get) / 2) // Analysis I  8
   private val collXSeq: Seq[Double] = Seq(collXG__0, collXG180)
 
-  val collYG_90: Double = rnd((G_90_C_90_T__0.wl.errorY_mm + G_90_C270_T__0.wl.errorY_mm) / 2) // Analysis J  5
-  val collYG270: Double = rnd((G270_C_90_T__0.wl.errorY_mm + G270_C270_T__0.wl.errorY_mm) / 2) // Analysis J 10
+  val collYG_90: Double = rnd((G_90_C_90_T__0.caY.get + G_90_C270_T__0.caY.get) / 2) // Analysis J  5
+  val collYG270: Double = rnd((G270_C_90_T__0.caY.get + G270_C270_T__0.caY.get) / 2) // Analysis J 10
   private val collYSeq: Seq[Double] = Seq(collYG_90, collYG270)
 
   val collZG__0: Double = rnd((G__0_C_90_T__0.caZ.get + G__0_C270_T__0.caZ.get) / 2) // Analysis K  3
@@ -63,7 +63,15 @@ case class WLMonthly( // @formatter:off
   val isoY: Double = rnd(collYSeq.sum / collYSeq.size) // Analysis M  3
   val isoZ: Double = rnd(collZSeq.sum / collZSeq.size) // Analysis N  3
 
-  if (true) {
+  if (true) { // TODO rm
+    Trace.trace("G__0_C_90_T__0.wl: " + G__0_C_90_T__0.wl)
+    Trace.trace("G__0_C270_T__0.wl: " + G__0_C270_T__0.wl)
+    Trace.trace("G180_C_90_T__0.wl: " + G180_C_90_T__0.wl)
+    Trace.trace("G180_C270_T__0.wl: " + G180_C270_T__0.wl)
+
+    Trace.trace("G_90_C_90_T__0.wl: " + G__0_C_90_T__0.wl)
+    Trace.trace("G_90_C270_T__0.wl: " + G__0_C270_T__0.wl)
+
     Trace.trace("collXG__0: " + collXG__0)
     Trace.trace("collXG180: " + collXG180)
     Trace.trace("collXSeq: " + collXSeq)
@@ -91,7 +99,17 @@ case class WLMonthly( // @formatter:off
 
   val gantryFlex: Double = rnd(collZG__0 - collZG180) // Analysis O  3
 
-  val gantryIsocentricity: Double = rnd(Math.sqrt(Seq(isoXRange, isoYRange, isoZRange).map(v => v * v).sum)) // Analysis O  8
+  val gantryIsocentricity: Double = {
+    val coordinates = Seq(isoXRange, isoYRange, isoZRange)
+    Trace.trace(s"coordinates: $coordinates")
+    val sumSquares = coordinates.map(v => v * v).sum
+    Trace.trace(s"sumSquares: $sumSquares")
+    val distance = Math.sqrt(sumSquares)
+    Trace.trace(s"distance: $distance")
+    val O8 = rnd(distance / 2)
+    Trace.trace(s"O8: $O8")
+    O8
+  } // Analysis O  8
 
   /* spreadsheet coordinates:                  I3-L3             J5-M3        L3-I8             M3-J10 */
   val collGantryMisalign: Double = rnd(Seq(collXG__0 - isoX, collYG_90 - isoY, isoX - collXG180, isoY - collYG270).sum / 4) // Analysis P  3

@@ -105,6 +105,40 @@ case class WinstonLutz(
 
   /** right edge measured - planned */
   def rightError_mm: Option[Double] = if (rightEdgePlanned_mm.isDefined) Some(rightEdge_mm - rightEdgePlanned_mm.get) else None
+
+  override def toString: String = {
+    // @formatter:off
+      s"""    winstonLutzPK        : $winstonLutzPK\n"""        +
+      s"""    outputPK             : $outputPK\n"""             +
+      s"""    rtimageUID           : $rtimageUID\n"""           +
+      s"""    rtplanUID            : $rtplanUID\n"""            +
+      s"""    beamName             : $beamName\n"""             +
+      s"""    gantryAngle_deg      : $gantryAngle_deg\n"""      +
+      s"""    collimatorAngle_deg  : $collimatorAngle_deg\n"""  +
+      s"""    gantryAngle_deg      : ${Util.angleRoundedTo90(gantryAngle_deg)}\n"""    +
+      s"""    collimatorAngle_deg  : ${Util.angleRoundedTo90(collimatorAngle_deg)}\n"""+
+      s"""    dataDate             : $dataDate\n"""             +
+      s"""    topEdge_mm           : $topEdge_mm\n"""           +
+      s"""    bottomEdge_mm        : $bottomEdge_mm\n"""        +
+      s"""    leftEdge_mm          : $leftEdge_mm\n"""          +
+      s"""    rightEdge_mm         : $rightEdge_mm\n"""         +
+      s"""    ballX_mm             : $ballX_mm\n"""             +
+      s"""    ballY_mm             : $ballY_mm\n"""             +
+      s"""    topEdgePlanned_mm    : $topEdgePlanned_mm\n"""    +
+      s"""    bottomEdgePlanned_mm : $bottomEdgePlanned_mm\n""" +
+      s"""    leftEdgePlanned_mm   : $leftEdgePlanned_mm\n"""   +
+      s"""    rightEdgePlanned_mm  : $rightEdgePlanned_mm\n"""  +
+      s"""    boxCenterX_mm        : $boxCenterX_mm\n"""        +
+      s"""    boxCenterY_mm        : $boxCenterY_mm\n"""        +
+      s"""    errorX_mm            : $errorX_mm\n"""            +
+      s"""    errorY_mm            : $errorY_mm\n"""            +
+      s"""    errorXY_mm           : $errorXY_mm\n"""           +
+      s"""    topError_mm          : $topError_mm\n"""          +
+      s"""    bottomError_mm       : $bottomError_mm\n"""       +
+      s"""    leftError_mm         : $leftError_mm\n"""         +
+      s"""    rightError_mm        : $rightError_mm\n"""
+    // @formatter:on
+  }
 }
 
 object WinstonLutz extends Logging {
