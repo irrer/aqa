@@ -79,7 +79,7 @@ object SSHtml extends Logging {
         <ul class="nav nav-tabs">
           {tabList.map(_.toListItem)}
         </ul>
-        <div class="tab-content">
+        <div class="tab-content" style="margin-right:20px;">
           {tabList.map(_.toContent)}
         </div>
       </div>

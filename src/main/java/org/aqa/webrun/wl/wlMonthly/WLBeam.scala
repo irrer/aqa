@@ -12,15 +12,23 @@ import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.rnd
 import java.util.Date
 
 case class WLBeam(wl: WinstonLutz, al: AttributeList) extends Logging {
+  /** Analysis A */
   val gantryAngle: Int = WLXlsxUtil.angleRounded(Util.gantryAngle(al))
+
+  /** Analysis B */
   val collimatorAngle: Int = WLXlsxUtil.angleRounded(Util.collimatorAngle(al))
+
+  /** Analysis C */
   val tableAngle: Int = WLXlsxUtil.angleRounded(DicomUtil.findAllSingle(al, TagByName.PatientSupportAngle).head.getDoubleValues.head)
+
+  /** Data date */
   val acquisition: Date = WLXlsxUtil.acq(al)
 
   def matches(gantry: Int, collimator: Int, table: Int): Boolean = {
     (gantryAngle == gantry) && (collimatorAngle == collimator) && (tableAngle == table)
   }
 
+  /** Analysis F */
   val caX: Option[Double] = {
     val value = gantryAngle match {
       case 0   => Some(wl.errorX_mm)
@@ -30,6 +38,7 @@ case class WLBeam(wl: WinstonLutz, al: AttributeList) extends Logging {
     value.map(rnd)
   }
 
+  /** Analysis G */
   val caY: Option[Double] = {
     val value = gantryAngle match {
       case 90  => Some(wl.errorX_mm)
@@ -39,6 +48,7 @@ case class WLBeam(wl: WinstonLutz, al: AttributeList) extends Logging {
     value.map(rnd)
   }
 
+  /** Analysis H */
   val caZ: Option[Double] = Some(-wl.errorY_mm).map(rnd)
 
 }
