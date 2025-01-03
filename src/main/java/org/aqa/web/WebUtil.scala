@@ -91,6 +91,7 @@ object WebUtil extends Logging {
   private val mathPre = "@@mathPre@@"
   private val mathSuf = "@@mathSuf@@"
   private val rightDoubleArrow = "@@rightDoubleArrow@@"
+  val rightBoldArrow = "@@rightBoldArrow@@"
   val gt = "@@gt@@"
 
   /**
@@ -139,6 +140,7 @@ object WebUtil extends Logging {
       .replace(closeCurly, "}")
       .replace(nbsp, "&#160;")
       .replace(rightDoubleArrow, "&#8658;")
+      .replace(rightBoldArrow, "&#x2794;")
       .replace(gt, "&#62;")
       .replace(mathPre, """<math xmlns="http://www.w3.org/1998/Math/MathML">""")
       .replace(mathSuf, """</math>""")
