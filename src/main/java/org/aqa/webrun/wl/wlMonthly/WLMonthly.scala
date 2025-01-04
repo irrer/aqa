@@ -179,6 +179,8 @@ case class WLMonthly( // @formatter:off
     Trace.trace("G_90_C_90_T__0.wl: " + G__0_C_90_T__0.wl)
     Trace.trace("G_90_C270_T__0.wl: " + G__0_C270_T__0.wl)
 
+    Trace.trace("-----------------------------------------------------------------------------------------------------------" )
+
     Trace.trace("collXG__0: " + collXG__0)
     Trace.trace("collXG180: " + collXG180)
     Trace.trace("collXSeq: " + collXSeq)

@@ -122,11 +122,18 @@ object WLXlsxUtil extends Logging {
   }
 
   /**
-   * Round a value to 2 significant figures to the right of the decimal point.
-   * @param value Round this.
-   * @return Rounded value.
-   */
+    * Round a value to 2 significant figures to the right of the decimal point.
+    * @param value Round this.
+    * @return Rounded value.
+    */
   def rnd(value: Double): Double = (value * 100).round / 100.0
+
+  /**
+    * Flip an angle
+    * @param angle around 0 degrees.  e.g. 10 degrees becomes 350.
+    * @return Flipped angle.
+    */
+  def flip(angle: Int): Int = (360 - angle) % 360
 
   /**
     * Acquisition date+time of file.

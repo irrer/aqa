@@ -65,8 +65,7 @@ object SSHtml extends Logging {
       // SNCImport
       new SSData(extendedData: ExtendedData, pairList),
       new SSPreprocess(extendedData: ExtendedData, pairList),
-      new SSAnalysis(extendedData: ExtendedData, monthly)
-      // Analysis
+      new SSAnalysis(extendedData: ExtendedData, monthly, table)
       // Collimator
       // Report
       // Instructions

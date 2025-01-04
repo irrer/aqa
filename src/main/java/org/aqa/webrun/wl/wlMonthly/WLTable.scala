@@ -1,20 +1,50 @@
 package org.aqa.webrun.wl.wlMonthly
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.flip
 
 case class WLTable(
                     // @formatter:off
                     extendedData: ExtendedData,
-                    T000: WLBeam,
-                    T030: WLBeam,
-                    T060: WLBeam,
-                    T090: WLBeam,
+                    T__0: WLBeam,
+                    T_30: WLBeam,
+                    T_60: WLBeam,
+                    T_90: WLBeam,
                     T270: WLBeam,
                     T300: WLBeam,
                     T330: WLBeam
                     // @formatter:on
                   ) {
 
+  /** Analysis L14 */
+  var dXT__0: Double = 0.183972235121236 // TODO determine proper seed value
+
+  /** Analysis M14 */
+  var dZT__0: Double = 0.332920649471168 // TODO determine proper seed value
+
+  def dXOf(beam: WLBeam): Double = {
+    val radians = Math.toRadians(flip(beam.tableAngle))
+    val cos = Math.cos(radians)
+    val sin = Math.sin(radians)
+    (dXT__0 * cos) + (dZT__0 * sin)
+  }
+
+
+  def dZOf(beam: WLBeam): Double = {
+    val radians = Math.toRadians(flip(beam.tableAngle))
+    val cos = Math.cos(radians)
+    val sin = Math.sin(radians)
+    (dZT__0 * cos) - (dXT__0 * sin)
+  }
+
+  Trace.trace("T__0: " + T__0.wl)
+  Trace.trace("T_30: " + T_30.wl)
+  Trace.trace("T_60: " + T_60.wl)
+  Trace.trace("T_90: " + T_90.wl)
+  Trace.trace("T270: " + T270.wl)
+  Trace.trace("T300: " + T300.wl)
+  Trace.trace("T330: " + T330.wl)
 
 }
 
@@ -37,10 +67,10 @@ object WLTable {
 
 
     // @formatter:off
-    val T000 : Option[WLBeam] = findPair( 180, 270,   0 )
-    val T030 : Option[WLBeam] = findPair( 180, 270,  30 )
-    val T060 : Option[WLBeam] = findPair( 180, 270,  60 )
-    val T090 : Option[WLBeam] = findPair( 180, 270,  90 )
+    val T__0 : Option[WLBeam] = findPair( 180, 270,   0 )
+    val T_30 : Option[WLBeam] = findPair( 180, 270,  30 )
+    val T_60 : Option[WLBeam] = findPair( 180, 270,  60 )
+    val T_90 : Option[WLBeam] = findPair( 180, 270,  90 )
     val T270 : Option[WLBeam] = findPair( 180, 270, 270 )
     val T300 : Option[WLBeam] = findPair( 180, 270, 300 )
     val T330 : Option[WLBeam] = findPair( 180, 270, 330 )
@@ -48,10 +78,10 @@ object WLTable {
 
     // list of all files required for WL Table
     val list = Seq(
-      T000,
-      T030,
-      T060,
-      T090,
+      T__0,
+      T_30,
+      T_60,
+      T_90,
       T270,
       T300,
       T330
@@ -60,10 +90,10 @@ object WLTable {
     // if of the files are there then construct the object, otherwise return None.
     if (list.flatten.size == list.size) {
       Some(WLTable(extendedData,
-        T000.get,
-        T030.get,
-        T060.get,
-        T090.get,
+        T__0.get,
+        T_30.get,
+        T_60.get,
+        T_90.get,
         T270.get,
         T300.get,
         T330.get

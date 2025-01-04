@@ -2,11 +2,12 @@ package org.aqa.webrun.wl.wlMonthly.ssHtml
 
 import org.aqa.Util
 import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.wl.wlMonthly.WLColumn
 import org.aqa.webrun.wl.wlMonthly.WLBeam
+import org.aqa.webrun.wl.wlMonthly.WLColumn
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssPreprocessLeft
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssPreprocessRight
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.flip
 
 import scala.xml.Elem
 
@@ -19,8 +20,8 @@ import scala.xml.Elem
 class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SSSheet {
 
   private def preprocessSorter(a: WLBeam, b: WLBeam): Boolean = {
-    val aTable = (360 - a.tableAngle) % 360
-    val bTable = (360 - b.tableAngle) % 360
+    val aTable = flip(a.tableAngle)
+    val bTable = flip(b.tableAngle)
 
     0 match {
       case _ if aTable > bTable => false
@@ -106,7 +107,7 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SS
     val row = sortedPairList(index)
 
     def makeCell(c: Int): Elem = {
-      val col  = columnList(c)
+      val col = columnList(c)
       toHtml(col.toPreprocessText(row.wl, row.al), col.alignLeft)
     }
 

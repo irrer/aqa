@@ -4,9 +4,11 @@ import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.wlMonthly.WLBeam
 import org.aqa.webrun.wl.wlMonthly.WLMonthly
+import org.aqa.webrun.wl.wlMonthly.WLTable
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssPreprocessLeft
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssPreprocessRight
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.flip
 
 import scala.xml.Elem
 
@@ -16,7 +18,7 @@ import scala.xml.Elem
   * @param extendedData Metadata
   * @param monthly Monthly data
   */
-class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly) extends SSSheet {
+class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable) extends SSSheet {
 
   override val name: String = "Analysis"
 
@@ -96,6 +98,27 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly) extends SSSheet
     )
   }
 
+  /**
+    * Makes cells A to G which are common to all gantry beams.
+    * @param beam Beam to show.
+    * @return cells for common content.
+    */
+  private def tableAnglePrefix(beam: WLBeam): Seq[Elem] = {
+    Seq(
+      toHtml(beam.gantryAngle), /*                            A */
+      toHtml(beam.collimatorAngle), /*                        B */
+      toHtml(flip(beam.tableAngle)), /*                       C */
+      toHtml(beam.wl.errorX_mm), /*                           D X offset corrected box-ball */
+      toHtml(beam.wl.errorY_mm), /*                           D X offset corrected box-ball */
+      toHtml(-beam.wl.errorX_mm), /*                          F CA-X */
+      toHtml(-beam.wl.errorY_mm), /*                          G CA-Z */
+      toHtml(beam.wl.errorX_mm - table.T__0.wl.errorX_mm), /* H BB-X */
+      toHtml(beam.wl.errorY_mm - table.T__0.wl.errorY_mm), /* I BB-Z */
+      toHtml(table.dXOf(beam)), /* I BB-Z */
+      toHtml(table.dZOf(beam)) /* I BB-Z */
+    )
+  }
+
   private def makeRow1: Elem = {
     <tr>
       {WLXlsxUtil.makeRowIndex(1)}
@@ -168,7 +191,7 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly) extends SSSheet
     <tr>
       {WLXlsxUtil.makeRowIndex(4)}
       {gantryAnglePrefix(monthly.G__0_C270_T__0) /* A4 to H4 */}
-      {blankCells(8) /* I4 thru P4 */}
+      {blankCells(8) /* I4 to P4 */}
       {toHtml(monthly.mlcDxG__0_C270) /* Q4 */}
       {toHtml(monthly.mlcDyG__0_C270) /* R4 */}
       {toHtml(monthly.mlcOffsetX_270) /* S4 */}
@@ -187,7 +210,7 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly) extends SSSheet
       {blankCells(1) /* I5 */}
       {toHtml(monthly.collYG_90) /* J5 */}
       {toHtml(monthly.collZG_90) /* K5 */}
-      {blankCells(5) /* L5 thru P5 */}
+      {blankCells(5) /* L5 to P5 */}
       {toHtml(monthly.mlcDxG_90_C_90) /* Q5 */}
       {toHtml(monthly.mlcDyG_90_C_90) /* R5 */}
       {blankCells(2) /* S5 to T5 */}
@@ -202,7 +225,7 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly) extends SSSheet
     <tr>
       {WLXlsxUtil.makeRowIndex(6)}
       {gantryAnglePrefix(monthly.G_90_C270_T__0) /* I6 */}
-      {blankCells(4) /* I6 thru L6 */}
+      {blankCells(4) /* I6 to L6 */}
       {toHtml("ΔX") /* M6 */}
       {toHtml("ΔY") /* N6 */}
       {toHtml("ΔZ") /* O6 */}
@@ -216,7 +239,7 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly) extends SSSheet
   private def makeRow7: Elem = {
     <tr>
       {WLXlsxUtil.makeRowIndex(7)}
-      {gantryAnglePrefix(monthly.G180_C__0_T__0) /* A7 thru G7 */}
+      {gantryAnglePrefix(monthly.G180_C__0_T__0) /* A7 to G7 */}
       {blankCells(4) /* I7 to L7 */}
       {toHtml(monthly.isoXRange) /* M7 */}
       {toHtml(monthly.isoYRange) /* N7 */}
@@ -248,7 +271,7 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly) extends SSSheet
     <tr>
       {WLXlsxUtil.makeRowIndex(9)}
       {gantryAnglePrefix(monthly.G180_C270_T__0) /* A9 to H9 */}
-      {blankCells(8) /* I9 thru P9 */}
+      {blankCells(8) /* I9 to P9 */}
       {toHtml(monthly.mlcDxG180_C270) /* Q9 */}
       {toHtml(monthly.mlcDyG180_C270) /* R9 */}
       {blankCells(6) /* S9 to X9 */}
@@ -262,7 +285,7 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly) extends SSSheet
       {blankCells(1) /* I10 */}
       {toHtml(monthly.collYG270) /* J10 */}
       {toHtml(monthly.collZG270) /* K10 */}
-      {blankCells(5) /* L10 thru P10 */}
+      {blankCells(5) /* L10 to P10 */}
       {toHtml(monthly.mlcDxG270_C_90) /* Q10 */}
       {toHtml(monthly.mlcDyG270_C_90) /* R10 */}
       {blankCells(6) /* S10 to X10 */}
@@ -272,8 +295,8 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly) extends SSSheet
   private def makeRow11: Elem = {
     <tr>
       {WLXlsxUtil.makeRowIndex(11)}
-      {gantryAnglePrefix(monthly.G270_C270_T__0)}
-      {blankCells(8) /* I11 thru P11 */}
+      {gantryAnglePrefix(monthly.G270_C270_T__0) /* A11 to H11 */}
+      {blankCells(8) /* I11 to P11 */}
       {toHtml(monthly.mlcDxG270_C270) /* Q11 */}
       {toHtml(monthly.mlcDyG270_C270) /* R11 */}
       {blankCells(6) /* S11 to X11 */}
@@ -283,20 +306,92 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly) extends SSSheet
   private def makeRow12: Elem = {
     <tr>
       {WLXlsxUtil.makeRowIndex(12)}
-      {blankCells(10)}
-      {toHtml("TODO K12") /* TODO */}
-      {blankCells(3)}
-      {toHtmlPowderBlue("Max square of BB displacement")}
-      {toHtmlPowderBlue(WebUtil.rightBoldArrow)}
-      {toHtml("TODO R12") /* TODO */}
-      {toHtml("Solve for smallest max (Couch Isocentricity)")}
-      {blankCells(5)}
+      {blankCells(10) /* A12 to J12*/}
+      {toHtml("TODO K12") /* TODO  K12 */}
+      {blankCells(3) /* L12 to N12*/}
+      {toHtmlPowderBlue("Max square of BB displacement") /* O12 */}
+      {toHtmlPowderBlue(WebUtil.rightBoldArrow) /* P12 */}
+      {toHtml("TODO R12") /* TODO Q12 */}
+      {toHtml("Solve for smallest max (Couch Isocentricity)") /* R12 */}
+      {blankCells(6) /* S12 to X12*/}
     </tr>
   }
 
   private def makeRow13: Elem = {
     <tr>
       {WLXlsxUtil.makeRowIndex(13)}
+      {toHtml("Table") /* A13 */}
+      {blankCells(4) /* B13 to E13*/}
+      {toHtml("CA-X") /* F13 */}
+      {toHtml("CA-Z") /* G13 */}
+      {toHtml("BB-X") /* H13 */}
+      {toHtml("BB-Z") /* I13 */}
+      {toHtml("BB-X'") /* J13 */}
+      {toHtml("BB-Z'") /* K13 */}
+      {toHtml("dX") /* L13 */}
+      {toHtml("dZ") /* M13 */}
+      {toHtml("Table-X") /* N13 */}
+      {toHtml("Table-Z") /* O13 */}
+      {toHtml("BB-X\"") /* P13 */}
+      {toHtml("BB-Z\"") /* Q13 */}
+      {toHtml("BB-R\"^2") /* R13 */}
+      {blankCells(6) /* S13 to X13*/}
+    </tr>
+  }
+
+  private def makeRow14: Elem = {
+
+    /*
+    toHtml("J TODO"), /* J BB-X' */
+    toHtml("K TODO"), /*  K BB-Z' */
+    toHtml("L TODO"), /*  L dX */
+    toHtml("M TODO"), /*  M dZ */
+     */
+    <tr>
+      {WLXlsxUtil.makeRowIndex(14)}
+      {tableAnglePrefix(table.T__0) /* A14 to G14 */}
+    </tr>
+  }
+
+  private def makeRow15: Elem = {
+    <tr>
+      {WLXlsxUtil.makeRowIndex(15)}
+      {tableAnglePrefix(table.T330) /* A15 to G15 */}
+    </tr>
+  }
+
+  private def makeRow16: Elem = {
+    <tr>
+      {WLXlsxUtil.makeRowIndex(16)}
+      {tableAnglePrefix(table.T300) /* A16 to G16 */}
+    </tr>
+  }
+
+  private def makeRow17: Elem = {
+    <tr>
+      {WLXlsxUtil.makeRowIndex(17)}
+      {tableAnglePrefix(table.T270) /* A17 to G17 */}
+    </tr>
+  }
+
+  private def makeRow18: Elem = {
+    <tr>
+      {WLXlsxUtil.makeRowIndex(18)}
+      {tableAnglePrefix(table.T_90) /* A18 to G18 */}
+    </tr>
+  }
+
+  private def makeRow19: Elem = {
+    <tr>
+      {WLXlsxUtil.makeRowIndex(19)}
+      {tableAnglePrefix(table.T_60) /* A19 to G19 */}
+    </tr>
+  }
+
+  private def makeRow20: Elem = {
+    <tr>
+      {WLXlsxUtil.makeRowIndex(20)}
+      {tableAnglePrefix(table.T_30) /* A20 to G20 */}
     </tr>
   }
 
@@ -317,6 +412,13 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly) extends SSSheet
         {makeRow11}
         {makeRow12}
         {makeRow13}
+        {makeRow14}
+        {makeRow15}
+        {makeRow16}
+        {makeRow17}
+        {makeRow18}
+        {makeRow19}
+        {makeRow20}
       </table>
     }
 
