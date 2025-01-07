@@ -31,12 +31,6 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
     </td>
   }
 
-  private def toHtmlPeach(text: String): Elem = {
-    <td class={cssPreprocessRight} style="border:2px solid black;background:#F8CBAD;">
-      {text}
-    </td>
-  }
-
   private def toHtmlPeach(dbl: Double): Elem = {
     <td class={cssPreprocessRight} style="border:2px solid black;background:#F8CBAD;">
       {fmt(dbl)}
@@ -52,12 +46,6 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
   private def toHtmlPowderBlue(dbl: Double): Elem = {
     <td class={cssPreprocessRight} style="border:2px solid black;background:#DDEBF7;">
       {fmt(dbl)}
-    </td>
-  }
-
-  private def toHtmlYellow(text: String): Elem = {
-    <td class={cssPreprocessLeft} style="border:2px solid black;background:#FFFF00;">
-      {text}
     </td>
   }
 
@@ -120,17 +108,8 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
     } else {
       val beam = beamOpt.get
 
-      val CA_X = -beam.wl.errorX_mm // F
-      val CA_Z = -beam.wl.errorY_mm // G
-
-      val BB_X = beam.wl.errorX_mm - table.T__0.get.wl.errorX_mm // H
-      val BB_Z = beam.wl.errorY_mm - table.T__0.get.wl.errorY_mm // I
-
-      val dX = table.dXOf(beam) // L
-      val dZ = table.dZOf(beam) // M
-
-      val BB_Xp = BB_X + dX // J
-      val BB_Zp = BB_Z + dZ // K
+      val dX = table.dX(beam)
+      val dZ = table.dZ(beam)
 
       val tableAngle0 = beam.tableAngle == 0
 
@@ -158,43 +137,37 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
         else
           blankCell
 
-      val BB_Xpp = BB_Xp - table.Table_X //  P BB-X"
-
-      val BB_Zpp = BB_Zp - table.Table_Z //  P BB-Z"
-
-      val BB_RRpp = (BB_Xpp * BB_Xpp) + (BB_Zpp * BB_Zpp) //  P BB-Z"
-
       Seq(
-        toHtml(beam.gantryAngle), /*      A */
-        toHtml(beam.collimatorAngle), /*  B */
-        toHtml(flip(beam.tableAngle)), /* C */
-        toHtml(beam.wl.errorX_mm), /*     D X offset corrected box-ball */
-        toHtml(beam.wl.errorY_mm), /*     E X offset corrected box-ball */
-        toHtml(CA_X), /*                  F CA-X */
-        toHtml(CA_Z), /*                  G CA-Z */
-        toHtml(BB_X), /*                  H BB-X */
-        toHtml(BB_Z), /*                  I BB-Z */
-        toHtml(BB_Xp), /*                 J BB-X' */
-        toHtml(BB_Zp), /*                 K BB-Z' */
-        L, /*                             L dX */
-        M, /*                             M dZ */
-        N, /*                             N Table-X */
-        O, /*                             O Table-Z */
-        toHtmlPowderBlue(BB_Xpp), /*      P BB-X" */
-        toHtmlPowderBlue(BB_Zpp), /*      Q BB-Z" */
-        toHtmlPowderBlue(BB_RRpp) /*     R BB-R"^2 */
-      ) ++ blankCells(6) /*               S to X */
+        toHtml(beam.gantryAngle), /*             A */
+        toHtml(beam.collimatorAngle), /*         B */
+        toHtml(flip(beam.tableAngle)), /*        C */
+        toHtml(beam.wl.errorX_mm), /*            D X offset corrected box-ball */
+        toHtml(beam.wl.errorY_mm), /*            E X offset corrected box-ball */
+        toHtml(WLTable.CA_X(beam)), /*           F CA-X */
+        toHtml(WLTable.CA_Z(beam)), /*           G CA-Z */
+        toHtml(table.BB_X(beam)), /*             H BB-X */
+        toHtml(table.BB_Z(beam)), /*             I BB-Z */
+        toHtml(table.BB_Xp(beam)), /*            J BB-X' */
+        toHtml(table.BB_Zp(beam)), /*            K BB-Z' */
+        L, /*                                    L dX */
+        M, /*                                    M dZ */
+        N, /*                                    N Table-X */
+        O, /*                                    O Table-Z */
+        toHtmlPowderBlue(table.BB_Xpp(beam)), /* P BB-X" */
+        toHtmlPowderBlue(table.BB_Zpp(beam)), /* Q BB-Z" */
+        toHtmlPowderBlue(table.BB_Rpp(beam)) /*  R BB-R"^2 */
+      ) ++ blankCells(6) /*                      S to X */
     }
   }
 
   private def makeRow1: Elem = {
     <tr>
       {WLXlsxUtil.makeRowIndex(1)}
-      {toHtml("Gantry") /*      A1 */}
-      {blankCells(17) /*        B1 to R1 */}
-      {toHtml("MLC offset") /*  S1 */}
-      {toHtml("TODO T1") /*     TODO T1 */}
-      {blankCells(4) /*         U1 to X1 */}
+      {toHtml("Gantry") /*           A1 */}
+      {blankCells(17) /*             B1 to R1 */}
+      {toHtml("MLC offset") /*       S1 */}
+      {toHtml(monthly.mlcOffsetY) /* T1 */}
+      {blankCells(4) /*              U1 to X1 */}
     </tr>
   }
 
@@ -375,13 +348,12 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
     <tr>
       {WLXlsxUtil.makeRowIndex(12)}
       {blankCells(10) /* A12 to J12*/}
-      {toHtml("TODO K12") /* TODO  K12 */}
+      {toHtml(table.K12) /* K12 */}
       {blankCells(5) /* L12 to P12*/}
       {toHtmlPowderBlue("Max square of BB displacement" + WebUtil.rightBoldArrow) /* Q12 */}
-      {toHtmlPeach(table.dXT__0) /* TODO R12 */}
-      {blankCell}
-      {toHtml("Solve for smallest max (Couch Isocentricity)") /* R12 */}
-      {blankCells(4) /* S12 to X12*/}
+      {toHtmlPeach(table.maxSquareOfBBDisplacement) /* R12 */}
+      {toHtml("Solve for smallest max (Couch Isocentricity)") /* S12 */}
+      {blankCells(4) /* T12 to X12*/}
     </tr>
   }
 
