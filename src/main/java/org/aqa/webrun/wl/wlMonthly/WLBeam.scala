@@ -7,6 +7,7 @@ import org.aqa.Util
 import org.aqa.db.WinstonLutz
 import org.aqa.Logging
 import org.aqa.webrun.wl.WLRunReq
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.flip
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.rnd
 
 import java.util.Date
@@ -51,6 +52,12 @@ case class WLBeam(wl: WinstonLutz, al: AttributeList) extends Logging {
   /** Analysis H */
   val caZ: Option[Double] = Some(-wl.errorY_mm).map(rnd)
 
+  private val radians: Double = Math.toRadians(flip(tableAngle))
+  /** cosine of table angle */
+  val cos: Double = Math.cos(radians)
+
+  /** sine of table angle */
+  val sin: Double = Math.sin(radians)
 }
 
 object WLBeam extends Logging {

@@ -2,18 +2,17 @@ package org.aqa.webrun.wl.wlMonthly
 
 import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.flip
 
 case class WLTable(
                     // @formatter:off
                     extendedData: ExtendedData,
-                    T__0: WLBeam,
-                    T_30: WLBeam,
-                    T_60: WLBeam,
-                    T_90: WLBeam,
-                    T270: WLBeam,
-                    T300: WLBeam,
-                    T330: WLBeam
+                    T__0: Option[ WLBeam],
+                    T_30: Option[ WLBeam],
+                    T_60: Option[ WLBeam],
+                    T_90: Option[ WLBeam],
+                    T270: Option[ WLBeam],
+                    T300: Option[ WLBeam],
+                    T330: Option[ WLBeam]
                     // @formatter:on
                   ) {
 
@@ -23,29 +22,30 @@ case class WLTable(
   /** Analysis M14 */
   var dZT__0: Double = 0.332920649471168 // TODO determine proper seed value
 
-  def dXOf(beam: WLBeam): Double = {
-    val radians = Math.toRadians(flip(beam.tableAngle))
-    val cos = Math.cos(radians)
-    val sin = Math.sin(radians)
-    (dXT__0 * cos) + (dZT__0 * sin)
+  /** Analysis L14 */
+  var Table_X: Double = 0.332018792527814 // TODO determine proper seed value
+
+  /** Analysis M14 */
+  var Table_Z: Double = 0.323882986957228 // TODO determine proper seed value
+
+
+  /** Analysis L */
+  def dXOf(beam: WLBeam, dX: Double = dXT__0, dZ: Double = dZT__0): Double = {
+    (dX * beam.cos) + (dZ * beam.sin)
   }
 
-
-  def dZOf(beam: WLBeam): Double = {
-    val radians = Math.toRadians(flip(beam.tableAngle))
-    val cos = Math.cos(radians)
-    val sin = Math.sin(radians)
-    (dZT__0 * cos) - (dXT__0 * sin)
+  /** Analysis M */
+  def dZOf(beam: WLBeam, dX: Double = dXT__0, dZ: Double = dZT__0): Double = {
+    (dZ * beam.cos) - (dX * beam.sin)
   }
 
-  Trace.trace("T__0: " + T__0.wl)
-  Trace.trace("T_30: " + T_30.wl)
-  Trace.trace("T_60: " + T_60.wl)
-  Trace.trace("T_90: " + T_90.wl)
-  Trace.trace("T270: " + T270.wl)
-  Trace.trace("T300: " + T300.wl)
-  Trace.trace("T330: " + T330.wl)
-
+  Trace.trace("T__0: " + T__0.get.wl)
+  if (T_30.isDefined) Trace.trace("T_30: " + T_30.get.wl)
+  if (T_60.isDefined) Trace.trace("T_60: " + T_60.get.wl)
+  Trace.trace("T_90: " + T_90.get.wl)
+  Trace.trace("T270: " + T270.get.wl)
+  if (T300.isDefined) Trace.trace("T300: " + T300.get.wl)
+  if (T330.isDefined) Trace.trace("T330: " + T330.get.wl)
 }
 
 object WLTable {
@@ -77,26 +77,22 @@ object WLTable {
     // @formatter:on
 
     // list of all files required for WL Table
-    val list = Seq(
+    val requiredList = Seq(
       T__0,
-      T_30,
-      T_60,
       T_90,
       T270,
-      T300,
-      T330
     )
 
     // if of the files are there then construct the object, otherwise return None.
-    if (list.flatten.size == list.size) {
+    if (requiredList.flatten.size == requiredList.size) {
       Some(WLTable(extendedData,
-        T__0.get,
-        T_30.get,
-        T_60.get,
-        T_90.get,
-        T270.get,
-        T300.get,
-        T330.get
+        T__0,
+        T_30,
+        T_60,
+        T_90,
+        T270,
+        T300,
+        T330
       ))
     }
     else

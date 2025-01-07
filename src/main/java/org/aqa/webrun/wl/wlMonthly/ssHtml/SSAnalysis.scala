@@ -31,6 +31,12 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
     </td>
   }
 
+  private def toHtmlPeach(text: String): Elem = {
+    <td class={cssPreprocessRight} style="border:2px solid black;background:#F8CBAD;">
+      {text}
+    </td>
+  }
+
   private def toHtmlPeach(dbl: Double): Elem = {
     <td class={cssPreprocessRight} style="border:2px solid black;background:#F8CBAD;">
       {fmt(dbl)}
@@ -56,7 +62,7 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
   }
 
   private def toHtmlYellow(dbl: Double): Elem = {
-    <td class={cssPreprocessRight} style="border:2px solid black;background:#FFFF00;">
+    <td class={cssPreprocessRight} style="background:#FFFF00;">
       {fmt(dbl)}
     </td>
   }
@@ -80,6 +86,10 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
     (0 until count).map(_ => toHtml(""))
   }
 
+  private def blankCell: Elem = {
+    blankCells(1).head
+  }
+
   /**
     * Makes cells A to H which are common to all gantry beams.
     * @param beam Beam to show.
@@ -100,23 +110,81 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
 
   /**
     * Makes cells A to G which are common to all gantry beams.
-    * @param beam Beam to show.
+    * @param beamOpt Beam to show.
     * @return cells for common content.
     */
-  private def tableAnglePrefix(beam: WLBeam): Seq[Elem] = {
-    Seq(
-      toHtml(beam.gantryAngle), /*                            A */
-      toHtml(beam.collimatorAngle), /*                        B */
-      toHtml(flip(beam.tableAngle)), /*                       C */
-      toHtml(beam.wl.errorX_mm), /*                           D X offset corrected box-ball */
-      toHtml(beam.wl.errorY_mm), /*                           D X offset corrected box-ball */
-      toHtml(-beam.wl.errorX_mm), /*                          F CA-X */
-      toHtml(-beam.wl.errorY_mm), /*                          G CA-Z */
-      toHtml(beam.wl.errorX_mm - table.T__0.wl.errorX_mm), /* H BB-X */
-      toHtml(beam.wl.errorY_mm - table.T__0.wl.errorY_mm), /* I BB-Z */
-      toHtml(table.dXOf(beam)), /* I BB-Z */
-      toHtml(table.dZOf(beam)) /* I BB-Z */
-    )
+  private def tableAnglePrefix(beamOpt: Option[WLBeam]): Seq[Elem] = {
+
+    if (beamOpt.isEmpty) {
+      toHtml("NA") +: blankCells(24)
+    } else {
+      val beam = beamOpt.get
+
+      val CA_X = -beam.wl.errorX_mm // F
+      val CA_Z = -beam.wl.errorY_mm // G
+
+      val BB_X = beam.wl.errorX_mm - table.T__0.get.wl.errorX_mm // H
+      val BB_Z = beam.wl.errorY_mm - table.T__0.get.wl.errorY_mm // I
+
+      val dX = table.dXOf(beam) // L
+      val dZ = table.dZOf(beam) // M
+
+      val BB_Xp = BB_X + dX // J
+      val BB_Zp = BB_Z + dZ // K
+
+      val tableAngle0 = beam.tableAngle == 0
+
+      val L = //                             L dX
+        if (tableAngle0)
+          toHtmlYellow(dX)
+        else
+          toHtmlPowderBlue(dX)
+
+      val M = //                             M dX
+        if (tableAngle0)
+          toHtmlYellow(dZ)
+        else
+          toHtmlPowderBlue(dZ)
+
+      val N = //                             N Table-X
+        if (tableAngle0)
+          toHtmlYellow(table.Table_X)
+        else
+          blankCell
+
+      val O = //                             N Table-Z
+        if (tableAngle0)
+          toHtmlYellow(table.Table_Z)
+        else
+          blankCell
+
+      val BB_Xpp = BB_Xp - table.Table_X //  P BB-X"
+
+      val BB_Zpp = BB_Zp - table.Table_Z //  P BB-Z"
+
+      val BB_RRpp = (BB_Xpp * BB_Xpp) + (BB_Zpp * BB_Zpp) //  P BB-Z"
+
+      Seq(
+        toHtml(beam.gantryAngle), /*      A */
+        toHtml(beam.collimatorAngle), /*  B */
+        toHtml(flip(beam.tableAngle)), /* C */
+        toHtml(beam.wl.errorX_mm), /*     D X offset corrected box-ball */
+        toHtml(beam.wl.errorY_mm), /*     E X offset corrected box-ball */
+        toHtml(CA_X), /*                  F CA-X */
+        toHtml(CA_Z), /*                  G CA-Z */
+        toHtml(BB_X), /*                  H BB-X */
+        toHtml(BB_Z), /*                  I BB-Z */
+        toHtml(BB_Xp), /*                 J BB-X' */
+        toHtml(BB_Zp), /*                 K BB-Z' */
+        L, /*                             L dX */
+        M, /*                             M dZ */
+        N, /*                             N Table-X */
+        O, /*                             O Table-Z */
+        toHtmlPowderBlue(BB_Xpp), /*      P BB-X" */
+        toHtmlPowderBlue(BB_Zpp), /*      Q BB-Z" */
+        toHtmlPowderBlue(BB_RRpp) /*     R BB-R"^2 */
+      ) ++ blankCells(6) /*               S to X */
+    }
   }
 
   private def makeRow1: Elem = {
@@ -156,11 +224,11 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
 
     <tr>
       {WLXlsxUtil.makeRowIndex(2)}
-      {titleList1.map(toHtml(_)) /* A2 to R2 */}
+      {titleList1.map(toHtml(_)) /*  A2 to R2 */}
       {toHtml(monthly.mlcOffsetX) /* S2 */}
       {toHtml(monthly.mlcOffsetY) /* T2 */}
-      {blankCells(1) /* U2 */}
-      {titleList2.map(toHtml(_)) /* V2 to X2 */}
+      {blankCell /*                  U2 */}
+      {titleList2.map(toHtml(_)) /*  V2 to X2 */}
     </tr>
   }
 
@@ -169,7 +237,7 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
       {WLXlsxUtil.makeRowIndex(3)}
       {gantryAnglePrefix(monthly.G__0_C_90_T__0) /*          A3 to G3 */}
       {toHtml(monthly.collXG__0) /*                          I3 */}
-      {blankCells(1) /*                                      J3 */}
+      {blankCell /*                                          J3 */}
       {toHtml(monthly.collZG__0) /*                          K3 */}
       {toHtml(monthly.isoX) /*                               L3 */}
       {toHtml(monthly.isoY) /*                               M3 */}
@@ -190,12 +258,12 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
   private def makeRow4: Elem = {
     <tr>
       {WLXlsxUtil.makeRowIndex(4)}
-      {gantryAnglePrefix(monthly.G__0_C270_T__0) /* A4 to H4 */}
-      {blankCells(8) /* I4 to P4 */}
-      {toHtml(monthly.mlcDxG__0_C270) /* Q4 */}
-      {toHtml(monthly.mlcDyG__0_C270) /* R4 */}
-      {toHtml(monthly.mlcOffsetX_270) /* S4 */}
-      {toHtml(monthly.mlcOffsetY_270) /* T4 */}
+      {gantryAnglePrefix(monthly.G__0_C270_T__0) /*               A4 to H4 */}
+      {blankCells(8) /*                                           I4 to P4 */}
+      {toHtml(monthly.mlcDxG__0_C270) /*                          Q4 */}
+      {toHtml(monthly.mlcDyG__0_C270) /*                          R4 */}
+      {toHtml(monthly.mlcOffsetX_270) /*                          S4 */}
+      {toHtml(monthly.mlcOffsetY_270) /*                          T4 */}
       {toHtml("Gantry isocenter relative to BB at table zero") /* U4 */}
       {toHtml(monthly.isoX) /* V4 */}
       {toHtml(monthly.isoY) /* W4 */}
@@ -206,33 +274,33 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
   private def makeRow5: Elem = {
     <tr>
       {WLXlsxUtil.makeRowIndex(5)}
-      {gantryAnglePrefix(monthly.G_90_C_90_T__0)}
-      {blankCells(1) /* I5 */}
-      {toHtml(monthly.collYG_90) /* J5 */}
-      {toHtml(monthly.collZG_90) /* K5 */}
-      {blankCells(5) /* L5 to P5 */}
-      {toHtml(monthly.mlcDxG_90_C_90) /* Q5 */}
-      {toHtml(monthly.mlcDyG_90_C_90) /* R5 */}
-      {blankCells(2) /* S5 to T5 */}
+      {gantryAnglePrefix(monthly.G_90_C_90_T__0) /*         A4 to H4 */}
+      {blankCell /*                                         I5 */}
+      {toHtml(monthly.collYG_90) /*                         J5 */}
+      {toHtml(monthly.collZG_90) /*                         K5 */}
+      {blankCells(5) /*                                     L5 to P5 */}
+      {toHtml(monthly.mlcDxG_90_C_90) /*                    Q5 */}
+      {toHtml(monthly.mlcDyG_90_C_90) /*                    R5 */}
+      {blankCells(2) /*                                     S5 to T5 */}
       {toHtml("Table axis relative to BB at table zero") /* U5 */}
-      {toHtml("V5 TODO") /* V5 */ /* TODO */}
-      {blankCells(1)}
-      {toHtml("X5 TODO") /* X5 */ /* TODO */}
+      {toHtml(table.Table_X) /*                             V5 */}
+      {blankCell /*                                         S5 to T5 */}
+      {toHtml(table.Table_Z) /*                             X5 */}
     </tr>
   }
 
   private def makeRow6: Elem = {
     <tr>
-      {WLXlsxUtil.makeRowIndex(6)}
+      {WLXlsxUtil.makeRowIndex(6) /*                A4 to H4 */}
       {gantryAnglePrefix(monthly.G_90_C270_T__0) /* I6 */}
-      {blankCells(4) /* I6 to L6 */}
-      {toHtml("ΔX") /* M6 */}
-      {toHtml("ΔY") /* N6 */}
-      {toHtml("ΔZ") /* O6 */}
-      {blankCells(1) /* P6 */}
-      {toHtml(monthly.mlcDxG_90_C270) /* Q6 */}
-      {toHtml(monthly.mlcDyG_90_C270) /* R6 */}
-      {blankCells(6)}
+      {blankCells(4) /*                             I6 to L6 */}
+      {toHtml("ΔX") /*                              M6 */}
+      {toHtml("ΔY") /*                              N6 */}
+      {toHtml("ΔZ") /*                              O6 */}
+      {blankCell /*                                 P6 */}
+      {toHtml(monthly.mlcDxG_90_C270) /*            Q6 */}
+      {toHtml(monthly.mlcDyG_90_C270) /*            R6 */}
+      {blankCells(6) /*                             R6 */}
     </tr>
   }
 
@@ -244,7 +312,7 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
       {toHtml(monthly.isoXRange) /* M7 */}
       {toHtml(monthly.isoYRange) /* N7 */}
       {toHtml(monthly.isoZRange) /* O7 */}
-      {blankCells(1) /* P7 */}
+      {blankCell /* P7 */}
       {toHtml(monthly.mlcDxG180_C__0) /* Q7 */}
       {toHtml(monthly.mlcDyG180_C__0) /* R7 */}
       {blankCells(6)}
@@ -256,7 +324,7 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
       {WLXlsxUtil.makeRowIndex(8)}
       {gantryAnglePrefix(monthly.G180_C_90_T__0) /* A8 to H8 */}
       {toHtml(monthly.collXG180) /* I8 */}
-      {blankCells(1) /* J8 */}
+      {blankCell /* J8 */}
       {toHtml(monthly.collZG180) /* K8 */}
       {blankCells(3) /* L8 to N8 */}
       {toHtmlPeach(monthly.gantryIsocentricity) /* O8 */}
@@ -282,7 +350,7 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
     <tr>
       {WLXlsxUtil.makeRowIndex(10)}
       {gantryAnglePrefix(monthly.G270_C_90_T__0) /* A9 to H9 */}
-      {blankCells(1) /* I10 */}
+      {blankCell /* I10 */}
       {toHtml(monthly.collYG270) /* J10 */}
       {toHtml(monthly.collZG270) /* K10 */}
       {blankCells(5) /* L10 to P10 */}
@@ -308,12 +376,12 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
       {WLXlsxUtil.makeRowIndex(12)}
       {blankCells(10) /* A12 to J12*/}
       {toHtml("TODO K12") /* TODO  K12 */}
-      {blankCells(3) /* L12 to N12*/}
-      {toHtmlPowderBlue("Max square of BB displacement") /* O12 */}
-      {toHtmlPowderBlue(WebUtil.rightBoldArrow) /* P12 */}
-      {toHtml("TODO R12") /* TODO Q12 */}
+      {blankCells(5) /* L12 to P12*/}
+      {toHtmlPowderBlue("Max square of BB displacement" + WebUtil.rightBoldArrow) /* Q12 */}
+      {toHtmlPeach(table.dXT__0) /* TODO R12 */}
+      {blankCell}
       {toHtml("Solve for smallest max (Couch Isocentricity)") /* R12 */}
-      {blankCells(6) /* S12 to X12*/}
+      {blankCells(4) /* S12 to X12*/}
     </tr>
   }
 
@@ -341,12 +409,6 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
 
   private def makeRow14: Elem = {
 
-    /*
-    toHtml("J TODO"), /* J BB-X' */
-    toHtml("K TODO"), /*  K BB-Z' */
-    toHtml("L TODO"), /*  L dX */
-    toHtml("M TODO"), /*  M dZ */
-     */
     <tr>
       {WLXlsxUtil.makeRowIndex(14)}
       {tableAnglePrefix(table.T__0) /* A14 to G14 */}
@@ -395,6 +457,38 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
     </tr>
   }
 
+  private def makeRow21: Elem = {
+    <tr>
+      {WLXlsxUtil.makeRowIndex(21)}
+      {blankCells(11)}
+      <td colSpan="2" rowSpan="2"  style="border:2px solid black;margin-bottom:2px;">
+        Coordinates in rotated system
+      </td>
+      {blankCells(2)}
+      <td colSpan="2" rowSpan="2"  style="border:2px solid black;margin-bottom:2px;">
+        BB coordinates after minimization
+      </td>
+      <td colSpan="2" rowSpan="2"  style="border:2px solid black;margin-bottom:2px;">
+        sum of squares x^2 +y^2 for each table angle
+      </td>
+      {blankCells(5)}
+    </tr>
+  }
+
+  private def makeRow22: Elem = {
+    <tr>
+      {WLXlsxUtil.makeRowIndex(22)}
+      {blankCells(18)}
+    </tr>
+  }
+
+  private def makeRow23: Elem = {
+    <tr>
+      {WLXlsxUtil.makeRowIndex(23)}
+      {blankCells(24)}
+    </tr>
+  }
+
   override def make(): Elem = {
     val content = {
       <table class="table table-bordered">
@@ -419,6 +513,9 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
         {makeRow18}
         {makeRow19}
         {makeRow20}
+        {makeRow21}
+        {makeRow22}
+        {makeRow23}
       </table>
     }
 
