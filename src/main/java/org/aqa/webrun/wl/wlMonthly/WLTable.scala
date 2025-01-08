@@ -27,24 +27,24 @@ case class WLTable(
   ).flatten
 
   /** Analysis L14 */
-  private var dXT__0: Double = 0.183972235121236 // TODO determine proper seed value
+  var dXT__0_Optimized: Double = 0.183972235121236 // TODO determine proper seed value
 
   /** Analysis M14 */
-  private var dZT__0: Double = 0.332920649471168 // TODO determine proper seed value
+  var dZT__0_Optimized: Double = 0.332920649471168 // TODO determine proper seed value
 
   /** Analysis L14 */
-  var Table_X: Double = 0.332018792527814 // TODO determine proper seed value
+  var Table_X_Optimized: Double = 0.332018792527814 // TODO determine proper seed value
 
   /** Analysis M14 */
-  var Table_Z: Double = 0.323882986957228 // TODO determine proper seed value
+  var Table_Z_Optimized: Double = 0.323882986957228 // TODO determine proper seed value
 
   /** Analysis L */
-  private def dXOf(beam: WLBeam, dX: Double = dXT__0, dZ: Double = dZT__0): Double = {
+  def dXOf(beam: WLBeam, dX: Double, dZ: Double): Double = {
     (dX * beam.cos) + (dZ * beam.sin)
   }
 
   /** Analysis M */
-  private def dZOf(beam: WLBeam, dX: Double = dXT__0, dZ: Double = dZT__0): Double = {
+  def dZOf(beam: WLBeam, dX: Double, dZ: Double): Double = {
     (dZ * beam.cos) - (dX * beam.sin)
   }
 
@@ -55,33 +55,33 @@ case class WLTable(
   def BB_Z(beam: WLBeam): Double = beam.wl.errorY_mm - T__0.get.wl.errorY_mm // I
 
   /** Analysis L */
-  def dX(beam: WLBeam): Double = dXOf(beam) // L
+  //def dX(beam: WLBeam, dXv: Double, dZv: Double): Double = dXOf(beam, dXv, dZv) // L
 
   /** Analysis M */
-  def dZ(beam: WLBeam): Double = dZOf(beam) // M
+  //def dZ(beam: WLBeam, dXv: Double, dZv: Double): Double = dZOf(beam, dXv, dZv) // M
 
   /** Analysis J */
-  def BB_Xp(beam: WLBeam): Double = BB_X(beam) + dX(beam) // J
+  def BB_Xp(beam: WLBeam, dXv: Double, dZv: Double): Double = BB_X(beam) + dXOf(beam, dXv, dZv) // J
 
   /** Analysis K */
-  def BB_Zp(beam: WLBeam): Double = BB_Z(beam) + dZ(beam)
+  def BB_Zp(beam: WLBeam, dXv: Double, dZv: Double): Double = BB_Z(beam) + dZOf(beam, dXv, dZv) // K
 
   /** Analysis P BB-X" */
-  def BB_Xpp(beam: WLBeam): Double = BB_Xp(beam) - Table_X
+  def BB_Xpp(beam: WLBeam, dXv: Double, dZv: Double, Table_X: Double): Double = BB_Xp(beam, dXv, dZv) - Table_X
 
   /** Analysis Q BB-X" */
-  def BB_Zpp(beam: WLBeam): Double = BB_Zp(beam) - Table_Z
+  def BB_Zpp(beam: WLBeam, dXv: Double, dZv: Double, Table_Z: Double): Double = BB_Zp(beam, dXv, dZv) - Table_Z
 
   /** Analysis P BB-Z" */
-  def BB_Rpp(beam: WLBeam): Double = {
-    val x = BB_Xpp(beam)
-    val z = BB_Zpp(beam)
+  def BB_Rpp(beam: WLBeam, dXv: Double, dZv: Double, Table_X: Double, Table_Z: Double): Double = {
+    val x = BB_Xpp(beam, dXv, dZv, Table_X)
+    val z = BB_Zpp(beam, dXv, dZv, Table_Z)
     (x * x) + (z * z)
   }
 
-  def K12: Double = {
-    val BB_XpList = beamList.map(BB_Xp)
-    val BB_ZpList = beamList.map(BB_Zp)
+  def K12(dXv: Double, dZv: Double): Double = {
+    val BB_XpList = beamList.map(beam => BB_Xp(beam, dXv, dZv))
+    val BB_ZpList = beamList.map(beam => BB_Zp(beam, dXv, dZv))
 
     val xRange = BB_XpList.max - BB_XpList.min
     val zRange = BB_ZpList.max - BB_ZpList.min
@@ -89,10 +89,31 @@ case class WLTable(
     Math.max(xRange, zRange)
   }
 
-  def maxSquareOfBBDisplacement: Double = beamList.map(BB_Rpp).max
+  /**
+   * Calculate the minimum R-squared value.
+   *
+   * @param dXv     dXv
+   * @param dZv     dZv
+   * @param Table_X Table_X
+   * @param Table_Z Table_Z
+   * @return
+   */
+  def minSquareOfBBDisplacement(dXv: Double, dZv: Double, Table_X: Double, Table_Z: Double): Double = beamList.map(beam => BB_Rpp(beam, dXv, dZv, Table_X, Table_Z)).min
 
 
-  def minMax(dXv: Double, dZv: Double, Table_Xv: Double, Table_Zv: Double): Double = {
+  /**
+   * Optimize the minimum of the maximum R-squared values
+   *
+   * @param dXv     dXv
+   * @param dZv     dZv
+   * @param Table_X Table_X
+   * @param Table_Z Table_Z
+   * @return
+   */
+  def minMax(): Double = {
+
+    //  dXv: Double, dZv: Double, Table_X: Double, Table_Z: Double): Double = {
+
     0.0 // TODO
   }
 
