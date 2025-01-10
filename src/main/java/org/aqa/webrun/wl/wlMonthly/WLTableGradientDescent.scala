@@ -23,13 +23,16 @@ object WLTableGradientDescent {
   private var degree: Int = 32 // TODO change from var to val
 
   /** Initial width of search field in mm. */
-  private val initialDepth: Int = 5
+  private val initialDepth: Int = 40
 
   /** Initial width of search field in mm. */
   private val initialWidth_mm: Double = 3.0
 
   /** For each successive approximation, reduce the search area by this factor. */
-  private val reductionFactor: Double = 4.0
+  private val reductionFactor: Double = 2.0
+
+  /** For each successive approximation, reduce the search area by this factor. */
+  private val maxBest: Int = 1
 
   /**
     * A segment of one dimension in hyperspace.
@@ -49,6 +52,34 @@ object WLTableGradientDescent {
     val list: Seq[Double] = (0 until degree).map(coordinateToValue)
   }
 
+  private class Best {
+
+    val best: scala.collection.mutable.ArrayBuffer[WLTablePoint] = scala.collection.mutable.ArrayBuffer[WLTablePoint]()
+
+    def put(point: WLTablePoint): Unit =
+      best.synchronized {
+        val j = best.lastOption
+        if (best.isEmpty || (point.minSquare < best.last.minSquare)) {
+          best.append(point)
+          val newBest = best.sortBy(_.minSquare).take(maxBest)
+          best.clear()
+          best.appendAll(newBest)
+        }
+      }
+
+    def goodEnough(minSq: Double): Boolean =
+      best.synchronized {
+        val j = best.lastOption
+        val good = best.isEmpty || (minSq < best.last.minSquare)
+        good
+      }
+
+    def entireList: Seq[WLTablePoint] = best.synchronized { best.toSeq }
+
+    def getVeryBest: WLTablePoint = best.synchronized { best.head }
+
+  }
+
   /* private case class SearchVolume( dX: Dim, dZ: Dim, tableX: Dim, tableZ: Dim ) { def minMax(): Double = { 0.0 // xODO } val dXMin = ??? } */
 
   /**
@@ -64,8 +95,14 @@ object WLTableGradientDescent {
   private val fullRange: Seq[Int] = 0 until degree
   private val subRange: Seq[Int] = fullRange.tail.dropRight(1)
 
-  case class WLTablePoint(dX: Double, dZ: Double, tableX: Double, tableZ: Double) {
-    def minSquare(table: WLTable): Double = table.minSquareOfBBDisplacement(dX, dZ, tableX, tableZ)
+  case class WLTablePoint(dX: Double, dZ: Double, tableX: Double, tableZ: Double, table: WLTable) {
+    val minSquare: Double = table.minSquareOfBBDisplacement(dX, dZ, tableX, tableZ)
+    override def toString(): String = {
+
+      def fmt(d: Double): String = d.formatted("%19.16f")
+
+      s"dX: ${fmt(dX)}    dZ: ${fmt(dZ)}    tableX: ${fmt(tableX)}    tableZ: ${fmt(tableZ)} => ${fmt(minSquare)}"
+    }
   }
 
   // list of offsets for coordinate adjacent to a central point
@@ -82,88 +119,46 @@ object WLTableGradientDescent {
 
   def findMin(table: WLTable): WLTablePoint = {
 
-    def finder(dXp: Dim, dZp: Dim, tableXp: Dim, tableZp: Dim, depth: Int): Seq[WLTablePoint] = {
+    val bestList = new Best
 
-      Trace.trace("Making pointArray")
+    def finder(dXp: Dim, dZp: Dim, tableXp: Dim, tableZp: Dim, depth: Int): Unit = {
 
-      val pointArray: Seq[Seq[Seq[Seq[Double]]]] = {
+      Trace.trace("Searching array")
 
-        var count: Long = 0.toLong // TODO rm
-
-        def make(dXi: Int): Seq[Seq[Seq[Double]]] = {
-          for (dZi <- fullRange) yield {
-            for (tableXi <- fullRange) yield {
-              for (tableZi <- fullRange) yield {
-                count = count + 1
-                table.minSquareOfBBDisplacement(dXp.list(dXi), dZp.list(dZi), tableXp.list(tableXi), tableXp.list(tableZi))
+      fullRange.par.foreach(dXi => {
+        fullRange.foreach(dZi => {
+          fullRange.foreach(tableXi => {
+            fullRange.foreach(tableZi => {
+              if (bestList.goodEnough(table.minSquareOfBBDisplacement(dXp.list(dXi), dZp.list(dZi), tableXp.list(tableXi), tableZp.list(tableZi)))) {
+                bestList.put(WLTablePoint(dXp.list(dXi), dZp.list(dZi), tableXp.list(tableXi), tableXp.list(tableZi), table))
+                // Trace.trace(s"put best: ${bestList.getVeryBest}")
               }
-            }
-          }
-        }
-
-        val pa = fullRange.par.map(make).toArray.toSeq
-        Trace.trace(s"count: $count") // TODO rm
-
-        pa
-      }
-
-      Trace.trace("Done making pointArray")
-
-      /** Determine if the given point is a local minimum. */
-      def isMin(dXi: Int, dZi: Int, tableXi: Int, tableZi: Int): Boolean = {
-        val centerValue: Double = pointArray(dXi)(dZi)(tableXi)(tableZi)
-        val smaller = offsetList.find(p =>
-          pointArray //
-          (p._1 + dXi) //
-          (p._2 + dZi) //
-          (p._3 + tableXi) //
-          (p._4 + tableZi) //
-            < centerValue
-        )
-        smaller.isEmpty
-      }
-
-      Trace.trace("Traversing pointArray")
-      val minList =
-        for ( //
-          dXi <- subRange; //
-          dZi <- subRange; //
-          tableXi <- subRange; //
-          tableZi <- subRange //
-          if isMin(dXi, dZi, tableXi, tableZi)
-        )
-          yield //
-          WLTablePoint(dXp.list(dXi), dZp.list(dZi), tableXp.list(tableXi), tableZp.list(tableZi))
-
-      Trace.trace("Done traversing pointArray")
-
-      minList // TODO rm
-        .sortBy(_.minSquare(table))
-        .foreach(p => { // TODO rm
-          Trace.trace(s"dX: ${p.dX}    dZ: ${p.dZ}    tableX: ${p.tableX}    tableZ: ${p.tableZ} => ${p.minSquare(table)}   ")
+            })
+          })
         })
-
-      if (depth > 0) {
-        def doit(p: WLTablePoint): Seq[WLTablePoint] = {
-          val width = dXp.len / reductionFactor
-          finder(Dim(p.dX, width), Dim(p.dZ, width), Dim(p.tableX, width), Dim(p.tableZ, width), depth - 1)
-        }
-        minList.flatMap(doit)
-      } else
-        minList
-    }
-
-    val minList = finder(Dim(0, initialWidth_mm), Dim(0, initialWidth_mm), Dim(0, initialWidth_mm), Dim(0, initialWidth_mm), initialDepth)
-
-    Trace.trace("Number of min: " + minList.size) // TODO rm
-
-    minList // TODO rm
-      .sortBy(_.minSquare(table))
-      .foreach(p => { // TODO rm
-        Trace.trace(s"dX: ${p.dX}    dZ: ${p.dZ}    tableX: ${p.tableX}    tableZ: ${p.tableZ} => ${p.minSquare(table)}   ")
       })
 
-    Trace.trace()
-    minList.head
+      if (depth > 0) {
+        val width = dXp.len / reductionFactor
+        Trace.trace(s"depth: $depth    width: $width    best: ${bestList.getVeryBest}")
+        bestList.entireList.foreach(p =>
+          finder( //
+            Dim(p.dX, width), //
+            Dim(p.dZ, width), //
+            Dim(p.tableX, width), //
+            Dim(p.tableZ, width), //
+            depth - 1
+          )
+        )
+      }
+    }
+
+    Trace.trace("Done searching")
+
+    finder(Dim(0, initialWidth_mm), Dim(0, initialWidth_mm), Dim(0, initialWidth_mm), Dim(0, initialWidth_mm), initialDepth)
+
+    Trace.trace(s"very best: ${bestList.getVeryBest}")
+
+    bestList.getVeryBest
   }
 }
