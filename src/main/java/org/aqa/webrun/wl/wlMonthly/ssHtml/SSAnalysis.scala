@@ -9,6 +9,7 @@ import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssPreprocessLeft
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssPreprocessRight
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.flip
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.numericFormat
 
 import scala.xml.Elem
 
@@ -22,7 +23,7 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
 
   override val name: String = "Analysis"
 
-  private def fmt(d: Double): String = d.formatted("%12.2f").trim
+  private def fmt(d: Double): String = d.formatted(numericFormat).trim
 
   private def toHtml(text: String, alignLeft: Boolean = true): Elem = {
     val c = if (alignLeft) cssPreprocessLeft else cssPreprocessRight

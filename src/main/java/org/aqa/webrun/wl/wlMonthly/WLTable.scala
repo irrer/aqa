@@ -54,34 +54,28 @@ case class WLTable(
   /** Analysis I */
   def BB_Z(beam: WLBeam): Double = beam.wl.errorY_mm - T__0.get.wl.errorY_mm // I
 
-  /** Analysis L */
-  //def dX(beam: WLBeam, dXv: Double, dZv: Double): Double = dXOf(beam, dXv, dZv) // L
-
-  /** Analysis M */
-  //def dZ(beam: WLBeam, dXv: Double, dZv: Double): Double = dZOf(beam, dXv, dZv) // M
-
   /** Analysis J */
-  def BB_Xp(beam: WLBeam, dXv: Double, dZv: Double): Double = BB_X(beam) + dXOf(beam, dXv, dZv) // J
+  def BB_Xp(beam: WLBeam, dX: Double, dZ: Double): Double = BB_X(beam) + dXOf(beam, dX, dZ) // J
 
   /** Analysis K */
-  def BB_Zp(beam: WLBeam, dXv: Double, dZv: Double): Double = BB_Z(beam) + dZOf(beam, dXv, dZv) // K
+  def BB_Zp(beam: WLBeam, dX: Double, dZ: Double): Double = BB_Z(beam) + dZOf(beam, dX, dZ) // K
 
   /** Analysis P BB-X" */
-  def BB_Xpp(beam: WLBeam, dXv: Double, dZv: Double, Table_X: Double): Double = BB_Xp(beam, dXv, dZv) - Table_X
+  def BB_Xpp(beam: WLBeam, dX: Double, dZ: Double, Table_X: Double): Double = BB_Xp(beam, dX, dZ) - Table_X
 
   /** Analysis Q BB-X" */
-  def BB_Zpp(beam: WLBeam, dXv: Double, dZv: Double, Table_Z: Double): Double = BB_Zp(beam, dXv, dZv) - Table_Z
+  def BB_Zpp(beam: WLBeam, dX: Double, dZ: Double, Table_Z: Double): Double = BB_Zp(beam, dX, dZ) - Table_Z
 
   /** Analysis P BB-Z" */
-  def BB_Rpp(beam: WLBeam, dXv: Double, dZv: Double, Table_X: Double, Table_Z: Double): Double = {
-    val x = BB_Xpp(beam, dXv, dZv, Table_X)
-    val z = BB_Zpp(beam, dXv, dZv, Table_Z)
+  def BB_Rpp(beam: WLBeam, dX: Double, dZ: Double, Table_X: Double, Table_Z: Double): Double = {
+    val x = BB_Xpp(beam, dX, dZ, Table_X)
+    val z = BB_Zpp(beam, dX, dZ, Table_Z)
     (x * x) + (z * z)
   }
 
-  def K12(dXv: Double, dZv: Double): Double = {
-    val BB_XpList = beamList.map(beam => BB_Xp(beam, dXv, dZv))
-    val BB_ZpList = beamList.map(beam => BB_Zp(beam, dXv, dZv))
+  def K12(dX: Double, dZ: Double): Double = {
+    val BB_XpList = beamList.map(beam => BB_Xp(beam, dX, dZ))
+    val BB_ZpList = beamList.map(beam => BB_Zp(beam, dX, dZ))
 
     val xRange = BB_XpList.max - BB_XpList.min
     val zRange = BB_ZpList.max - BB_ZpList.min
@@ -90,32 +84,45 @@ case class WLTable(
   }
 
   /**
-   * Calculate the minimum R-squared value.
+   * Calculate the minimum R-squared value.  This is spreadsheet cell Analysis R12.
    *
-   * @param dXv     dXv
-   * @param dZv     dZv
+   * @param dX      dX
+   * @param dZ      dZ
    * @param Table_X Table_X
    * @param Table_Z Table_Z
    * @return
    */
-  def minSquareOfBBDisplacement(dXv: Double, dZv: Double, Table_X: Double, Table_Z: Double): Double = beamList.map(beam => BB_Rpp(beam, dXv, dZv, Table_X, Table_Z)).min
+  def minSquareOfBBDisplacement(dX: Double, dZ: Double, Table_X: Double, Table_Z: Double): Double = beamList.map(beam => BB_Rpp(beam, dX, dZ, Table_X, Table_Z)).max
 
+  if (true) { // TODO rm
+
+    val list = beamList.map(beam => BB_Rpp(beam, 0.183972235121236, 0.332920649471168, 0.332018792527814, 0.323882986957228))
+
+    Trace.trace(s"""Min List: \n    ${list.mkString("\n    ")}""")
+
+    val j = minSquareOfBBDisplacement(0.183972235121236, 0.332920649471168, 0.332018792527814, 0.323882986957228)
+    Trace.trace(s"R12 min: $j")
+    Trace.trace()
+    WLTableGradientDescent.findMin(this)
+    Trace.trace()
+  }
 
   /**
    * Optimize the minimum of the maximum R-squared values
    *
-   * @param dXv     dXv
-   * @param dZv     dZv
+   * @param dX      dX
+   * @param dZ      dZ
    * @param Table_X Table_X
    * @param Table_Z Table_Z
    * @return
    */
   def minMax(): Double = {
 
-    //  dXv: Double, dZv: Double, Table_X: Double, Table_Z: Double): Double = {
+    //  dX: Double, dZ: Double, Table_X: Double, Table_Z: Double): Double = {
 
     0.0 // TODO
   }
+
 
   Trace.trace("T__0: " + T__0.get.wl)
   if (T_30.isDefined) Trace.trace("T_30: " + T_30.get.wl)

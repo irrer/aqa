@@ -6,6 +6,7 @@ import edu.umro.ScalaUtil.DicomUtil
 import org.apache.poi.xssf.usermodel.XSSFCell
 import org.aqa.db.WinstonLutz
 import org.aqa.AnonymizeUtil
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.numericFormat
 
 /**
   * Generalized column.  This supports putting values into spreadsheet form, both as HTML and XLSX.
@@ -90,7 +91,7 @@ class WLColumnAlNumeric(name: String, tag: AttributeTag) extends WLColumn(name) 
 
   override def toText(wl: WinstonLutz, al: AttributeList): String = toVal(al).toString
 
-  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toVal(al).formatted("%12.2f").trim
+  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toVal(al).formatted(numericFormat).trim
 
   override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = cell.setCellValue(toVal(al))
 }
@@ -152,7 +153,7 @@ class WlColumnWlNumeric(name: String, toVal: WinstonLutz => Double) extends WLCo
 
   override def toText(wl: WinstonLutz, al: AttributeList): String = toVal(wl).toString
 
-  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toVal(wl).formatted("%12.2f").trim
+  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toVal(wl).formatted(numericFormat).trim
 
   override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = cell.setCellValue(toVal(wl))
 }

@@ -24,6 +24,9 @@ object WLXlsxUtil extends Logging {
   val cssPreprocessLeft: String = "CSSPreprocessLeft"
   val cssPreprocessRight: String = "CSSPreprocessRight"
 
+  // val numericFormat = "%12.2f" // TODO put back
+  val numericFormat = "%16.10f" // TODO rm
+
   def makeRowIndex(index: Int): Elem = {
     <td class={cssIndex}>{index}</td>
   }
@@ -126,7 +129,7 @@ object WLXlsxUtil extends Logging {
     * @param value Round this.
     * @return Rounded value.
     */
-  def rnd(value: Double): Double = (value * 100).round / 100.0
+  def rnd(value: Double): Double = value // (value * 100).round / 100.0  // shut off rounding
 
   /**
     * Flip an angle
