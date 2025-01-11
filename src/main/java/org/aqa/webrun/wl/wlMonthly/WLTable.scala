@@ -103,8 +103,7 @@ case class WLTable(
     val j = minSquareOfBBDisplacement(0.183972235121236, 0.332920649471168, 0.332018792527814, 0.323882986957228)
     Trace.trace(s"R12 min: $j")
     Trace.trace()
-    WLTableGradientDescent.findMin(this)
-    Trace.trace()
+    val min = new WLTableGradientDescent(this).findMin() // TODO save this
   }
 
   /**

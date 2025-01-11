@@ -2,163 +2,123 @@ package org.aqa.webrun.wl.wlMonthly
 
 import edu.umro.ScalaUtil.Trace
 
+import scala.annotation.tailrec
+
 /**
   * Optimize the minimum of the maximum R-squared values
-  *
-  * @param dX     dX
-  * @param dZ     dZ
-  * @param tableX tableX
-  * @param tableZ tableZ
-  * @return
   */
 
-object WLTableGradientDescent {
+class WLTableGradientDescent(table: WLTable) {
 
-  /** The number of increments in each dimension to explore.  The smaller this number is, the
-    *  greater chance that a local minimum will be missed.  The larger it is, the greater the
-    *  execution time.
-    *
-    * Compute time is a multiple of n**4, so 10  produces 10,000 calculations.
-    */
-  private var degree: Int = 32 // TODO change from var to val
+  private val initialCubeLen: Double = 0.5
 
-  /** Initial width of search field in mm. */
-  private val initialDepth: Int = 40
+  private val initialDepth: Int = 50
 
-  /** Initial width of search field in mm. */
-  private val initialWidth_mm: Double = 3.0
-
-  /** For each successive approximation, reduce the search area by this factor. */
-  private val reductionFactor: Double = 2.0
-
-  /** For each successive approximation, reduce the search area by this factor. */
-  private val maxBest: Int = 1
+  private val degree: Int = 31
 
   /**
-    * A segment of one dimension in hyperspace.
-    * @param center The position of the center of the range.
-    * @param len The length of the range.
-    */
-  private case class Dim(center: Double, len: Double) {
-    // lower limit of coordinate space
-    private val lo = center - (len / 2)
-
-    // separation between adjacent points
-    private val separation = len / degree
-
-    private def coordinateToValue(coordinate: Int) = center + (separation * coordinate)
-
-    /** Absolute position of coordinates in real space.  Provides translation of index to position. */
-    val list: Seq[Double] = (0 until degree).map(coordinateToValue)
-  }
-
-  private class Best {
-
-    val best: scala.collection.mutable.ArrayBuffer[WLTablePoint] = scala.collection.mutable.ArrayBuffer[WLTablePoint]()
-
-    def put(point: WLTablePoint): Unit =
-      best.synchronized {
-        val j = best.lastOption
-        if (best.isEmpty || (point.minSquare < best.last.minSquare)) {
-          best.append(point)
-          val newBest = best.sortBy(_.minSquare).take(maxBest)
-          best.clear()
-          best.appendAll(newBest)
-        }
-      }
-
-    def goodEnough(minSq: Double): Boolean =
-      best.synchronized {
-        val j = best.lastOption
-        val good = best.isEmpty || (minSq < best.last.minSquare)
-        good
-      }
-
-    def entireList: Seq[WLTablePoint] = best.synchronized { best.toSeq }
-
-    def getVeryBest: WLTablePoint = best.synchronized { best.head }
-
-  }
-
-  /* private case class SearchVolume( dX: Dim, dZ: Dim, tableX: Dim, tableZ: Dim ) { def minMax(): Double = { 0.0 // xODO } val dXMin = ??? } */
-
-  /**
-    * Optimize the minimum of the maximum R-squared values
+    * A point in the 4 dimensional hyperspace being searched.
     *
-    * @param dXi     dX index
-    * @param dZi     dZ index
-    * @param tableXi tableX index
-    * @param tableZi tableZ index
+    * @param dX     dX coordinate
+    * @param dZ     dZ coordinate
+    * @param tableX tableX coordinate
+    * @param tableZ tableZ coordinate
     * @return
     */
-
-  private val fullRange: Seq[Int] = 0 until degree
-  private val subRange: Seq[Int] = fullRange.tail.dropRight(1)
-
-  case class WLTablePoint(dX: Double, dZ: Double, tableX: Double, tableZ: Double, table: WLTable) {
+  private class WLTablePointLocal(dX: Double, dZ: Double, tableX: Double, tableZ: Double) extends WLTablePoint(dX, dZ, tableX, tableZ) {
     val minSquare: Double = table.minSquareOfBBDisplacement(dX, dZ, tableX, tableZ)
-    override def toString(): String = {
 
+    override def toString: String = {
       def fmt(d: Double): String = d.formatted("%19.16f")
-
-      s"dX: ${fmt(dX)}    dZ: ${fmt(dZ)}    tableX: ${fmt(tableX)}    tableZ: ${fmt(tableZ)} => ${fmt(minSquare)}"
+      super.toString + s" => ${fmt(minSquare)}"
     }
   }
 
-  // list of offsets for coordinate adjacent to a central point
-  private val offsetList: Seq[(Int, Int, Int, Int)] = {
-    val plusMinus1 = Seq(-1, 0, 1)
-    for ( //
-      dx <- plusMinus1; //
-      dz <- plusMinus1; //
-      tableX <- plusMinus1; //
-      tableZ <- plusMinus1 //
-      if (dx, dz, tableX, tableZ) != (0, 0, 0, 0) // do not include center point
-    ) yield (dx, dz, tableX, tableZ)
-  }
+  private var bestPoint: WLTablePointLocal = new WLTablePointLocal(100, 100, 100, 100)
 
-  def findMin(table: WLTable): WLTablePoint = {
+  private def updateBestPoint(point: WLTablePointLocal): Unit =
+    bestPoint.synchronized {
+      if (point.minSquare < bestPoint.minSquare)
+        bestPoint = point
+    }
 
-    val bestList = new Best
+  private case class WalkingCube(center: WLTablePointLocal, len: Double, id: Int) {
 
-    def finder(dXp: Dim, dZp: Dim, tableXp: Dim, tableZp: Dim, depth: Int): Unit = {
+    private val radius = len / 2
 
-      Trace.trace("Searching array")
+    private val increment = len / (degree - 1)
 
-      fullRange.par.foreach(dXi => {
-        fullRange.foreach(dZi => {
-          fullRange.foreach(tableXi => {
-            fullRange.foreach(tableZi => {
-              if (bestList.goodEnough(table.minSquareOfBBDisplacement(dXp.list(dXi), dZp.list(dZi), tableXp.list(tableXi), tableZp.list(tableZi)))) {
-                bestList.put(WLTablePoint(dXp.list(dXi), dZp.list(dZi), tableXp.list(tableXi), tableXp.list(tableZi), table))
-                // Trace.trace(s"put best: ${bestList.getVeryBest}")
-              }
-            })
+    private val hi: Int = (degree - 1) / 2
+
+    private val incrementList = (-hi to hi).map(_ * increment)
+
+    private var min: WLTablePointLocal = new WLTablePointLocal(10, 10, 10, 10)
+
+    def near(a: Double, b: Double): Boolean = {
+      (a-b).abs < 0.0001
+    }
+
+    incrementList.foreach(dXInc => { //
+      val dX = center.dX + dXInc
+      incrementList.foreach(dZInc => { //
+        val dZ = center.dZ + dZInc
+        incrementList.foreach(tableXInc => { //
+          val tableX = center.tableX + tableXInc
+          incrementList.foreach(tableZInc => { //
+            val tableZ = center.tableZ + tableZInc
+            val p = new WLTablePointLocal(dX, dZ, tableX, tableZ)
+            if (p.minSquare < min.minSquare) min = p
           })
         })
       })
+    })
 
-      if (depth > 0) {
-        val width = dXp.len / reductionFactor
-        Trace.trace(s"depth: $depth    width: $width    best: ${bestList.getVeryBest}")
-        bestList.entireList.foreach(p =>
-          finder( //
-            Dim(p.dX, width), //
-            Dim(p.dZ, width), //
-            Dim(p.tableX, width), //
-            Dim(p.tableZ, width), //
-            depth - 1
+    updateBestPoint(min)
+
+    def nextCube(nextLen: Double): WalkingCube = WalkingCube(min, nextLen, id)
+  }
+
+  private def makeInitialCubeCenterList: Seq[WLTablePointLocal] = {
+
+    val cList: Seq[Double] = Seq(-1.0, 1.0)
+
+    val list = //
+      cList.flatMap(dX => //
+        cList.flatMap(dZ => //
+          cList.flatMap(tableX => //
+            cList.map(tableZ => //
+              new WLTablePointLocal(dX, dZ, tableX, tableZ)
+            )
           )
         )
-      }
+      )
+    list
+  }
+
+  /**
+    * Recursively walk a cube, searching for a better solution.
+    * @param cube Search here
+    * @param depth Current depth of recursion.
+    */
+  @tailrec
+  private def finder(cube: WalkingCube, depth: Int): Unit = {
+    if (depth > 0) {
+      Trace.trace(s"""depth: ${depth.formatted("%3d")}    len: ${cube.len.formatted("%10.8f")}""")
+      finder(cube.nextCube(cube.len * 0.9), depth - 1)
     }
+  }
 
-    Trace.trace("Done searching")
+  def findMin(): WLTablePoint = {
+    val start = System.currentTimeMillis()
+    Trace.trace()
+    val initialCubeCenterList =  Seq(new WLTablePointLocal(0, 0, 0, 0)) // makeInitialCubeCenterList
 
-    finder(Dim(0, initialWidth_mm), Dim(0, initialWidth_mm), Dim(0, initialWidth_mm), Dim(0, initialWidth_mm), initialDepth)
+    Trace.trace()
+    initialCubeCenterList.indices.par.foreach(index => finder(WalkingCube(initialCubeCenterList(index), initialCubeLen, index), initialDepth))
 
-    Trace.trace(s"very best: ${bestList.getVeryBest}")
+    val elapsed = System.currentTimeMillis() - start
+    Trace.trace(s"Elapsed ms: $elapsed     bestPoint: $bestPoint")
 
-    bestList.getVeryBest
+    bestPoint.asInstanceOf[WLTablePoint]
   }
 }
