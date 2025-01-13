@@ -142,12 +142,22 @@ object DbSetup extends Logging {
     * Initialize database by creating tables in dependency order.
     */
   def init: Boolean = {
+    val retryTime_sec = 60.0
+    val retryTime_ms: Long = (retryTime_sec * 1000).round
     logger.info("Initializing connection to database")
     Config.validate // force configuration to be read
 
     logger.info("List of required tables in reverse order of creation:\n    " + tableQueryList.reverse.map(table => table.shaped.value.tableName).mkString("\n    "))
 
-    tableQueryList.foreach(q => Db.createTableIfNonexistent(q.asInstanceOf[TableQuery[Table[_]]]))
+    try {
+      tableQueryList.foreach(q => Db.createTableIfNonexistent(q.asInstanceOf[TableQuery[Table[_]]]))
+    } catch {
+      case t: Throwable =>
+        logger.fatal(s"Unable to connect with database.  Will retry in $retryTime_sec seconds.   Exception: ${fmtEx(t)}")
+        Thread.sleep(retryTime_ms)
+        init
+    }
+
     ensureAdminUser
     logger.info("Done initializing connection to database")
     true

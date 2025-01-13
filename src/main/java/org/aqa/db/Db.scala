@@ -162,10 +162,10 @@ object Db extends Logging {
       } catch {
         case ex: Throwable =>
           val stackTrace = fmtEx(new RuntimeException("Db.run stack trace from Slick internal error"))
-          val msg = "Error from Slick: " + fmtEx(ex) + "\nAQA source stack trace:" + stackTrace
-          logger.warn(msg)
-          throw new RuntimeException(msg)
-
+          val msg = "Restarting AQA.   Error from Slick database connection: " + fmtEx(ex) + "\nAQA source stack trace:" + stackTrace
+          logger.fatal(msg)
+          System.exit(2) // restart system
+          throw new RuntimeException(msg) // never executed, but makes compiler happy
       }
 
     }
