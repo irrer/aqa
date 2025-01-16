@@ -35,7 +35,7 @@ class WLTableGradientDescent(table: WLTable) extends Logging {
     val minSquare: Double = table.minSquareOfBBDisplacement(dX, dZ, tableX, tableZ)
 
     override def toString: String = {
-      def fmt(d: Double): String = d.formatted("%19.16f")
+      def fmt(d: Double): String = d.formatted("%21.18f")
       super.toString + s"    min R^2: ${fmt(minSquare)}"
     }
   }
