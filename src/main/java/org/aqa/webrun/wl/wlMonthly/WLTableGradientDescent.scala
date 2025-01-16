@@ -1,6 +1,6 @@
 package org.aqa.webrun.wl.wlMonthly
 
-import edu.umro.ScalaUtil.Trace
+import org.aqa.Logging
 
 import scala.annotation.tailrec
 
@@ -8,13 +8,19 @@ import scala.annotation.tailrec
   * Optimize the minimum of the maximum R-squared values
   */
 
-class WLTableGradientDescent(table: WLTable) {
+class WLTableGradientDescent(table: WLTable) extends Logging {
 
-  private val initialCubeLen: Double = 0.5
+  /** Initial size (edge length) of hypercube in mm. */
+  private val initialCubeLen_mm: Double = 0.5
 
-  private val initialDepth: Int = 50
+  /** Stop after this many iterations, regardless of if the degree of precision is sufficient. */
+  private val maxNumberOfIterations: Int = 100000
 
-  private val degree: Int = 31
+  /** For each iteration, multiply the cube length by this amount. */
+  private val cubeReductionFactor: Double = 0.999
+
+  /** Stop iterating if the cube length becomes this small, indicating that the result is sufficiently precise. */
+  private val precision: Double = 1.0e-9
 
   /**
     * A point in the 4 dimensional hyperspace being searched.
@@ -30,7 +36,7 @@ class WLTableGradientDescent(table: WLTable) {
 
     override def toString: String = {
       def fmt(d: Double): String = d.formatted("%19.16f")
-      super.toString + s" => ${fmt(minSquare)}"
+      super.toString + s"    min R^2: ${fmt(minSquare)}"
     }
   }
 
@@ -44,19 +50,14 @@ class WLTableGradientDescent(table: WLTable) {
 
   private case class WalkingCube(center: WLTablePointLocal, len: Double, id: Int) {
 
-    private val radius = len / 2
+    private val increment = len / 2
 
-    private val increment = len / (degree - 1)
-
-    private val hi: Int = (degree - 1) / 2
-
-    private val incrementList = (-hi to hi).map(_ * increment)
+    // private val incrementList = (-hi to hi).map(_ * increment)
+    private val incrementList = Seq(-increment, 0.0, increment)
 
     private var min: WLTablePointLocal = new WLTablePointLocal(10, 10, 10, 10)
 
-    def near(a: Double, b: Double): Boolean = {
-      (a-b).abs < 0.0001
-    }
+    def getMin: WLTablePointLocal = min
 
     incrementList.foreach(dXInc => { //
       val dX = center.dX + dXInc
@@ -78,46 +79,31 @@ class WLTableGradientDescent(table: WLTable) {
     def nextCube(nextLen: Double): WalkingCube = WalkingCube(min, nextLen, id)
   }
 
-  private def makeInitialCubeCenterList: Seq[WLTablePointLocal] = {
-
-    val cList: Seq[Double] = Seq(-1.0, 1.0)
-
-    val list = //
-      cList.flatMap(dX => //
-        cList.flatMap(dZ => //
-          cList.flatMap(tableX => //
-            cList.map(tableZ => //
-              new WLTablePointLocal(dX, dZ, tableX, tableZ)
-            )
-          )
-        )
-      )
-    list
-  }
-
   /**
     * Recursively walk a cube, searching for a better solution.
     * @param cube Search here
-    * @param depth Current depth of recursion.
+    * @param iteration Current iteration of recursion.  Each iteration increases the precision of the result.
     */
   @tailrec
-  private def finder(cube: WalkingCube, depth: Int): Unit = {
-    if (depth > 0) {
-      Trace.trace(s"""depth: ${depth.formatted("%3d")}    len: ${cube.len.formatted("%10.8f")}""")
-      finder(cube.nextCube(cube.len * 0.9), depth - 1)
+  private def finder(cube: WalkingCube, iteration: Int): Unit = {
+    if ((iteration > 0) && (cube.len > precision)) {
+      finder(cube.nextCube(cube.len * cubeReductionFactor), iteration - 1)
+    } else {
+      val iterationsPerformed = "iterations performed: " + (maxNumberOfIterations - iteration)
+      val precision = "Result is precise to within " + cube.len.formatted("%20.17f") + " mm"
+      val valuesText = "Calculated values: " + cube.getMin.toString
+      logger.info(s"$iterationsPerformed    $precision    $valuesText")
     }
   }
 
   def findMin(): WLTablePoint = {
     val start = System.currentTimeMillis()
-    Trace.trace()
-    val initialCubeCenterList =  Seq(new WLTablePointLocal(0, 0, 0, 0)) // makeInitialCubeCenterList
+    val initialCubeCenterList = Seq(new WLTablePointLocal(0, 0, 0, 0)) // makeInitialCubeCenterList
 
-    Trace.trace()
-    initialCubeCenterList.indices.par.foreach(index => finder(WalkingCube(initialCubeCenterList(index), initialCubeLen, index), initialDepth))
+    initialCubeCenterList.indices.par.foreach(index => finder(WalkingCube(initialCubeCenterList(index), initialCubeLen_mm, index), maxNumberOfIterations))
 
     val elapsed = System.currentTimeMillis() - start
-    Trace.trace(s"Elapsed ms: $elapsed     bestPoint: $bestPoint")
+    logger.info(s"Finished gradient descent.   Elapsed ms: $elapsed     bestPoint: $bestPoint")
 
     bestPoint.asInstanceOf[WLTablePoint]
   }
