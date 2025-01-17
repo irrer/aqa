@@ -109,32 +109,32 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
     } else {
       val beam = beamOpt.get
 
-      val dX = table.dXOf(beam, table.dXT__0_Optimized, table.dZT__0_Optimized)
-      val dZ = table.dZOf(beam, table.dXT__0_Optimized, table.dZT__0_Optimized)
+      val dX = table.dXOf(beam, table.get_dXT__0_Optimized, table.get_dZT__0_Optimized)
+      val dZ = table.dZOf(beam, table.get_dXT__0_Optimized, table.get_dZT__0_Optimized)
 
       val tableAngle0 = beam.tableAngle == 0
 
       val L = //                             L dX
         if (tableAngle0)
-          toHtmlYellow(dX)
+          toHtmlYellow(table.get_dXT__0_Optimized)
         else
           toHtmlPowderBlue(dX)
 
       val M = //                             M dX
         if (tableAngle0)
-          toHtmlYellow(dZ)
+          toHtmlYellow(table.get_dZT__0_Optimized)
         else
           toHtmlPowderBlue(dZ)
 
       val N = //                             N Table-X
         if (tableAngle0)
-          toHtmlYellow(table.Table_X_Optimized)
+          toHtmlYellow(table.get_Table_X_Optimized)
         else
           blankCell
 
       val O = //                             N Table-Z
         if (tableAngle0)
-          toHtmlYellow(table.Table_Z_Optimized)
+          toHtmlYellow(table.get_Table_Z_Optimized)
         else
           blankCell
 
@@ -148,15 +148,15 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
         toHtml(WLTable.CA_Z(beam)), /*           G CA-Z */
         toHtml(table.BB_X(beam)), /*             H BB-X */
         toHtml(table.BB_Z(beam)), /*             I BB-Z */
-        toHtml(table.BB_Xp(beam, table.dXT__0_Optimized, table.dZT__0_Optimized)), /*            J BB-X' */
-        toHtml(table.BB_Zp(beam, table.dXT__0_Optimized, table.dZT__0_Optimized)), /*            K BB-Z' */
+        toHtml(table.BB_Xp(beam, table.get_dXT__0_Optimized, table.get_dZT__0_Optimized)), /*            J BB-X' */
+        toHtml(table.BB_Zp(beam, table.get_dXT__0_Optimized, table.get_dZT__0_Optimized)), /*            K BB-Z' */
         L, /*                                    L dX */
         M, /*                                    M dZ */
         N, /*                                    N Table-X */
         O, /*                                    O Table-Z */
-        toHtmlPowderBlue(table.BB_Xpp(beam, table.Table_X_Optimized, table.dZT__0_Optimized, table.Table_X_Optimized)), /* P BB-X" */
-        toHtmlPowderBlue(table.BB_Zpp(beam, table.dXT__0_Optimized, table.dZT__0_Optimized, table.Table_Z_Optimized)), /* Q BB-Z" */
-        toHtmlPowderBlue(table.BB_Rpp(beam, table.dXT__0_Optimized, table.dZT__0_Optimized, table.Table_X_Optimized, table.Table_Z_Optimized)) /*  R BB-R"^2 */
+        toHtmlPowderBlue(table.BB_Xpp(beam, table.get_Table_X_Optimized, table.get_dZT__0_Optimized, table.get_Table_X_Optimized)), /* P BB-X" */
+        toHtmlPowderBlue(table.BB_Zpp(beam, table.get_dXT__0_Optimized, table.get_dZT__0_Optimized, table.get_Table_Z_Optimized)), /* Q BB-Z" */
+        toHtmlPowderBlue(table.BB_Rpp(beam, table.get_dXT__0_Optimized, table.get_dZT__0_Optimized, table.get_Table_X_Optimized, table.get_Table_Z_Optimized)) /*  R BB-R"^2 */
       ) ++ blankCells(6) /*                      S to X */
     }
   }
@@ -257,9 +257,9 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
       {toHtml(monthly.mlcDyG_90_C_90) /*                    R5 */}
       {blankCells(2) /*                                     S5 to T5 */}
       {toHtml("Table axis relative to BB at table zero") /* U5 */}
-      {toHtml(table.Table_X_Optimized) /*                             V5 */}
+      {toHtml(table.get_Table_X_Optimized) /*                             V5 */}
       {blankCell /*                                         S5 to T5 */}
-      {toHtml(table.Table_Z_Optimized) /*                             X5 */}
+      {toHtml(table.get_Table_Z_Optimized) /*                             X5 */}
     </tr>
   }
 
@@ -349,10 +349,10 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
     <tr>
       {WLXlsxUtil.makeRowIndex(12)}
       {blankCells(10) /* A12 to J12*/}
-      {toHtml(table.K12(table.dXT__0_Optimized, table.dZT__0_Optimized)) /* K12 */}
+      {toHtml(table.K12(table.get_dXT__0_Optimized, table.get_dZT__0_Optimized)) /* K12 */}
       {blankCells(5) /* L12 to P12*/}
       {toHtmlPowderBlue("Max square of BB displacement" + WebUtil.rightBoldArrow) /* Q12 */}
-      {toHtmlPeach(table.minSquareOfBBDisplacement(table.dXT__0_Optimized, table.dZT__0_Optimized, table.Table_X_Optimized, table.Table_Z_Optimized)) /* R12 */}
+      {toHtmlPeach(table.get_RSquared_Optimized) /* R12 */}
       {toHtml("Solve for smallest max (Couch Isocentricity)") /* S12 */}
       {blankCells(4) /* T12 to X12*/}
     </tr>

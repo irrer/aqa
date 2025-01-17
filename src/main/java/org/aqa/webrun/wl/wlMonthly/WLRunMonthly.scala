@@ -27,7 +27,7 @@ object WLRunMonthly {
     // only do this if the required data is there.
     if (monthly.isDefined && table.isDefined) {
 
-      val ssFileName = WLData.makeSpreadsheet(extendedData, runReq, pairList)
+      val ssFileName = WLData.makeSpreadsheet(extendedData, pairList, table.get)
       val htmlFileName = SSHtml.make(extendedData, pairList, monthly.get, table.get)
 
       val elem = {

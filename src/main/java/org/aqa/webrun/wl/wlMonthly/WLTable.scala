@@ -27,16 +27,28 @@ case class WLTable(
   ).flatten
 
   /** Analysis L14 */
-  var dXT__0_Optimized: Double = 0.183972235121236 // TODO determine proper seed value
+  private var dXT__0_Optimized: Double = 0.0
+
+  def get_dXT__0_Optimized: Double = dXT__0_Optimized
 
   /** Analysis M14 */
-  var dZT__0_Optimized: Double = 0.332920649471168 // TODO determine proper seed value
+  private var dZT__0_Optimized: Double = 0.0
+
+  def get_dZT__0_Optimized: Double = dZT__0_Optimized
 
   /** Analysis L14 */
-  var Table_X_Optimized: Double = 0.332018792527814 // TODO determine proper seed value
+  private var Table_X_Optimized: Double = 0.0
+
+  def get_Table_X_Optimized: Double = Table_X_Optimized
 
   /** Analysis M14 */
-  var Table_Z_Optimized: Double = 0.323882986957228 // TODO determine proper seed value
+  private var Table_Z_Optimized: Double = 0.0
+
+  def get_Table_Z_Optimized: Double = Table_Z_Optimized
+
+  private var RSquared_Optimized: Double = 0.0
+
+  def get_RSquared_Optimized: Double = RSquared_Optimized
 
   /** Analysis L */
   def dXOf(beam: WLBeam, dX: Double, dZ: Double): Double = {
@@ -90,7 +102,7 @@ case class WLTable(
    * @param dZ      dZ
    * @param Table_X Table_X
    * @param Table_Z Table_Z
-   * @return
+   * @return Minimum R**2
    */
   def minSquareOfBBDisplacement(dX: Double, dZ: Double, Table_X: Double, Table_Z: Double): Double = beamList.map(beam => BB_Rpp(beam, dX, dZ, Table_X, Table_Z)).max
 
@@ -103,25 +115,25 @@ case class WLTable(
     val j = minSquareOfBBDisplacement(0.183972235121236, 0.332920649471168, 0.332018792527814, 0.323882986957228)
     Trace.trace(s"R12 min: $j")
     Trace.trace()
-    val min = new WLTableGradientDescent(this).findMin() // TODO save this
+    val min = new WLTableGradientDescent(this).findMin()
   }
 
   /**
-   * Optimize the minimum of the maximum R-squared values
-   *
-   * @param dX      dX
-   * @param dZ      dZ
-   * @param Table_X Table_X
-   * @param Table_Z Table_Z
-   * @return
+   * Optimize the minimum of the maximum R-squared values using gradient descent.
    */
-  def minMax(): Double = {
+  private def optimizeRSquared(): Unit = {
 
-    //  dX: Double, dZ: Double, Table_X: Double, Table_Z: Double): Double = {
+    val optimizedPoint = new WLTableGradientDescent(this).findMin()
+    RSquared_Optimized = minSquareOfBBDisplacement(optimizedPoint.dX, optimizedPoint.dZ, optimizedPoint.tableX, optimizedPoint.tableZ)
 
-    0.0 // TODO
+    dXT__0_Optimized = optimizedPoint.dX
+    dZT__0_Optimized = optimizedPoint.dZ
+    Table_X_Optimized = optimizedPoint.tableX
+    Table_Z_Optimized = optimizedPoint.tableZ
   }
 
+  // Perform optimization
+  optimizeRSquared()
 
   Trace.trace("T__0: " + T__0.get.wl)
   if (T_30.isDefined) Trace.trace("T_30: " + T_30.get.wl)
