@@ -19,7 +19,7 @@ object WLData extends Logging {
   /** Last row of Data sheet content (inclusive). */
   private val lastRowNum = 17
 
-  def makeSpreadsheet(extendedData: ExtendedData, pairList: Seq[WLBeam], table: WLTable): String = {
+  def makeSpreadsheet(extendedData: ExtendedData, pairList: Seq[WLBeam], table: WLTable, collimator: WLCollimator): String = {
 
     val workbook = new XSSFWorkbook(Config.WLMonthlyTemplateFile)
 
@@ -57,7 +57,7 @@ object WLData extends Logging {
     }
 
     /**
-      * Update the values that are calculated using gradient descent
+      * Update the values in the Analysis sheet that are calculated using gradient descent
       */
     def updateAnalysisSheet(): Unit = {
       val sheetAnalysis = workbook.getSheetAt(3)
@@ -69,11 +69,23 @@ object WLData extends Logging {
       row14.getCell(14).setCellValue(table.get_Table_Z_Optimized)
     }
 
+    /**
+      * Update the values in the Collimator sheet that are calculated using gradient descent
+      */
+    def updateCollimatorSheet(): Unit = {
+      val sheetAnalysis = workbook.getSheetAt(4)
+
+      val row4 = sheetAnalysis.getRow(3) // zero relative addressing 3 -> 4
+      row4.getCell(7).setCellValue(collimator.getColl_X_Optimized)
+      row4.getCell(8).setCellValue(collimator.getColl_Z_Optimized)
+    }
+
     def update(): Unit = {
       // turn on auto sizing for all columns
       updateTitleRow()
       updateContentRowList()
       updateAnalysisSheet()
+      updateCollimatorSheet()
     }
 
     update()

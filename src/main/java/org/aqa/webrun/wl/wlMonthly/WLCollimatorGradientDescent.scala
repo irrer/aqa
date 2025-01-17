@@ -8,7 +8,7 @@ import scala.annotation.tailrec
   * Optimize the minimum of the maximum R-squared values
   */
 
-class WLTableGradientDescent(table: WLTable) extends Logging {
+class WLCollimatorGradientDescent(collimator: WLCollimator) extends Logging {
 
   /** Initial size (edge length) of hypercube in mm. */
   private val initialCubeLen_mm: Double = 0.5
@@ -23,54 +23,46 @@ class WLTableGradientDescent(table: WLTable) extends Logging {
   private val precision: Double = 1.0e-9
 
   /**
-    * A point in the 4 dimensional hyperspace being searched.
+    * A point in the 2-dimensional space being searched.
     *
-    * @param dX     dX coordinate
-    * @param dZ     dZ coordinate
-    * @param tableX tableX coordinate
-    * @param tableZ tableZ coordinate
+    * @param Coll_X     Coll-X coordinate
+    * @param Coll_Z     Coll-Z coordinate
     * @return
     */
-  private class WLTablePointLocal(dX: Double, dZ: Double, tableX: Double, tableZ: Double) extends WLTablePoint(dX, dZ, tableX, tableZ) {
-    val minSquare: Double = table.minSquareOfBBDisplacement(dX, dZ, tableX, tableZ)
+  private class WLCollimatorPointLocal(Coll_X: Double, Coll_Z: Double) extends WLCollimatorPoint(Coll_X, Coll_Z) {
+    val minSquare: Double = collimator.MinCA_Rpp(Coll_X, Coll_Z)
 
     override def toString: String = {
       def fmt(d: Double): String = d.formatted("%21.18f")
-      super.toString + s"    min R^2: ${fmt(minSquare)}"
+      super.toString + s"    min R: ${fmt(minSquare)}"
     }
   }
 
-  private var bestPoint: WLTablePointLocal = new WLTablePointLocal(100, 100, 100, 100)
+  private var bestPoint: WLCollimatorPointLocal = new WLCollimatorPointLocal(-1, -1)
 
-  private def updateBestPoint(point: WLTablePointLocal): Unit =
+  private def updateBestPoint(point: WLCollimatorPointLocal): Unit =
     bestPoint.synchronized {
       if (point.minSquare < bestPoint.minSquare)
         bestPoint = point
     }
 
-  private case class WalkingCube(center: WLTablePointLocal, len: Double, id: Int) {
+  private case class WalkingCube(center: WLCollimatorPointLocal, len: Double, id: Int) {
 
     private val increment = len / 2
 
     // private val incrementList = (-hi to hi).map(_ * increment)
     private val incrementList = Seq(-increment, 0.0, increment)
 
-    private var min: WLTablePointLocal = new WLTablePointLocal(0, 0, 0, 0)
+    private var min: WLCollimatorPointLocal = new WLCollimatorPointLocal(10, 10)
 
-    def getMin: WLTablePointLocal = min
+    def getMin: WLCollimatorPointLocal = min
 
-    incrementList.foreach(dXInc => { //
-      val dX = center.dX + dXInc
-      incrementList.foreach(dZInc => { //
-        val dZ = center.dZ + dZInc
-        incrementList.foreach(tableXInc => { //
-          val tableX = center.tableX + tableXInc
-          incrementList.foreach(tableZInc => { //
-            val tableZ = center.tableZ + tableZInc
-            val p = new WLTablePointLocal(dX, dZ, tableX, tableZ)
-            if (p.minSquare < min.minSquare) min = p
-          })
-        })
+    incrementList.foreach(Coll_X_Inc => { //
+      val Coll_X = center.Coll_X + Coll_X_Inc
+      incrementList.foreach(Coll_Z_Inc => { //
+        val Coll_Z = center.Coll_Z + Coll_Z_Inc
+        val p = new WLCollimatorPointLocal(Coll_X, Coll_Z)
+        if (p.minSquare < min.minSquare) min = p
       })
     })
 
@@ -96,15 +88,15 @@ class WLTableGradientDescent(table: WLTable) extends Logging {
     }
   }
 
-  def findMin(): WLTablePoint = {
+  def findMin(): WLCollimatorPoint = {
     val start = System.currentTimeMillis()
-    val initialCubeCenterList = Seq(new WLTablePointLocal(0, 0, 0, 0)) // makeInitialCubeCenterList
+    val initialCubeCenterList = Seq(new WLCollimatorPointLocal(0, 0)) // makeInitialCubeCenterList
 
     initialCubeCenterList.indices.par.foreach(index => finder(WalkingCube(initialCubeCenterList(index), initialCubeLen_mm, index), maxNumberOfIterations))
 
     val elapsed = System.currentTimeMillis() - start
     logger.info(s"Finished gradient descent.   Elapsed ms: $elapsed     bestPoint: $bestPoint")
 
-    bestPoint.asInstanceOf[WLTablePoint]
+    bestPoint.asInstanceOf[WLCollimatorPoint]
   }
 }

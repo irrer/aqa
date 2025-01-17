@@ -9,7 +9,7 @@ import org.aqa.Logging
 
 import scala.xml.Elem
 
-object WLRunMonthly extends Logging{
+object WLRunMonthly extends Logging {
 
   /**
     * Perform monthly processing if the required data is there.
@@ -24,12 +24,13 @@ object WLRunMonthly extends Logging{
 
     val monthly = WLMonthly.make(extendedData, pairList)
     val table = WLTable.make(extendedData, pairList)
+    val collimator = WLCollimator.make(extendedData, pairList)
 
     // only do this if the required data is there.
-    if (monthly.isDefined && table.isDefined) {
+    if (monthly.isDefined && table.isDefined && collimator.isDefined) {
 
-      val ssFileName = WLData.makeSpreadsheet(extendedData, pairList, table.get)
-      val htmlFileName = SSHtml.make(extendedData, pairList, monthly.get, table.get)
+      val ssFileName = WLData.makeSpreadsheet(extendedData, pairList, table.get, collimator.get)
+      val htmlFileName = SSHtml.make(extendedData, pairList, monthly.get, table.get, collimator.get)
 
       val elem = {
 

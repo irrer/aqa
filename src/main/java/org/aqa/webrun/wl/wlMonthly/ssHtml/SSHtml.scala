@@ -6,6 +6,7 @@ import org.aqa.web.C3Chart
 import org.aqa.web.WebUtil
 import org.aqa.Logging
 import org.aqa.webrun.wl.wlMonthly.WLBeam
+import org.aqa.webrun.wl.wlMonthly.WLCollimator
 import org.aqa.webrun.wl.wlMonthly.WLMonthly
 import org.aqa.webrun.wl.wlMonthly.WLTable
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil
@@ -59,13 +60,14 @@ object SSHtml extends Logging {
     * @param pairList List of images with analysis.
     * @return name of HTML file.
     */
-  def make(extendedData: ExtendedData, pairList: Seq[WLBeam], monthly: WLMonthly, table: WLTable): String = {
+  def make(extendedData: ExtendedData, pairList: Seq[WLBeam], monthly: WLMonthly, table: WLTable, collimator: WLCollimator): String = {
 
     val sheetList: Seq[SSSheet] = Seq(
       // SNCImport
       new SSData(extendedData: ExtendedData, pairList),
       new SSPreprocess(extendedData: ExtendedData, pairList),
-      new SSAnalysis(extendedData: ExtendedData, monthly, table)
+      new SSAnalysis(extendedData: ExtendedData, monthly, table),
+      new SSCollimator(extendedData: ExtendedData, collimator)
       // Collimator
       // Report
       // Instructions
@@ -94,13 +96,6 @@ object SSHtml extends Logging {
 
     Util.writeFile(htmlFile, text)
     logger.info(s"Wrote spreadsheet as HTML to ${htmlFile.getAbsolutePath}")
-
-    /*
-    val xlsxFile = new File(extendedData.output.dir, s"$baseFileName.xlsx")
-
-    workbook.write(new FileOutputStream(xlsxFile))
-    logger.info(s"Wrote spreadsheet as HTML to ${xlsxFile.getAbsolutePath}")
-     */
 
     htmlFile.getName
   }

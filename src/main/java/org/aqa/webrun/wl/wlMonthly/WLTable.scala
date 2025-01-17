@@ -1,6 +1,5 @@
 package org.aqa.webrun.wl.wlMonthly
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 
@@ -107,18 +106,6 @@ case class WLTable(
    */
   def minSquareOfBBDisplacement(dX: Double, dZ: Double, Table_X: Double, Table_Z: Double): Double = beamList.map(beam => BB_Rpp(beam, dX, dZ, Table_X, Table_Z)).max
 
-  if (true) { // TODO rm
-
-    val list = beamList.map(beam => BB_Rpp(beam, 0.183972235121236, 0.332920649471168, 0.332018792527814, 0.323882986957228))
-
-    Trace.trace(s"""Min List: \n    ${list.mkString("\n    ")}""")
-
-    val j = minSquareOfBBDisplacement(0.183972235121236, 0.332920649471168, 0.332018792527814, 0.323882986957228)
-    Trace.trace(s"R12 min: $j")
-    Trace.trace()
-    val min = new WLTableGradientDescent(this).findMin()
-  }
-
   /**
    * Optimize the minimum of the maximum R-squared values using gradient descent.
    */
@@ -135,14 +122,6 @@ case class WLTable(
 
   // Perform optimization
   optimizeRSquared()
-
-  Trace.trace("T__0: " + T__0.get.wl)
-  if (T_30.isDefined) Trace.trace("T_30: " + T_30.get.wl)
-  if (T_60.isDefined) Trace.trace("T_60: " + T_60.get.wl)
-  Trace.trace("T_90: " + T_90.get.wl)
-  Trace.trace("T270: " + T270.get.wl)
-  if (T300.isDefined) Trace.trace("T300: " + T300.get.wl)
-  if (T330.isDefined) Trace.trace("T330: " + T330.get.wl)
 }
 
 object WLTable {
