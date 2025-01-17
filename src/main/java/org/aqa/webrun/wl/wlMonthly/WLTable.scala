@@ -2,6 +2,7 @@ package org.aqa.webrun.wl.wlMonthly
 
 import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.ExtendedData
+import org.aqa.Logging
 
 case class WLTable(
     // @formatter:off
@@ -14,7 +15,7 @@ case class WLTable(
                     T300: Option[ WLBeam],
                     T330: Option[ WLBeam]
                     // @formatter:on
-                  ) {
+                  ) extends Logging{
 
   private val beamList = Seq(
     T__0,

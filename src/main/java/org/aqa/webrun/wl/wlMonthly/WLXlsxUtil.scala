@@ -131,6 +131,62 @@ object WLXlsxUtil extends Logging {
     */
   def rnd(value: Double): Double = value // (value * 100).round / 100.0  // shut off rounding
 
+  private def fmt(d: Double): String = d.formatted(numericFormat).trim
+
+  def toHtml(text: String, alignLeft: Boolean = true): Elem = {
+    val c = if (alignLeft) cssPreprocessLeft else cssPreprocessRight
+    <td class={c}>
+      {text}
+    </td>
+  }
+
+  def toHtmlPeach(dbl: Double): Elem = {
+    <td class={cssPreprocessRight} style="border:2px solid black;background:#F8CBAD;">
+      {fmt(dbl)}
+    </td>
+  }
+
+  def toHtmlPowderBlue(text: String): Elem = {
+    <td class={cssPreprocessLeft} style="border:2px solid black;background:#DDEBF7;">
+      {text}
+    </td>
+  }
+
+  def toHtmlPowderBlue(dbl: Double): Elem = {
+    <td class={cssPreprocessRight} style="border:2px solid black;background:#DDEBF7;">
+      {fmt(dbl)}
+    </td>
+  }
+
+  def toHtmlYellow(dbl: Double): Elem = {
+    <td class={cssPreprocessRight} style="background:#FFFF00;">
+      {fmt(dbl)}
+    </td>
+  }
+
+  def toHtml(dbl: Double): Elem = {
+    toHtml(fmt(dbl), alignLeft = false)
+  }
+
+  def toHtml(dbl: Option[Double]): Elem = {
+    if (dbl.isDefined)
+      toHtml(dbl.get)
+    else
+      toHtml("")
+  }
+
+  def toHtml(int: Int): Elem = {
+    toHtml(int.toString)
+  }
+
+  def blankCells(count: Int): Seq[Elem] = {
+    (0 until count).map(_ => toHtml(""))
+  }
+
+  def blankCell: Elem = {
+    blankCells(1).head
+  }
+
   /**
     * Flip an angle
     * @param angle around 0 degrees.  e.g. 10 degrees becomes 350.

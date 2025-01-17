@@ -5,10 +5,11 @@ import org.aqa.web.WebUtil
 import org.aqa.webrun.wl.WLRunReq
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.wlMonthly.ssHtml.SSHtml
+import org.aqa.Logging
 
 import scala.xml.Elem
 
-object WLRunMonthly {
+object WLRunMonthly extends Logging{
 
   /**
     * Perform monthly processing if the required data is there.

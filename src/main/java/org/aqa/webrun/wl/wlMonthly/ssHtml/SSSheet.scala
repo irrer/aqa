@@ -1,8 +1,10 @@
 package org.aqa.webrun.wl.wlMonthly.ssHtml
 
+import org.aqa.Logging
+
 import scala.xml.Elem
 
-abstract class SSSheet {
+abstract class SSSheet extends Logging {
 
   val name: String
 

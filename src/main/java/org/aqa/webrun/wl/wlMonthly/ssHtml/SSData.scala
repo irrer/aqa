@@ -2,8 +2,8 @@ package org.aqa.webrun.wl.wlMonthly.ssHtml
 
 import org.aqa.Util
 import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.wl.wlMonthly.WLColumn
 import org.aqa.webrun.wl.wlMonthly.WLBeam
+import org.aqa.webrun.wl.wlMonthly.WLColumn
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssDataLeft
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssDataRight
