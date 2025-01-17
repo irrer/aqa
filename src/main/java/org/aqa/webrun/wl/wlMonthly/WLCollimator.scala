@@ -1,10 +1,15 @@
 package org.aqa.webrun.wl.wlMonthly
 
+import edu.umro.ImageUtil.DicomImage
+import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
+import org.aqa.Util
+
+import java.io.File
 
 case class WLCollimator(
-                         // @formatter:off
+    // @formatter:off
                     extendedData: ExtendedData,
                     T__0: WLBeam,
                     T_90: WLBeam,
@@ -65,6 +70,29 @@ case class WLCollimator(
 
   // Perform optimization
   optimize()
+
+  if (true) { // TODO add units and put it in a web page
+    val pix = 1000
+    val xList = (-pix / 2 until pix / 2).map(x => (x.toDouble / pix) + getColl_X_Optimized)
+    val zList = (-pix / 2 until pix / 2).map(z => (z.toDouble / pix) + getColl_Z_Optimized)
+
+    val array: IndexedSeq[IndexedSeq[Float]] = {
+      for (x <- xList) yield {
+        for (z <- zList) yield {
+          MinCA_Rpp(x, z).toFloat
+        }
+      }
+    }
+
+    val di = new DicomImage(array)
+
+    val buf = di.toDeepColorBufferedImage(0.0)
+    val file = new File(extendedData.output.dir, "CollimatorGradient.png")
+    file.delete()
+
+    Util.writePng(buf, file)
+    Trace.trace(s"Wrote file $file")
+  }
 }
 
 object WLCollimator {
