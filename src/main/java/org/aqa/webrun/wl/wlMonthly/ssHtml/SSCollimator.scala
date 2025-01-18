@@ -49,9 +49,9 @@ class SSCollimator(extendedData: ExtendedData, collimator: WLCollimator) extends
       toHtml(beam.caZ), /*                G */
       coll_X, /*                          H */
       coll_Z, /*                          I */
-      toHtml(collimator.CA_Xpp(beam, collimator.getColl_X_Optimized)), /*                                      J */
-      toHtml(collimator.CA_Zpp(beam, collimator.getColl_Z_Optimized)), /*                                      K */
-      toHtmlPeach(collimator.CA_Rpp(beam, collimator.getColl_X_Optimized, collimator.getColl_Z_Optimized)), /* L */
+      toHtml(collimator.CA_Xpp(beam, collimator.getColl_X_Optimized)), /*                                 J */
+      toHtml(collimator.CA_Zpp(beam, collimator.getColl_Z_Optimized)), /*                                 K */
+      toHtml(collimator.CA_Rpp(beam, collimator.getColl_X_Optimized, collimator.getColl_Z_Optimized)), /* L */
       blankCell /*                        M */
     )
   }
