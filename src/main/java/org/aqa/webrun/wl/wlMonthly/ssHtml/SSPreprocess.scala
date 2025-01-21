@@ -5,6 +5,8 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.wlMonthly.WLBeam
 import org.aqa.webrun.wl.wlMonthly.WLColumn
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.blankCell
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.blankCells
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssPreprocessLeft
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssPreprocessRight
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.flip
@@ -37,6 +39,7 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SS
     }
   }
 
+  /** note that the ordering of 4, 5, 3 is intentional.  */
   private val columnIndexList = Seq(0, 1, 2, 4, 5, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24)
 
   private val sortedPairList = pairList.sortWith(preprocessSorter)
@@ -63,17 +66,22 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SS
     <tr>
       {WLXlsxUtil.makeRowIndex(1)}
       {Seq(title, dataDateText, analysisDateText).map(text => toHtml(text))}
+      {blankCells(23)}
     </tr>
   }
 
   private def blankRow(index: Int): Elem = {
-    <tr>{WLXlsxUtil.makeRowIndex(index)}</tr>
+    <tr>
+      {WLXlsxUtil.makeRowIndex(index)}
+      {blankCells(26)}
+    </tr>
   }
 
   private def makeHeaderRow: Elem = {
     <tr>
       {WLXlsxUtil.makeRowIndex(2)}
       {columnIndexList.map(c => toHtml(columnList(c).name))}
+      {blankCell}
     </tr>
   }
 
@@ -84,6 +92,7 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SS
       {toHtml("")}
       {toHtml("")}
       {sortedColumnIndexList.map(c => toHtml(columnList(c).name))}
+      {blankCells(18)}
     </tr>
   }
 
@@ -99,6 +108,7 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SS
 
     <tr>
       {WLXlsxUtil.makeRowIndex(index + 3) :+ columnIndexList.map(c => colToHtml(columnList(c)))}
+      {blankCell}
     </tr>
   }
 
@@ -117,20 +127,21 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SS
       {toHtml("")}
       {toHtml("")}
       {sortedColumnIndexList.map(makeCell)}
-
+      {blankCells(18)}
     </tr>
   }
 
   override def make(): Elem = {
     val content = {
       <table class="table table-bordered">
-        {WLXlsxUtil.makeAlphaRow(25)}
+        {WLXlsxUtil.makeAlphaRow(26)}
         {makeTitleRow}
         {makeHeaderRow}
         {pairList.indices.map(makeRow)}
         {blankRow(pairList.size + 3)}
         {makeSortedHeaderRow(pairList.size + 4)}
         {sortedPairList.indices.map(makeSortedRow)}
+        {blankRow(35)}
       </table>
     }
 

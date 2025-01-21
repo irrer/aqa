@@ -133,9 +133,11 @@ object WLXlsxUtil extends Logging {
 
   private def fmt(d: Double): String = d.formatted(numericFormat).trim
 
-  def toHtml(text: String, alignLeft: Boolean = true): Elem = {
+  def toHtml(text: String, alignLeft: Boolean = true, style: Option[String] = None): Elem = {
     val c = if (alignLeft) cssPreprocessLeft else cssPreprocessRight
-    <td class={c}>
+    val s = if (style.isDefined) style.get else ""
+
+    <td class={c} style={s}>
       {text}
     </td>
   }
@@ -158,8 +160,16 @@ object WLXlsxUtil extends Logging {
     </td>
   }
 
-  def toHtmlYellow(dbl: Double): Elem = {
-    <td class={cssPreprocessRight} style="background:#FFFF00;">
+  def toHtmlYellow(dbl: Double, style: Option[String] = None): Elem = {
+    val s = {
+      val yellow = "background:#FFFF00;"
+      if (style.isDefined)
+        yellow + style.get
+      else
+        yellow
+    }
+
+    <td class={cssPreprocessRight} style={s}>
       {fmt(dbl)}
     </td>
   }

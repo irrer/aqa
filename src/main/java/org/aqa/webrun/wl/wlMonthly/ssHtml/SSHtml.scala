@@ -69,7 +69,7 @@ object SSHtml extends Logging {
       new SSPreprocess(extendedData: ExtendedData, pairList),
       new SSAnalysis(extendedData: ExtendedData, monthly, table),
       new SSCollimator(extendedData: ExtendedData, collimator),
-      new SSReport(extendedData: ExtendedData, table),
+      new SSReport(extendedData: ExtendedData, monthly, table),
       new SSInstructions()
     )
 

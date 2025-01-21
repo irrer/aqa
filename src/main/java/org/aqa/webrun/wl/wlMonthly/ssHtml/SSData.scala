@@ -5,6 +5,7 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.wlMonthly.WLBeam
 import org.aqa.webrun.wl.wlMonthly.WLColumn
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil
+import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.blankCells
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssDataLeft
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssDataRight
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.cssPreprocessLeft
@@ -48,6 +49,7 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SSSheet 
     <tr>
       {WLXlsxUtil.makeRowIndex(1)}
       {Seq(title, dataDateText, analysisDateText).map(text => toHtml(text))}
+      {(0 until 23).map(_ => toHtml(""))}
     </tr>
   }
 
@@ -55,6 +57,7 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SSSheet 
     <tr>
       {WLXlsxUtil.makeRowIndex(2)}
       {columnList.map(col => toHtml(col.name))}
+      {toHtml("")}
     </tr>
   }
 
@@ -69,11 +72,15 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SSSheet 
     <tr>
       {WLXlsxUtil.makeRowIndex(index + 3)}
       {columnList.map(colToHtml)}
+      {toHtml("")}
     </tr>
   }
 
   private def blankRow(index: Int): Elem = {
-    <tr>{WLXlsxUtil.makeRowIndex(index)}</tr>
+    <tr>
+      {WLXlsxUtil.makeRowIndex(index)}
+      {blankCells(26)}
+    </tr>
   }
 
   //noinspection SameParameterValue
@@ -81,6 +88,7 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SSSheet 
     <tr>
       {WLXlsxUtil.makeRowIndex(index)}
       <td>ballCBCT</td>
+      {blankCells(25)}
     </tr>
   }
 
@@ -91,6 +99,7 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SSSheet 
       {toPlainHtml("x (mm)")}
       {toPlainHtml("y (mm)")}
       {toPlainHtml("z (mm)")}
+      {blankCells(23)}
     </tr>
   }
 
@@ -101,6 +110,7 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SSSheet 
       {toPlainHtml("0", alignLeft = false)}
       {toPlainHtml("0", alignLeft = false)}
       {toPlainHtml("0", alignLeft = false)}
+      {blankCells(23)}
     </tr>
   }
 
@@ -111,6 +121,7 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SSSheet 
       {toHtml("0", alignLeft = false)}
       {toHtml("0", alignLeft = false)}
       {toHtml(name)}
+      {blankCells(22)}
     </tr>
   }
 
@@ -122,14 +133,15 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SSSheet 
       zeroRow(21),
       blankRow(22),
       zeroDataRow(23, "AcqIsocenter"),
-      zeroDataRow(24, "Ball")
+      zeroDataRow(24, "Ball"),
+      blankRow(25)
     )
   }
 
   override def make(): Elem = {
     val content = {
       <table class="table table-bordered">
-        {WLXlsxUtil.makeAlphaRow(25)}
+        {WLXlsxUtil.makeAlphaRow(26)}
         {makeTitleRow}
         {makeHeaderRow}
         {pairList.indices.map(makeRow)}

@@ -163,9 +163,9 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
       {toHtml(monthly.mlcOffsetX_090) /*                     S3 */}
       {toHtml(monthly.mlcOffsetY_090) /*                     T3 */}
       {toHtml("CBCT origin relative to BB at table zero") /* U3 */}
-      {toHtml("0.00", alignLeft = false) /*                  V3 */}
-      {toHtml("0.00", alignLeft = false) /*                  W3 */}
-      {toHtml("0.00", alignLeft = false) /*                  X3 */}
+      {toHtml(0.0) /*                                        V3 */}
+      {toHtml(0.0) /*                                        W3 */}
+      {toHtml(0.0) /*                                        X3 */}
     </tr>
   }
 
