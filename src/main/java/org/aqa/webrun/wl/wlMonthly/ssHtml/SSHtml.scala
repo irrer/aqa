@@ -64,7 +64,7 @@ object SSHtml extends Logging {
   def make(extendedData: ExtendedData, pairList: Seq[WLBeam], monthly: WLMonthly, table: WLTable, collimator: WLCollimator): String = {
 
     val sheetList: Seq[SSSheet] = Seq(
-      new SSSNCImport(extendedData: ExtendedData, table),
+      new SSSNCImport(extendedData: ExtendedData, monthly, collimator, table),
       new SSData(extendedData: ExtendedData, pairList),
       new SSPreprocess(extendedData: ExtendedData, pairList),
       new SSAnalysis(extendedData: ExtendedData, monthly, table),

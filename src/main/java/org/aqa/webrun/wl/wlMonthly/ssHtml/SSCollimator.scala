@@ -70,7 +70,7 @@ class SSCollimator(extendedData: ExtendedData, collimator: WLCollimator) extends
       <td colSpan="4" style="background:#DDEBF7;"> { /*                H2 to K2 */ }
         Max square of CA displacement   ->
       </td>
-      {toHtmlPeach(collimator.getCA_Rpp_Optimized) /*                         L2 */}
+      {toHtmlPeach(collimator.getCA_Rpp_Optimized) /*                  L2 */}
       {toHtml("Solve for smallest max (Collimator Isocentricity)") /*  M2 */}
     </tr>
   }
