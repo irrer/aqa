@@ -1,7 +1,6 @@
 package org.aqa.webrun.wl.wlMonthly.ssHtml
 
 import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.wl.wlMonthly.WLMonthly
 import org.aqa.webrun.wl.wlMonthly.WLTable
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil._
 
@@ -11,9 +10,8 @@ import scala.xml.Elem
   * Construct HTML showing the Data sheet.
   *
   * @param extendedData Metadata
-  * @param monthly Monthly data
   */
-class SSSNCImport(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable) extends SSSheet {
+class SSSNCImport(extendedData: ExtendedData, table: WLTable) extends SSSheet {
 
   override val name: String = "SNCImport"
 

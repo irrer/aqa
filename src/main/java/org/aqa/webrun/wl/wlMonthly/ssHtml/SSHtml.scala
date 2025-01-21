@@ -10,6 +10,7 @@ import org.aqa.webrun.wl.wlMonthly.WLCollimator
 import org.aqa.webrun.wl.wlMonthly.WLMonthly
 import org.aqa.webrun.wl.wlMonthly.WLTable
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil
+import org.aqa.webrun.wl.wlMonthly.wlMonthlyHTML.WLMonthlyHTML
 
 import java.io.File
 import scala.xml.Elem
@@ -63,17 +64,13 @@ object SSHtml extends Logging {
   def make(extendedData: ExtendedData, pairList: Seq[WLBeam], monthly: WLMonthly, table: WLTable, collimator: WLCollimator): String = {
 
     val sheetList: Seq[SSSheet] = Seq(
-      // SNCImport
-      new SSSNCImport(extendedData: ExtendedData, monthly, table),
+      new SSSNCImport(extendedData: ExtendedData, table),
       new SSData(extendedData: ExtendedData, pairList),
       new SSPreprocess(extendedData: ExtendedData, pairList),
       new SSAnalysis(extendedData: ExtendedData, monthly, table),
       new SSCollimator(extendedData: ExtendedData, collimator),
-      new SSReport(extendedData: ExtendedData, monthly, table),
-      new SSInstructions(extendedData: ExtendedData, monthly, table)
-      // Collimator
-      // Report
-      // Instructions
+      new SSReport(extendedData: ExtendedData, table),
+      new SSInstructions()
     )
 
     val tabList = sheetList.map(sheet => Tab(sheet, sheetList))
@@ -93,7 +90,7 @@ object SSHtml extends Logging {
 
     val baseFileName = WLXlsxUtil.baseFileName(extendedData)
 
-    val htmlFile = new File(extendedData.output.dir, s"$baseFileName.html")
+    val htmlFile = new File(WLMonthlyHTML.dir(extendedData), s"$baseFileName.html")
 
     val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "WL Monthly", runScript = None)
 

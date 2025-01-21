@@ -1,22 +1,16 @@
 package org.aqa.webrun.wl.wlMonthly.ssHtml
 
-import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.wl.wlMonthly.WLMonthly
-import org.aqa.webrun.wl.wlMonthly.WLTable
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil._
 
 import scala.xml.Elem
 
 /**
- * Construct HTML showing the Data sheet.
- *
- * @param extendedData Metadata
- * @param monthly      Monthly data
- */
-class SSInstructions(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable) extends SSSheet {
+  * Construct HTML showing the Data sheet.
+  *
+  */
+class SSInstructions() extends SSSheet {
 
   override val name: String = "Instructions"
-
 
   private def makeRow1: Elem = {
     <tr>

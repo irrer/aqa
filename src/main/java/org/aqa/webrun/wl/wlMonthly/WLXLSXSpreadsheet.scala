@@ -6,12 +6,13 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
+import org.aqa.webrun.wl.wlMonthly.wlMonthlyHTML.WLMonthlyHTML
 
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Date
 
-object WLData extends Logging {
+object WLXLSXSpreadsheet extends Logging {
 
   /** First row of Data sheet content (inclusive). */
   private val firstRowNum = 3
@@ -19,6 +20,19 @@ object WLData extends Logging {
   /** Last row of Data sheet content (inclusive). */
   private val lastRowNum = 17
 
+  /**
+    * Put the data into a copy of the XLSX template file and write a new *.xlxs file.
+    *
+    * The new file is put into the monthly subdirectory.
+    *
+    * This file can serve as a double check as to the correctness of the calculations.
+    *
+    * @param extendedData Metadata data.
+    * @param pairList WL data and DICOM.
+    * @param table Processed table data.
+    * @param collimator Processed column data.
+    * @return The name of the file.
+    */
   def makeSpreadsheet(extendedData: ExtendedData, pairList: Seq[WLBeam], table: WLTable, collimator: WLCollimator): String = {
 
     val workbook = new XSSFWorkbook(Config.WLMonthlyTemplateFile)
@@ -90,9 +104,10 @@ object WLData extends Logging {
 
     update()
 
-    val file = new File(extendedData.output.dir, WLXlsxUtil.baseFileName(extendedData) + ".xlsx")
+    val file = new File(WLMonthlyHTML.dir(extendedData), WLXlsxUtil.baseFileName(extendedData) + ".xlsx")
     file.delete()
     workbook.write(new FileOutputStream(file))
+    logger.info("Wrote WL Monthly spreadsheet file " + file.getAbsolutePath)
 
     file.getName
   }
