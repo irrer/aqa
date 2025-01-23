@@ -33,7 +33,7 @@ case class C3ScatterPlotDataSet(name: String, data: Seq[C3ScatterPlotDataPoint],
     def toRow(n: String, d: Seq[Double]): String = {
       s"[$n, ${d.mkString(", ")} ]"
     }
-    val text = toRow(nameX, data.map(_.x)) + ",          \n" + toRow(nameY, data.map(_.x))
+    val text = toRow(nameX, data.map(_.x)) + ",          \n" + toRow(nameY, data.map(_.y))
     text
   }
 

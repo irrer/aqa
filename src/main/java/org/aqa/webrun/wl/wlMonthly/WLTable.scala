@@ -16,7 +16,7 @@ case class WLTable(
                     // @formatter:on
                   ) extends Logging{
 
-  private val beamList = Seq(
+  val beamList: Seq[WLBeam] = Seq(
     T__0,
     T_30,
     T_60,

@@ -4,6 +4,10 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.wlMonthly.WLTable
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil._
 import org.aqa.Util
+import org.aqa.web.C3ScatterPlot
+import org.aqa.web.C3ScatterPlotDataPoint
+import org.aqa.web.C3ScatterPlotDataSet
+import org.aqa.webrun.wl.wlMonthly.WLBeam
 import org.aqa.webrun.wl.wlMonthly.WLMonthly
 
 import scala.xml.Elem
@@ -24,6 +28,68 @@ class SSReport(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable) e
   private val bTBL = Some("border-Top: 2px solid black;border-left: 2px solid black;border-bottom: 2px solid black;")
   private val bTBR = Some("border-Top: 2px solid black;border-right: 2px solid black;border-bottom: 2px solid black;")
   private val bTBLR = Some("border: 2px solid black;")
+
+  private val MLCWobbleChart: C3ScatterPlot = {
+
+    val dataList: Seq[C3ScatterPlotDataSet] = {
+      val data = Seq(
+        C3ScatterPlotDataPoint(monthly.mlcDyG__0_C_90, monthly.mlcDxG__0_C_90),
+        C3ScatterPlotDataPoint(monthly.mlcDyG__0_C270, monthly.mlcDxG__0_C270),
+        C3ScatterPlotDataPoint(monthly.mlcDyG_90_C_90, monthly.mlcDxG_90_C_90),
+        C3ScatterPlotDataPoint(monthly.mlcDyG_90_C270, monthly.mlcDxG_90_C270),
+        C3ScatterPlotDataPoint(monthly.mlcDyG180_C__0, monthly.mlcDxG180_C__0),
+        C3ScatterPlotDataPoint(monthly.mlcDyG180_C_90, monthly.mlcDxG180_C_90),
+        C3ScatterPlotDataPoint(monthly.mlcDyG180_C270, monthly.mlcDxG180_C270),
+        C3ScatterPlotDataPoint(monthly.mlcDyG270_C_90, monthly.mlcDxG270_C_90),
+        C3ScatterPlotDataPoint(monthly.mlcDyG270_C270, monthly.mlcDxG270_C270)
+      )
+
+      Seq(C3ScatterPlotDataSet("MLC Wobble about Collimator Axis", data))
+    }
+
+    new C3ScatterPlot(
+      width = Some(450),
+      height = None,
+      xAxisLabel = "X (mm)",
+      xDataLabel = "Z (mm)",
+      dataList = dataList,
+      // xFormat
+      yDataLabel = "(mm)"
+      // pointFormat
+    )
+  }
+
+  private val TableWobbleChart: C3ScatterPlot = {
+
+    def dXOf(beam: WLBeam): Double = {
+      table.BB_Xpp(beam, table.get_Table_X_Optimized, table.get_dZT__0_Optimized, table.get_Table_X_Optimized)
+    }
+
+    def dZOf(beam: WLBeam): Double = {
+      table.BB_Zpp(beam, table.get_dXT__0_Optimized, table.get_dZT__0_Optimized, table.get_Table_Z_Optimized)
+    }
+
+    def point(beam: WLBeam): C3ScatterPlotDataPoint = {
+      C3ScatterPlotDataPoint(dXOf(beam), dZOf(beam))
+    }
+
+    val dataList: Seq[C3ScatterPlotDataSet] = {
+      val data = table.beamList.map(point)
+
+      Seq(C3ScatterPlotDataSet("MLC Wobble about Table Axis", data))
+    }
+
+    new C3ScatterPlot(
+      width = Some(450),
+      height = None,
+      xAxisLabel = "X (mm)",
+      xDataLabel = "Z (mm)",
+      dataList = dataList,
+      // xFormat
+      yDataLabel = "(mm)"
+      // pointFormat
+    )
+  }
 
   private def makeRow1: Elem = {
     <tr>
@@ -99,62 +165,28 @@ class SSReport(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable) e
   private def makeRow5: Elem = {
     <tr>
       {makeRowIndex(5)}
-      {blankCells(12) /* JJJ */}
+      {blankCells(12) /* A5 to L5 */}
     </tr>
   }
 
   private def makeRow6: Elem = {
     <tr>
       {makeRowIndex(6) /*                A4 to H4 */}
-      {blankCell /* JJJ */}
+      <td>
+        <h4>MLC Wobble about Collimator Axis</h4>
+        {MLCWobbleChart.html}
+      </td>
+      <td>
+        <h4>Table Wobble about Table Axis</h4>
+        {TableWobbleChart.html}
+      </td>
     </tr>
   }
 
   private def makeRow7: Elem = {
     <tr>
       {makeRowIndex(7)}
-      {blankCell /* JJJ */}
-    </tr>
-  }
-
-  private def makeRow8: Elem = {
-    <tr>
-      {makeRowIndex(8)}
-      {blankCell /* JJJ */}
-    </tr>
-  }
-
-  private def makeRow9: Elem = {
-    <tr>
-      {makeRowIndex(9)}
-      {blankCell /* JJJ */}
-    </tr>
-  }
-
-  private def makeRow10: Elem = {
-    <tr>
-      {makeRowIndex(10)}
-      {blankCell /* JJJ */}
-    </tr>
-  }
-
-  private def makeRow11: Elem = {
-    <tr>
-      {makeRowIndex(11)}
-      {blankCell /* JJJ */}
-    </tr>
-  }
-
-  private def makeRow12: Elem = {
-    <tr>
-      {makeRowIndex(12)}
-      {blankCell /* JJJ */}
-    </tr>
-  }
-
-  private def makeRow13: Elem = {
-    <tr>
-      {makeRowIndex(13)}
+      {blankCells(12) /* A7 to L7 */}
       {blankCell /* JJJ */}
     </tr>
   }
@@ -170,15 +202,21 @@ class SSReport(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable) e
         {makeRow5}
         {makeRow6}
         {makeRow7}
-        {makeRow8}
-        {makeRow9}
-        {makeRow10}
-        {makeRow11}
-        {makeRow12}
-        {makeRow13}
       </table>
     }
 
     content
+  }
+
+  val js: String = {
+    s"""
+       |<script>
+       |
+       |    ${MLCWobbleChart.javascript}
+       |    
+       |    ${TableWobbleChart.javascript}
+       | 
+       | </script>""".stripMargin
+
   }
 }
