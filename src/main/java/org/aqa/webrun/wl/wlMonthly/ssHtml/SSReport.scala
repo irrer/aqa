@@ -21,41 +21,41 @@ class SSReport(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable) e
 
   override val name: String = "Report"
 
-  private val bL = Some("border-left: 2px solid black;")
-  private val bR = Some("border-left: 2px solid black;")
-  private val bLR = Some("border-left: 2px solid black;border-right: 2px solid black;")
-  private val bTB = Some("border-Top: 2px solid black;border-bottom: 2px solid black;")
-  private val bTBL = Some("border-Top: 2px solid black;border-left: 2px solid black;border-bottom: 2px solid black;")
-  private val bTBR = Some("border-Top: 2px solid black;border-right: 2px solid black;border-bottom: 2px solid black;")
-  private val bTBLR = Some("border: 2px solid black;")
+  /** CSS styles for making cell borders  */
+  private val border = "2px solid black"
+  private val bL = Some(s"border-left: $border;")
+  private val bLR = Some(s"border-left: $border;border-right: $border;")
+  private val bTB = Some(s"border-Top: $border;border-bottom: $border;")
+  private val bTBL = Some(s"border-Top: $border;border-left: $border;border-bottom: $border;")
+  private val bTBLR = Some(s"border: $border;")
 
   private val MLCWobbleChart: C3ScatterPlot = {
 
     val dataList: Seq[C3ScatterPlotDataSet] = {
       val data = Seq(
-        C3ScatterPlotDataPoint(monthly.mlcDyG__0_C_90, monthly.mlcDxG__0_C_90),
-        C3ScatterPlotDataPoint(monthly.mlcDyG__0_C270, monthly.mlcDxG__0_C270),
-        C3ScatterPlotDataPoint(monthly.mlcDyG_90_C_90, monthly.mlcDxG_90_C_90),
-        C3ScatterPlotDataPoint(monthly.mlcDyG_90_C270, monthly.mlcDxG_90_C270),
-        C3ScatterPlotDataPoint(monthly.mlcDyG180_C__0, monthly.mlcDxG180_C__0),
-        C3ScatterPlotDataPoint(monthly.mlcDyG180_C_90, monthly.mlcDxG180_C_90),
-        C3ScatterPlotDataPoint(monthly.mlcDyG180_C270, monthly.mlcDxG180_C270),
-        C3ScatterPlotDataPoint(monthly.mlcDyG270_C_90, monthly.mlcDxG270_C_90),
-        C3ScatterPlotDataPoint(monthly.mlcDyG270_C270, monthly.mlcDxG270_C270)
+        C3ScatterPlotDataPoint(monthly.mlcDxG__0_C_90, monthly.mlcDyG__0_C_90),
+        C3ScatterPlotDataPoint(monthly.mlcDxG__0_C270, monthly.mlcDyG__0_C270),
+        C3ScatterPlotDataPoint(monthly.mlcDxG_90_C_90, monthly.mlcDyG_90_C_90),
+        C3ScatterPlotDataPoint(monthly.mlcDxG_90_C270, monthly.mlcDyG_90_C270),
+        C3ScatterPlotDataPoint(monthly.mlcDxG180_C__0, monthly.mlcDyG180_C__0),
+        C3ScatterPlotDataPoint(monthly.mlcDxG180_C_90, monthly.mlcDyG180_C_90),
+        C3ScatterPlotDataPoint(monthly.mlcDxG180_C270, monthly.mlcDyG180_C270),
+        C3ScatterPlotDataPoint(monthly.mlcDxG270_C_90, monthly.mlcDyG270_C_90),
+        C3ScatterPlotDataPoint(monthly.mlcDxG270_C270, monthly.mlcDyG270_C270)
       )
 
       Seq(C3ScatterPlotDataSet("MLC Wobble about Collimator Axis", data))
     }
 
     new C3ScatterPlot(
-      width = Some(450),
-      height = None,
+      width = Some(600),
+      height = Some(600),
       xAxisLabel = "X (mm)",
       xDataLabel = "Z (mm)",
       dataList = dataList,
-      // xFormat
-      yDataLabel = "(mm)"
-      // pointFormat
+      xAxisFormat = ".1g",
+      yDataLabel = "(mm)",
+      pointPrecision = 10
     )
   }
 
@@ -70,7 +70,7 @@ class SSReport(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable) e
     }
 
     def point(beam: WLBeam): C3ScatterPlotDataPoint = {
-      C3ScatterPlotDataPoint(dXOf(beam), dZOf(beam))
+      C3ScatterPlotDataPoint(dZOf(beam), dXOf(beam))
     }
 
     val dataList: Seq[C3ScatterPlotDataSet] = {
@@ -80,14 +80,14 @@ class SSReport(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable) e
     }
 
     new C3ScatterPlot(
-      width = Some(450),
-      height = None,
+      width = Some(600),
+      height = Some(600),
       xAxisLabel = "X (mm)",
       xDataLabel = "Z (mm)",
       dataList = dataList,
-      // xFormat
-      yDataLabel = "(mm)"
-      // pointFormat
+      xAxisFormat = ".1g",
+      yDataLabel = "(mm)",
+      pointPrecision = 10
     )
   }
 
@@ -172,14 +172,15 @@ class SSReport(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable) e
   private def makeRow6: Elem = {
     <tr>
       {makeRowIndex(6) /*                A4 to H4 */}
-      <td>
-        <h4>MLC Wobble about Collimator Axis</h4>
+      <td colspan="5" style={s"border: $border;"}>
+        <h4 style="text-align: center;">MLC Wobble about Collimator Axis</h4>
         {MLCWobbleChart.html}
       </td>
-      <td>
-        <h4>Table Wobble about Table Axis</h4>
+      <td colspan="6" style={s"border: $border;"}>
+        <h4 style="text-align: center;">Table Wobble about Table Axis</h4>
         {TableWobbleChart.html}
       </td>
+      {blankCell}
     </tr>
   }
 
@@ -187,7 +188,6 @@ class SSReport(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable) e
     <tr>
       {makeRowIndex(7)}
       {blankCells(12) /* A7 to L7 */}
-      {blankCell /* JJJ */}
     </tr>
   }
 
