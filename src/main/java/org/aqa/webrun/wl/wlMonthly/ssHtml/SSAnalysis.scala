@@ -94,7 +94,7 @@ class SSAnalysis(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable)
         M, /*                                    M dZ */
         N, /*                                    N Table-X */
         O, /*                                    O Table-Z */
-        toHtmlPowderBlue(table.BB_Xpp(beam, table.get_Table_X_Optimized, table.get_dZT__0_Optimized, table.get_Table_X_Optimized)), /* P BB-X" */
+        toHtmlPowderBlue(table.BB_Xp(beam, table.get_dXT__0_Optimized, table.get_dZT__0_Optimized) - table.get_Table_X_Optimized), /* P BB-X" */
         toHtmlPowderBlue(table.BB_Zpp(beam, table.get_dXT__0_Optimized, table.get_dZT__0_Optimized, table.get_Table_Z_Optimized)), /* Q BB-Z" */
         toHtmlPowderBlue(table.BB_Rpp(beam, table.get_dXT__0_Optimized, table.get_dZT__0_Optimized, table.get_Table_X_Optimized, table.get_Table_Z_Optimized)) /*  R BB-R"^2 */
       ) ++ blankCells(6) /*                      S to X */

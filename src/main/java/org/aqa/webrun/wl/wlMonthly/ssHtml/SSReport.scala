@@ -44,25 +44,30 @@ class SSReport(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable) e
         C3ScatterPlotDataPoint(monthly.mlcDxG270_C270, monthly.mlcDyG270_C270)
       )
 
-      Seq(C3ScatterPlotDataSet("MLC Wobble about Collimator Axis", data))
+      Seq(C3ScatterPlotDataSet("MLC Wobble", data))
     }
 
     new C3ScatterPlot(
-      width = Some(600),
-      height = Some(600),
-      xAxisLabel = "X (mm)",
-      xDataLabel = "Z (mm)",
       dataList = dataList,
+      xAxisLabel = "dZ (mm)",
+      yAxisLabel = "dX (mm)",
+      width = Some(600),
+      height = Some(686),
       xAxisFormat = ".1g",
-      yDataLabel = "(mm)",
-      pointPrecision = 10
+      yAxisFormat = ".1g",
+      xMin = Some(-0.5),
+      xMax = Some(0.5),
+      yMin = Some(-0.5),
+      yMax = Some(0.5),
+      showPrecision = 10,
+      showGrid = true
     )
   }
 
   private val TableWobbleChart: C3ScatterPlot = {
 
     def dXOf(beam: WLBeam): Double = {
-      table.BB_Xpp(beam, table.get_Table_X_Optimized, table.get_dZT__0_Optimized, table.get_Table_X_Optimized)
+      table.BB_Xp(beam, table.get_dXT__0_Optimized, table.get_dZT__0_Optimized) - table.get_Table_X_Optimized
     }
 
     def dZOf(beam: WLBeam): Double = {
@@ -70,24 +75,29 @@ class SSReport(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable) e
     }
 
     def point(beam: WLBeam): C3ScatterPlotDataPoint = {
-      C3ScatterPlotDataPoint(dZOf(beam), dXOf(beam))
+      C3ScatterPlotDataPoint(dXOf(beam), dZOf(beam))
     }
 
     val dataList: Seq[C3ScatterPlotDataSet] = {
       val data = table.beamList.map(point)
 
-      Seq(C3ScatterPlotDataSet("MLC Wobble about Table Axis", data))
+      Seq(C3ScatterPlotDataSet("Table Wobble", data))
     }
 
     new C3ScatterPlot(
-      width = Some(600),
-      height = Some(600),
-      xAxisLabel = "X (mm)",
-      xDataLabel = "Z (mm)",
       dataList = dataList,
+      xAxisLabel = "BB-X`` (mm)",
+      yAxisLabel = "BB-Z`` (mm)",
+      width = Some(600),
+      height = Some(686),
       xAxisFormat = ".1g",
-      yDataLabel = "(mm)",
-      pointPrecision = 10
+      yAxisFormat = ".1g",
+      xMin = Some(-0.5),
+      xMax = Some(0.5),
+      yMin = Some(-0.5),
+      yMax = Some(0.5),
+      showPrecision = 10,
+      showGrid = true
     )
   }
 
@@ -216,7 +226,7 @@ class SSReport(extendedData: ExtendedData, monthly: WLMonthly, table: WLTable) e
        |    
        |    ${TableWobbleChart.javascript}
        | 
-       | </script>""".stripMargin
+       | </script>""".stripMargin.replaceAll("\r", "")
 
   }
 }

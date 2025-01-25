@@ -24,16 +24,19 @@ case class C3ScatterPlotDataPoint(x: Double, y: Double) {}
 
 case class C3ScatterPlotDataSet(name: String, data: Seq[C3ScatterPlotDataPoint], color: Option[String] = None) {
 
-  private val nameX = s"""'${name}X'"""
+  private val nameX = s"""'${name}_X'"""
   private val nameY = s"""'$name'"""
 
   def toXs: String = s"$nameY: $nameX"
 
   def toColumns: String = {
     def toRow(n: String, d: Seq[Double]): String = {
-      s"[$n, ${d.mkString(", ")} ]"
+      s"""
+         |          [
+         |            $n, ${d.mkString(", ")}
+         |          ]""".stripMargin
     }
-    val text = toRow(nameX, data.map(_.x)) + ",\n          " + toRow(nameY, data.map(_.y))
+    val text = toRow(nameX, data.map(_.x)) + ",\n            " + toRow(nameY, data.map(_.y))
     text
   }
 
@@ -44,34 +47,37 @@ case class C3AxisSpec(label: String, format: String = ".2g") {}
 /**
   * Make a C3 scatter plot.
   *
+  * @param dataList: Data to plot.
+  *
+  * @param xAxisLabel: Text label for X axis
+  *
+  * @param yAxisLabel: Label for Y axis.
+  *
   * @param width: Optional width of chart in pixels.
   *
   * @param height: Optional height of chart in pixels.
   *
-  * @param xAxisLabel: Text label for X axis
-  *
-  * @param xDataLabel: Label for Y axis.
-  *
-  * @param dataList: Data to plot.
-  *
   * @param xAxisFormat: Formatting for x values.   Examples: .3 .4g.  Reference: http://bl.ocks.org/zanarmstrong/05c1e95bf7aa16c4768e
   *
-  * @param yDataLabel Axis label, one per set of Y values.
+  * @param showPrecision On mouseover for a point on the plot, show this many digits to the right of the decimal point.
   *
-  * @param pointFormat Numeric format of point shown on mouseover.
+  * @param showGrid If true, show a grid on the plot.
   *
-  * Format: .3g .4g
   */
 class C3ScatterPlot(
+    dataList: Seq[C3ScatterPlotDataSet],
+    xAxisLabel: String,
+    yAxisLabel: String,
     width: Option[Int] = None,
     height: Option[Int] = None,
-    xAxisLabel: String,
-    xDataLabel: String,
-    dataList: Seq[C3ScatterPlotDataSet],
     xAxisFormat: String = ".2g",
     yAxisFormat: String = ".2g",
-    yDataLabel: String,
-    pointPrecision: Int = 4
+    xMin: Option[Double] = None,
+    xMax: Option[Double] = None,
+    yMin: Option[Double] = None,
+    yMax: Option[Double] = None,
+    showPrecision: Int = 4,
+    showGrid: Boolean = true
 ) extends Logging {
 
   private val chartIdTag = C3Chart.makeUniqueChartIdTag
@@ -100,6 +106,25 @@ class C3ScatterPlot(
     s"pattern: [ $list ]"
   }
 
+  private def minMaxToText(min: Option[Double], max: Option[Double]): String = {
+    val minText = min.map(d => s"min: $d")
+    val maxText = max.map(d => s"max: $d")
+
+    val text = (minText, maxText) match {
+      case (Some(lo), Some(hi)) =>
+        s"$lo,\n          $hi,\n"
+
+      case (Some(lo), _) =>
+        s"         $lo,"
+
+      case (_, Some(hi)) =>
+        s"         $hi,"
+
+      case _ => ""
+    }
+    text
+  }
+
   /** Embed this in the HTML where the chart is to appear. */
   val html: Elem = {
     <div id={chartIdTag}>
@@ -111,25 +136,43 @@ class C3ScatterPlot(
   val javascript: String = {
     s"""
          |
+         |    var columns$chartIdTag = [ ${dataList.map(_.toColumns).mkString(",\n")} ];
+         |
          |    var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
          |    data: {
          |        xs: {
          |          ${dataList.map(_.toXs).mkString(",\n")}
          |        },
-         |          columns: [
-         |            ${dataList.map(_.toColumns).mkString(",\n")}
-         |          ],
          |        columns: columns$chartIdTag,
          |        type: 'scatter'
          |    },
          |    tooltip: {
          |      format: {
          |        value: function (value, ratio, id, index) {
-         |          var text = value.toFixed($pointPrecision) + ", " + index.toFixed($pointPrecision);
+         |          var xColIndex = 0;
+         |          for (i = 0; i < columns$chartIdTag.length; i++) {
+         |            if ((columns$chartIdTag[i][0] + "_X") == id)
+         |              xColIndex = i;
+         |          }
+         |
+         |          var yColIndex = 0;
+         |          for (i = 0; i < columns$chartIdTag.length; i++) {
+         |            if ((columns$chartIdTag[i][0]) == id)
+         |              yColIndex = i;
+         |          }
+         |
+         |          var yIndex = 1;
+         |          for (i = 0; i < columns$chartIdTag[yColIndex].length; i++) {
+         |            if (columns$chartIdTag[yColIndex][i] == value)
+         |              yIndex = i;
+         |          }
+         |
+         |          var text = columns$chartIdTag[xColIndex][yIndex].toPrecision($showPrecision) + ", " + value.toPrecision($showPrecision);
          |          return text;
          |        }
          |      }
          |    },
+         |
          |    point: { // enlarge point on hover
          |      r: 4,
          |      focus : {
@@ -139,16 +182,26 @@ class C3ScatterPlot(
          |      }
          |    },
          |    bindto : '#$chartIdTag',
+         |        grid: {
+         |      x: {
+         |        show: $showGrid
+         |      },
+         |      y: {
+         |        show: $showGrid
+         |      }
+         |    },
          |    axis: {
          |      x: {
-         |        label: '$xDataLabel',
+         |        label: '$xAxisLabel',
+         |        ${minMaxToText(xMin, xMax)}
          |        tick: {
          |          format: d3.format('$xAxisFormat'),
          |          fit: false
          |        }
          |      },
          |      y: {
-         |        label: '$yDataLabel',
+         |        label: '$yAxisLabel',
+         |        ${minMaxToText(yMin, yMax)}
          |        tick: {
          |          format: d3.format('$yAxisFormat'),
          |          fit: false

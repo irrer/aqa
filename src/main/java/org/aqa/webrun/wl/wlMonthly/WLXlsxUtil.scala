@@ -18,14 +18,13 @@ import scala.xml.Elem
 
 object WLXlsxUtil extends Logging {
 
-  val cssIndex: String = "CSSIndex"
+  private val cssIndex: String = "CSSIndex"
   val cssDataLeft: String = "CSSDataLeft"
   val cssDataRight: String = "CSSDataRight"
   val cssPreprocessLeft: String = "CSSPreprocessLeft"
   val cssPreprocessRight: String = "CSSPreprocessRight"
 
-  // val numericFormat = "%12.2f" // TODO put back
-  val numericFormat = "%16.10f" // TODO rm
+  val numericFormat = "%24.20f"
 
   def makeRowIndex(index: Int): Elem = {
     <td class={cssIndex}>{index}</td>
@@ -143,7 +142,7 @@ object WLXlsxUtil extends Logging {
   }
 
   def toHtmlPeach(dbl: Double): Elem = {
-    <td class={cssPreprocessRight} style="border:2px solid black;background:#F8CBAD;">
+    <td class={cssPreprocessRight} style="border:2px solid black;background:#F8CBAD;" floating={dbl.toString}>
       {fmt(dbl)}
     </td>
   }
@@ -155,7 +154,7 @@ object WLXlsxUtil extends Logging {
   }
 
   def toHtmlPowderBlue(dbl: Double): Elem = {
-    <td class={cssPreprocessRight} style="border:2px solid black;background:#DDEBF7;">
+    <td class={cssPreprocessRight} style="border:2px solid black;background:#DDEBF7;" floating={dbl.toString}>
       {fmt(dbl)}
     </td>
   }
@@ -169,13 +168,15 @@ object WLXlsxUtil extends Logging {
         yellow
     }
 
-    <td class={cssPreprocessRight} style={s}>
+    <td class={cssPreprocessRight} style={s} floating={dbl.toString}>
       {fmt(dbl)}
     </td>
   }
 
   def toHtml(dbl: Double): Elem = {
-    toHtml(fmt(dbl), alignLeft = false)
+    <td class={cssPreprocessRight} floating={dbl.toString}>
+      {dbl.toString}
+    </td>
   }
 
   def toHtml(dbl: Option[Double]): Elem = {

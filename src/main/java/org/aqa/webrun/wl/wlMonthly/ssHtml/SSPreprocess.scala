@@ -4,6 +4,7 @@ import org.aqa.Util
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.wlMonthly.WLBeam
 import org.aqa.webrun.wl.wlMonthly.WLColumn
+import org.aqa.webrun.wl.wlMonthly.WlColumnWlNumeric
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.blankCell
 import org.aqa.webrun.wl.wlMonthly.WLXlsxUtil.blankCells
@@ -48,11 +49,18 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SS
 
   val columnList: Seq[WLColumn] = org.aqa.webrun.wl.wlMonthly.WLColumnList(extendedData.machine, pairList.head.acquisition).columnList
 
-  private def toHtml(text: String, alignLeft: Boolean = true): Elem = {
+  private def toHtml(text: String, alignLeft: Boolean = true, isNumeric: Boolean = false): Elem = {
     val c = if (alignLeft) cssPreprocessLeft else cssPreprocessRight
-    <td class={c}>
+    if (isNumeric) {
+      <td class={c} floating={text.trim}>
+        {text}
+      </td>
+    } else {
+      <td class={c}>
       {text}
     </td>
+    }
+
   }
 
   private def makeTitleRow: Elem = {
@@ -103,7 +111,7 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SS
     val pair = pairList(index)
 
     def colToHtml(col: WLColumn): Elem = {
-      toHtml(col.toPreprocessText(pair.wl, pair.al), col.alignLeft)
+      toHtml(col.toPreprocessText(pair.wl, pair.al), col.alignLeft, isNumeric = col.isInstanceOf[WlColumnWlNumeric])
     }
 
     <tr>

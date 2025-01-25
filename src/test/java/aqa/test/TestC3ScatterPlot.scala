@@ -75,14 +75,11 @@ object TestC3ScatterPlot {
     }
 
     val scatter = new C3ScatterPlot(
-      width = None,
-      height = None,
-      xAxisLabel = "X Label",
-      xDataLabel = "Y Label",
       dataList = Seq(data1, data2),
-      // xFormat: String = ".4g",
-      yDataLabel = "Y Data Label"
-      // pointFormat: String = ".4g"
+      xAxisLabel = "X Label",
+      yAxisLabel = "Y Label",
+      width = Some(400),
+      height = Some(200)
     )
 
     val text = makeDoc(Util.prettyPrint(scatter.html), scatter.javascript)

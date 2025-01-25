@@ -55,6 +55,48 @@ private case class Tab(sheet: SSSheet, sheetList: Seq[SSSheet]) {
   */
 object SSHtml extends Logging {
 
+  private val precisionJs: String = {
+    """
+      |
+      |<script>
+      |var precision = 2;
+      |
+      |function updateFloatingPrecision() {
+      |  var list = $( "[floating]" );
+      |  for (i = 0; i < list.length; i++) {
+      |    var num = parseFloat(list[i].getAttribute("floating"));
+      |    var text = num.toPrecision(precision);
+      |    list[i].innerHTML = text;
+      |  }
+      |}
+      |
+      |function precisionInc() {
+      |  if (precision < 20) {
+      |    precision = precision + 1;
+      |    updateFloatingPrecision() ;
+      |  }
+      |}
+      |
+      |function precisionDec() {
+      |  if (precision > 1) {
+      |    precision = precision - 1;
+      |    updateFloatingPrecision() ;
+      |  }
+      |}
+      |
+      |setTimeout(
+      |  updateFloatingPrecision,
+      |  100
+      |);
+      |
+      |setTimeout(
+      |  updateFloatingPrecision,
+      |  500
+      |);
+      |</script>
+      |""".stripMargin.replaceAll("\r", "")
+  }
+
   /**
     * Make a web page containing all the spreadsheets.
     * @param extendedData Metadata.
@@ -79,6 +121,9 @@ object SSHtml extends Logging {
 
     def makeContent(): Elem = {
       <div>
+        <div>
+          Precision <button onclick="precisionInc()">Inc</button>  <button onclick="precisionDec()">Dec</button>
+        </div>
         <ul class="nav nav-tabs">
           {tabList.map(_.toListItem)}
         </ul>
@@ -94,7 +139,7 @@ object SSHtml extends Logging {
 
     val htmlFile = new File(WLMonthlyHTML.dir(extendedData), s"$baseFileName.html")
 
-    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "WL Monthly", c3 = true, runScript = Some(ssReport.js))
+    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "WL Monthly", c3 = true, runScript = Some( precisionJs + ssReport.js))
 
     Util.writeFile(htmlFile, text)
     logger.info(s"Wrote spreadsheet as HTML to ${htmlFile.getAbsolutePath}")
