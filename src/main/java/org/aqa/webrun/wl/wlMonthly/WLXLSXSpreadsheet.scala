@@ -67,7 +67,7 @@ object WLXLSXSpreadsheet extends Logging {
       * Update all the content rows.  Sort by acquisition time, associate each data set with a row, and then process each row.
       */
     def updateContentRowList(): Unit = {
-      (firstRowNum until lastRowNum).foreach(rowNum => updateContentRow(rowNum, pairList(rowNum - firstRowNum)))
+      (firstRowNum to lastRowNum).foreach(rowNum => updateContentRow(rowNum, pairList(rowNum - firstRowNum)))
     }
 
     /**
