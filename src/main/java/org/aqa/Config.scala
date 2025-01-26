@@ -1006,8 +1006,8 @@ object Config extends Logging {
     list
   }
 
-  private val WLMonthlyTemplateFileName: String = logMainText("WLMonthlyTemplateFileName", "WLMonthlyTemplateFileName.xlsx")
-  val WLMonthlyTemplateFile: File = new File(staticDirFile, WLMonthlyTemplateFileName)
+  private val WLIsoCheckTemplateFileName: String = logMainText("WLIsoCheckTemplateFileName", "WLIsoCheckTemplateFileName.xlsx")
+  val WLIsoCheckTemplateFile: File = new File(staticDirFile, WLIsoCheckTemplateFileName)
 
   // =================================================================================
 

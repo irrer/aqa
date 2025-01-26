@@ -17,7 +17,7 @@ import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil.emptyValueMap
 import org.aqa.web.WebUtil.getValueMap
 import org.aqa.webrun.phase2.Phase2Util
-import org.aqa.webrun.wl.wlMonthly.WLRunMonthly
+import org.aqa.webrun.wl.isoCheck.WLRunIsoCheck
 import org.restlet.Request
 import org.restlet.Response
 
@@ -51,7 +51,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
     // If there are images to do a monthly analysis, then do it and add links to the web page
     val monthly: Elem = {
       try {
-        val elem = WLRunMonthly.run(extendedData, runReq, dbList)
+        val elem = WLRunIsoCheck.run(extendedData, runReq, dbList)
         elem // This will be a trivial HTML snippet if this data set does not have monthly data.
       } catch {
         case t: Throwable =>
