@@ -10,6 +10,7 @@ import org.apache.poi.xssf.streaming.SXSSFRow
 import org.apache.poi.xssf.streaming.SXSSFSheet
 import org.aqa.Logging
 import org.aqa.Util
+import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 
 import java.text.SimpleDateFormat
@@ -142,9 +143,11 @@ object WLXlsxUtil extends Logging {
   }
 
   def toHtmlPeach(dbl: Double): Elem = {
-    <td class={cssPreprocessRight} style="border:2px solid black;background:#F8CBAD;" floating={dbl.toString}>
+    val elem = <td class={cssPreprocessRight} style="border:2px solid black;background:#F8CBAD;">
       {fmt(dbl)}
     </td>
+
+    WebUtil.setPrecisionAttr(elem, dbl)
   }
 
   def toHtmlPowderBlue(text: String): Elem = {
@@ -154,9 +157,12 @@ object WLXlsxUtil extends Logging {
   }
 
   def toHtmlPowderBlue(dbl: Double): Elem = {
-    <td class={cssPreprocessRight} style="border:2px solid black;background:#DDEBF7;" floating={dbl.toString}>
+    val elem = {
+      <td class={cssPreprocessRight} style="border:2px solid black;background:#DDEBF7;">
       {fmt(dbl)}
     </td>
+    }
+    WebUtil.setPrecisionAttr(elem, dbl)
   }
 
   def toHtmlYellow(dbl: Double, style: Option[String] = None): Elem = {
@@ -168,15 +174,22 @@ object WLXlsxUtil extends Logging {
         yellow
     }
 
-    <td class={cssPreprocessRight} style={s} floating={dbl.toString}>
-      {fmt(dbl)}
-    </td>
+    val elem = {
+      <td class={cssPreprocessRight} style={s}>
+        {fmt(dbl)}
+      </td>
+    }
+    WebUtil.setPrecisionAttr(elem, dbl)
   }
 
   def toHtml(dbl: Double): Elem = {
-    <td class={cssPreprocessRight} floating={dbl.toString}>
+    val elem = {
+      <td class={cssPreprocessRight}>
       {dbl.toString}
     </td>
+    }
+
+    WebUtil.setPrecisionAttr(elem, dbl)
   }
 
   def toHtml(dbl: Option[Double]): Elem = {

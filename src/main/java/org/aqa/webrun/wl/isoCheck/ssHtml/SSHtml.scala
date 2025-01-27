@@ -55,48 +55,6 @@ private case class Tab(sheet: SSSheet, sheetList: Seq[SSSheet]) {
   */
 object SSHtml extends Logging {
 
-  private val precisionJs: String = {
-    """
-      |
-      |<script>
-      |var precision = 2;
-      |
-      |function updateFloatingPrecision() {
-      |  var list = $( "[floating]" );
-      |  for (i = 0; i < list.length; i++) {
-      |    var num = parseFloat(list[i].getAttribute("floating"));
-      |    var text = num.toPrecision(precision);
-      |    list[i].innerHTML = text;
-      |  }
-      |}
-      |
-      |function precisionInc() {
-      |  if (precision < 20) {
-      |    precision = precision + 1;
-      |    updateFloatingPrecision() ;
-      |  }
-      |}
-      |
-      |function precisionDec() {
-      |  if (precision > 1) {
-      |    precision = precision - 1;
-      |    updateFloatingPrecision() ;
-      |  }
-      |}
-      |
-      |setTimeout(
-      |  updateFloatingPrecision,
-      |  100
-      |);
-      |
-      |setTimeout(
-      |  updateFloatingPrecision,
-      |  500
-      |);
-      |</script>
-      |""".stripMargin.replaceAll("\r", "")
-  }
-
   /**
     * Make a web page containing all the spreadsheets.
     * @param extendedData Metadata.
@@ -121,9 +79,16 @@ object SSHtml extends Logging {
 
     def makeContent(): Elem = {
       <div>
-        <div>
-          Precision <button onclick="precisionInc()">Inc</button>  <button onclick="precisionDec()">Dec</button>
+
+        <div class="row">
+          <div class="col-md-2">
+            {WebUtil.showPrecision}
+          </div>
+          <div class="col-md-2 col-md-offset-1">
+            <h2 style="margin:10px;">IsoCheck</h2>
+          </div>
         </div>
+
         <ul class="nav nav-tabs">
           {tabList.map(_.toListItem)}
         </ul>
@@ -139,7 +104,7 @@ object SSHtml extends Logging {
 
     val htmlFile = new File(WLIsoCheckHTML.dir(extendedData), s"$baseFileName.html")
 
-    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "WL IsoCheck", c3 = true, runScript = Some(precisionJs + ssReport.js))
+    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "WL IsoCheck", c3 = true, runScript = Some(ssReport.js))
 
     Util.writeFile(htmlFile, text)
     logger.info(s"Wrote spreadsheet as HTML to ${htmlFile.getAbsolutePath}")

@@ -1,6 +1,7 @@
 package org.aqa.webrun.wl.isoCheck.ssHtml
 
 import org.aqa.Util
+import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLColumn
@@ -52,9 +53,12 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SS
   private def toHtml(text: String, alignLeft: Boolean = true, isNumeric: Boolean = false): Elem = {
     val c = if (alignLeft) cssPreprocessLeft else cssPreprocessRight
     if (isNumeric) {
-      <td class={c} floating={text.trim}>
-        {text}
-      </td>
+      val elem = {
+        <td class={c}>
+          {text}
+        </td>
+      }
+      WebUtil.setPrecisionAttr(elem, text.trim.toDouble)
     } else {
       <td class={c}>
       {text}
