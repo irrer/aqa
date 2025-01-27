@@ -199,6 +199,43 @@ object WebUtil extends Logging {
   }
 
   /**
+    * Include this in the page to show buttons that increase and decrease the number of digits of precision shown.
+    *
+    *
+    */
+  val showPrecision: Elem = {
+    <div title="Click 'More' or 'Less' to show more or less digits of precision.">
+      <table style="border:1px solid grey;">
+        <tr>
+          <td>
+            <span style="margin:8px">Precision</span>
+          </td>
+          <td>
+            <button style="margin:8px;" onclick="precisionInc()">More</button>
+          </td>
+          <td>
+            <button style="margin:8px;" onclick="precisionDec()">Less</button>
+          </td>
+        </tr>
+      </table>
+    </div>
+  }
+
+  /**
+    * Set the precision attribute for the given element.
+    *
+    * @param elem Element to have attribute set.
+    * @param d    Floating point value to show.
+    * @return Clone of original element with presicion attribute set.
+    */
+  def setPrecisionAttr(elem: Elem, d: Double): Elem = {
+    val attr = {
+      <div precision={d.toString}/>
+    }.attributes
+    elem % attr
+  }
+
+  /**
     * Number of digits to use when constructing anonymized file names.
     */
   private val writeUploadedFileDigits = 4

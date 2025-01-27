@@ -85,6 +85,7 @@ jsonhttp.onreadystatechange = function() {
       aliasToRealList = JSON.parse(this.responseText);
       translateAliases();
       showOutputHeader();
+      updateFloatingPrecision();
   }
 };
 
@@ -94,6 +95,34 @@ jsonhttp.onreadystatechange = function() {
 if (window.location.pathname.toLowerCase().indexOf("/static/") == -1) {
   jsonhttp.open("GET", aliasToRealUrl, true);
   jsonhttp.send();
+}
+
+var precision = 2; // default precision to show
+
+/* Update all elements with the 'precision' attribute to the 'precision' number of digits. */
+function updateFloatingPrecision() {
+  var list = $( "[precision]" );
+  for (i = 0; i < list.length; i++) {
+    var num = parseFloat(list[i].getAttribute("precision"));
+    var text = num.toPrecision(precision);
+    list[i].innerHTML = text;
+  }
+}
+
+/* Increase the precision by 1. */
+function precisionInc() {
+  if (precision < 20) {
+    precision = precision + 1;
+    updateFloatingPrecision() ;
+  }
+}
+
+/* Decrease the precision by 1. */
+function precisionDec() {
+  if (precision > 1) {
+    precision = precision - 1;
+    updateFloatingPrecision() ;
+  }
 }
 
 function translateAliases() {
