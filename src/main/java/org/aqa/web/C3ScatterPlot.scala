@@ -184,9 +184,11 @@ class C3ScatterPlot(
          |    bindto : '#$chartIdTag',
          |        grid: {
          |      x: {
+         |        lines: [ {value: 0} ],
          |        show: $showGrid
          |      },
          |      y: {
+         |        lines: [ {value: 0} ],
          |        show: $showGrid
          |      }
          |    },
