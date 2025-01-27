@@ -97,7 +97,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
         toHtmlPowderBlue(isoTable.BB_Xp(beam, isoTable.get_dXT__0_Optimized, isoTable.get_dZT__0_Optimized) - isoTable.get_IsoTable_X_Optimized), /* P BB-X" */
         toHtmlPowderBlue(isoTable.BB_Zpp(beam, isoTable.get_dXT__0_Optimized, isoTable.get_dZT__0_Optimized, isoTable.get_IsoTable_Z_Optimized)), /* Q BB-Z" */
         toHtmlPowderBlue(isoTable.BB_Rpp(beam, isoTable.get_dXT__0_Optimized, isoTable.get_dZT__0_Optimized, isoTable.get_IsoTable_X_Optimized, isoTable.get_IsoTable_Z_Optimized)) /*  R BB-R"^2 */
-      ) ++ blankCells(6) /*                      S to X */
+      ) ++ blankCells(7) /*                      S to Y */
     }
   }
 
@@ -108,7 +108,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
       {blankCells(17) /*              B1 to R1 */}
       {toHtml("MLC offset") /*        S1 */}
       {toHtml(isoCheck.mlcOffsetY) /* T1 */}
-      {blankCells(4) /*               U1 to X1 */}
+      {blankCells(5) /*               U1 to Y1 */}
     </tr>
   }
 
@@ -143,6 +143,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
       {toHtml(isoCheck.mlcOffsetY) /* T2 */}
       {blankCell /*                   U2 */}
       {titleList2.map(toHtml(_)) /*   V2 to X2 */}
+      {blankCell /*                   Y2 */}
     </tr>
   }
 
@@ -166,22 +167,24 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
       {toHtml(0.0) /*                                           V3 */}
       {toHtml(0.0) /*                                           W3 */}
       {toHtml(0.0) /*                                           X3 */}
+      {blankCell /*                                             Y3 */}
     </tr>
   }
 
   private def makeRow4: Elem = {
     <tr>
       {makeRowIndex(4)}
-      {gantryAnglePrefix(isoCheck.G__0_C270_T__0) /*                 A4 to H4 */}
-      {blankCells(8) /*                                              I4 to P4 */}
-      {toHtml(isoCheck.mlcDxG__0_C270) /*                            Q4 */}
-      {toHtml(isoCheck.mlcDyG__0_C270) /*                            R4 */}
-      {toHtml(isoCheck.mlcOffsetX_270) /*                            S4 */}
-      {toHtml(isoCheck.mlcOffsetY_270) /*                            T4 */}
-      {toHtml("Gantry isocenter relative to BB at Table zero") /*    U4 */}
-      {toHtml(isoCheck.isoX) /* V4 */}
-      {toHtml(isoCheck.isoY) /* W4 */}
-      {toHtml(isoCheck.isoZ) /* X4 */}
+      {gantryAnglePrefix(isoCheck.G__0_C270_T__0) /*               A4 to H4 */}
+      {blankCells(8) /*                                            I4 to P4 */}
+      {toHtml(isoCheck.mlcDxG__0_C270) /*                          Q4 */}
+      {toHtml(isoCheck.mlcDyG__0_C270) /*                          R4 */}
+      {toHtml(isoCheck.mlcOffsetX_270) /*                          S4 */}
+      {toHtml(isoCheck.mlcOffsetY_270) /*                          T4 */}
+      {toHtml("Gantry isocenter relative to BB at Table zero") /*  U4 */}
+      {toHtml(isoCheck.isoX) /*                                    V4 */}
+      {toHtml(isoCheck.isoY) /*                                    W4 */}
+      {toHtml(isoCheck.isoZ) /*                                    X4 */}
+      {blankCell /*                                                Y4 */}
     </tr>
   }
 
@@ -200,6 +203,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
       {toHtml(isoTable.get_IsoTable_X_Optimized) /*          V5 */}
       {blankCell /*                                          S5 to T5 */}
       {toHtml(isoTable.get_IsoTable_Z_Optimized) /*          X5 */}
+      {blankCell /*                                          Y5 */}
     </tr>
   }
 
@@ -214,7 +218,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
       {blankCell /*                                  P6 */}
       {toHtml(isoCheck.mlcDxG_90_C270) /*            Q6 */}
       {toHtml(isoCheck.mlcDyG_90_C270) /*            R6 */}
-      {blankCells(6) /*                              S6 to X6 */}
+      {blankCells(7) /*                              S6 to Y6 */}
     </tr>
   }
 
@@ -229,7 +233,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
       {blankCell /*                                  P7 */}
       {toHtml(isoCheck.mlcDxG180_C__0) /*            Q7 */}
       {toHtml(isoCheck.mlcDyG180_C__0) /*            R7 */}
-      {blankCells(6) /*                              S7 to X7 */}
+      {blankCells(7) /*                              S7 to Y7 */}
     </tr>
   }
 
@@ -245,7 +249,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
       {toHtml("Gantry Isocentricity") /*             P8 */}
       {toHtml(isoCheck.mlcDxG180_C_90) /*            Q8 */}
       {toHtml(isoCheck.mlcDyG180_C_90) /*            R8 */}
-      {blankCells(6) /*                              S8 to X8 */}
+      {blankCells(7) /*                              S8 to Y8 */}
     </tr>
   }
 
@@ -256,7 +260,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
       {blankCells(8) /*                              I9 to P9 */}
       {toHtml(isoCheck.mlcDxG180_C270) /*            Q9 */}
       {toHtml(isoCheck.mlcDyG180_C270) /*            R9 */}
-      {blankCells(6) /*                              S9 to X9 */}
+      {blankCells(7) /*                              S9 to Y9 */}
     </tr>
   }
 
@@ -270,7 +274,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
       {blankCells(5) /*                              L10 to P10 */}
       {toHtml(isoCheck.mlcDxG270_C_90) /*            Q10 */}
       {toHtml(isoCheck.mlcDyG270_C_90) /*            R10 */}
-      {blankCells(6) /*                              S10 to X10 */}
+      {blankCells(7) /*                              S10 to Y10 */}
     </tr>
   }
 
@@ -281,7 +285,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
       {blankCells(8) /*                              I11 to P11 */}
       {toHtml(isoCheck.mlcDxG270_C270) /*            Q11 */}
       {toHtml(isoCheck.mlcDyG270_C270) /*            R11 */}
-      {blankCells(6) /*                              S11 to X11 */}
+      {blankCells(7) /*                              S11 to Y11 */}
     </tr>
   }
 
@@ -294,7 +298,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
       {toHtmlPowderBlue("Max square of BB displacement" + WebUtil.rightBoldArrow) /*          Q12 */}
       {toHtmlPeach(isoTable.get_RSquared_Optimized) /*                                        R12 */}
       {toHtml("Solve for smallest max (Couch Isocentricity)") /*                              S12 */}
-      {blankCells(4) /*                                                                       T12 to X12*/}
+      {blankCells(5) /*                                                                       T12 to Y12*/}
     </tr>
   }
 
@@ -316,7 +320,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
       {toHtml("BB-X\"") /*   P13 */}
       {toHtml("BB-Z\"") /*   Q13 */}
       {toHtml("BB-R\"^2") /* R13 */}
-      {blankCells(6) /*      S13 to X13*/}
+      {blankCells(7) /*      S13 to Y13*/}
     </tr>
   }
 
@@ -324,49 +328,49 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
 
     <tr>
       {makeRowIndex(14)}
-      {isoTableAnglePrefix(isoTable.T__0) /* A14 to G14 */}
+      {isoTableAnglePrefix(isoTable.T__0) /* A14 to Y14 */}
     </tr>
   }
 
   private def makeRow15: Elem = {
     <tr>
       {makeRowIndex(15)}
-      {isoTableAnglePrefix(isoTable.T330) /* A15 to G15 */}
+      {isoTableAnglePrefix(isoTable.T330) /* A15 to Y15 */}
     </tr>
   }
 
   private def makeRow16: Elem = {
     <tr>
       {makeRowIndex(16)}
-      {isoTableAnglePrefix(isoTable.T300) /* A16 to G16 */}
+      {isoTableAnglePrefix(isoTable.T300) /* A16 to Y16 */}
     </tr>
   }
 
   private def makeRow17: Elem = {
     <tr>
       {makeRowIndex(17)}
-      {isoTableAnglePrefix(isoTable.T270) /* A17 to G17 */}
+      {isoTableAnglePrefix(isoTable.T270) /* A17 to Y17 */}
     </tr>
   }
 
   private def makeRow18: Elem = {
     <tr>
       {makeRowIndex(18)}
-      {isoTableAnglePrefix(isoTable.T_90) /* A18 to G18 */}
+      {isoTableAnglePrefix(isoTable.T_90) /* A18 to Y18 */}
     </tr>
   }
 
   private def makeRow19: Elem = {
     <tr>
       {makeRowIndex(19)}
-      {isoTableAnglePrefix(isoTable.T_60) /* A19 to G19 */}
+      {isoTableAnglePrefix(isoTable.T_60) /* A19 to Y19 */}
     </tr>
   }
 
   private def makeRow20: Elem = {
     <tr>
       {makeRowIndex(20)}
-      {isoTableAnglePrefix(isoTable.T_30) /* A20 to G20 */}
+      {isoTableAnglePrefix(isoTable.T_30) /* A20 to Y20 */}
     </tr>
   }
 
@@ -384,14 +388,14 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
       <td colSpan="2" rowSpan="2"  style="border:2px solid black;margin-bottom:2px;"> { /* R21 + S21 */ }
         sum of squares x^2 +y^2 for each isoTable angle
       </td>
-      {blankCells(5) /*                                                                    T21 to X21 */}
+      {blankCells(6) /*                                                                    T21 to Y21 */}
     </tr>
   }
 
   private def makeRow22: Elem = {
     <tr>
       {makeRowIndex(22)}
-      {blankCells(18) /*               Fill in columns that are not occupied by line 21.    A22 to X22 */}
+      {blankCells(19) /*               Fill in columns that are not occupied by line 21.    A22 to Y22 */}
     </tr>
   }
 
@@ -402,14 +406,14 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
   private def makeRow23: Elem = {
     <tr>
       {makeRowIndex(23)}
-      {blankCells(24)}
+      {blankCells(25)}
     </tr>
   }
 
   override def make(): Elem = {
     val content = {
       <table class="table table-bordered">
-        {makeAlphaRow(24)}
+        {makeAlphaRow(25)}
         {makeRow1}
         {makeRow2}
         {makeRow3}
