@@ -54,7 +54,7 @@ case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], iso
 
     val htmlRef = {
       val hRef = WLIsoCheckHTML.dirName + "/" + htmlFile.getName
-      <h4><a href={hRef} style="margin:20px;">WL IsoCheck</a></h4>
+      <h4><a href={hRef} style="margin:20px;">IsoCheck</a></h4>
     }
     htmlRef
   }
