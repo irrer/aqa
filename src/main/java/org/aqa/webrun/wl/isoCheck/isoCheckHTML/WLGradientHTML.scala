@@ -101,6 +101,54 @@ case class WLGradientHTML(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoT
     }
   }
 
+  private def collimatorImage = {
+    val x = CoordinateSpec(center = collimator.Coll_X_Optimized, name = "Coll X")
+    val y = CoordinateSpec(center = collimator.Coll_Z_Optimized, name = "Coll Z")
+    GradientImage("Collimator", x, y, collimator.MinCA_Rpp, "Collimator X vs Z")
+  }
+
+  private def isoTableImageDXDZ = {
+    val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "dX")
+    val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "dZ")
+    def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(x, y, isoTable.get_IsoTable_X_Optimized, isoTable.get_IsoTable_Z_Optimized)
+    GradientImage("Table dX vs dZ", x, y, func, "Table dX vs dZ")
+  }
+
+  private def isoTableImageDXIsoTableX = {
+    val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "dX")
+    val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "TableX")
+    def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(x, isoTable.get_dZT__0_Optimized, y, isoTable.get_IsoTable_Z_Optimized)
+    GradientImage("Table dX vs TableX", x, y, func, "Table dX vs TableX")
+  }
+
+  private def isoTableImageDXIsoTableZ = {
+    val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "dX")
+    val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "TableZ")
+    def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(x, isoTable.get_dZT__0_Optimized, isoTable.get_IsoTable_X_Optimized, y)
+    GradientImage("Table dX vs TableZ", x, y, func, "Table dX vs TableZ")
+  }
+
+  private def isoTableImageDZIsoTableX = {
+    val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "dZ")
+    val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "TableX")
+    def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(isoTable.get_dXT__0_Optimized, x, y, isoTable.get_IsoTable_Z_Optimized)
+    GradientImage("Table dZ vs TableX", x, y, func, "Table dZ vs TableX")
+  }
+
+  private def isoTableImageDZIsoTableZ = {
+    val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "dZ")
+    val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "TableZ")
+    def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(isoTable.get_dXT__0_Optimized, x, isoTable.get_IsoTable_X_Optimized, y)
+    GradientImage("Table dZ vs TableZ", x, y, func, "Table dZ vs TableZ")
+  }
+
+  private def isoTableImageIsoTableXIsoTableZ = {
+    val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "TableX")
+    val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "TableZ")
+    def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(isoTable.get_dXT__0_Optimized, isoTable.get_dZT__0_Optimized, x, y)
+    GradientImage("Table TableX vs TableZ", x, y, func, "Table TableX vs TableZ")
+  }
+
   /**
     * Make all gradient HTML, including the main page and a page for each gradient.  There are seven in
     * all, one for the collimator, and six for the isoTable.
@@ -118,54 +166,6 @@ case class WLGradientHTML(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoT
     * @return An HTML snippet that serves as a reference to the gradient main page.
     */
   def makeHtml(): Elem = {
-
-    val collimatorImage = {
-      val x = CoordinateSpec(center = collimator.Coll_X_Optimized, name = "Coll X")
-      val y = CoordinateSpec(center = collimator.Coll_Z_Optimized, name = "Coll Z")
-      GradientImage("Collimator", x, y, collimator.MinCA_Rpp, "Collimator X vs Z")
-    }
-
-    val isoTableImageDXDZ = {
-      val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "dX")
-      val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "dZ")
-      def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(x, y, isoTable.get_IsoTable_X_Optimized, isoTable.get_IsoTable_Z_Optimized)
-      GradientImage("Table dX vs dZ", x, y, func, "Table dX vs dZ")
-    }
-
-    val isoTableImageDXIsoTableX = {
-      val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "dX")
-      val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "TableX")
-      def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(x, isoTable.get_dZT__0_Optimized, y, isoTable.get_IsoTable_Z_Optimized)
-      GradientImage("Table dX vs TableX", x, y, func, "Table dX vs TableX")
-    }
-
-    val isoTableImageDXIsoTableZ = {
-      val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "dX")
-      val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "TableZ")
-      def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(x, isoTable.get_dZT__0_Optimized, isoTable.get_IsoTable_X_Optimized, y)
-      GradientImage("Table dX vs TableZ", x, y, func, "Table dX vs TableZ")
-    }
-
-    val isoTableImageDZIsoTableX = {
-      val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "dZ")
-      val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "TableX")
-      def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(isoTable.get_dXT__0_Optimized, x, y, isoTable.get_IsoTable_Z_Optimized)
-      GradientImage("Table dZ vs TableX", x, y, func, "Table dZ vs TableX")
-    }
-
-    val isoTableImageDZIsoTableZ = {
-      val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "dZ")
-      val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "TableZ")
-      def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(isoTable.get_dXT__0_Optimized, x, isoTable.get_IsoTable_X_Optimized, y)
-      GradientImage("Table dZ vs TableZ", x, y, func, "Table dZ vs TableZ")
-    }
-
-    val isoTableImageIsoTableXIsoTableZ = {
-      val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "TableX")
-      val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "TableZ")
-      def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(isoTable.get_dXT__0_Optimized, isoTable.get_dZT__0_Optimized, x, y)
-      GradientImage("Table TableX vs TableZ", x, y, func, "Table TableX vs TableZ")
-    }
 
     // group the content as collimator by itself, and then the six isoTable gradients.
     val htmlContent: Elem = {
@@ -211,7 +211,7 @@ case class WLGradientHTML(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoT
     Util.writeFile(htmlFile, text)
     logger.info(s"Wrote file ${htmlFile.getAbsoluteFile}")
 
-    <a href={gradientDirName + "/index.html"}>Gradients</a>
+    <a href={gradientDirName + "/index.html"} style="margin-left:50px;">View Gradients</a>
   }
 
 }

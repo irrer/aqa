@@ -34,7 +34,7 @@ case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], iso
 
     val htmlFile = new File(WLIsoCheckHTML.dir(extendedData), "index.html")
 
-    val fileNameHtmlSpreadsheet = SSHtml.make(extendedData, pairList, isoCheck, isoTable, collimator)
+    val fileNameCsvSNCImport = SSHtml.make(extendedData, pairList, isoCheck, isoTable, collimator)
 
     val fileName_xlsx = WLXLSXSpreadsheet.makeSpreadsheet(extendedData, pairList, isoTable, collimator)
 
@@ -43,7 +43,10 @@ case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], iso
         <table>
           <tr>
             <td>
-              <a href={fileNameHtmlSpreadsheet}>View Spreadsheet</a>
+              <a href={SSHtml.spreadsheetHtmlFileName}>View Spreadsheet</a>
+            </td>
+            <td>
+              <a href={fileNameCsvSNCImport} style="margin-left:50px;">Download CSV for SNC</a>
             </td>
             <td>
               <a href={fileName_xlsx} style="margin-left:50px;">Download XLSX</a>

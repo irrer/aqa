@@ -3,6 +3,7 @@ package org.aqa.webrun.wl.isoCheck
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.FileUtil
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.util.CellReference
 import org.apache.poi.xssf.streaming.SXSSFCell
@@ -234,8 +235,9 @@ object WLXlsxUtil extends Logging {
     */
   def baseFileName(extendedData: ExtendedData): String = {
     val dateFormat = new SimpleDateFormat("yyyy-MM-dd'_'HH-mm")
+    val machineName = FileUtil.replaceInvalidFileNameCharacters(extendedData.machine.getRealId, '_')
     val dateText = Util.formatDate(dateFormat, extendedData.output.dataDate.get)
-    s"WinstonLutz_$dateText"
+    s"IsoCheck_${machineName}_$dateText"
   }
 
 }

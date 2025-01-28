@@ -1,6 +1,5 @@
 package org.aqa.webrun.wl.isoCheck.ssHtml
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.isoCheck.WLCollimator
 import org.aqa.webrun.wl.isoCheck.WLIsoCheck
@@ -70,8 +69,13 @@ class SSSNCImport(extendedData: ExtendedData, isoCheck: WLIsoCheck, collimator: 
       </table>
     }
 
-    Trace.trace("=====CSV=====\n" + buffer.toString + "=====") // TODO
-
     content
   }
+
+  /**
+    * Get the CSV content for the SNC import.
+    * @return CSV content as text.
+    */
+  def csvContent: String = buffer.toString
+
 }

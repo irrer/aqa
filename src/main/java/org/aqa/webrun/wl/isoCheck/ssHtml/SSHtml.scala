@@ -55,7 +55,7 @@ private case class Tab(sheet: SSSheet, sheetList: Seq[SSSheet]) {
   */
 object SSHtml extends Logging {
 
-
+  val spreadsheetHtmlFileName = "spreadsheet.html"
 
   /**
     * Make a web page containing all the spreadsheets.
@@ -101,18 +101,24 @@ object SSHtml extends Logging {
       </div>
     }
 
-    val content = makeContent()
-
+    /** Build a name that can be used to differentiate different downloads. */
     val baseFileName = WLXlsxUtil.baseFileName(extendedData)
 
-    val htmlFile = new File(WLIsoCheckHTML.dir(extendedData), s"$baseFileName.html")
+    /** Directory where all spreadsheet content is written */
+    val dir = WLIsoCheckHTML.dir(extendedData)
 
+    // make and write HTML for all spreadsheets to disc
+    val content = makeContent()
+    val htmlFile = new File(dir, spreadsheetHtmlFileName)
     val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "WL IsoCheck", c3 = true, runScript = Some(ssReport.js))
-
     Util.writeFile(htmlFile, text)
     logger.info(s"Wrote spreadsheet as HTML to ${htmlFile.getAbsolutePath}")
 
-    htmlFile.getName
+    val csvFile = new File(dir, s"$baseFileName.csv")
+    Util.writeFile(csvFile, ssSNCImport.csvContent)
+    logger.info(s"Wrote SNC as CSV to ${csvFile.getAbsolutePath}")
+
+    csvFile.getName
   }
 
 }
