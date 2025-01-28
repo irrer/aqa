@@ -55,18 +55,21 @@ private case class Tab(sheet: SSSheet, sheetList: Seq[SSSheet]) {
   */
 object SSHtml extends Logging {
 
+
+
   /**
     * Make a web page containing all the spreadsheets.
     * @param extendedData Metadata.
     * @param pairList List of images with analysis.
-    * @return name of HTML file.
+    * @return name of CSV file.
     */
   def make(extendedData: ExtendedData, pairList: Seq[WLBeam], isoCheck: WLIsoCheck, isoTable: WLIsoTable, collimator: WLCollimator): String = {
 
+    val ssSNCImport = new SSSNCImport(extendedData: ExtendedData, isoCheck, collimator, isoTable)
     val ssReport = new SSReport(extendedData: ExtendedData, isoCheck, isoTable)
 
     val sheetList: Seq[SSSheet] = Seq(
-      new SSSNCImport(extendedData: ExtendedData, isoCheck, collimator, isoTable),
+      ssSNCImport,
       new SSData(extendedData: ExtendedData, pairList),
       new SSPreprocess(extendedData: ExtendedData, pairList),
       new SSAnalysis(extendedData: ExtendedData, isoCheck, isoTable),

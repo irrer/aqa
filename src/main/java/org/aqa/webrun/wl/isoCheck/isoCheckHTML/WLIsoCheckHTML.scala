@@ -40,11 +40,19 @@ case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], iso
 
     val content = {
       <div>
-        <a href={fileNameHtmlSpreadsheet}>View Spreadsheet</a>
-        <br></br>
-        <a href={fileName_xlsx} style="margin-left:50px;">Download XLSX WLCollimator</a>
-        <br></br>
-        {gradientHtml}
+        <table>
+          <tr>
+            <td>
+              <a href={fileNameHtmlSpreadsheet}>View Spreadsheet</a>
+            </td>
+            <td>
+              <a href={fileName_xlsx} style="margin-left:50px;">Download XLSX</a>
+            </td>
+            <td>
+              {gradientHtml}
+            </td>
+          </tr>
+        </table>
       </div>
     }
 

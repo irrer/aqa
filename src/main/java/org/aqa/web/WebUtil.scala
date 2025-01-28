@@ -204,17 +204,17 @@ object WebUtil extends Logging {
     *
     */
   val showPrecision: Elem = {
-    <div title="Click 'More' or 'Less' to show more or less digits of precision.">
+    <div title="Click '+' or '-' to show more or fewer digits of precision.">
       <table style="border:1px solid grey;">
         <tr>
           <td>
             <span style="margin:8px">Precision</span>
           </td>
           <td>
-            <button style="margin:8px;" onclick="precisionInc()">More</button>
+            <button style="margin:8px;" onclick="precisionInc()"> <b> + </b> </button>
           </td>
           <td>
-            <button style="margin:8px;" onclick="precisionDec()">Less</button>
+            <button style="margin:8px;" onclick="precisionDec()"> <b> - </b> </button>
           </td>
         </tr>
       </table>
