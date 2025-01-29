@@ -38,10 +38,7 @@ case class WLIsoCheck( // @formatter:off
                       G180_C270_T__0: WLBeam,
 
                       G270_C_90_T__0: WLBeam,
-                      G270_C270_T__0: WLBeam,
-
-                      G180_C270_T_90: WLBeam,
-                      G180_C270_T270: WLBeam
+                      G270_C270_T__0: WLBeam
                       // @formatter:on
                      ) extends Logging {
 
@@ -262,9 +259,6 @@ object WLIsoCheck extends Logging {
 
     val G270_C_90_T__0: Option[WLBeam] = findPair(270,  90,   0)
     val G270_C270_T__0: Option[WLBeam] = findPair(270, 270,   0)
-
-    val G180_C270_T_90: Option[WLBeam] = findPair(180, 270,  90)
-    val G180_C270_T270: Option[WLBeam] = findPair(180, 270, 270)
     // @formatter:on
 
     // list of all files required for WL IsoCheck
@@ -281,10 +275,7 @@ object WLIsoCheck extends Logging {
       G180_C270_T__0,
 
       G270_C_90_T__0,
-      G270_C270_T__0,
-
-      G180_C270_T_90,
-      G180_C270_T270
+      G270_C270_T__0
       // @formatter:on
     )
 
@@ -304,10 +295,7 @@ object WLIsoCheck extends Logging {
         G180_C270_T__0 = G180_C270_T__0.get,
 
         G270_C_90_T__0 = G270_C_90_T__0.get,
-        G270_C270_T__0 = G270_C270_T__0.get,
-
-        G180_C270_T_90 = G180_C270_T_90.get,
-        G180_C270_T270 = G180_C270_T270.get
+        G270_C270_T__0 = G270_C270_T__0.get
         // @formatter:on
       ))
     }

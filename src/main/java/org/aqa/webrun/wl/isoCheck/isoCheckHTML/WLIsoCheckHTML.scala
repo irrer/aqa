@@ -1,5 +1,6 @@
 package org.aqa.webrun.wl.isoCheck.isoCheckHTML
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.isoCheck.WLCollimator
@@ -24,7 +25,7 @@ import scala.xml.Elem
   * @param collimator Collimator data.
   */
 
-case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], isoCheck: WLIsoCheck, isoTable: WLIsoTable, collimator: WLCollimator) extends Logging {
+case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], isoCheck: WLIsoCheck, isoTable: Option[WLIsoTable], collimator: WLCollimator) extends Logging {
 
   def mainPage(): Elem = {
 
@@ -36,7 +37,9 @@ case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], iso
 
     val fileNameCsvSNCImport = SSHtml.make(extendedData, pairList, isoCheck, isoTable, collimator)
 
+    Trace.trace()
     val fileName_xlsx = WLXLSXSpreadsheet.makeSpreadsheet(extendedData, pairList, isoTable, collimator)
+    Trace.trace()
 
     val content = {
       <div>
@@ -59,9 +62,13 @@ case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], iso
       </div>
     }
 
-    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "WL IsoCheck", runScript = None)
+    Trace.trace()
+    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "IsoCheck", runScript = None)
+    Trace.trace()
     Util.writeFile(htmlFile, text)
+    Trace.trace()
     logger.info(s"Wrote spreadsheet as HTML to ${htmlFile.getAbsolutePath}")
+    Trace.trace()
 
     val htmlRef = {
       val hRef = WLIsoCheckHTML.dirName + "/" + htmlFile.getName

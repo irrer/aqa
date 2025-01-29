@@ -15,8 +15,8 @@ import scala.xml.Elem
   * @param extendedData Metadata
   * @param isoCheck IsoCheck data
   */
-class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLIsoTable) extends SSSheet {
-
+class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Option[WLIsoTable]) extends SSSheet {
+  private val hasIt = isoTable.isDefined
   override val name: String = "Analysis"
 
   /**
@@ -42,40 +42,46 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
     * @param beamOpt Beam to show.
     * @return cells for common content.
     */
-  private def isoTableAnglePrefix(beamOpt: Option[WLBeam]): Seq[Elem] = {
+  private def isoTableAnglePrefix(getBeam: WLIsoTable => Option[WLBeam]): Seq[Elem] = {
 
-    if (beamOpt.isEmpty) {
+    if ((!hasIt) || getBeam(isoTable.get).isEmpty) {
       toHtml("NA") +: blankCells(24)
     } else {
-      val beam = beamOpt.get
+      val beam = getBeam(isoTable.get).get
 
-      val dX = isoTable.dXOf(beam, isoTable.get_dXT__0_Optimized, isoTable.get_dZT__0_Optimized)
-      val dZ = isoTable.dZOf(beam, isoTable.get_dXT__0_Optimized, isoTable.get_dZT__0_Optimized)
+      val dX: Option[Double] = isoTable.map(it => it.dXOf(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized))
+      val dZ: Option[Double] = isoTable.map(it => it.dZOf(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized))
 
       val isoTableAngle0 = beam.isoTableAngle == 0
 
       val L = //                             L dX
-        if (isoTableAngle0)
-          toHtmlYellow(isoTable.get_dXT__0_Optimized)
-        else
-          toHtmlPowderBlue(dX)
+        if (isoTableAngle0) {
+          if (hasIt)
+            toHtmlYellow(isoTable.get.get_dXT__0_Optimized)
+          else
+            toHtmlYellow("NA")
+        } else
+          toHtmlPowderBlue(dX.get)
 
       val M = //                             M dX
-        if (isoTableAngle0)
-          toHtmlYellow(isoTable.get_dZT__0_Optimized)
-        else
-          toHtmlPowderBlue(dZ)
+        if (isoTableAngle0) {
+          if (hasIt)
+            toHtmlYellow(isoTable.get.get_dZT__0_Optimized)
+          else
+            toHtmlYellow("NA")
+        } else
+          toHtmlPowderBlue(dZ.get)
 
       val N = //                             N IsoTable-X
-        if (isoTableAngle0)
-          toHtmlYellow(isoTable.get_IsoTable_X_Optimized)
-        else
+        if (hasIt && isoTableAngle0) {
+          toHtmlYellow(isoTable.get.get_IsoTable_X_Optimized)
+        } else
           blankCell
 
       val O = //                             N IsoTable-Z
-        if (isoTableAngle0)
-          toHtmlYellow(isoTable.get_IsoTable_Z_Optimized)
-        else
+        if (hasIt && isoTableAngle0) {
+          toHtmlYellow(isoTable.get.get_IsoTable_Z_Optimized)
+        } else
           blankCell
 
       Seq(
@@ -86,17 +92,24 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
         toHtml(beam.wl.errorY_mm), /*            E X offset corrected box-ball */
         toHtml(WLIsoTable.CA_X(beam)), /*        F CA-X */
         toHtml(WLIsoTable.CA_Z(beam)), /*        G CA-Z */
-        toHtml(isoTable.BB_X(beam)), /*          H BB-X */
-        toHtml(isoTable.BB_Z(beam)), /*          I BB-Z */
-        toHtml(isoTable.BB_Xp(beam, isoTable.get_dXT__0_Optimized, isoTable.get_dZT__0_Optimized)), /* J BB-X' */
-        toHtml(isoTable.BB_Zp(beam, isoTable.get_dXT__0_Optimized, isoTable.get_dZT__0_Optimized)), /* K BB-Z' */
+        if (hasIt) toHtml(isoTable.get.BB_X(beam)) else blankCell, /*          H BB-X */
+        if (hasIt) toHtml(isoTable.get.BB_Z(beam)) else blankCell, /*          I BB-Z */
+        if (hasIt) toHtml(isoTable.get.BB_Xp(beam, isoTable.get.get_dXT__0_Optimized, isoTable.get.get_dZT__0_Optimized)) else blankCell, /* J BB-X' */
+        if (hasIt) toHtml(isoTable.get.BB_Zp(beam, isoTable.get.get_dXT__0_Optimized, isoTable.get.get_dZT__0_Optimized)) else blankCell, /* K BB-Z' */
         L, /*                                    L dX */
         M, /*                                    M dZ */
         N, /*                                    N IsoTable-X */
         O, /*                                    O IsoTable-Z */
-        toHtmlPowderBlue(isoTable.BB_Xp(beam, isoTable.get_dXT__0_Optimized, isoTable.get_dZT__0_Optimized) - isoTable.get_IsoTable_X_Optimized), /* P BB-X" */
-        toHtmlPowderBlue(isoTable.BB_Zpp(beam, isoTable.get_dXT__0_Optimized, isoTable.get_dZT__0_Optimized, isoTable.get_IsoTable_Z_Optimized)), /* Q BB-Z" */
-        toHtmlPowderBlue(isoTable.BB_Rpp(beam, isoTable.get_dXT__0_Optimized, isoTable.get_dZT__0_Optimized, isoTable.get_IsoTable_X_Optimized, isoTable.get_IsoTable_Z_Optimized)) /*  R BB-R"^2 */
+        if (hasIt) toHtmlPowderBlue(isoTable.get.BB_Xp(beam, isoTable.get.get_dXT__0_Optimized, isoTable.get.get_dZT__0_Optimized) - isoTable.get.get_IsoTable_X_Optimized)
+        else toHtmlPowderBlue("NA"), /* P BB-X" */
+        if (hasIt) toHtmlPowderBlue(isoTable.get.BB_Zpp(beam, isoTable.get.get_dXT__0_Optimized, isoTable.get.get_dZT__0_Optimized, isoTable.get.get_IsoTable_Z_Optimized))
+        else toHtmlPowderBlue("NA"), /* Q BB-Z" */
+        if (hasIt)
+          toHtmlPowderBlue(
+            isoTable.get.BB_Rpp(beam, isoTable.get.get_dXT__0_Optimized, isoTable.get.get_dZT__0_Optimized, isoTable.get.get_IsoTable_X_Optimized, isoTable.get.get_IsoTable_Z_Optimized)
+          )
+        else
+          toHtmlPowderBlue("NA") /*  R BB-R"^2 */
       ) ++ blankCells(7) /*                      S to Y */
     }
   }
@@ -200,9 +213,9 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
       {toHtml(isoCheck.mlcDyG_90_C_90) /*                    R5 */}
       {blankCells(2) /*                                      S5 to T5 */}
       {toHtml("Table axis relative to BB at Table zero") /*  U5 */}
-      {toHtml(isoTable.get_IsoTable_X_Optimized) /*          V5 */}
+      {if (hasIt) toHtml(isoTable.get.get_IsoTable_X_Optimized) else blankCell /*          V5 */}
       {blankCell /*                                          S5 to T5 */}
-      {toHtml(isoTable.get_IsoTable_Z_Optimized) /*          X5 */}
+      {if (hasIt) toHtml(isoTable.get.get_IsoTable_Z_Optimized) else blankCell /*          X5 */}
       {blankCell /*                                          Y5 */}
     </tr>
   }
@@ -293,10 +306,10 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
     <tr>
       {makeRowIndex(12)}
       {blankCells(10) /*                                                                      A12 to J12*/}
-      {toHtml(isoTable.K12(isoTable.get_dXT__0_Optimized, isoTable.get_dZT__0_Optimized)) /*  K12 */}
+      {if (hasIt) toHtml(isoTable.get.K12(isoTable.get.get_dXT__0_Optimized, isoTable.get.get_dZT__0_Optimized)) else blankCell /*  K12 */}
       {blankCells(5) /*                                                                       L12 to P12*/}
       {toHtmlPowderBlue("Max square of BB displacement" + WebUtil.rightBoldArrow) /*          Q12 */}
-      {toHtmlPeach(isoTable.get_RSquared_Optimized) /*                                        R12 */}
+      {if (hasIt) toHtmlPeach(isoTable.get.get_RSquared_Optimized) else blankCell /*                                        R12 */}
       {toHtml("Solve for smallest max (Couch Isocentricity)") /*                              S12 */}
       {blankCells(5) /*                                                                       T12 to Y12*/}
     </tr>
@@ -328,49 +341,49 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLI
 
     <tr>
       {makeRowIndex(14)}
-      {isoTableAnglePrefix(isoTable.T__0) /* A14 to Y14 */}
+      {isoTableAnglePrefix(it => it.T__0) /* A14 to Y14 */}
     </tr>
   }
 
   private def makeRow15: Elem = {
     <tr>
       {makeRowIndex(15)}
-      {isoTableAnglePrefix(isoTable.T330) /* A15 to Y15 */}
+      {isoTableAnglePrefix(it => it.T330) /* A15 to Y15 */}
     </tr>
   }
 
   private def makeRow16: Elem = {
     <tr>
       {makeRowIndex(16)}
-      {isoTableAnglePrefix(isoTable.T300) /* A16 to Y16 */}
+      {isoTableAnglePrefix(it => it.T300) /* A16 to Y16 */}
     </tr>
   }
 
   private def makeRow17: Elem = {
     <tr>
       {makeRowIndex(17)}
-      {isoTableAnglePrefix(isoTable.T270) /* A17 to Y17 */}
+      {isoTableAnglePrefix(it => it.T270) /* A17 to Y17 */}
     </tr>
   }
 
   private def makeRow18: Elem = {
     <tr>
       {makeRowIndex(18)}
-      {isoTableAnglePrefix(isoTable.T_90) /* A18 to Y18 */}
+      {isoTableAnglePrefix(it => it.T_90) /* A18 to Y18 */}
     </tr>
   }
 
   private def makeRow19: Elem = {
     <tr>
       {makeRowIndex(19)}
-      {isoTableAnglePrefix(isoTable.T_60) /* A19 to Y19 */}
+      {isoTableAnglePrefix(it => it.T_60) /* A19 to Y19 */}
     </tr>
   }
 
   private def makeRow20: Elem = {
     <tr>
       {makeRowIndex(20)}
-      {isoTableAnglePrefix(isoTable.T_30) /* A20 to Y20 */}
+      {isoTableAnglePrefix(it => it.T_30) /* A20 to Y20 */}
     </tr>
   }
 

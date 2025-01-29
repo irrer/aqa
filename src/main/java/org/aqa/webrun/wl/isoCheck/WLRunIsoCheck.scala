@@ -26,9 +26,9 @@ object WLRunIsoCheck extends Logging {
     val collimator = WLCollimator.make(extendedData, pairList)
 
     // only do this if the required data is there.
-    if (isoCheck.isDefined && isoTable.isDefined && collimator.isDefined) {
+    if (isoCheck.isDefined && collimator.isDefined) {
 
-      val wlIsoCheckHTML = org.aqa.webrun.wl.isoCheck.isoCheckHTML.WLIsoCheckHTML(extendedData, pairList, isoCheck.get, isoTable.get, collimator.get)
+      val wlIsoCheckHTML = org.aqa.webrun.wl.isoCheck.isoCheckHTML.WLIsoCheckHTML(extendedData, pairList, isoCheck.get, isoTable, collimator.get)
 
       val htmlRef = wlIsoCheckHTML.mainPage()
 

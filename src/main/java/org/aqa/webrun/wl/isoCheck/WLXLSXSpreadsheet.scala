@@ -1,5 +1,6 @@
 package org.aqa.webrun.wl.isoCheck
 
+import edu.umro.ScalaUtil.Trace
 import org.apache.poi.xssf.usermodel.XSSFSheet
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.aqa.webrun.ExtendedData
@@ -33,7 +34,7 @@ object WLXLSXSpreadsheet extends Logging {
     * @param collimator Processed column data.
     * @return The name of the file.
     */
-  def makeSpreadsheet(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: WLIsoTable, collimator: WLCollimator): String = {
+  def makeSpreadsheet(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option[WLIsoTable], collimator: WLCollimator): String = {
 
     val workbook = new XSSFWorkbook(Config.WLIsoCheckTemplateFile)
 
@@ -58,29 +59,36 @@ object WLXLSXSpreadsheet extends Logging {
     }
 
     def updateContentRow(rowNum: Int, pair: WLBeam): Unit = {
+      Trace.trace(rowNum)
       val row = sheetData.getRow(rowNum - 1) // subtracting 1 converts a row number to a 0-relative row index
+      Trace.trace(rowNum)
 
       columnList.indices.foreach(i => columnList(i).updateCell(row.getCell(i), pair.wl, pair.al))
+      Trace.trace(rowNum)
     }
 
     /**
       * Update all the content rows.  Sort by acquisition time, associate each data set with a row, and then process each row.
       */
     def updateContentRowList(): Unit = {
-      (firstRowNum to lastRowNum).foreach(rowNum => updateContentRow(rowNum, pairList(rowNum - firstRowNum)))
+      Trace.trace(pairList.size + firstRowNum - 1)
+      val last = Math.min(lastRowNum, pairList.size + firstRowNum - 1)
+      (firstRowNum to last).foreach(rowNum => updateContentRow(rowNum, pairList(rowNum - firstRowNum)))
     }
 
     /**
       * Update the values in the Analysis sheet that are calculated using gradient descent
       */
     def updateAnalysisSheet(): Unit = {
-      val sheetAnalysis = workbook.getSheetAt(3)
+      if (isoTable.isDefined) {
+        val sheetAnalysis = workbook.getSheetAt(3)
 
-      val row14 = sheetAnalysis.getRow(13)
-      row14.getCell(11).setCellValue(isoTable.get_dXT__0_Optimized)
-      row14.getCell(12).setCellValue(isoTable.get_dZT__0_Optimized)
-      row14.getCell(13).setCellValue(isoTable.get_IsoTable_X_Optimized)
-      row14.getCell(14).setCellValue(isoTable.get_IsoTable_Z_Optimized)
+        val row14 = sheetAnalysis.getRow(13)
+        row14.getCell(11).setCellValue(isoTable.get.get_dXT__0_Optimized)
+        row14.getCell(12).setCellValue(isoTable.get.get_dZT__0_Optimized)
+        row14.getCell(13).setCellValue(isoTable.get.get_IsoTable_X_Optimized)
+        row14.getCell(14).setCellValue(isoTable.get.get_IsoTable_Z_Optimized)
+      }
     }
 
     /**
@@ -96,18 +104,28 @@ object WLXLSXSpreadsheet extends Logging {
 
     def update(): Unit = {
       // turn on auto sizing for all columns
+      Trace.trace()
       updateTitleRow()
+      Trace.trace()
       updateContentRowList()
+      Trace.trace()
       updateAnalysisSheet()
+      Trace.trace()
       updateCollimatorSheet()
+      Trace.trace()
     }
 
     update()
+    Trace.trace()
 
     val file = new File(WLIsoCheckHTML.dir(extendedData), WLXlsxUtil.baseFileName(extendedData) + ".xlsx")
+    Trace.trace()
     file.delete()
+    Trace.trace()
     workbook.write(new FileOutputStream(file))
+    Trace.trace()
     logger.info("Wrote WL IsoCheck spreadsheet file " + file.getAbsolutePath)
+    Trace.trace()
 
     file.getName
   }

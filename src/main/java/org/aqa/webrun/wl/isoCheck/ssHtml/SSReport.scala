@@ -17,7 +17,9 @@ import scala.xml.Elem
   *
   * @param extendedData Metadata
   */
-class SSReport(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLIsoTable) extends SSSheet {
+class SSReport(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Option[WLIsoTable]) extends SSSheet {
+
+  private val hasIt = isoTable.isDefined
 
   override val name: String = "Report"
 
@@ -66,22 +68,26 @@ class SSReport(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLIso
 
   private val IsoTableWobbleChart: C3ScatterPlot = {
 
-    def dXOf(beam: WLBeam): Double = {
-      isoTable.BB_Xp(beam, isoTable.get_dXT__0_Optimized, isoTable.get_dZT__0_Optimized) - isoTable.get_IsoTable_X_Optimized
+    def dXOf(beam: WLBeam): Option[Double] = {
+      isoTable.map(it => it.BB_Xp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized) - it.get_IsoTable_X_Optimized)
     }
 
-    def dZOf(beam: WLBeam): Double = {
-      isoTable.BB_Zpp(beam, isoTable.get_dXT__0_Optimized, isoTable.get_dZT__0_Optimized, isoTable.get_IsoTable_Z_Optimized)
+    def dZOf(beam: WLBeam): Option[Double] = {
+      isoTable.map(it => it.BB_Zpp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_Z_Optimized))
     }
 
-    def point(beam: WLBeam): C3ScatterPlotDataPoint = {
-      C3ScatterPlotDataPoint(dXOf(beam), dZOf(beam))
+    def point(beam: WLBeam): Option[C3ScatterPlotDataPoint] = {
+      if (hasIt)
+        Some(C3ScatterPlotDataPoint(dXOf(beam).get, dZOf(beam).get))
+      else None
     }
 
     val dataList: Seq[C3ScatterPlotDataSet] = {
-      val data = isoTable.beamList.map(point)
-
-      Seq(C3ScatterPlotDataSet("Table Wobble", data))
+      if (hasIt) {
+        val data = isoTable.get.beamList.map(point)
+        Seq(C3ScatterPlotDataSet("Table Wobble", data.flatten))
+      } else
+        Seq()
     }
 
     new C3ScatterPlot(
@@ -162,12 +168,12 @@ class SSReport(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLIso
       {toHtmlYellow(0 - isoCheck.isoX, style = { bTBL }) /*                             C4 */}
       {toHtmlYellow(0 - isoCheck.isoY, style = { bTB }) /*                             D4 */}
       {toHtmlYellow(0 - isoCheck.isoZ, style = { bTB }) /*                             E4 */}
-      {toHtmlYellow(isoTable.get_IsoTable_X_Optimized - isoCheck.isoX, style = { bTBL }) /*   F4 */}
-      {toHtmlYellow(isoTable.get_IsoTable_Z_Optimized - isoCheck.isoZ, style = { bTBL }) /*   G4 */}
+      {if (hasIt) toHtmlYellow(isoTable.get.get_IsoTable_X_Optimized - isoCheck.isoX, style = { bTBL }) else blankCell /*   F4 */}
+      {if (hasIt) toHtmlYellow(isoTable.get.get_IsoTable_Z_Optimized - isoCheck.isoZ, style = { bTBL }) else blankCell /*   G4 */}
       {toHtmlYellow(isoCheck.gantryFlex, style = { bTBLR }) /*                           H4 */}
       {toHtmlYellow(isoCheck.collGantryMisalign, style = { bTBLR }) /*                   I4 */}
       {toHtmlYellow(isoCheck.mlcOffsetY, style = { bTBLR }) /*                           J4 */}
-      {toHtmlYellow(2 * Math.sqrt(isoTable.get_RSquared_Optimized), style = bTBLR) /*  K4 */}
+      {if (hasIt) toHtmlYellow(2 * Math.sqrt(isoTable.get.get_RSquared_Optimized), style = bTBLR) else blankCell /*  K4 */}
       {blankCell /*                                                  L2 */}
     </tr>
   }

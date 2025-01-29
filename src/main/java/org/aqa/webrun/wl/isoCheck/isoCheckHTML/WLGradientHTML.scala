@@ -19,7 +19,7 @@ import scala.xml.Elem
   * @param isoTable IsoTable data.
   * @param collimator Collimator data.
   */
-case class WLGradientHTML(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: WLIsoTable, collimator: WLCollimator) extends Logging {
+case class WLGradientHTML(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Option[WLIsoTable], collimator: WLCollimator) extends Logging {
 
   private val gradientDirName = "Gradient"
 
@@ -108,45 +108,79 @@ case class WLGradientHTML(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoT
   }
 
   private def isoTableImageDXDZ = {
-    val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "dX")
-    val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "dZ")
-    def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(x, y, isoTable.get_IsoTable_X_Optimized, isoTable.get_IsoTable_Z_Optimized)
+    val x = CoordinateSpec(center = isoTable.get.get_dXT__0_Optimized, name = "dX")
+    val y = CoordinateSpec(center = isoTable.get.get_dZT__0_Optimized, name = "dZ")
+    def func(x: Double, y: Double) = isoTable.get.minSquareOfBBDisplacement(x, y, isoTable.get.get_IsoTable_X_Optimized, isoTable.get.get_IsoTable_Z_Optimized)
     GradientImage("Table dX vs dZ", x, y, func, "Table dX vs dZ")
   }
 
   private def isoTableImageDXIsoTableX = {
-    val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "dX")
-    val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "TableX")
-    def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(x, isoTable.get_dZT__0_Optimized, y, isoTable.get_IsoTable_Z_Optimized)
+    val x = CoordinateSpec(center = isoTable.get.get_dXT__0_Optimized, name = "dX")
+    val y = CoordinateSpec(center = isoTable.get.get_dZT__0_Optimized, name = "TableX")
+    def func(x: Double, y: Double) = isoTable.get.minSquareOfBBDisplacement(x, isoTable.get.get_dZT__0_Optimized, y, isoTable.get.get_IsoTable_Z_Optimized)
     GradientImage("Table dX vs TableX", x, y, func, "Table dX vs TableX")
   }
 
   private def isoTableImageDXIsoTableZ = {
-    val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "dX")
-    val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "TableZ")
-    def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(x, isoTable.get_dZT__0_Optimized, isoTable.get_IsoTable_X_Optimized, y)
+    val x = CoordinateSpec(center = isoTable.get.get_dXT__0_Optimized, name = "dX")
+    val y = CoordinateSpec(center = isoTable.get.get_dZT__0_Optimized, name = "TableZ")
+    def func(x: Double, y: Double) = isoTable.get.minSquareOfBBDisplacement(x, isoTable.get.get_dZT__0_Optimized, isoTable.get.get_IsoTable_X_Optimized, y)
     GradientImage("Table dX vs TableZ", x, y, func, "Table dX vs TableZ")
   }
 
   private def isoTableImageDZIsoTableX = {
-    val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "dZ")
-    val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "TableX")
-    def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(isoTable.get_dXT__0_Optimized, x, y, isoTable.get_IsoTable_Z_Optimized)
+    val x = CoordinateSpec(center = isoTable.get.get_dXT__0_Optimized, name = "dZ")
+    val y = CoordinateSpec(center = isoTable.get.get_dZT__0_Optimized, name = "TableX")
+    def func(x: Double, y: Double) = isoTable.get.minSquareOfBBDisplacement(isoTable.get.get_dXT__0_Optimized, x, y, isoTable.get.get_IsoTable_Z_Optimized)
     GradientImage("Table dZ vs TableX", x, y, func, "Table dZ vs TableX")
   }
 
   private def isoTableImageDZIsoTableZ = {
-    val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "dZ")
-    val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "TableZ")
-    def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(isoTable.get_dXT__0_Optimized, x, isoTable.get_IsoTable_X_Optimized, y)
+    val x = CoordinateSpec(center = isoTable.get.get_dXT__0_Optimized, name = "dZ")
+    val y = CoordinateSpec(center = isoTable.get.get_dZT__0_Optimized, name = "TableZ")
+    def func(x: Double, y: Double) = isoTable.get.minSquareOfBBDisplacement(isoTable.get.get_dXT__0_Optimized, x, isoTable.get.get_IsoTable_X_Optimized, y)
     GradientImage("Table dZ vs TableZ", x, y, func, "Table dZ vs TableZ")
   }
 
   private def isoTableImageIsoTableXIsoTableZ = {
-    val x = CoordinateSpec(center = isoTable.get_dXT__0_Optimized, name = "TableX")
-    val y = CoordinateSpec(center = isoTable.get_dZT__0_Optimized, name = "TableZ")
-    def func(x: Double, y: Double) = isoTable.minSquareOfBBDisplacement(isoTable.get_dXT__0_Optimized, isoTable.get_dZT__0_Optimized, x, y)
+    val x = CoordinateSpec(center = isoTable.get.get_dXT__0_Optimized, name = "TableX")
+    val y = CoordinateSpec(center = isoTable.get.get_dZT__0_Optimized, name = "TableZ")
+    def func(x: Double, y: Double) = isoTable.get.minSquareOfBBDisplacement(isoTable.get.get_dXT__0_Optimized, isoTable.get.get_dZT__0_Optimized, x, y)
     GradientImage("Table TableX vs TableZ", x, y, func, "Table TableX vs TableZ")
+  }
+
+  def isoTableHtml: Seq[Elem] = {
+
+    if (isoTable.isDefined) {
+      val a = {
+        <tr>
+          <td>
+            {isoTableImageDXDZ.htmlRef}
+          </td>
+          <td>
+            {isoTableImageDXIsoTableX.htmlRef}
+          </td>
+          <td>
+            {isoTableImageDXIsoTableZ.htmlRef}
+          </td>
+        </tr>
+      }
+      val b = {
+        <tr>
+          <td>
+            {isoTableImageDZIsoTableX.htmlRef}
+          </td>
+          <td>
+            {isoTableImageDZIsoTableZ.htmlRef}
+          </td>
+          <td>
+            {isoTableImageIsoTableXIsoTableZ.htmlRef}
+          </td>
+        </tr>
+      }
+      Seq(a, b)
+    } else
+      Seq()
   }
 
   /**
@@ -177,30 +211,7 @@ case class WLGradientHTML(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoT
               {collimatorImage.htmlRef}
             </td>
           </tr>
-
-          <tr>
-            <td>
-              {isoTableImageDXDZ.htmlRef}
-            </td>
-            <td>
-              {isoTableImageDXIsoTableX.htmlRef}
-            </td>
-            <td>
-              {isoTableImageDXIsoTableZ.htmlRef}
-            </td>
-          </tr>
-
-          <tr>
-            <td>
-              {isoTableImageDZIsoTableX.htmlRef}
-            </td>
-            <td>
-              {isoTableImageDZIsoTableZ.htmlRef}
-            </td>
-            <td>
-              {isoTableImageIsoTableXIsoTableZ.htmlRef}
-            </td>
-          </tr>
+          {isoTableHtml}
         </table>
       </div>
     }

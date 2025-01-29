@@ -13,7 +13,7 @@ import scala.xml.Elem
   *
   * @param extendedData Metadata
   */
-class SSSNCImport(extendedData: ExtendedData, isoCheck: WLIsoCheck, collimator: WLCollimator, isoTable: WLIsoTable) extends SSSheet {
+class SSSNCImport(extendedData: ExtendedData, isoCheck: WLIsoCheck, collimator: WLCollimator, isoTable: Option[WLIsoTable]) extends SSSheet {
 
   override val name: String = "SNCImport"
 
@@ -24,14 +24,26 @@ class SSSNCImport(extendedData: ExtendedData, isoCheck: WLIsoCheck, collimator: 
   }
 
   private def makeCsvRow(row: Int, text: String, value: Double): Elem = {
-    appendBuf(text, value.toString)
-    <tr>
-      {makeRowIndex(row)}
-      {blankCell /*      A  */}
-      {toHtml(text) /*   B  */}
-      {toHtml(value) /*  C  */}
-      {blankCell /*      D  */}
-    </tr>
+    if (value.isNaN) {
+      appendBuf(text, "NA")
+
+      <tr>
+        {makeRowIndex(row)}
+        {blankCell /*      A  */}
+        {toHtml(text) /*   B  */}
+        {toHtml("NA") /*   C  */}
+        {blankCell /*      D  */}
+      </tr>
+    } else {
+      appendBuf(text, value.toString)
+      <tr>
+        {makeRowIndex(row)}
+        {blankCell /*      A  */}
+        {toHtml(text) /*   B  */}
+        {toHtml(value) /*  C  */}
+        {blankCell /*      D  */}
+      </tr>
+    }
   }
 
   private def makeRow1: Elem = {
@@ -50,19 +62,20 @@ class SSSNCImport(extendedData: ExtendedData, isoCheck: WLIsoCheck, collimator: 
   }
 
   override def make(): Elem = {
+    val hasTable = isoTable.isDefined
     val content = {
       <table class="table table-bordered">
         {makeAlphaRow(4)}
         {makeRow1}
-        {makeCsvRow(2, "CBCT - Gantry Iso X (mm)", 0 - isoCheck.isoX)}
-        {makeCsvRow(3, s"CBCT - Gantry Iso Y (mm)", 0 - isoCheck.isoY)}
-        {makeCsvRow(4, "CBCT - Gantry Iso Z (mm)", 0 - isoCheck.isoZ)}
-        {makeCsvRow(5, "Table - Gantry Iso X (mm)", isoTable.get_IsoTable_X_Optimized - isoCheck.isoX)}
-        {makeCsvRow(6, "Table - Gantry Iso Z (mm)", isoTable.get_IsoTable_Z_Optimized - isoCheck.isoZ)}
+        {makeCsvRow(2, "CBCT - Gantry Iso X (mm)", -isoCheck.isoX)}
+        {makeCsvRow(3, s"CBCT - Gantry Iso Y (mm)", -isoCheck.isoY)}
+        {makeCsvRow(4, "CBCT - Gantry Iso Z (mm)", -isoCheck.isoZ)}
+        {makeCsvRow(5, "Table - Gantry Iso X (mm)", if (hasTable) isoTable.get.get_IsoTable_X_Optimized - isoCheck.isoX else Double.NaN)}
+        {makeCsvRow(6, "Table - Gantry Iso Z (mm)", if (hasTable) isoTable.get.get_IsoTable_Z_Optimized - isoCheck.isoZ else Double.NaN)}
         {makeCsvRow(7, "Gantry Flex (mm)", isoCheck.gantryFlex)}
         {makeCsvRow(8, "Col-Gantry misalignment (mm)", isoCheck.collGantryMisalign)}
         {makeCsvRow(9, "MLC offset (mm)", isoCheck.mlcOffsetY)}
-        {makeCsvRow(10, "Table Isocentricity (mm)", Math.sqrt(isoTable.get_RSquared_Optimized))}
+        {makeCsvRow(10, "Table Isocentricity (mm)", if (hasTable) Math.sqrt(isoTable.get.get_RSquared_Optimized) else Double.NaN)}
         {makeCsvRow(11, "Gantry Isocentricity (mm)", isoCheck.gantryIsocentricity)}
         {makeCsvRow(12, "Collimator Isocentricity (mm)", collimator.getCA_Rpp_Optimized)} 
         {makeRow13}

@@ -63,7 +63,7 @@ object SSHtml extends Logging {
     * @param pairList List of images with analysis.
     * @return name of CSV file.
     */
-  def make(extendedData: ExtendedData, pairList: Seq[WLBeam], isoCheck: WLIsoCheck, isoTable: WLIsoTable, collimator: WLCollimator): String = {
+  def make(extendedData: ExtendedData, pairList: Seq[WLBeam], isoCheck: WLIsoCheck, isoTable: Option[WLIsoTable], collimator: WLCollimator): String = {
 
     val ssSNCImport = new SSSNCImport(extendedData: ExtendedData, isoCheck, collimator, isoTable)
     val ssReport = new SSReport(extendedData: ExtendedData, isoCheck, isoTable)
