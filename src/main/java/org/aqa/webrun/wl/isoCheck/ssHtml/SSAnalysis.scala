@@ -412,6 +412,13 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Opt
 
   private def makeRow23: Elem = makeBlankRow(23)
 
+  private def tableRows(): Seq[Elem] = {
+    if (hasIt) { // if there is isoTable data, then show it in the spreadsheet.
+      Seq(makeRow12, makeRow13, makeRow14, makeRow15, makeRow16, makeRow17, makeRow18, makeRow19, makeRow20, makeRow21, makeRow22, makeRow23)
+    } else
+      Seq(makeBlankRow(12))
+  }
+
   override def make(): Elem = {
     val content = {
       <table class="table table-bordered">
@@ -427,23 +434,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Opt
         {makeRow9}
         {makeRow10}
         {makeRow11}
-      {
-        if (hasIt) { // if there is isoTable data, then show it in the spreadsheet.
-          { makeRow12 }
-          { makeRow13 }
-          { makeRow14 }
-          { makeRow15 }
-          { makeRow16 }
-          { makeRow17 }
-          { makeRow18 }
-          { makeRow19 }
-          { makeRow20 }
-          { makeRow21 }
-          { makeRow22 }
-          { makeRow23 }
-        } else
-          makeBlankRow(12)
-      }
+        {tableRows()}
       </table>
     }
 
