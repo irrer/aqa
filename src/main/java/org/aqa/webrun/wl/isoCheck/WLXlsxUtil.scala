@@ -183,13 +183,21 @@ object WLXlsxUtil extends Logging {
     WebUtil.setPrecisionAttr(elem, dbl)
   }
 
-  def toHtmlYellow(text: String): Elem = {
+  def toHtmlYellowText(text: String, style: Option[String] = None): Elem = {
+
+    val s = {
+      val yellow = "background:#FFFF00;"
+      if (style.isDefined)
+        yellow + style.get
+      else
+        yellow
+    }
+
     val elem = {
-      <td style="background:#FFFF00;">
+      <td class={cssPreprocessRight} style={s}>
         {text}
       </td>
     }
-
     elem
   }
 

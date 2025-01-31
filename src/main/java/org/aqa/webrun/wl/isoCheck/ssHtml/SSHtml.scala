@@ -70,8 +70,8 @@ object SSHtml extends Logging {
 
     val sheetList: Seq[SSSheet] = Seq(
       ssSNCImport,
-      new SSData(extendedData: ExtendedData, pairList),
-      new SSPreprocess(extendedData: ExtendedData, pairList),
+      new SSData(extendedData: ExtendedData, pairList, isoTable),
+      new SSPreprocess(extendedData: ExtendedData, pairList, isoTable),
       new SSAnalysis(extendedData: ExtendedData, isoCheck, isoTable),
       new SSCollimator(extendedData: ExtendedData, collimator),
       ssReport,

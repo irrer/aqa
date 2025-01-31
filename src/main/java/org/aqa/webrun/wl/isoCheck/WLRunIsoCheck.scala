@@ -34,7 +34,7 @@ object WLRunIsoCheck extends Logging {
 
       val elem = {
         val nl = WebUtil.titleNewline
-        val title = s"""To re-calculate spreadsheet in Excel, use$nl CTRL-ALT-SHIFT-F9,and then run the solver on$nl each of the Analysis and Collimator sheets."""
+        val title = s"""To re-calculate spreadsheet in Excel, use$nl CTRL-ALT-F9,and then run the solver on$nl each of the Analysis and Collimator sheets."""
         <div style="text-align: center; border: 2px solid #777777; margin-top:10px;" title={title}>
           <div style="text-align: center; border: 1px solid lightgrey; margin10px;">
             {htmlRef}

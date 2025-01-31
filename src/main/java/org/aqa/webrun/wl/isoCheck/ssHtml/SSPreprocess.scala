@@ -6,6 +6,7 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLColumn
 import org.aqa.webrun.wl.isoCheck.WlColumnWlNumeric
+import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.blankCell
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.blankCells
@@ -21,7 +22,7 @@ import scala.xml.Elem
   * @param extendedData Metadata
   * @param pairList WL data
   */
-class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SSSheet {
+class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option[WLIsoTable]) extends SSSheet {
 
   private def preprocessSorter(a: WLBeam, b: WLBeam): Boolean = {
     val aIsoTable = flip(a.isoTableAngle)
@@ -110,16 +111,16 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SS
 
   private val sortedColumnIndexList = Seq(4, 5, 3, 6, 7)
 
+  def colToHtml(pair: WLBeam, col: WLColumn): Elem = {
+    toHtml(col.toPreprocessText(pair.wl, pair.al), col.alignLeft, isNumeric = col.isInstanceOf[WlColumnWlNumeric])
+  }
+
   private def makeRow(index: Int): Elem = {
 
     val pair = pairList(index)
 
-    def colToHtml(col: WLColumn): Elem = {
-      toHtml(col.toPreprocessText(pair.wl, pair.al), col.alignLeft, isNumeric = col.isInstanceOf[WlColumnWlNumeric])
-    }
-
     <tr>
-      {WLXlsxUtil.makeRowIndex(index + 3) :+ columnIndexList.map(c => colToHtml(columnList(c)))}
+      {WLXlsxUtil.makeRowIndex(index + 3) :+ columnIndexList.map(c => colToHtml(pair, columnList(c)))}
       {blankCell}
     </tr>
   }
@@ -130,7 +131,7 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SS
 
     def makeCell(c: Int): Elem = {
       val col = columnList(c)
-      toHtml(col.toPreprocessText(row.wl, row.al), col.alignLeft)
+      toHtml(col.toPreprocessText(row.wl, row.al), col.alignLeft, isNumeric = col.isInstanceOf[WlColumnWlNumeric])
     }
 
     <tr>
@@ -144,6 +145,9 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SS
   }
 
   override def make(): Elem = {
+
+    val lastRowIndex = if (isoTable.isDefined) 35 else 23
+
     val content = {
       <table class="table table-bordered">
         {WLXlsxUtil.makeAlphaRow(26)}
@@ -153,7 +157,7 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SS
         {blankRow(pairList.size + 3)}
         {makeSortedHeaderRow(pairList.size + 4)}
         {sortedPairList.indices.map(makeSortedRow)}
-        {blankRow(35)}
+        {blankRow(lastRowIndex)}
       </table>
     }
 

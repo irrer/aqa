@@ -4,6 +4,7 @@ import org.aqa.Util
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLColumn
+import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.blankCells
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.cssDataLeft
@@ -18,7 +19,7 @@ import scala.xml.Elem
   * @param extendedData Metadata
   * @param pairList WL data
   */
-class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SSSheet {
+class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option[WLIsoTable]) extends SSSheet {
 
   override val name: String = "Data"
 
@@ -138,6 +139,14 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SSSheet 
     )
   }
 
+  private val isoTableFiller : Seq[Elem] = {
+    if (isoTable.isEmpty) {
+      (12 to 17).map(blankRow)
+    }
+    else
+      Seq()
+  }
+
   override def make(): Elem = {
     val content = {
       <table class="table table-bordered">
@@ -145,6 +154,7 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam]) extends SSSheet 
         {makeTitleRow}
         {makeHeaderRow}
         {pairList.indices.map(makeRow)}
+        {isoTableFiller}
         {makeCbct}
       </table>
     }

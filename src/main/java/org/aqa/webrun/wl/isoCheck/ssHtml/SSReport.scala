@@ -19,6 +19,7 @@ import scala.xml.Elem
   */
 class SSReport(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Option[WLIsoTable]) extends SSSheet {
 
+  /** true IsoTable is present. */
   private val hasIt = isoTable.isDefined
 
   override val name: String = "Report"
@@ -145,36 +146,55 @@ class SSReport(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Optio
   private def makeRow3: Elem = {
     <tr>
       {makeRowIndex(2)}
-      {blankCells(2) /*               A3 to B3 */}
-      {toHtml("X (mm)", style = { bL }) /*            C3 */}
-      {toHtml("Y (mm)") /*            D3 */}
-      {toHtml("Z (mm)") /*            E3 */}
-      {toHtml("X (mm)", style = { bL }) /*            F3 */}
-      {toHtml("Z (mm)") /*            G3 */}
-      {toHtml("(mm)", style = { bLR }) /*              H3 */}
-      {toHtml("(mm)", style = { bLR }) /*              I3 */}
-      {toHtml("(mm)", style = { bLR }) /*              J3 */}
-      {toHtml("(mm)", style = { bLR }) /*              K3 */}
-      {blankCell /*                   L3 */}
+      {blankCells(2) /*                     A3 to B3 */}
+      {toHtml("X (mm)", style = { bL }) /*  C3 */}
+      {toHtml("Y (mm)") /*                  D3 */}
+      {toHtml("Z (mm)") /*                  E3 */}
+      {toHtml("X (mm)", style = { bL }) /*  F3 */}
+      {toHtml("Z (mm)") /*                  G3 */}
+      {toHtml("(mm)", style = { bLR }) /*   H3 */}
+      {toHtml("(mm)", style = { bLR }) /*   I3 */}
+      {toHtml("(mm)", style = { bLR }) /*   J3 */}
+      {toHtml("(mm)", style = { bLR }) /*   K3 */}
+      {blankCell /*                         L3 */}
     </tr>
   }
 
   private def makeRow4: Elem = {
     val dateText = Util.formatDate(Util.spreadsheetDateFormat, extendedData.output.dataDate.get)
+
+    val F4 =
+      if (hasIt)
+        toHtmlYellow(isoTable.get.get_IsoTable_X_Optimized - isoCheck.isoX, style = { bTBL })
+      else
+        toHtml("", style = bTBL) /*   F4 */
+
+    val G4 =
+      if (hasIt)
+        toHtmlYellow(isoTable.get.get_IsoTable_Z_Optimized - isoCheck.isoZ, style = { bTBL })
+      else
+        toHtml("", style = bTBL) /*   G4 */
+
+    val K4 =
+      if (hasIt)
+        toHtmlYellow(2 * Math.sqrt(isoTable.get.get_RSquared_Optimized), style = bTBLR)
+      else
+        toHtml("", style = bTBLR) /*  K4 */
+
     <tr>
       {makeRowIndex(4)}
-      {toHtml(dateText) /*                                           A4 */}
-      {toHtml(extendedData.machine.getRealId) /*                     B4 */}
-      {toHtmlYellow(0 - isoCheck.isoX, style = { bTBL }) /*                             C4 */}
-      {toHtmlYellow(0 - isoCheck.isoY, style = { bTB }) /*                             D4 */}
-      {toHtmlYellow(0 - isoCheck.isoZ, style = { bTB }) /*                             E4 */}
-      {if (hasIt) toHtmlYellow(isoTable.get.get_IsoTable_X_Optimized - isoCheck.isoX, style = { bTBL }) else blankCell /*   F4 */}
-      {if (hasIt) toHtmlYellow(isoTable.get.get_IsoTable_Z_Optimized - isoCheck.isoZ, style = { bTBL }) else blankCell /*   G4 */}
-      {toHtmlYellow(isoCheck.gantryFlex, style = { bTBLR }) /*                           H4 */}
-      {toHtmlYellow(isoCheck.collGantryMisalign, style = { bTBLR }) /*                   I4 */}
-      {toHtmlYellow(isoCheck.mlcOffsetY, style = { bTBLR }) /*                           J4 */}
-      {if (hasIt) toHtmlYellow(2 * Math.sqrt(isoTable.get.get_RSquared_Optimized), style = bTBLR) else blankCell /*  K4 */}
-      {blankCell /*                                                  L2 */}
+      {toHtml(dateText) /*                                              A4 */}
+      {toHtml(extendedData.machine.getRealId) /*                        B4 */}
+      {toHtmlYellow(0 - isoCheck.isoX, style = { bTBL }) /*             C4 */}
+      {toHtmlYellow(0 - isoCheck.isoY, style = { bTB }) /*              D4 */}
+      {toHtmlYellow(0 - isoCheck.isoZ, style = { bTB }) /*              E4 */}
+      {F4 /*                                                            F4 */}
+      {G4 /*                                                            G4 */}
+      {toHtmlYellow(isoCheck.gantryFlex, style = { bTBLR }) /*          H4 */}
+      {toHtmlYellow(isoCheck.collGantryMisalign, style = { bTBLR }) /*  I4 */}
+      {toHtmlYellow(isoCheck.mlcOffsetY, style = { bTBLR }) /*          J4 */}
+      {K4 /*                                                            K4 */}
+      {blankCell /*                                                     L2 */}
     </tr>
   }
 
@@ -185,6 +205,21 @@ class SSReport(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Optio
     </tr>
   }
 
+  /**
+    * Make the table wobble chart if the data is available, otherwise return a blank space.
+    * @return Table wobble chart.
+    */
+  private def tableWobbleChart: Seq[Elem] = {
+    if (hasIt) {
+      Seq(
+        { <h4 style="text-align: center;">IsoTable Wobble about IsoTable Axis</h4> },
+        IsoTableWobbleChart.html
+      )
+    } else {
+      Seq() // table wobble chart not available
+    }
+  }
+
   private def makeRow6: Elem = {
     <tr>
       {makeRowIndex(6) /*                A4 to H4 */}
@@ -193,8 +228,7 @@ class SSReport(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Optio
         {MLCWobbleChart.html}
       </td>
       <td colspan="6" style={s"border: $border;"}>
-        <h4 style="text-align: center;">IsoTable Wobble about IsoTable Axis</h4>
-        {IsoTableWobbleChart.html}
+        {tableWobbleChart}
       </td>
       {blankCell}
     </tr>

@@ -25,14 +25,14 @@ class SSSNCImport(extendedData: ExtendedData, isoCheck: WLIsoCheck, collimator: 
 
   private def makeCsvRow(row: Int, text: String, value: Double): Elem = {
     if (value.isNaN) {
-      appendBuf(text, "NA")
+      appendBuf(text, "")
 
       <tr>
         {makeRowIndex(row)}
-        {blankCell /*      A  */}
-        {toHtml(text) /*   B  */}
-        {toHtml("NA") /*   C  */}
-        {blankCell /*      D  */}
+        {blankCell /*     A  */}
+        {toHtml(text) /*  B  */}
+        {toHtml("") /*    C  */}
+        {blankCell /*     D  */}
       </tr>
     } else {
       appendBuf(text, value.toString)
