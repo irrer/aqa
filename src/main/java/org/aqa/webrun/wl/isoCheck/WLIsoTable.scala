@@ -73,7 +73,7 @@ case class WLIsoTable(
   def BB_Zp(beam: WLBeam, dX: Double, dZ: Double): Double = BB_Z(beam) + dZOf(beam, dX, dZ) // K
 
   /** Analysis P BB-X" */
-  def BB_Xpp(beam: WLBeam, dX: Double, dZ: Double, IsoTable_X: Double): Double = BB_Xp(beam, dX, dZ) - IsoTable_X
+  private def BB_Xpp(beam: WLBeam, dX: Double, dZ: Double, IsoTable_X: Double): Double = BB_Xp(beam, dX, dZ) - IsoTable_X
 
   /** Analysis Q BB-X" */
   def BB_Zpp(beam: WLBeam, dX: Double, dZ: Double, IsoTable_Z: Double): Double = BB_Zp(beam, dX, dZ) - IsoTable_Z

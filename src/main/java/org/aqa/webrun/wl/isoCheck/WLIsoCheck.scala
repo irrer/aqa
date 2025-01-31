@@ -1,6 +1,5 @@
 package org.aqa.webrun.wl.isoCheck
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.rnd
@@ -166,68 +165,6 @@ case class WLIsoCheck( // @formatter:off
   val mlcOffsetY: Double = rnd(mlcOffsetY_090 - mlcOffsetY_270) // Analysis T3
 
   // ------------------------------------------------------------------------------------------
-
-  if (true) { // TODO rm
-    Trace.trace("G__0_C_90_T__0.wl: " + G__0_C_90_T__0.wl)
-    Trace.trace("G__0_C270_T__0.wl: " + G__0_C270_T__0.wl)
-    Trace.trace("G180_C_90_T__0.wl: " + G180_C_90_T__0.wl)
-    Trace.trace("G180_C270_T__0.wl: " + G180_C270_T__0.wl)
-
-    Trace.trace("G_90_C_90_T__0.wl: " + G__0_C_90_T__0.wl)
-    Trace.trace("G_90_C270_T__0.wl: " + G__0_C270_T__0.wl)
-
-    Trace.trace("-----------------------------------------------------------------------------------------------------------")
-
-    Trace.trace("collXG__0: " + collXG__0)
-    Trace.trace("collXG180: " + collXG180)
-    Trace.trace("collXSeq: " + collXSeq)
-
-    Trace.trace("collYG_90: " + collYG_90)
-    Trace.trace("collYG270: " + collYG270)
-    Trace.trace("collYSeq: " + collYSeq)
-
-    Trace.trace("collZG__0: " + collZG__0)
-    Trace.trace("collZG_90: " + collZG_90)
-    Trace.trace("collZG180: " + collZG180)
-    Trace.trace("collZG270: " + collZG270)
-    Trace.trace("collZSeq: " + collZSeq)
-
-    Trace.trace("isoX: " + isoX)
-    Trace.trace("isoY: " + isoY)
-    Trace.trace("isoZ: " + isoZ)
-
-    Trace.trace("gantryFlex: " + gantryFlex)
-    Trace.trace("gantryIsocentricity: " + gantryIsocentricity)
-    Trace.trace("collGantryMisalign: " + collGantryMisalign)
-
-    Trace.trace("mlcDxG__0_C_90: " + mlcDxG__0_C_90)
-    Trace.trace("mlcDxG__0_C270: " + mlcDxG__0_C270)
-    Trace.trace("mlcDxG_90_C_90: " + mlcDxG_90_C_90)
-    Trace.trace("mlcDxG_90_C270: " + mlcDxG_90_C270)
-    Trace.trace("mlcDxG180_C__0: " + mlcDxG180_C__0)
-    Trace.trace("mlcDxG180_C_90: " + mlcDxG180_C_90)
-    Trace.trace("mlcDxG180_C270: " + mlcDxG180_C270)
-    Trace.trace("mlcDxG270_C_90: " + mlcDxG270_C_90)
-    Trace.trace("mlcDxG270_C270: " + mlcDxG270_C270)
-    Trace.trace("mlcDyG__0_C_90: " + mlcDyG__0_C_90)
-    Trace.trace("mlcDyG__0_C270: " + mlcDyG__0_C270)
-    Trace.trace("mlcDyG_90_C_90: " + mlcDyG_90_C_90)
-    Trace.trace("mlcDyG_90_C270: " + mlcDyG_90_C270)
-    Trace.trace("mlcDyG180_C__0: " + mlcDyG180_C__0)
-    Trace.trace("mlcDyG180_C_90: " + mlcDyG180_C_90)
-    Trace.trace("mlcDyG180_C270: " + mlcDyG180_C270)
-    Trace.trace("mlcDyG270_C_90: " + mlcDyG270_C_90)
-    Trace.trace("mlcDyG270_C270: " + mlcDyG270_C270)
-    Trace.trace("mlcOffsetX_090: " + mlcOffsetX_090)
-    Trace.trace("mlcOffsetX_270: " + mlcOffsetX_270)
-    Trace.trace("mlcOffsetX: " + mlcOffsetX)
-    Trace.trace("mlcOffsetY_090: " + mlcOffsetY_090)
-    Trace.trace("mlcOffsetY_270: " + mlcOffsetY_270)
-    Trace.trace("mlcOffsetY: " + mlcOffsetY)
-
-    Trace.trace()
-  }
-
 
 }
 
