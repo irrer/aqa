@@ -21,8 +21,6 @@ import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.rnd
   * @param G180_C270_T__0 beam
   * @param G270_C_90_T__0 beam
   * @param G270_C270_T__0 beam
-  * @param G180_C270_T_90 beam
-  * @param G180_C270_T270 beam
   */
 case class WLIsoCheck( // @formatter:off
                       extendedData: ExtendedData,
