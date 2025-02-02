@@ -2,8 +2,8 @@ package org.aqa.webrun.wl.isoCheck.ssHtml
 
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.wl.isoCheck.IsoCheck
 import org.aqa.webrun.wl.isoCheck.WLBeam
-import org.aqa.webrun.wl.isoCheck.WLIsoCheck
 import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil._
 
@@ -15,7 +15,7 @@ import scala.xml.Elem
   * @param extendedData Metadata
   * @param isoCheck IsoCheck data
   */
-class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Option[WLIsoTable]) extends SSSheet {
+class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: IsoCheck, isoTable: Option[WLIsoTable]) extends SSSheet {
   private val hasIt = isoTable.isDefined
   override val name: String = "Analysis"
 
@@ -24,7 +24,8 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Opt
     * @param beam Beam to show.
     * @return cells for common content.
     */
-  private def gantryAnglePrefix(beam: WLBeam): Seq[Elem] = {
+  private def gantryAnglePrefix(gantry: Int, collimator: Int): Seq[Elem] = {
+    val beam = beamList.find(b => (b.gantryAngle == gantry) && (b.collimatorAngle == collimator) && (b.isoTableAngle == 0)).get
     Seq(
       toHtml(beam.gantryAngle), /*     A */
       toHtml(beam.collimatorAngle), /* B */
@@ -151,7 +152,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Opt
   private def makeRow3: Elem = {
     <tr>
       {makeRowIndex(3)}
-      {gantryAnglePrefix(isoCheck.G__0_C_90_T__0) /*            A3 to G3 */}
+      {gantryAnglePrefix(0, 90) /*            A3 to G3 */}
       {toHtml(isoCheck.collXG__0) /*                            I3 */}
       {blankCell /*                                             J3 */}
       {toHtml(isoCheck.collZG__0) /*                            K3 */}
@@ -175,7 +176,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Opt
   private def makeRow4: Elem = {
     <tr>
       {makeRowIndex(4)}
-      {gantryAnglePrefix(isoCheck.G__0_C270_T__0) /*               A4 to H4 */}
+      {gantryAnglePrefix(0, 270) /*               A4 to H4 */}
       {blankCells(8) /*                                            I4 to P4 */}
       {toHtml(isoCheck.mlcDxG__0_C270) /*                          Q4 */}
       {toHtml(isoCheck.mlcDyG__0_C270) /*                          R4 */}
@@ -192,7 +193,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Opt
   private def makeRow5: Elem = {
     <tr>
       {makeRowIndex(5)}
-      {gantryAnglePrefix(isoCheck.G_90_C_90_T__0) /*         A4 to H4 */}
+      {gantryAnglePrefix(90, 90) /*         A4 to H4 */}
       {blankCell /*                                          I5 */}
       {toHtml(isoCheck.collYG_90) /*                         J5 */}
       {toHtml(isoCheck.collZG_90) /*                         K5 */}
@@ -211,7 +212,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Opt
   private def makeRow6: Elem = {
     <tr>
       {makeRowIndex(6) /*                            A4 to H4 */}
-      {gantryAnglePrefix(isoCheck.G_90_C270_T__0) /* I6 */}
+      {gantryAnglePrefix(90, 270) /* I6 */}
       {blankCells(4) /*                              I6 to L6 */}
       {toHtml("ΔX") /*                               M6 */}
       {toHtml("ΔY") /*                               N6 */}
@@ -226,7 +227,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Opt
   private def makeRow7: Elem = {
     <tr>
       {makeRowIndex(7)}
-      {gantryAnglePrefix(isoCheck.G180_C__0_T__0) /* A7 to G7 */}
+      {gantryAnglePrefix(180, 0) /* A7 to G7 */}
       {blankCells(4) /*                              I7 to L7 */}
       {toHtml(isoCheck.isoXRange) /*                 M7 */}
       {toHtml(isoCheck.isoYRange) /*                 N7 */}
@@ -241,7 +242,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Opt
   private def makeRow8: Elem = {
     <tr>
       {makeRowIndex(8)}
-      {gantryAnglePrefix(isoCheck.G180_C_90_T__0) /* A8 to H8 */}
+      {gantryAnglePrefix(180, 90) /* A8 to H8 */}
       {toHtml(isoCheck.collXG180) /*                 I8 */}
       {blankCell /*                                  J8 */}
       {toHtml(isoCheck.collZG180) /*                 K8 */}
@@ -257,7 +258,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Opt
   private def makeRow9: Elem = {
     <tr>
       {makeRowIndex(9)}
-      {gantryAnglePrefix(isoCheck.G180_C270_T__0) /* A9 to H9 */}
+      {gantryAnglePrefix(180, 270) /* A9 to H9 */}
       {blankCells(8) /*                              I9 to P9 */}
       {toHtml(isoCheck.mlcDxG180_C270) /*            Q9 */}
       {toHtml(isoCheck.mlcDyG180_C270) /*            R9 */}
@@ -268,7 +269,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Opt
   private def makeRow10: Elem = {
     <tr>
       {makeRowIndex(10)}
-      {gantryAnglePrefix(isoCheck.G270_C_90_T__0) /* A9 to H9 */}
+      {gantryAnglePrefix(270, 90) /* A9 to H9 */}
       {blankCell /*                                  I10 */}
       {toHtml(isoCheck.collYG270) /*                 J10 */}
       {toHtml(isoCheck.collZG270) /*                 K10 */}
@@ -282,7 +283,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Opt
   private def makeRow11: Elem = {
     <tr>
       {makeRowIndex(11)}
-      {gantryAnglePrefix(isoCheck.G270_C270_T__0) /* A11 to H11 */}
+      {gantryAnglePrefix(270, 270) /* A11 to H11 */}
       {blankCells(8) /*                              I11 to P11 */}
       {toHtml(isoCheck.mlcDxG270_C270) /*            Q11 */}
       {toHtml(isoCheck.mlcDyG270_C270) /*            R11 */}

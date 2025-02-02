@@ -2,7 +2,7 @@ package org.aqa.webrun.wl.isoCheck.ssHtml
 
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.isoCheck.WLCollimator
-import org.aqa.webrun.wl.isoCheck.WLIsoCheck
+import org.aqa.webrun.wl.isoCheck.IsoCheck
 import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil._
 
@@ -13,7 +13,7 @@ import scala.xml.Elem
   *
   * @param extendedData Metadata
   */
-class SSSNCImport(extendedData: ExtendedData, isoCheck: WLIsoCheck, collimator: WLCollimator, isoTable: Option[WLIsoTable]) extends SSSheet {
+class SSSNCImport(extendedData: ExtendedData, isoCheck: IsoCheck, collimator: WLCollimator, isoTable: Option[WLIsoTable]) extends SSSheet {
 
   override val name: String = "SNCImport"
 

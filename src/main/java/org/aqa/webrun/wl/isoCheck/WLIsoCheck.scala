@@ -22,7 +22,7 @@ import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.rnd
   * @param G270_C_90_T__0 beam
   * @param G270_C270_T__0 beam
   */
-case class WLIsoCheck( // @formatter:off
+case class XWLIsoCheck( // @formatter:off
                       extendedData: ExtendedData,
                       G__0_C_90_T__0: WLBeam,
                       G__0_C270_T__0: WLBeam,
@@ -166,7 +166,7 @@ case class WLIsoCheck( // @formatter:off
 
 }
 
-object WLIsoCheck extends Logging {
+object XWLIsoCheck extends Logging {
 
   /**
    * Determine if all the data is present to construct a WL IsoCheck data set.  If so, make one and return it.
@@ -175,7 +175,7 @@ object WLIsoCheck extends Logging {
    * @param beamList     List of incoming DICOM and results.
    * @return IsoCheck data set or None.
    */
-  def make(extendedData: ExtendedData, beamList: Seq[WLBeam]): Option[WLIsoCheck] = {
+  def make(extendedData: ExtendedData, beamList: Seq[WLBeam]): Option[XWLIsoCheck] = {
 
     def findPair(g: Int, c: Int, t: Int): Option[WLBeam] = {
       WLBeam.findGCT(beamList, g, c, t)
@@ -216,7 +216,7 @@ object WLIsoCheck extends Logging {
 
     // if of the files are there then construct the object, otherwise return None.
     if (list.flatten.size == list.size) {
-      Some(WLIsoCheck(
+      Some(XWLIsoCheck(
         extendedData,
         // @formatter:off
         G__0_C_90_T__0 = G__0_C_90_T__0.get,

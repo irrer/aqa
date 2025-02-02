@@ -8,7 +8,7 @@ import org.aqa.web.C3ScatterPlot
 import org.aqa.web.C3ScatterPlotDataPoint
 import org.aqa.web.C3ScatterPlotDataSet
 import org.aqa.webrun.wl.isoCheck.WLBeam
-import org.aqa.webrun.wl.isoCheck.WLIsoCheck
+import org.aqa.webrun.wl.isoCheck.IsoCheck
 
 import scala.xml.Elem
 
@@ -17,7 +17,7 @@ import scala.xml.Elem
   *
   * @param extendedData Metadata
   */
-class SSReport(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Option[WLIsoTable]) extends SSSheet {
+class SSReport(extendedData: ExtendedData, isoCheck: IsoCheck, isoTable: Option[WLIsoTable]) extends SSSheet {
 
   /** true IsoTable is present. */
   private val hasIt = isoTable.isDefined
