@@ -8,9 +8,10 @@ import org.aqa.Logging
 import org.aqa.webrun.wl.isoCheck.IsoCheck
 import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLCollimator
-import org.aqa.webrun.wl.isoCheck.WLIsoTable
+import org.aqa.webrun.wl.isoCheck.IsoTable
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil
 import org.aqa.webrun.wl.isoCheck.isoCheckHTML.WLIsoCheckHTML
+import org.aqa.webrun.wl.isoCheck.IsoTable
 
 import java.io.File
 import scala.xml.Elem
@@ -63,7 +64,7 @@ object SSHtml extends Logging {
     * @param pairList List of images with analysis.
     * @return name of CSV file.
     */
-  def make(extendedData: ExtendedData, pairList: Seq[WLBeam], isoCheck: IsoCheck, isoTable: Option[WLIsoTable], collimator: WLCollimator): String = {
+  def make(extendedData: ExtendedData, pairList: Seq[WLBeam], isoCheck: IsoCheck, isoTable: Option[IsoTable], collimator: WLCollimator): String = {
 
     val ssSNCImport = new SSSNCImport(extendedData: ExtendedData, isoCheck, collimator, isoTable)
     val ssReport = new SSReport(extendedData: ExtendedData, isoCheck, isoTable)

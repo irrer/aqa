@@ -4,13 +4,14 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.isoCheck.WLCollimator
-import org.aqa.webrun.wl.isoCheck.WLIsoTable
+import org.aqa.webrun.wl.isoCheck.IsoTable
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.webrun.wl.isoCheck.IsoCheck
 import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLXLSXSpreadsheet
 import org.aqa.webrun.wl.isoCheck.ssHtml.SSHtml
+import org.aqa.webrun.wl.isoCheck.IsoTable
 
 import java.io.File
 import scala.xml.Elem
@@ -25,7 +26,7 @@ import scala.xml.Elem
   * @param collimator Collimator data.
   */
 
-case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], isoCheck: IsoCheck, isoTable: Option[WLIsoTable], collimator: WLCollimator) extends Logging {
+case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], isoCheck: IsoCheck, isoTable: Option[IsoTable], collimator: WLCollimator) extends Logging {
 
   def mainPage(): Elem = {
 

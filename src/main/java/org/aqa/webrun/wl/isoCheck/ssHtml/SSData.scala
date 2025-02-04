@@ -4,7 +4,7 @@ import org.aqa.Util
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLColumn
-import org.aqa.webrun.wl.isoCheck.WLIsoTable
+import org.aqa.webrun.wl.isoCheck.IsoTable
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.blankCells
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.cssDataLeft
@@ -19,7 +19,7 @@ import scala.xml.Elem
   * @param extendedData Metadata
   * @param pairList WL data
   */
-class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option[WLIsoTable]) extends SSSheet {
+class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option[IsoTable]) extends SSSheet {
 
   override val name: String = "Data"
 

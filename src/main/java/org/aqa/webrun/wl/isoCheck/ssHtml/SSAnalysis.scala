@@ -3,8 +3,9 @@ package org.aqa.webrun.wl.isoCheck.ssHtml
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.isoCheck.IsoCheck
+import org.aqa.webrun.wl.isoCheck.IsoTable
+import org.aqa.webrun.wl.isoCheck.TableBeam
 import org.aqa.webrun.wl.isoCheck.WLBeam
-import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil._
 
 import scala.xml.Elem
@@ -15,7 +16,7 @@ import scala.xml.Elem
   * @param extendedData Metadata
   * @param isoCheck IsoCheck data
   */
-class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: IsoCheck, isoTable: Option[WLIsoTable]) extends SSSheet {
+class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: IsoCheck, isoTable: Option[IsoTable]) extends SSSheet {
   private val hasIt = isoTable.isDefined
   override val name: String = "Analysis"
 
@@ -49,10 +50,11 @@ class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: Is
       toHtml("") +: blankCells(24)
     } else {
       val beam = beamOpt.get
+      val tableBeam = new TableBeam(beam)
       val it = isoTable.get
 
-      val dX = it.dXOf(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)
-      val dZ = it.dZOf(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)
+      val dX = it.dXOf(tableBeam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)
+      val dZ = it.dZOf(tableBeam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)
 
       val isoTableAngle0 = beam.tableAngle == 0
 
@@ -86,19 +88,19 @@ class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: Is
         toHtml(flip(beam.tableAngle)), /*     C */
         toHtml(beam.wl.errorX_mm), /*            D X offset corrected box-ball */
         toHtml(beam.wl.errorY_mm), /*            E X offset corrected box-ball */
-        toHtml(WLIsoTable.CA_X(beam)), /*        F CA-X */
-        toHtml(WLIsoTable.CA_Z(beam)), /*        G CA-Z */
-        toHtml(it.BB_X(beam)), /*          H BB-X */
-        toHtml(it.BB_Z(beam)), /*          I BB-Z */
-        toHtml(it.BB_Xp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)), /* J BB-X' */
-        toHtml(it.BB_Zp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)), /* K BB-Z' */
+        toHtml(IsoTable.CA_X(beam)), /*        F CA-X */
+        toHtml(IsoTable.CA_Z(beam)), /*        G CA-Z */
+        toHtml(it.BB_X(new TableBeam(beam))), /*          H BB-X */
+        toHtml(it.BB_Z(tableBeam)), /*          I BB-Z */
+        toHtml(it.BB_Xp(tableBeam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)), /* J BB-X' */
+        toHtml(it.BB_Zp(tableBeam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)), /* K BB-Z' */
         L, /*                                    L dX */
         M, /*                                    M dZ */
         N, /*                                    N IsoTable-X */
         O, /*                                    O IsoTable-Z */
-        toHtmlPowderBlue(it.BB_Xp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized) - it.get_IsoTable_X_Optimized), /* P BB-X" */
-        toHtmlPowderBlue(it.BB_Zpp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_Z_Optimized)), /* Q BB-Z" */
-        toHtmlPowderBlue(it.BB_Rpp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_X_Optimized, it.get_IsoTable_Z_Optimized)) /*  R BB-R"^2 */
+        toHtmlPowderBlue(it.BB_Xp(tableBeam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized) - it.get_IsoTable_X_Optimized), /* P BB-X" */
+        toHtmlPowderBlue(it.BB_Zpp(tableBeam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_Z_Optimized)), /* Q BB-Z" */
+        toHtmlPowderBlue(it.BB_Rpp(tableBeam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_X_Optimized, it.get_IsoTable_Z_Optimized)) /*  R BB-R"^2 */
       ) ++ blankCells(7) /*                      S to Y */
     }
   }
@@ -326,52 +328,59 @@ class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: Is
     </tr>
   }
 
+  def findTableBeam(tableBeam: Option[TableBeam]): Option[WLBeam] = {
+    if (tableBeam.isDefined) {
+      val tb = tableBeam.get
+      beamList.find(b => (b.gantryAngle == tb.gantryAngle) && (b.collimatorAngle == tb.collimatorAngle) && (b.isoTableAngle == 0))
+    } else None
+  }
+
   private def makeRow14: Elem = {
     <tr>
       {makeRowIndex(14)}
-      {isoTableAnglePrefix(isoTable.get.T__0) /* A14 to Y14 */}
+      {isoTableAnglePrefix(findTableBeam(isoTable.get.T__0)) /* A14 to Y14 */}
     </tr>
   }
 
   private def makeRow15: Elem = {
     <tr>
       {makeRowIndex(15)}
-      {isoTableAnglePrefix(isoTable.get.T330) /* A15 to Y15 */}
+      {isoTableAnglePrefix(findTableBeam(isoTable.get.T330)) /* A15 to Y15 */}
     </tr>
   }
 
   private def makeRow16: Elem = {
     <tr>
       {makeRowIndex(16)}
-      {isoTableAnglePrefix(isoTable.get.T300) /* A16 to Y16 */}
+      {isoTableAnglePrefix(findTableBeam(isoTable.get.T300)) /* A16 to Y16 */}
     </tr>
   }
 
   private def makeRow17: Elem = {
     <tr>
       {makeRowIndex(17)}
-      {isoTableAnglePrefix(isoTable.get.T270) /* A17 to Y17 */}
+      {isoTableAnglePrefix(findTableBeam(isoTable.get.T270)) /* A17 to Y17 */}
     </tr>
   }
 
   private def makeRow18: Elem = {
     <tr>
       {makeRowIndex(18)}
-      {isoTableAnglePrefix(isoTable.get.T_90) /* A18 to Y18 */}
+      {isoTableAnglePrefix(findTableBeam(isoTable.get.T_90)) /* A18 to Y18 */}
     </tr>
   }
 
   private def makeRow19: Elem = {
     <tr>
       {makeRowIndex(19)}
-      {isoTableAnglePrefix(isoTable.get.T_60) /* A19 to Y19 */}
+      {isoTableAnglePrefix(findTableBeam(isoTable.get.T_60)) /* A19 to Y19 */}
     </tr>
   }
 
   private def makeRow20: Elem = {
     <tr>
       {makeRowIndex(20)}
-      {isoTableAnglePrefix(isoTable.get.T_30) /* A20 to Y20 */}
+      {isoTableAnglePrefix(findTableBeam(isoTable.get.T_30)) /* A20 to Y20 */}
     </tr>
   }
 
