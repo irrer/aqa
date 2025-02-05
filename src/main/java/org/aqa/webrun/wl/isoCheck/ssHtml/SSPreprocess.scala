@@ -25,8 +25,8 @@ import scala.xml.Elem
 class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option[WLIsoTable]) extends SSSheet {
 
   private def preprocessSorter(a: WLBeam, b: WLBeam): Boolean = {
-    val aIsoTable = flip(a.isoTableAngle)
-    val bIsoTable = flip(b.isoTableAngle)
+    val aIsoTable = flip(a.tableAngle)
+    val bIsoTable = flip(b.tableAngle)
 
     0 match {
       case _ if aIsoTable > bIsoTable => false
@@ -49,7 +49,7 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: 
 
   override val name: String = "Preprocess"
 
-  val columnList: Seq[WLColumn] = org.aqa.webrun.wl.isoCheck.WLColumnList(extendedData.machine, pairList.head.acquisition).columnList
+  val columnList: Seq[WLColumn] = org.aqa.webrun.wl.isoCheck.WLColumnList(extendedData.machine, pairList.head.dataDate).columnList
 
   private def toHtml(text: String, alignLeft: Boolean = true, isNumeric: Boolean = false): Elem = {
     val c = if (alignLeft) cssPreprocessLeft else cssPreprocessRight

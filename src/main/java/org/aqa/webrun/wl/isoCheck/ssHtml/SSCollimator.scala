@@ -43,7 +43,7 @@ class SSCollimator(extendedData: ExtendedData, collimator: WLCollimator) extends
     Seq(
       toHtml(beam.gantryAngle), /*        A */
       toHtml(beam.collimatorAngle), /*    B */
-      toHtml(beam.isoTableAngle), /*      C */
+      toHtml(beam.tableAngle), /*      C */
       toHtml(beam.wl.errorX_mm), /*       D */
       toHtml(beam.wl.errorY_mm), /*       E */
       toHtml(beam.caX), /*                F */

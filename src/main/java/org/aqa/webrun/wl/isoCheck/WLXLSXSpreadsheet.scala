@@ -65,7 +65,7 @@ object WLXLSXSpreadsheet extends Logging {
     val workbook = new XSSFWorkbook(Config.WLIsoCheckTemplateFile)
 
     // get the date+time of the first slice
-    val firstDateTime: Date = pairList.head.acquisition
+    val firstDateTime: Date = pairList.head.dataDate
 
     val columnList = WLColumnList(extendedData.machine, firstDateTime).columnList
 

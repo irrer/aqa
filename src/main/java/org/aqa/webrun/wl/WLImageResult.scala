@@ -86,6 +86,7 @@ class WLImageResult(
 
   val gantryRounded_deg: Int = Util.angleRoundedTo90(gantry_deg)
   val collimatorRounded_deg: Double = angleRoundedTo22_5(collimator_deg)
+  val tableAngle_deg: Double =  rtimage.get(TagByName.PatientSupportAngle).getDoubleValues.head
 
   val gantryRounded_txt: String = "G" + gantryRounded_deg.formatted("%03d")
   val collimatorRounded_txt: String = "C" + {
@@ -213,6 +214,7 @@ class WLImageResult(
       beamName = beamName,
       gantryAngle_deg = gantry_deg,
       collimatorAngle_deg = collimator_deg,
+      tableAngle_deg = Some(tableAngle_deg),
       dataDate = new Timestamp(contentTime.getTime),
       topEdge_mm = top_mm,
       bottomEdge_mm = bottom_mm,

@@ -23,7 +23,7 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option
 
   override val name: String = "Data"
 
-  val columnList: Seq[WLColumn] = org.aqa.webrun.wl.isoCheck.WLColumnList(extendedData.machine, pairList.head.acquisition).columnList
+  val columnList: Seq[WLColumn] = org.aqa.webrun.wl.isoCheck.WLColumnList(extendedData.machine, pairList.head.dataDate).columnList
 
   private def toPlainHtml(text: String, alignLeft: Boolean = true): Elem = {
     val a = if (alignLeft) cssPreprocessLeft else cssPreprocessRight

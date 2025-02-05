@@ -1,8 +1,6 @@
 package org.aqa.webrun.wl.isoCheck
 
 import com.pixelmed.dicom.AttributeList
-import edu.umro.DicomDict.TagByName
-import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Util
 import org.aqa.db.WinstonLutz
 import org.aqa.Logging
@@ -15,19 +13,19 @@ import java.util.Date
 case class WLBeam(wl: WinstonLutz, al: AttributeList) extends Logging {
 
   /** Analysis A */
-  val gantryAngle: Int = WLXlsxUtil.angleRounded(Util.gantryAngle(al))
+  val gantryAngle: Int = WLXlsxUtil.angleRounded(wl.gantryAngle_deg)
 
   /** Analysis B */
-  val collimatorAngle: Int = WLXlsxUtil.angleRounded(Util.collimatorAngle(al))
+  val collimatorAngle: Int = WLXlsxUtil.angleRounded(wl.collimatorAngle_deg)
 
   /** Analysis C */
-  val isoTableAngle: Int = WLXlsxUtil.angleRounded(DicomUtil.findAllSingle(al, TagByName.PatientSupportAngle).head.getDoubleValues.head)
+  val tableAngle: Int = WLXlsxUtil.angleRounded(wl.tableAngle_deg.get)
 
   /** Data date */
-  val acquisition: Date = WLXlsxUtil.acq(al)
+  val dataDate: Date = wl.dataDate
 
   def matches(gantry: Int, collimator: Int, isoTable: Int): Boolean = {
-    (gantryAngle == gantry) && (collimatorAngle == collimator) && (isoTableAngle == isoTable)
+    (gantryAngle == gantry) && (collimatorAngle == collimator) && (tableAngle == isoTable)
   }
 
   /** Analysis F */
@@ -53,7 +51,7 @@ case class WLBeam(wl: WinstonLutz, al: AttributeList) extends Logging {
   /** Analysis H */
   val caZ: Option[Double] = Some(-wl.errorY_mm).map(rnd)
 
-  private val radians: Double = Math.toRadians(flip(isoTableAngle))
+  private val radians: Double = Math.toRadians(flip(tableAngle))
 
   /** cosine of isoTable angle */
   val cos: Double = Math.cos(radians)
@@ -74,7 +72,7 @@ object WLBeam extends Logging {
         case _        => None
       }
     }
-    dbList.flatMap(makePair).sortBy(_.acquisition)
+    dbList.flatMap(makePair).sortBy(_.dataDate)
   }
 
   def findGCT(pairList: Seq[WLBeam], gantry: Int, collimator: Int, isoTable: Int): Option[WLBeam] = {

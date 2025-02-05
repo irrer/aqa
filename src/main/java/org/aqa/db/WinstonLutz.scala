@@ -40,6 +40,7 @@ case class WinstonLutz(
     beamName             : Option[String]     , // Name of beam in RTPLAN (if available)
     gantryAngle_deg      : Double             , // Angle of gantry in degrees.  This is the raw value from the RTIMAGE and is not rounded.
     collimatorAngle_deg  : Double             , // Angle of collimator in degrees.  This is the raw value from the RTIMAGE and is not rounded.
+    tableAngle_deg       : Option[Double]     , // Angle of table (couch) in degrees.  This is the raw value PatientSupportAngle from the RTIMAGE and is not rounded.  This is optional (nullable) because it was added after many sets of data were already in the database.  Going forward, it will always have a value.
     dataDate             : java.sql.Timestamp , // time and date that this image was captured at the treatment machine
     //
     topEdge_mm           : Double             , // measured top edge of rectangle
@@ -54,7 +55,7 @@ case class WinstonLutz(
     bottomEdgePlanned_mm : Option[Double]     , // planned bottom edge of rectangle
     leftEdgePlanned_mm   : Option[Double]     , // planned left edge of rectangle
     rightEdgePlanned_mm  : Option[Double]       // planned right edge of rectangle
-  // @formatter:on
+                        // @formatter:on
                       ) {
 
   def insert: WinstonLutz = {
@@ -73,7 +74,11 @@ case class WinstonLutz(
     if (beamName.isDefined)
       beamName.get.replaceFirst("^[0-9] ", "").trim
     else {
-      val name = "WL G" + Util.angleRoundedTo90(gantryAngle_deg) + " C" + Util.angleRoundedTo90(collimatorAngle_deg)
+      val table: String = if (tableAngle_deg.isDefined && (Util.angleRoundedTo90(tableAngle_deg.get) != 0))
+        " T" + Util.angleRoundedTo90(tableAngle_deg.get)
+      else
+        ""
+      val name = "WL G" + Util.angleRoundedTo90(gantryAngle_deg) + " C" + Util.angleRoundedTo90(collimatorAngle_deg) + table
       name
     }
   }
@@ -106,6 +111,10 @@ case class WinstonLutz(
   /** right edge measured - planned */
   def rightError_mm: Option[Double] = if (rightEdgePlanned_mm.isDefined) Some(rightEdge_mm - rightEdgePlanned_mm.get) else None
 
+  val gantryAngleRounded: Int = Util.angleRoundedTo90(gantryAngle_deg)
+  val collimatorAngleRounded: Int = Util.angleRoundedTo90(collimatorAngle_deg)
+  val tableAngleRounded: Option[Int] = tableAngle_deg.map(Util.angleRoundedTo90)
+
   override def toString: String = {
     // @formatter:off
       s"""    winstonLutzPK        : $winstonLutzPK\n"""        +
@@ -115,6 +124,7 @@ case class WinstonLutz(
       s"""    beamName             : $beamName\n"""             +
       s"""    gantryAngle_deg      : $gantryAngle_deg\n"""      +
       s"""    collimatorAngle_deg  : $collimatorAngle_deg\n"""  +
+      s"""    tableAngle_deg       : $tableAngle_deg\n"""  +
       s"""    gantryAngle_deg      : ${Util.angleRoundedTo90(gantryAngle_deg)}\n"""    +
       s"""    collimatorAngle_deg  : ${Util.angleRoundedTo90(collimatorAngle_deg)}\n"""+
       s"""    dataDate             : $dataDate\n"""             +
@@ -158,6 +168,8 @@ object WinstonLutz extends Logging {
 
     def collimatorAngle_deg = column[Double]("collimatorAngle_deg")
 
+    def tableAngle_deg = column[Option[Double]]("tableAngle_deg")
+
     def dataDate = column[java.sql.Timestamp]("dataDate")
 
     def topEdge_mm = column[Double]("topEdge_mm")
@@ -189,6 +201,7 @@ object WinstonLutz extends Logging {
         beamName,
         gantryAngle_deg,
         collimatorAngle_deg,
+        tableAngle_deg,
         dataDate,
         topEdge_mm,
         bottomEdge_mm,

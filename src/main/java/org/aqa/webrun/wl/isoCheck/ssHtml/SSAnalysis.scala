@@ -28,7 +28,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Opt
     Seq(
       toHtml(beam.gantryAngle), /*     A */
       toHtml(beam.collimatorAngle), /* B */
-      toHtml(beam.isoTableAngle), /*   C */
+      toHtml(beam.tableAngle), /*   C */
       toHtml(beam.wl.errorX_mm), /*    D */
       toHtml(beam.wl.errorY_mm), /*    E */
       toHtml(beam.caX), /*             F */
@@ -53,7 +53,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Opt
       val dX = it.dXOf(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)
       val dZ = it.dZOf(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)
 
-      val isoTableAngle0 = beam.isoTableAngle == 0
+      val isoTableAngle0 = beam.tableAngle == 0
 
       val L = //                             L dX
         if (isoTableAngle0)
@@ -82,7 +82,7 @@ class SSAnalysis(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Opt
       Seq(
         toHtml(beam.gantryAngle), /*             A */
         toHtml(beam.collimatorAngle), /*         B */
-        toHtml(flip(beam.isoTableAngle)), /*     C */
+        toHtml(flip(beam.tableAngle)), /*     C */
         toHtml(beam.wl.errorX_mm), /*            D X offset corrected box-ball */
         toHtml(beam.wl.errorY_mm), /*            E X offset corrected box-ball */
         toHtml(WLIsoTable.CA_X(beam)), /*        F CA-X */
