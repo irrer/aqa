@@ -14,7 +14,7 @@ case class WLIsoTable(
                     T300: Option[ WLBeam],
                     T330: Option[ WLBeam]
                     // @formatter:on
-                     ) extends Logging {
+                   ) extends Logging {
 
   val beamList: Seq[WLBeam] = Seq(
     T__0,
@@ -61,7 +61,13 @@ case class WLIsoTable(
   }
 
   /** Analysis H */
-  def BB_X(beam: WLBeam): Double = beam.wl.errorX_mm - T__0.get.wl.errorX_mm // H
+  def BB_X(beam: WLBeam): Double = { // H
+    val j1 = beam.wl.errorX_mm
+    val j2 = T__0.get.wl.errorX_mm
+    val j3 = beam.wl.errorX_mm - T__0.get.wl.errorX_mm
+    val bb_x = beam.wl.errorX_mm - T__0.get.wl.errorX_mm
+    bb_x
+  }
 
   /** Analysis I */
   def BB_Z(beam: WLBeam): Double = beam.wl.errorY_mm - T__0.get.wl.errorY_mm // I
@@ -111,7 +117,6 @@ case class WLIsoTable(
    */
   private def optimizeRSquared(): Unit = {
 
-    /*
     val optimizedPoint = new WLIsoTableGradientDescent(this).findMin()
     RSquared_Optimized = minSquareOfBBDisplacement(optimizedPoint.dX, optimizedPoint.dZ, optimizedPoint.isoTableX, optimizedPoint.isoTableZ)
 
@@ -119,7 +124,6 @@ case class WLIsoTable(
     dZT__0_Optimized = optimizedPoint.dZ
     IsoTable_X_Optimized = optimizedPoint.isoTableX
     IsoTable_Z_Optimized = optimizedPoint.isoTableZ
-    */
   }
 
   // Perform optimization
@@ -175,9 +179,15 @@ object WLIsoTable {
       None
   }
 
-  def CA_X(beam: WLBeam): Double = -beam.wl.errorX_mm
+  def CA_X(beam: WLBeam): Double = {
+    val j = -beam.wl.errorX_mm
+    -beam.wl.errorX_mm
+  }
 
-  def CA_Z(beam: WLBeam): Double = -beam.wl.errorY_mm
+  def CA_Z(beam: WLBeam): Double = {
+    val j = -beam.wl.errorY_mm
+    -beam.wl.errorY_mm
+  }
 
 
 }

@@ -97,7 +97,7 @@ class WLCollimatorGradientDescent(collimator: WLCollimator) extends Logging {
     val elapsed = System.currentTimeMillis() - start
     logger.info(s"Finished gradient descent.   Elapsed ms: $elapsed     bestPoint: $bestPoint")
 
-    if (true) { // TODO rm
+    if (false) { // TODO rm
       val excel = new WLCollimatorPointLocal(0.254910403528524, -0.169929070303584)
       excel
     } else

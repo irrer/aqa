@@ -60,7 +60,7 @@ object WLXLSXSpreadsheet extends Logging {
     * @param collimator Processed column data.
     * @return The name of the file.
     */
-  def makeSpreadsheet(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option[IsoTable], collimator: WLCollimator): String = {
+  def makeSpreadsheet(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option[WLIsoTable], collimator: WLCollimator): String = {
 
     val workbook = new XSSFWorkbook(Config.WLIsoCheckTemplateFile)
 

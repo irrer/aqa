@@ -1,11 +1,11 @@
 package org.aqa.webrun.wl.isoCheck.ssHtml
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.wl.isoCheck.IsoCheck
-import org.aqa.webrun.wl.isoCheck.IsoTable
-import org.aqa.webrun.wl.isoCheck.TableBeam
 import org.aqa.webrun.wl.isoCheck.WLBeam
+import org.aqa.webrun.wl.isoCheck.WLIsoCheck
+import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil._
 
 import scala.xml.Elem
@@ -16,18 +16,19 @@ import scala.xml.Elem
   * @param extendedData Metadata
   * @param isoCheck IsoCheck data
   */
-class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: IsoCheck, isoTable: Option[IsoTable]) extends SSSheet {
+class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: WLIsoCheck, isoTable: Option[WLIsoTable]) extends SSSheet {
   private val hasIt = isoTable.isDefined
   override val name: String = "Analysis"
 
   /**
     * Makes cells A to H which are common to all gantry beams.
-    * @param beam Beam to show.
+    * @param gantry gantry angle
+    * @param collimator collimator angle
     * @return cells for common content.
     */
   private def gantryAnglePrefix(gantry: Int, collimator: Int): Seq[Elem] = {
-    val beam = beamList.find(b => (b.gantryAngle == gantry) && (b.collimatorAngle == collimator) && (b.isoTableAngle == 0)).get
-    Seq(
+    val beam = beamList.find(b => (b.gantryAngle == gantry) && (b.collimatorAngle == collimator) && (b.tableAngle == 0)).get
+    val elemList = Seq(
       toHtml(beam.gantryAngle), /*     A */
       toHtml(beam.collimatorAngle), /* B */
       toHtml(beam.tableAngle), /*   C */
@@ -37,6 +38,8 @@ class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: Is
       toHtml(beam.caY), /*             G */
       toHtml(beam.caZ) /*              H */
     )
+
+    elemList
   }
 
   /**
@@ -50,11 +53,10 @@ class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: Is
       toHtml("") +: blankCells(24)
     } else {
       val beam = beamOpt.get
-      val tableBeam = new TableBeam(beam)
       val it = isoTable.get
 
-      val dX = it.dXOf(tableBeam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)
-      val dZ = it.dZOf(tableBeam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)
+      val dX = it.dXOf(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)
+      val dZ = it.dZOf(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)
 
       val isoTableAngle0 = beam.tableAngle == 0
 
@@ -88,19 +90,19 @@ class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: Is
         toHtml(flip(beam.tableAngle)), /*     C */
         toHtml(beam.wl.errorX_mm), /*            D X offset corrected box-ball */
         toHtml(beam.wl.errorY_mm), /*            E X offset corrected box-ball */
-        toHtml(IsoTable.CA_X(beam)), /*        F CA-X */
-        toHtml(IsoTable.CA_Z(beam)), /*        G CA-Z */
-        toHtml(it.BB_X(new TableBeam(beam))), /*          H BB-X */
-        toHtml(it.BB_Z(tableBeam)), /*          I BB-Z */
-        toHtml(it.BB_Xp(tableBeam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)), /* J BB-X' */
-        toHtml(it.BB_Zp(tableBeam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)), /* K BB-Z' */
+        toHtml(WLIsoTable.CA_X(beam)), /*        F CA-X */
+        toHtml(WLIsoTable.CA_Z(beam)), /*        G CA-Z */
+        toHtml(it.BB_X(beam)), /*          H BB-X */
+        toHtml(it.BB_Z(beam)), /*          I BB-Z */
+        toHtml(it.BB_Xp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)), /* J BB-X' */
+        toHtml(it.BB_Zp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized)), /* K BB-Z' */
         L, /*                                    L dX */
         M, /*                                    M dZ */
         N, /*                                    N IsoTable-X */
         O, /*                                    O IsoTable-Z */
-        toHtmlPowderBlue(it.BB_Xp(tableBeam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized) - it.get_IsoTable_X_Optimized), /* P BB-X" */
-        toHtmlPowderBlue(it.BB_Zpp(tableBeam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_Z_Optimized)), /* Q BB-Z" */
-        toHtmlPowderBlue(it.BB_Rpp(tableBeam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_X_Optimized, it.get_IsoTable_Z_Optimized)) /*  R BB-R"^2 */
+        toHtmlPowderBlue(it.BB_Xp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized) - it.get_IsoTable_X_Optimized), /* P BB-X" */
+        toHtmlPowderBlue(it.BB_Zpp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_Z_Optimized)), /* Q BB-Z" */
+        toHtmlPowderBlue(it.BB_Rpp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_X_Optimized, it.get_IsoTable_Z_Optimized)) /*  R BB-R"^2 */
       ) ++ blankCells(7) /*                      S to Y */
     }
   }
@@ -328,10 +330,10 @@ class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: Is
     </tr>
   }
 
-  def findTableBeam(tableBeam: Option[TableBeam]): Option[WLBeam] = {
-    if (tableBeam.isDefined) {
-      val tb = tableBeam.get
-      beamList.find(b => (b.gantryAngle == tb.gantryAngle) && (b.collimatorAngle == tb.collimatorAngle) && (b.isoTableAngle == 0))
+  def findTableBeam(wlBeam: Option[WLBeam]): Option[WLBeam] = {
+    if (wlBeam.isDefined) {
+      val tb = wlBeam.get
+      beamList.find(b => (b.gantryAngle == tb.gantryAngle) && (b.collimatorAngle == tb.collimatorAngle) && (b.tableAngle == tb.tableAngle))
     } else None
   }
 
@@ -343,6 +345,10 @@ class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: Is
   }
 
   private def makeRow15: Elem = {
+    val j = findTableBeam(isoTable.get.T330)
+    Trace.trace(j)
+    val j2 = isoTableAnglePrefix(j)
+    Trace.trace(j2)
     <tr>
       {makeRowIndex(15)}
       {isoTableAnglePrefix(findTableBeam(isoTable.get.T330)) /* A15 to Y15 */}

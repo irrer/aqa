@@ -8,7 +8,7 @@ import scala.annotation.tailrec
   * Optimize the minimum of the maximum R-squared values
   */
 
-class WLIsoTableGradientDescent(isoTable: IsoTable) extends Logging {
+class WLIsoTableGradientDescent(isoTable: WLIsoTable) extends Logging {
 
   /** Initial size (edge length) of hypercube in mm. */
   private val initialCubeLen_mm: Double = 0.5
@@ -105,7 +105,7 @@ class WLIsoTableGradientDescent(isoTable: IsoTable) extends Logging {
     val elapsed = System.currentTimeMillis() - start
     logger.info(s"Finished gradient descent.   Elapsed ms: $elapsed     bestPoint: $bestPoint")
 
-    if (true) { // TODO rm
+    if (false) { // TODO rm
       val excel = new WLIsoTablePointLocal(0.1839722351, 0.3329206495, 0.3320187925, 0.3238829870)
       excel
     } else

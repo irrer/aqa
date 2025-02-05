@@ -1,8 +1,8 @@
 package org.aqa.webrun.wl.isoCheck.isoCheckHTML
 
 import edu.umro.ImageUtil.DicomImage
-import org.aqa.webrun.wl.isoCheck.IsoCheck
-import org.aqa.webrun.wl.isoCheck.IsoTable
+import org.aqa.webrun.wl.isoCheck.WLIsoCheck
+import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.isoCheck.WLCollimator
 import org.aqa.Util
@@ -19,7 +19,7 @@ import scala.xml.Elem
   * @param isoTable IsoTable data.
   * @param collimator Collimator data.
   */
-case class WLGradientHTML(extendedData: ExtendedData, isoCheck: IsoCheck, isoTable: Option[IsoTable], collimator: WLCollimator) extends Logging {
+case class WLGradientHTML(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Option[WLIsoTable], collimator: WLCollimator) extends Logging {
 
   private val gradientDirName = "Gradient"
 
