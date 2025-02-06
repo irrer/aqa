@@ -21,9 +21,9 @@ object WLRunIsoCheck extends Logging {
 
     val pairList = WLBeam.makePairList(runReq, dbList)
 
-    val isoCheck = WLIsoCheck.make(extendedData, pairList)
-    val isoTable = WLIsoTable.make(extendedData, pairList)
-    val collimator = WLCollimator.make(extendedData, pairList)
+    val isoCheck = WLIsoCheck.make(pairList)
+    val isoTable = WLIsoTable.make(pairList)
+    val collimator = WLCollimator.make(pairList)
 
     // only do this if the required data is there.
     if (isoCheck.isDefined && collimator.isDefined) {

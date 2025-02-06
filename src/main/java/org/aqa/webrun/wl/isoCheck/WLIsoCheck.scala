@@ -1,6 +1,5 @@
 package org.aqa.webrun.wl.isoCheck
 
-import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 
 /**
@@ -30,7 +29,7 @@ import org.aqa.Logging
  * @param G270_C270_caZ Z
  */
 case class WLIsoCheck(
-                     // @formatter:off
+                       // @formatter:off
                      G__0_C_90_caX: Double, G__0_C_90_caZ: Double,
                      G__0_C270_caX: Double, G__0_C270_caZ: Double,
                      G_90_C_90_caY: Double, G_90_C_90_caZ: Double,
@@ -41,7 +40,7 @@ case class WLIsoCheck(
                      G270_C_90_caY: Double, G270_C_90_caZ: Double,
                      G270_C270_caY: Double, G270_C270_caZ: Double
                      // @formatter:on
-                   ) extends Logging {
+                     ) extends Logging {
 
   /** Analysis I3 = (F3 + F4) / 2 */
   val collXG__0: Double = (G__0_C_90_caX + G__0_C270_caX) / 2
@@ -191,11 +190,10 @@ object WLIsoCheck extends Logging {
   /**
    * Determine if all the data is present to construct a WL IsoCheck data set.  If so, make one and return it.
    *
-   * @param extendedData Metadata.
-   * @param beamList     List of incoming DICOM and results.
+   * @param beamList List of incoming DICOM and results.
    * @return IsoCheck data set or None.
    */
-  def make(extendedData: ExtendedData, beamList: Seq[WLBeam]): Option[WLIsoCheck] = {
+  def make(beamList: Seq[WLBeam]): Option[WLIsoCheck] = {
 
     def findPair(g: Int, c: Int, t: Int): Option[WLBeam] = {
       WLBeam.findGCT(beamList, g, c, t)

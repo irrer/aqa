@@ -134,6 +134,7 @@ object DbSetup extends Logging {
     VMAT.query,
     GapSkew.query,
     WinstonLutz.query,
+    IsoCheck.query,
     FloodField.query,
     PSMBeam.query
   )

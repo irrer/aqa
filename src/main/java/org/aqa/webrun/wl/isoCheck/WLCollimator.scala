@@ -1,11 +1,9 @@
 package org.aqa.webrun.wl.isoCheck
 
-import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 
 case class WLCollimator(
-    // @formatter:off
-                    extendedData: ExtendedData,
+                         // @formatter:off
                     T__0: WLBeam,
                     T_90: WLBeam,
                     T270: WLBeam,
@@ -18,13 +16,17 @@ case class WLCollimator(
     T270,
   )
 
-  var Coll_X_Optimized: Double = -1
+  private var Coll_X_Optimized: Double = -1
 
   def getColl_X_Optimized: Double = Coll_X_Optimized
 
-  var Coll_Z_Optimized: Double = -1
+  def setColl_X_Optimized(coll_x: Double): Unit = Coll_X_Optimized = coll_x
+
+  private var Coll_Z_Optimized: Double = -1
 
   def getColl_Z_Optimized: Double = Coll_Z_Optimized
+
+  def setColl_Z_Optimized(coll_z: Double): Unit = Coll_Z_Optimized = coll_z
 
   private var CA_Rpp_Optimized: Double = -1
 
@@ -72,11 +74,10 @@ object WLCollimator {
   /**
    * Determine if all the data is present to construct a WL IsoTable data set.  If so, make one and return it.
    *
-   * @param extendedData Metadata.
-   * @param pairList     List of incoming DICOM and results.
+   * @param pairList List of incoming DICOM and results.
    * @return IsoTable data set or None.
    */
-  def make(extendedData: ExtendedData, pairList: Seq[WLBeam]): Option[WLCollimator] = {
+  def make(pairList: Seq[WLBeam]): Option[WLCollimator] = {
 
     def findPair(g: Int, c: Int, t: Int): Option[WLBeam] = {
       WLBeam.findGCT(pairList, g, c, t)
@@ -98,7 +99,7 @@ object WLCollimator {
 
     // if of the files are there then construct the object, otherwise return None.
     if (requiredList.flatten.size == requiredList.size) {
-      Some(WLCollimator(extendedData,
+      Some(WLCollimator(
         T__0.get,
         T_90.get,
         T270.get

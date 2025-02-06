@@ -102,8 +102,8 @@ case class WLGradientHTML(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoT
   }
 
   private def collimatorImage = {
-    val x = CoordinateSpec(center = collimator.Coll_X_Optimized, name = "Coll X")
-    val y = CoordinateSpec(center = collimator.Coll_Z_Optimized, name = "Coll Z")
+    val x = CoordinateSpec(center = collimator.getColl_X_Optimized, name = "Coll X")
+    val y = CoordinateSpec(center = collimator.getColl_Z_Optimized, name = "Coll Z")
     GradientImage("Collimator", x, y, collimator.MinCA_Rpp, "Collimator X vs Z")
   }
 

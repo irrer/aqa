@@ -1,11 +1,9 @@
 package org.aqa.webrun.wl.isoCheck
 
-import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 
 case class WLIsoTable(
-    // @formatter:off
-                    extendedData: ExtendedData,
+                       // @formatter:off
                     T__0: Option[ WLBeam],
                     T_30: Option[ WLBeam],
                     T_60: Option[ WLBeam],
@@ -14,7 +12,7 @@ case class WLIsoTable(
                     T300: Option[ WLBeam],
                     T330: Option[ WLBeam]
                     // @formatter:on
-                   ) extends Logging {
+                     ) extends Logging {
 
   val beamList: Seq[WLBeam] = Seq(
     T__0,
@@ -31,20 +29,28 @@ case class WLIsoTable(
 
   def get_dXT__0_Optimized: Double = dXT__0_Optimized
 
+  def set_dXT__0_Optimized(x: Double): Unit = dXT__0_Optimized = x
+
   /** Analysis M14 */
   private var dZT__0_Optimized: Double = 0.0
 
   def get_dZT__0_Optimized: Double = dZT__0_Optimized
+
+  def set_dZT__0_Optimized(z: Double): Unit = dZT__0_Optimized = z
 
   /** Analysis L14 */
   private var IsoTable_X_Optimized: Double = 0.0
 
   def get_IsoTable_X_Optimized: Double = IsoTable_X_Optimized
 
+  def set_IsoTable_X_Optimized(x: Double): Unit = IsoTable_X_Optimized = x
+
   /** Analysis M14 */
   private var IsoTable_Z_Optimized: Double = 0.0
 
   def get_IsoTable_Z_Optimized: Double = IsoTable_Z_Optimized
+
+  def set_IsoTable_Z_Optimized(z: Double): Unit = IsoTable_Z_Optimized = z
 
   private var RSquared_Optimized: Double = 0.0
 
@@ -62,9 +68,6 @@ case class WLIsoTable(
 
   /** Analysis H */
   def BB_X(beam: WLBeam): Double = { // H
-    val j1 = beam.wl.errorX_mm
-    val j2 = T__0.get.wl.errorX_mm
-    val j3 = beam.wl.errorX_mm - T__0.get.wl.errorX_mm
     val bb_x = beam.wl.errorX_mm - T__0.get.wl.errorX_mm
     bb_x
   }
@@ -135,11 +138,10 @@ object WLIsoTable {
   /**
    * Determine if all the data is present to construct a WL IsoTable data set.  If so, make one and return it.
    *
-   * @param extendedData Metadata.
-   * @param pairList     List of incoming DICOM and results.
+   * @param pairList List of incoming DICOM and results.
    * @return IsoTable data set or None.
    */
-  def make(extendedData: ExtendedData, pairList: Seq[WLBeam]): Option[WLIsoTable] = {
+  def make(pairList: Seq[WLBeam]): Option[WLIsoTable] = {
 
     def findPair(g: Int, c: Int, t: Int): Option[WLBeam] = {
       WLBeam.findGCT(pairList, g, c, t)
@@ -165,7 +167,7 @@ object WLIsoTable {
 
     // if of the files are there then construct the object, otherwise return None.
     if (requiredList.flatten.size == requiredList.size) {
-      Some(WLIsoTable(extendedData,
+      Some(WLIsoTable(
         T__0,
         T_30,
         T_60,
@@ -179,15 +181,8 @@ object WLIsoTable {
       None
   }
 
-  def CA_X(beam: WLBeam): Double = {
-    val j = -beam.wl.errorX_mm
-    -beam.wl.errorX_mm
-  }
+  def CA_X(beam: WLBeam): Double = -beam.wl.errorX_mm
 
-  def CA_Z(beam: WLBeam): Double = {
-    val j = -beam.wl.errorY_mm
-    -beam.wl.errorY_mm
-  }
-
+  def CA_Z(beam: WLBeam): Double = -beam.wl.errorY_mm
 
 }
