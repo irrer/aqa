@@ -149,7 +149,7 @@ case class WLGradientHTML(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoT
     GradientImage("Table TableX vs TableZ", x, y, func, "Table TableX vs TableZ")
   }
 
-  def isoTableHtml: Seq[Elem] = {
+  private def isoTableHtml: Seq[Elem] = {
 
     if (isoTable.isDefined) {
       val a = {
@@ -203,14 +203,18 @@ case class WLGradientHTML(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoT
 
     // group the content as collimator by itself, and then the six isoTable gradients.
     val htmlContent: Elem = {
+      val collimatorImageRef = {
+        <tr>
+          <td>
+            {collimatorImage.htmlRef}
+          </td>
+        </tr>
+      }
+
       <div>
         <h2>Gradient Images</h2>
         <table class="table table-bordered">
-          <tr>
-            <td>
-              {collimatorImage.htmlRef}
-            </td>
-          </tr>
+          {collimatorImageRef}
           {isoTableHtml}
         </table>
       </div>

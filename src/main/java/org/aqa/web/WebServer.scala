@@ -31,7 +31,6 @@ import org.aqa.webrun.WebRun
 import org.aqa.webrun.bbByCBCT.BBbyCBCTChartHistoryRestlet
 import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryPartialRestlet
 import org.aqa.webrun.bbByEpid.BBbyEPIDChartHistoryRestlet
-import org.aqa.webrun.seriesMaker.SeriesMaker
 import org.aqa.webrun.dailyQA.DailyQASummary
 import org.aqa.webrun.focalSpot.FSHistoryRestlet
 import org.aqa.webrun.gapSkew.GapSkewHistoryRestlet
@@ -46,9 +45,11 @@ import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessSubHTML
 import org.aqa.webrun.phase2.vmat.VMATChartHistoryRestlet
 import org.aqa.webrun.phase2.wedge.WedgeChartHistoryRestlet
 import org.aqa.webrun.phase2.wedge.WedgeUseAsBaseline
+import org.aqa.webrun.seriesMaker.SeriesMaker
 import org.aqa.webrun.wl.WLHistoryRestlet
 import org.aqa.webrun.wl.WLNav
 import org.aqa.webrun.wl.WLUpdateRestlet
+import org.aqa.webrun.wl.isoCheck.isoCheckHTML.WLIsoCheckChartHistoryRestlet
 import org.restlet.Application
 import org.restlet.Component
 import org.restlet.Request
@@ -567,6 +568,7 @@ class WebServer extends Application with Logging {
         new BBbyEPIDChartHistoryRestlet,
         new WLNav,
         new BBbyEPIDChartHistoryPartialRestlet,
+        new WLIsoCheckChartHistoryRestlet,
         new VMATChartHistoryRestlet,
         new WedgeChartHistoryRestlet,
         new SymmetryAndFlatnessHistoryRestlet,

@@ -5,10 +5,9 @@ import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil._
 import org.aqa.Util
 import org.aqa.web.C3ScatterPlot
-import org.aqa.web.C3ScatterPlotDataPoint
-import org.aqa.web.C3ScatterPlotDataSet
-import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLIsoCheck
+import org.aqa.webrun.wl.isoCheck.isoCheckHTML
+import org.aqa.webrun.wl.isoCheck.isoCheckHTML.TableWobbleChart
 
 import scala.xml.Elem
 
@@ -32,81 +31,9 @@ class SSReport(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Optio
   private val bTBL = Some(s"border-Top: $border;border-left: $border;border-bottom: $border;")
   private val bTBLR = Some(s"border: $border;")
 
-  private val MLCWobbleChart: C3ScatterPlot = {
+  private val MLCWobbleChart: C3ScatterPlot = isoCheckHTML.MLCWobbleChart.makeChart(isoCheck)
 
-    val dataList: Seq[C3ScatterPlotDataSet] = {
-      val data = Seq(
-        C3ScatterPlotDataPoint(isoCheck.mlcDxG__0_C_90, isoCheck.mlcDyG__0_C_90),
-        C3ScatterPlotDataPoint(isoCheck.mlcDxG__0_C270, isoCheck.mlcDyG__0_C270),
-        C3ScatterPlotDataPoint(isoCheck.mlcDxG_90_C_90, isoCheck.mlcDyG_90_C_90),
-        C3ScatterPlotDataPoint(isoCheck.mlcDxG_90_C270, isoCheck.mlcDyG_90_C270),
-        C3ScatterPlotDataPoint(isoCheck.mlcDxG180_C__0, isoCheck.mlcDyG180_C__0),
-        C3ScatterPlotDataPoint(isoCheck.mlcDxG180_C_90, isoCheck.mlcDyG180_C_90),
-        C3ScatterPlotDataPoint(isoCheck.mlcDxG180_C270, isoCheck.mlcDyG180_C270),
-        C3ScatterPlotDataPoint(isoCheck.mlcDxG270_C_90, isoCheck.mlcDyG270_C_90),
-        C3ScatterPlotDataPoint(isoCheck.mlcDxG270_C270, isoCheck.mlcDyG270_C270)
-      )
-
-      Seq(C3ScatterPlotDataSet("MLC Wobble", data))
-    }
-
-    new C3ScatterPlot(
-      dataList = dataList,
-      xAxisLabel = "dZ (mm)",
-      yAxisLabel = "dX (mm)",
-      width = Some(600),
-      height = Some(686),
-      xAxisFormat = ".1g",
-      yAxisFormat = ".1g",
-      xMin = Some(-0.5),
-      xMax = Some(0.5),
-      yMin = Some(-0.5),
-      yMax = Some(0.5),
-      showPrecision = 10,
-      showGrid = true
-    )
-  }
-
-  private val IsoTableWobbleChart: C3ScatterPlot = {
-
-    def dXOf(beam: WLBeam): Option[Double] = {
-      isoTable.map(it => it.BB_Xp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized) - it.get_IsoTable_X_Optimized)
-    }
-
-    def dZOf(beam: WLBeam): Option[Double] = {
-      isoTable.map(it => it.BB_Zpp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_Z_Optimized))
-    }
-
-    def point(beam: WLBeam): Option[C3ScatterPlotDataPoint] = {
-      if (hasIt)
-        Some(C3ScatterPlotDataPoint(dXOf(beam).get, dZOf(beam).get))
-      else None
-    }
-
-    val dataList: Seq[C3ScatterPlotDataSet] = {
-      if (hasIt) {
-        val data = isoTable.get.beamList.map(point)
-        Seq(C3ScatterPlotDataSet("Table Wobble", data.flatten))
-      } else
-        Seq()
-    }
-
-    new C3ScatterPlot(
-      dataList = dataList,
-      xAxisLabel = "BB-X`` (mm)",
-      yAxisLabel = "BB-Z`` (mm)",
-      width = Some(600),
-      height = Some(686),
-      xAxisFormat = ".1g",
-      yAxisFormat = ".1g",
-      xMin = Some(-0.5),
-      xMax = Some(0.5),
-      yMin = Some(-0.5),
-      yMax = Some(0.5),
-      showPrecision = 10,
-      showGrid = true
-    )
-  }
+  private val IsoTableWobbleChart: C3ScatterPlot = TableWobbleChart.makeChart(isoTable)
 
   private def makeRow1: Elem = {
     <tr>

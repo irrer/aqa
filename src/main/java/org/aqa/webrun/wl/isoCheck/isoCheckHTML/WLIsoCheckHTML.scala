@@ -1,17 +1,15 @@
 package org.aqa.webrun.wl.isoCheck.isoCheckHTML
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.isoCheck.WLCollimator
 import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.Logging
 import org.aqa.Util
-import org.aqa.webrun.wl.isoCheck.WLIsoCheck
 import org.aqa.webrun.wl.isoCheck.WLBeam
+import org.aqa.webrun.wl.isoCheck.WLIsoCheck
 import org.aqa.webrun.wl.isoCheck.WLXLSXSpreadsheet
 import org.aqa.webrun.wl.isoCheck.ssHtml.SSHtml
-import org.aqa.webrun.wl.isoCheck.WLIsoTable
 
 import java.io.File
 import scala.xml.Elem
@@ -26,7 +24,7 @@ import scala.xml.Elem
   * @param collimator Collimator data.
   */
 
-case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], isoCheck: WLIsoCheck, isoTable: Option[WLIsoTable], collimator: WLCollimator) extends Logging {
+case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], isoCheck: WLIsoCheck, collimator: WLCollimator, isoTable: Option[WLIsoTable]) extends Logging {
 
   def mainPage(): Elem = {
 
@@ -38,38 +36,79 @@ case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], iso
 
     val fileNameCsvSNCImport = SSHtml.make(extendedData, pairList, isoCheck, isoTable, collimator)
 
-    Trace.trace()
     val fileName_xlsx = WLXLSXSpreadsheet.makeSpreadsheet(extendedData, pairList, isoTable, collimator)
-    Trace.trace()
+
+    val isoCheckChart = new WLIsoCheckChart(extendedData.outputPK)
+
+    val mlcWobbleChart = MLCWobbleChart.makeChart(isoCheck)
+
+    val tableWobbleChart = if (isoTable.isDefined) Some(TableWobbleChart.makeChart(isoTable)) else None
+
+    val tableWobbleChartJs = if (tableWobbleChart.isDefined) tableWobbleChart.get.javascript else ""
+
+    val wobbleCharts: Elem = {
+
+      val t: Elem = if (tableWobbleChart.isDefined) tableWobbleChart.get.html else <span>Not Available</span>
+
+      val content = {
+        <div class="row">
+          <div class="col-md-6" style="border: 2px solid black;">
+            <h4 style="text-align: center;">MLC Wobble about Collimator Axis</h4>
+            {mlcWobbleChart.html}
+          </div>
+          <div class="col-md-6" style="border: 2px solid black;">
+            <h4 style="text-align: center;">IsoTable Wobble about IsoTable Axis</h4>
+            {t}
+          </div>
+        </div>
+      }
+      content
+    }
+
+    val linkTable = {
+      <table class="table table-bordered" style="margin-top:10px;text-align: center;">
+        <tr>
+          <td>
+            <a href={SSHtml.spreadsheetHtmlFileName}>View Spreadsheet</a>
+          </td>
+          <td>
+            <a href={fileNameCsvSNCImport} style="margin-left:50px;">Download CSV for SNC</a>
+          </td>
+          <td>
+            <a href={fileName_xlsx} style="margin-left:50px;">Download XLSX</a>
+          </td>
+          <td>
+            {gradientHtml}
+          </td>
+        </tr>
+      </table>
+    }
+
+    val tableGantryAndCollimatorHtml = new TableGantryAndCollimator(isoCheckChart, isoCheck, collimator)
+    val tableHtml: TableHtml = new TableHtml(isoCheckChart, isoCheck, isoTable)
+    val tableBB_RSq = new TableBB_RSq(isoCheckChart, isoTable)
 
     val content = {
       <div>
-        <table>
-          <tr>
-            <td>
-              <a href={SSHtml.spreadsheetHtmlFileName}>View Spreadsheet</a>
-            </td>
-            <td>
-              <a href={fileNameCsvSNCImport} style="margin-left:50px;">Download CSV for SNC</a>
-            </td>
-            <td>
-              <a href={fileName_xlsx} style="margin-left:50px;">Download XLSX</a>
-            </td>
-            <td>
-              {gradientHtml}
-            </td>
-          </tr>
-        </table>
+        <h2>IsoCheck</h2>
+        {linkTable}
+        {wobbleCharts}
+        {tableGantryAndCollimatorHtml.content}
+        {tableHtml.content}
+        {tableBB_RSq.content}
+        <div style="margin-bottom:300px;"> </div>
       </div>
     }
 
-    Trace.trace()
-    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "IsoCheck", runScript = None)
-    Trace.trace()
+    val runScript = {
+      val scatter = s"""<script>${mlcWobbleChart.javascript}\n$tableWobbleChartJs</script>"""
+      val trend = s"""<script src='/WLIsoCheckChartHistoryRestlet?outputPK=${extendedData.outputPK}'></script>\n"""
+      scatter + trend
+    }
+
+    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "IsoCheck", c3 = true, runScript = Some(runScript))
     Util.writeFile(htmlFile, text)
-    Trace.trace()
     logger.info(s"Wrote spreadsheet as HTML to ${htmlFile.getAbsolutePath}")
-    Trace.trace()
 
     val htmlRef = {
       val hRef = WLIsoCheckHTML.dirName + "/" + htmlFile.getName
@@ -96,4 +135,9 @@ object WLIsoCheckHTML extends Logging {
       logger.info(s"Created WL IsoCheck HTML dir ${d.getAbsolutePath}")
     d
   }
+
+  def tdElem(name: String, value: Double): Elem = {
+    <td>{name}: {WebUtil.setPrecisionAttr(<span></span>, value)}</td>
+  }
+
 }

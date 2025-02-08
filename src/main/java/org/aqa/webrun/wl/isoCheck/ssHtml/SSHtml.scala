@@ -5,13 +5,12 @@ import org.aqa.Util
 import org.aqa.web.C3Chart
 import org.aqa.web.WebUtil
 import org.aqa.Logging
-import org.aqa.webrun.wl.isoCheck.WLIsoCheck
 import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLCollimator
+import org.aqa.webrun.wl.isoCheck.WLIsoCheck
 import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil
 import org.aqa.webrun.wl.isoCheck.isoCheckHTML.WLIsoCheckHTML
-import org.aqa.webrun.wl.isoCheck.WLIsoTable
 
 import java.io.File
 import scala.xml.Elem

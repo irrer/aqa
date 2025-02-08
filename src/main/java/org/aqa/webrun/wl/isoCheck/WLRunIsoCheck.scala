@@ -5,6 +5,7 @@ import org.aqa.web.WebUtil
 import org.aqa.webrun.wl.WLRunReq
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
+import org.aqa.db.IsoCheck
 
 import scala.xml.Elem
 
@@ -22,13 +23,64 @@ object WLRunIsoCheck extends Logging {
     val pairList = WLBeam.makePairList(runReq, dbList)
 
     val isoCheck = WLIsoCheck.make(pairList)
-    val isoTable = WLIsoTable.make(pairList)
     val collimator = WLCollimator.make(pairList)
+    val isoTable = WLIsoTable.make(pairList)
 
     // only do this if the required data is there.
-    if (isoCheck.isDefined && collimator.isDefined) {
+    if (isoCheck.isDefined) {
 
-      val wlIsoCheckHTML = org.aqa.webrun.wl.isoCheck.isoCheckHTML.WLIsoCheckHTML(extendedData, pairList, isoCheck.get, isoTable, collimator.get)
+      val wlIsoCheckHTML = org.aqa.webrun.wl.isoCheck.isoCheckHTML.WLIsoCheckHTML(extendedData, pairList, isoCheck.get, collimator.get, isoTable)
+
+      val isoCheckDb: IsoCheck = (collimator, isoTable) match {
+        case (Some(col), Some(table)) =>
+          IsoCheck(
+            isoCheckPK = None,
+            outputPK = extendedData.outputPK,
+            dX_mm = Some(table.get_dXT__0_Optimized),
+            dZ_mm = Some(table.get_dZT__0_Optimized),
+            tableX_mm = Some(table.get_IsoTable_X_Optimized),
+            tableZ_mm = Some(table.get_IsoTable_Z_Optimized),
+            collX_mm = Some(col.getColl_X_Optimized),
+            collZ_mm = Some(col.getColl_Z_Optimized)
+          )
+
+        case (Some(col), _) =>
+          IsoCheck(
+            isoCheckPK = None,
+            outputPK = extendedData.outputPK,
+            dX_mm = None,
+            dZ_mm = None,
+            tableX_mm = None,
+            tableZ_mm = None,
+            collX_mm = Some(col.getColl_X_Optimized),
+            collZ_mm = Some(col.getColl_Z_Optimized)
+          )
+        case (_, Some(table)) =>
+          IsoCheck(
+            isoCheckPK = None,
+            outputPK = extendedData.outputPK,
+            dX_mm = Some(table.get_dXT__0_Optimized),
+            dZ_mm = Some(table.get_dZT__0_Optimized),
+            tableX_mm = Some(table.get_IsoTable_X_Optimized),
+            tableZ_mm = Some(table.get_IsoTable_Z_Optimized),
+            collX_mm = None,
+            collZ_mm = None
+          )
+        case (_, _) =>
+          IsoCheck(
+            isoCheckPK = None,
+            outputPK = extendedData.outputPK,
+            dX_mm = None,
+            dZ_mm = None,
+            tableX_mm = None,
+            tableZ_mm = None,
+            collX_mm = None,
+            collZ_mm = None
+          )
+      }
+
+      isoCheckDb.insert
+      logger.info("Inserted IsoCheck row into database.")
 
       val htmlRef = wlIsoCheckHTML.mainPage()
 
