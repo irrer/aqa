@@ -36,7 +36,7 @@ case class WLGradientHTML(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoT
     */
   private case class CoordinateSpec(
       name: String,
-      length: Double = 1.0,
+      length: Double = 2.0,
       center: Double,
       pix: Int = 1000
   ) {
