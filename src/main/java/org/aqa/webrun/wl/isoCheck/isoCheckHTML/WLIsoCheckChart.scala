@@ -45,14 +45,14 @@ class WLIsoCheckChart(outputPK: Long) {
 
     val yValues: Seq[Seq[Double]] = {
       Seq(
-        history.map(-_.wlIsoCheck.isoX),
-        history.map(-_.wlIsoCheck.isoY),
-        history.map(-_.wlIsoCheck.isoZ),
-        history.map(_.wlIsoCheck.gantryFlex),
-        history.map(_.wlIsoCheck.collGantryMisalign),
-        history.map(_.wlIsoCheck.mlcOffsetY),
-        history.map(_.wlIsoCheck.gantryIsocentricity),
-        history.map(_.wlCollimator.getCA_Rpp_Optimized)
+        history.map(-_.isoCheck.isoX),
+        history.map(-_.isoCheck.isoY),
+        history.map(-_.isoCheck.isoZ),
+        history.map(_.isoCheck.gantryFlex),
+        history.map(_.isoCheck.collGantryMisalign),
+        history.map(_.isoCheck.mlcOffsetY),
+        history.map(_.isoCheck.gantryIsocentricity),
+        history.map(_.collimator.getCA_Rpp_Optimized)
       )
     }
 
@@ -95,7 +95,7 @@ class WLIsoCheckChart(outputPK: Long) {
   // ------------------------------------------------------------------------------------------------
 
   private def makeIsoTableChart(): C3ChartHistory = {
-    val isoTableList = history.filter(h => h.wlIsoTable.isDefined)
+    val isoTableList = history.filter(h => h.isoTable.isDefined)
 
     // list of all MaintenanceRecords in this time interval
     val MaintenanceRecordList = {
@@ -112,9 +112,9 @@ class WLIsoCheckChart(outputPK: Long) {
 
     val yValues: Seq[Seq[Double]] = {
       Seq(
-        history.map(h => h.wlIsoTable.get.get_IsoTable_X_Optimized - h.wlIsoCheck.isoX),
-        history.map(h => h.wlIsoTable.get.get_IsoTable_Z_Optimized - h.wlIsoCheck.isoZ),
-        history.map(h => Math.sqrt(h.wlIsoTable.get.get_RSquared_Optimized))
+        history.map(h => h.isoTable.get.get_IsoTable_X_Optimized - h.isoCheck.isoX),
+        history.map(h => h.isoTable.get.get_IsoTable_Z_Optimized - h.isoCheck.isoZ),
+        history.map(h => Math.sqrt(h.isoTable.get.get_RSquared_Optimized))
       )
     }
 
@@ -151,7 +151,7 @@ class WLIsoCheckChart(outputPK: Long) {
   // ------------------------------------------------------------------------------------------------
 
   private def makeIsoTableBB_RSqChart(): C3ChartHistory = {
-    val isoTableList = history.filter(h => h.wlIsoTable.isDefined)
+    val isoTableList = history.filter(h => h.isoTable.isDefined)
 
     // list of all MaintenanceRecords in this time interval
     val MaintenanceRecordList = {
@@ -176,13 +176,13 @@ class WLIsoCheckChart(outputPK: Long) {
 
     val yValues: Seq[Seq[Double]] = {
       Seq(
-        history.map(h => BB_RppSq(h.wlIsoTable.get, h.wlIsoTable.get.T__0.get)),
-        history.map(h => BB_RppSq(h.wlIsoTable.get, h.wlIsoTable.get.T_30.get)),
-        history.map(h => BB_RppSq(h.wlIsoTable.get, h.wlIsoTable.get.T_60.get)),
-        history.map(h => BB_RppSq(h.wlIsoTable.get, h.wlIsoTable.get.T_90.get)),
-        history.map(h => BB_RppSq(h.wlIsoTable.get, h.wlIsoTable.get.T270.get)),
-        history.map(h => BB_RppSq(h.wlIsoTable.get, h.wlIsoTable.get.T300.get)),
-        history.map(h => BB_RppSq(h.wlIsoTable.get, h.wlIsoTable.get.T330.get))
+        history.map(h => BB_RppSq(h.isoTable.get, h.isoTable.get.T__0.get)),
+        history.map(h => BB_RppSq(h.isoTable.get, h.isoTable.get.T_30.get)),
+        history.map(h => BB_RppSq(h.isoTable.get, h.isoTable.get.T_60.get)),
+        history.map(h => BB_RppSq(h.isoTable.get, h.isoTable.get.T_90.get)),
+        history.map(h => BB_RppSq(h.isoTable.get, h.isoTable.get.T270.get)),
+        history.map(h => BB_RppSq(h.isoTable.get, h.isoTable.get.T300.get)),
+        history.map(h => BB_RppSq(h.isoTable.get, h.isoTable.get.T330.get))
       )
     }
 
@@ -222,7 +222,7 @@ class WLIsoCheckChart(outputPK: Long) {
   // ------------------------------------------------------------------------------------------------
 
   val isoCheckChart: C3ChartHistory = makeIsoCheckChart()
-  val isoTableChart: Option[C3ChartHistory] = if (history.exists(_.wlIsoTable.isDefined)) Some(makeIsoTableChart()) else None
-  val isoTableBB_RSqChart: Option[C3ChartHistory] = if (history.exists(_.wlIsoTable.isDefined)) Some(makeIsoTableBB_RSqChart()) else None
+  val isoTableChart: Option[C3ChartHistory] = if (history.exists(_.isoTable.isDefined)) Some(makeIsoTableChart()) else None
+  val isoTableBB_RSqChart: Option[C3ChartHistory] = if (history.exists(_.isoTable.isDefined)) Some(makeIsoTableBB_RSqChart()) else None
 
 }

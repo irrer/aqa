@@ -112,11 +112,11 @@ object IsoCheck {
     Db.run(action)
   }
 
-  case class IsoCheckHistory(output: Output, wlIsoCheck: WLIsoCheck, wlCollimator: WLCollimator, wlIsoTable: Option[WLIsoTable]) extends HasOutput {
+  case class IsoCheckHistory(output: Output, isoCheck: WLIsoCheck, collimator: WLCollimator, isoTable: Option[WLIsoTable]) extends HasOutput {
 
     val date: Timestamp = output.dataDate.get
     def getTime: Long = date.getTime
-    val hasTable: Boolean = wlIsoTable.isDefined
+    val hasTable: Boolean = isoTable.isDefined
 
     override def getOutput: Output = output
   }
