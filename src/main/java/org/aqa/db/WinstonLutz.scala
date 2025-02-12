@@ -66,22 +66,32 @@ case class WinstonLutz(
   }
 
   /**
-   * Get a beam name.  Use the one in the RTPLAN, but if that is not available, construct one based on the gantry and collimator angles.
+   * Construct beam name based on the gantry, collimator, and table angles.
+   *
+   * @return text name.
+   */
+  def isoBeamName: String = {
+    val table: String = if (tableAngle_deg.isDefined && (Util.angleRoundedTo90(tableAngle_deg.get) != 0))
+      " T" + Util.angleRoundedTo90(tableAngle_deg.get)
+    else
+      ""
+    val name = "WL G" + Util.angleRoundedTo90(gantryAngle_deg) + " C" + Util.angleRoundedTo90(collimatorAngle_deg) + table
+    name
+  }
+
+
+  /**
+   * Get a beam name.  Use the one in the RTPLAN, but if that is not available, construct one based on the gantry, collimator, and table angles.
    *
    * @return The name of the beam.
    */
   def beamNameOf: String = {
     if (beamName.isDefined)
       beamName.get.replaceFirst("^[0-9] ", "").trim
-    else {
-      val table: String = if (tableAngle_deg.isDefined && (Util.angleRoundedTo90(tableAngle_deg.get) != 0))
-        " T" + Util.angleRoundedTo90(tableAngle_deg.get)
-      else
-        ""
-      val name = "WL G" + Util.angleRoundedTo90(gantryAngle_deg) + " C" + Util.angleRoundedTo90(collimatorAngle_deg) + table
-      name
-    }
+    else
+      isoBeamName
   }
+
 
   def insertOrUpdate(): Int = Db.run(WinstonLutz.query.insertOrUpdate(this))
 
