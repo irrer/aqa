@@ -112,10 +112,11 @@ object IsoCheck {
     Db.run(action)
   }
 
-  case class IsoCheckHistory(output: Output, wlIsoCheck: WLIsoCheck, wlCollimator: Option[WLCollimator], wlIsoTable: Option[WLIsoTable]) extends HasOutput {
+  case class IsoCheckHistory(output: Output, wlIsoCheck: WLIsoCheck, wlCollimator: WLCollimator, wlIsoTable: Option[WLIsoTable]) extends HasOutput {
 
     val date: Timestamp = output.dataDate.get
     def getTime: Long = date.getTime
+    val hasTable: Boolean = wlIsoTable.isDefined
 
     override def getOutput: Output = output
   }
@@ -126,14 +127,12 @@ object IsoCheck {
 
     val wlIsoCheck = WLIsoCheck.make(beamList)
 
-    val wlCollimator = WLCollimator.make(beamList)
+    val wlCollimator = WLCollimator.make(beamList).get
 
     val wlIsoTable = WLIsoTable.make(beamList)
 
-    if (wlCollimator.isDefined && isoCheck.collX_mm.isDefined && isoCheck.collZ_mm.isDefined) {
-      wlCollimator.get.setColl_X_Optimized(isoCheck.collX_mm.get)
-      wlCollimator.get.setColl_Z_Optimized(isoCheck.collZ_mm.get)
-    }
+    wlCollimator.setColl_X_Optimized(isoCheck.collX_mm.get)
+    wlCollimator.setColl_Z_Optimized(isoCheck.collZ_mm.get)
 
     if (
       wlIsoTable.isDefined &&
