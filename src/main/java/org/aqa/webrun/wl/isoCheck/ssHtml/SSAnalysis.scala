@@ -1,6 +1,5 @@
 package org.aqa.webrun.wl.isoCheck.ssHtml
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.isoCheck.WLBeam
@@ -100,7 +99,7 @@ class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: WL
         M, /*                                    M dZ */
         N, /*                                    N IsoTable-X */
         O, /*                                    O IsoTable-Z */
-        toHtmlPowderBlue(it.BB_Xp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized) - it.get_IsoTable_X_Optimized), /* P BB-X" */
+        toHtmlPowderBlue(it.BB_Xpp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_X_Optimized)), /* P BB-X" */
         toHtmlPowderBlue(it.BB_Zpp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_Z_Optimized)), /* Q BB-Z" */
         toHtmlPowderBlue(it.BB_Rpp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_X_Optimized, it.get_IsoTable_Z_Optimized)) /*  R BB-R"^2 */
       ) ++ blankCells(7) /*                      S to Y */
@@ -345,10 +344,6 @@ class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: WL
   }
 
   private def makeRow15: Elem = {
-    val j = findTableBeam(isoTable.get.T330)
-    Trace.trace(j)
-    val j2 = isoTableAnglePrefix(j)
-    Trace.trace(j2)
     <tr>
       {makeRowIndex(15)}
       {isoTableAnglePrefix(findTableBeam(isoTable.get.T330)) /* A15 to Y15 */}
