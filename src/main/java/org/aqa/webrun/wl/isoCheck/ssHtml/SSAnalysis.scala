@@ -329,7 +329,7 @@ class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: WL
     </tr>
   }
 
-  def findTableBeam(wlBeam: Option[WLBeam]): Option[WLBeam] = {
+  private def findTableBeam(wlBeam: Option[WLBeam]): Option[WLBeam] = {
     if (wlBeam.isDefined) {
       val tb = wlBeam.get
       beamList.find(b => (b.gantryAngle == tb.gantryAngle) && (b.collimatorAngle == tb.collimatorAngle) && (b.tableAngle == tb.tableAngle))

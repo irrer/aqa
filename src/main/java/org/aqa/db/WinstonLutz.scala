@@ -19,6 +19,7 @@ package org.aqa.db
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.Util
+import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.rnd
 
 import java.sql.Timestamp
 import java.util.Date
@@ -124,6 +125,33 @@ case class WinstonLutz(
   val gantryAngleRounded: Int = Util.angleRoundedTo90(gantryAngle_deg)
   val collimatorAngleRounded: Int = Util.angleRoundedTo90(collimatorAngle_deg)
   val tableAngleRounded: Option[Int] = tableAngle_deg.map(Util.angleRoundedTo90)
+
+
+
+  /** Analysis F */
+  val caX: Option[Double] = {
+    val value = gantryAngleRounded match {
+      case 0   => Some(errorX_mm)
+      case 180 => Some(-errorX_mm)
+      case _   => None
+    }
+    value.map(rnd)
+  }
+
+  /** Analysis G */
+  val caY: Option[Double] = {
+    val value = gantryAngleRounded match {
+      case 90  => Some(errorX_mm)
+      case 270 => Some(-errorX_mm)
+      case _   => None
+    }
+    value.map(rnd)
+  }
+
+  /** Analysis H */
+  val caZ: Option[Double] = Some(-errorY_mm).map(rnd)
+
+
 
   override def toString: String = {
     // @formatter:off

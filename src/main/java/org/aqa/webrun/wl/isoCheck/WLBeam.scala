@@ -6,11 +6,10 @@ import org.aqa.db.WinstonLutz
 import org.aqa.Logging
 import org.aqa.webrun.wl.WLRunReq
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.flip
-import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.rnd
 
 import java.util.Date
 
-case class WLBeam(wl: WinstonLutz, al: AttributeList) extends Logging {
+case class WLBeam(wl: WinstonLutz, al: AttributeList = new AttributeList) extends Logging {
 
   /** Analysis A */
   val gantryAngle: Int = WLXlsxUtil.angleRounded(wl.gantryAngle_deg)
@@ -29,27 +28,13 @@ case class WLBeam(wl: WinstonLutz, al: AttributeList) extends Logging {
   }
 
   /** Analysis F */
-  val caX: Option[Double] = {
-    val value = gantryAngle match {
-      case 0   => Some(wl.errorX_mm)
-      case 180 => Some(-wl.errorX_mm)
-      case _   => None
-    }
-    value.map(rnd)
-  }
+  val caX: Option[Double] = wl.caX
 
   /** Analysis G */
-  val caY: Option[Double] = {
-    val value = gantryAngle match {
-      case 90  => Some(wl.errorX_mm)
-      case 270 => Some(-wl.errorX_mm)
-      case _   => None
-    }
-    value.map(rnd)
-  }
+  val caY: Option[Double] = wl.caY
 
   /** Analysis H */
-  val caZ: Option[Double] = Some(-wl.errorY_mm).map(rnd)
+  val caZ: Option[Double] = wl.caZ
 
   private val radians: Double = Math.toRadians(flip(tableAngle))
 

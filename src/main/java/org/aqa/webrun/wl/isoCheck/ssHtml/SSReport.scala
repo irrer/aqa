@@ -104,7 +104,7 @@ class SSReport(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Optio
 
     val K4 =
       if (hasIt)
-        toHtmlYellow(2 * Math.sqrt(isoTable.get.get_RSquared_Optimized), style = bTBLR)
+        toHtmlYellow(isoTable.get.tableWobbleDiameter, style = bTBLR)
       else
         toHtml("", style = bTBLR) /*  K4 */
 

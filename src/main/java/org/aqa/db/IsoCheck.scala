@@ -112,13 +112,20 @@ object IsoCheck {
     Db.run(action)
   }
 
-  case class IsoCheckHistory(output: Output, isoCheck: WLIsoCheck, collimator: WLCollimator, isoTable: Option[WLIsoTable]) extends HasOutput {
+  case class IsoCheckHistory(output: Output, isoCheck: WLIsoCheck, collimator: WLCollimator, isoTable: Option[WLIsoTable], wlList: Seq[WinstonLutz]) extends HasOutput {
 
     val date: Timestamp = output.dataDate.get
     def getTime: Long = date.getTime
     val hasTable: Boolean = isoTable.isDefined
 
     override def getOutput: Output = output
+
+    def getBeam(gantry: Int, collimatorAngle: Int, tableAngle: Int = 0): Option[WinstonLutz] =
+      wlList.find(wl =>
+        (wl.gantryAngleRounded == gantry) &&
+          (wl.collimatorAngleRounded == collimatorAngle) &&
+          (wl.tableAngleRounded.get == tableAngle)
+      )
   }
 
   private def makeIsoCheckHistory(output: Output, isoCheck: IsoCheck, wlList: Seq[WinstonLutz]): Option[IsoCheckHistory] = {
@@ -148,7 +155,7 @@ object IsoCheck {
     }
 
     if (wlIsoCheck.isDefined) {
-      val ich = IsoCheckHistory(output, wlIsoCheck.get, wlCollimator, wlIsoTable)
+      val ich = IsoCheckHistory(output, wlIsoCheck.get, wlCollimator, wlIsoTable, wlList)
       Some(ich)
     } else
       None
@@ -175,7 +182,7 @@ object IsoCheck {
 
     val wlList = Db.run(searchWL.result)
 
-    val result = isoCheckList.flatMap(h => makeIsoCheckHistory(h._1, h._2, wlList.filter(_.outputPK == h._2.outputPK)))
+    val result = isoCheckList.flatMap(h => makeIsoCheckHistory(h._1, h._2, wlList.filter(_.outputPK == h._2.outputPK).sortBy(_.dataDate.getTime)))
     result
   }
 

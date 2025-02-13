@@ -552,7 +552,8 @@ object Phase2Csv extends Logging {
       new VMAT_T2_DG_RSCsv(metadataCache),
       new VMAT_T3MLCSpeedCsv(metadataCache),
       new WedgePointCsv(metadataCache),
-      new WinstonLutzCsv(metadataCache)
+      new WinstonLutzCsv(metadataCache),
+      new IsoCheckCsv(metadataCache)
     )
   }
 

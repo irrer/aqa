@@ -38,14 +38,14 @@ case class WLIsoTable(
 
   def set_dZT__0_Optimized(z: Double): Unit = dZT__0_Optimized = z
 
-  /** Analysis L14 */
+  /** Analysis N14 */
   private var IsoTable_X_Optimized: Double = 0.0
 
   def get_IsoTable_X_Optimized: Double = IsoTable_X_Optimized
 
   def set_IsoTable_X_Optimized(x: Double): Unit = IsoTable_X_Optimized = x
 
-  /** Analysis M14 */
+  /** Analysis O14 */
   private var IsoTable_Z_Optimized: Double = 0.0
 
   def get_IsoTable_Z_Optimized: Double = IsoTable_Z_Optimized
@@ -55,6 +55,8 @@ case class WLIsoTable(
   private var RSquared_Optimized: Double = 0.0
 
   def get_RSquared_Optimized: Double = RSquared_Optimized
+
+  def tableWobbleDiameter: Double = 2 * Math.sqrt(get_RSquared_Optimized)
 
   /** Analysis L */
   def dXOf(beam: WLBeam, dX: Double, dZ: Double): Double = {
@@ -82,7 +84,7 @@ case class WLIsoTable(
   def BB_Zp(beam: WLBeam, dX: Double, dZ: Double): Double = BB_Z(beam) + dZOf(beam, dX, dZ) // K
 
   /** Analysis P BB-X" */
-  private def BB_Xpp(beam: WLBeam, dX: Double, dZ: Double, IsoTable_X: Double): Double = BB_Xp(beam, dX, dZ) - IsoTable_X
+  def BB_Xpp(beam: WLBeam, dX: Double, dZ: Double, IsoTable_X: Double): Double = BB_Xp(beam, dX, dZ) - IsoTable_X
 
   /** Analysis Q BB-X" */
   def BB_Zpp(beam: WLBeam, dX: Double, dZ: Double, IsoTable_Z: Double): Double = BB_Zp(beam, dX, dZ) - IsoTable_Z
