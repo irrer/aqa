@@ -16,7 +16,7 @@ class TableBB_RSq(isoCheckChart: WLIsoCheckChart, isoTable: Option[WLIsoTable]) 
     tdElem(name, value)
   }
 
-  private val tableBB_RSqTable: Elem = {
+  private def tableBB_RSqTable: Elem = {
 
     <table class="table table-bordered" style="text-align: center;">
       <tr>

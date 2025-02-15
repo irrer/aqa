@@ -9,7 +9,7 @@ import scala.xml.Elem
 
 class TableHtml(isoCheckChart: WLIsoCheckChart, isoCheck: WLIsoCheck, isoTable: Option[WLIsoTable]) {
 
-  private val table: Elem = {
+  private def table: Elem = {
     <table class="table table-bordered" style="text-align: center;">
       <tr>
         {tdElem("Table - Gantry Iso X", isoTable.get.get_IsoTable_X_Optimized - isoCheck.isoX)}
@@ -20,7 +20,7 @@ class TableHtml(isoCheckChart: WLIsoCheckChart, isoCheck: WLIsoCheck, isoTable: 
   }
 
   val content: Seq[Elem] = {
-    if (isoCheckChart.isoTableChart.isDefined) {
+    if (isoTable.isDefined && isoCheckChart.isoTableChart.isDefined) {
       val elem = {
         <div style="margin-top:100px;">
           <hr style="border:3px solid #777777; border-radius: 8px;" > </hr>
