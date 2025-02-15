@@ -1,6 +1,5 @@
 package org.aqa.webrun.wl.isoCheck
 
-import edu.umro.ScalaUtil.Trace
 import org.apache.poi.ss.util.CellReference
 import org.apache.poi.xssf.usermodel.XSSFCell
 import org.apache.poi.xssf.usermodel.XSSFSheet
@@ -34,7 +33,7 @@ object WLXLSXSpreadsheet extends Logging {
           cell.setBlank()
         } catch {
           case t: Throwable =>
-            Trace.trace(s"=====badness ${sheet.getSheetName}      rowIndex: $rowIndex     cellIndex: $cellIndex : " + fmtEx(t))
+            logger.error(s"Unexpected exception: ${sheet.getSheetName}      rowIndex: $rowIndex     cellIndex: $cellIndex : " + fmtEx(t))
         }
       }
     }
