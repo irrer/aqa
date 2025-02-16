@@ -1605,6 +1605,21 @@ object Util extends Logging {
     RawByte.formatByteArray(h)
   }
 
+  /**
+   * Limit the number of items in a BB (Daily OBI) history.
+   * @param index Index of history item displayed in the web page.
+   * @param data List of all history.
+   * @tparam T Type of history items.
+   * @return Shortened list.
+   */
+  def bracketBBHistory[T](index: Int, data: Seq[T]): Seq[T] = {
+    val total = Config.BBPreHistory + Config.BBPostHistory
+    if((index >= 0) && (index < data.size) )
+      data.take(index + Config.BBPostHistory).takeRight(total)
+    else
+      data.takeRight(total)
+  }
+
   def main(args: Array[String]): Unit = {
     Config.validate
 

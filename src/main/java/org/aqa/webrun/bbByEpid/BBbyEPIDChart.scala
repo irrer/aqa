@@ -40,7 +40,10 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
   private val procedure: Procedure = Procedure.get(output.procedurePK).get
   private val input: Input = Input.get(output.inputPK).get
   private val machine: Machine = Machine.get(output.machinePK.get).get
-  private val history: Seq[BBbyEPIDComposite.BBbyEPIDCompositeHistory] = BBbyEPIDComposite.history(machine.machinePK.get, procedure.procedurePK.get)
+  private val history: Seq[BBbyEPIDComposite.BBbyEPIDCompositeHistory] = {
+    val hist = BBbyEPIDComposite.history(machine.machinePK.get, procedure.procedurePK.get)
+    Util.bracketBBHistory(hist.indexWhere(_.bbByEPIDComposite.outputPK == output.outputPK.get), hist)
+  }
 
   /** True if there is data to show */
   val hasData: Boolean = history.nonEmpty

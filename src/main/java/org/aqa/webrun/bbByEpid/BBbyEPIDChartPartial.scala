@@ -62,13 +62,18 @@ class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
     val epid3dSumHorz_mm: Double = Math.sqrt((epid3DYHorz_mm * epid3DYHorz_mm) + (epid3dZHorz_mm * epid3dZHorz_mm))
   }
 
-  private val all: Seq[BBbyEPIDHistory] = BBbyEPID.history(machine.machinePK.get, procedure.procedurePK.get)
+  private val all: Seq[BBbyEPIDHistory] = {
+    val a = BBbyEPID.history(machine.machinePK.get, procedure.procedurePK.get)
+    Util.bracketBBHistory(a.indexWhere(aa => aa.bbByEPID.outputPK == outputPK), a)
+  }
 
   private val history = {
     def hasBothVH(g: Seq[BBbyEPIDHistory]) = g.exists(e => e.bbByEPID.isHorz) && g.exists(e => e.bbByEPID.isVert)
 
-    val qualified = all.groupBy(_.bbByEPID.outputPK).values.filter(g => hasBothVH(g)).map(g => new ToBeCharted(g))
-    qualified.toSeq.sortBy(_.date.getTime)
+    val qualified = all.groupBy(_.bbByEPID.outputPK).values.filter(g => hasBothVH(g)).map(g => new ToBeCharted(Util.bracketBBHistory(g.indexWhere(gg => gg.bbByEPID.outputPK == outputPK), g)))
+    val sorted = qualified.toSeq.sortBy(_.date.getTime)
+    val hist = Util.bracketBBHistory(sorted.indexWhere(sh => sh.outputPK == outputPK), sorted)
+    hist
   }
 
   private val allDates = history.map(cd => cd.date)

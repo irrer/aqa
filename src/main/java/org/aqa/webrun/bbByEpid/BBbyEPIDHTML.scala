@@ -256,7 +256,7 @@ object BBbyEPIDHTML extends Logging {
     val chart = new BBbyEPIDChart(extendedData.output.outputPK.get)
     val chartPartial = new BBbyEPIDChartPartial(extendedData.output.outputPK.get)
 
-    // make all of the images and get their names
+    // make all the images and get their names
     val imageSetList = bbByEPIDList.zipWithIndex.par.map(ri => new ImageSet(ri._1, ri._2)).toList
     // val imageSetList = bbByEPIDList.zipWithIndex.map(ri => new ImageSet(ri._1, ri._2)).toList // non-parallel version for debug only
 

@@ -883,7 +883,13 @@ Note that when building a package for release, the Maven build process uses the 
     to 000000 (black) to use deep (multi) coloring. -->
     <CBCTImageColor>FFFFFF</CBCTImageColor>
 
-    <!-- Used for graphing CBCT BB history, a positive integer indicating the number of values to display before and after (if
+    <!-- Show this many history points in BBbyCBCT and BBbyEPID before the current point.  Positive integer defaults to 90. -->
+    <BBPreHistory>90</BBPreHistory>
+
+    <!-- Show this many history points in BBbyCBCT and BBbyEPID after the current point.  Positive integer defaults to 10. -->
+    <BBPostHistory>10</BBPostHistory>
+
+    <!-- DEPRECATED Used for graphing CBCT BB history, a positive integer indicating the number of values to display before and after (if
     they exist) the current point being plotted. -->
     <BBbyCBCTHistoryRange>1000000</BBbyCBCTHistoryRange>
 

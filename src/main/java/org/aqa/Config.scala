@@ -928,7 +928,9 @@ object Config extends Logging {
   val CBCTBBPenumbra_mm: Double = logMainText("CBCTBBPenumbra_mm", "2.5").toDouble
   val CBCTZoomSize_mm: Double = logMainText("CBCTZoomSize_mm", "40.0").toDouble
   val CBCTImageColor: Color = Util.hexToColor(logMainText("CBCTImageColor", "FFFFFF"))
-  val BBbyCBCTHistoryRange: Int = logMainText("BBbyCBCTHistoryRange", "1000000").toInt
+  // val BBbyCBCTHistoryRange: Int = logMainText("BBbyCBCTHistoryRange", "1000000").toInt
+  val BBPreHistory: Int = logMainText("BBPreHistory", "90").toInt
+  val BBPostHistory: Int = logMainText("BBPostHistory", "10").toInt
 
   val BBbyEPIDSearchDistance_mm: Double = logMainText("BBbyEPIDSearchDistance_mm", "10.0").toDouble
   val EPIDBBPenumbra_mm: Double = logMainText("EPIDBBPenumbra_mm", "2.0").toDouble
