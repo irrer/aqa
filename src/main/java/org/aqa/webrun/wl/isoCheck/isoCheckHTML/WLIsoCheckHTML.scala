@@ -86,7 +86,8 @@ case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], iso
 
     val tableGantryAndCollimatorHtml = new TableGantryAndCollimator(isoCheckChart, isoCheck, collimator)
     val tableHtml: TableHtml = new TableHtml(isoCheckChart, isoCheck, isoTable)
-    val tableBB_RSq = new TableBB_RSq(isoCheckChart, isoTable)
+    val tableBB_RSqThreeBeams = new TableBB_RSqThreeBeams(isoCheckChart, isoTable)
+    val tableBB_RSqSevenBeams = new TableBB_RSqSevenBeams(isoCheckChart, isoTable)
 
     val content = {
       <div>
@@ -95,7 +96,8 @@ case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], iso
         {wobbleCharts}
         {tableGantryAndCollimatorHtml.content}
         {tableHtml.content}
-        {tableBB_RSq.content}
+        {tableBB_RSqThreeBeams.content}
+        {tableBB_RSqSevenBeams.content}
         <div style="margin-bottom:300px;"> </div>
       </div>
     }

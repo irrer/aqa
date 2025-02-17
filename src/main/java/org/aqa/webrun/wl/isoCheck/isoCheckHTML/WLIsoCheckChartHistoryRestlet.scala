@@ -25,9 +25,11 @@ class WLIsoCheckChartHistoryRestlet extends Restlet with SubUrlRoot with Logging
 
         val js2 = if (chart.isoTableChart.isDefined) chart.isoTableChart.get.javascript else ""
 
-        val js3 = if (chart.isoTableBB_RSqChart.isDefined) chart.isoTableBB_RSqChart.get.javascript else ""
+        val js3 = if (chart.isoTableBB_RSqChartThreeBeams.isDefined) chart.isoTableBB_RSqChartThreeBeams.get.javascript else ""
 
-        s"$js1\n$js2\n$js3"
+        val js4 = if (chart.isoTableBB_RSqChartSevenBeams.isDefined) chart.isoTableBB_RSqChartSevenBeams.get.javascript else ""
+
+        s"$js1\n$js2\n$js3\n$js4"
       }
 
       response.setStatus(Status.SUCCESS_OK)
