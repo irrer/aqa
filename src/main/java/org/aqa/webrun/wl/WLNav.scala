@@ -36,7 +36,7 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
 
   private val rowsPerPageField = new WebInputText(label = "Items/Page", showLabel = true, col = 1, offset = 0, placeholder = Config.WLRowsPerPageDefault.toString, aqaAlias = false)
 
-  private val datePicker = new WebInputDatePicker(label = "Show items on or before:", col = 4, offset = 0, showLabel = true, submitOnChange = true)
+  private val datePicker = new WebInputDatePicker(label = "On-Or-Before", col = 4, offset = 0, showLabel = true, submitOnChange = true)
 
   private def makeMachineList(response: Option[Response]): Seq[(String, String)] = {
     val allSelector = Seq(("0", "All Machines"))
@@ -71,6 +71,9 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
     submitOnChange = true
   ) //
 
+  private val requireIsoCheck =
+    new WebInputCheckbox(label = "IsoCheck", showLabel = true, title = Some("Check to only list IsoCheck data sets."), col = 1, offset = 0, submitOnChange = true)
+
   private def list = new WebUtil.WebPlainText(label = "Winston Lutz Results", showLabel = false, col = 10, offset = 0, html = makeList)
 
   //  class WebForm(action: String, title: Option[String], rowList: List[WebRow], fileUpload: Int, runScript: Option[String] = None)
@@ -78,7 +81,7 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
     new WebForm(
       pathOf,
       title = None,
-      rowList = List(List(newestButton, prevButton, nextButton, oldestButton, rowsPerPageField), List(machineSelector, datePicker), List(list)),
+      rowList = List(List(newestButton, prevButton, nextButton, oldestButton, rowsPerPageField), List(machineSelector, requireIsoCheck, datePicker), List(list)),
       fileUpload = -1,
       runScript = Some(WLUpdateRestlet.makeJS)
     )
@@ -129,7 +132,11 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
       } else
         None
     }
-    val dataList = Output.getOutputChunk(institutionPK = user.get.institutionPK, date = new Timestamp(ms + day_ms), count = rowsPerPage(valueMap), procedurePK = wlProcedurePK, machinePK = machinePK)
+
+    val isoCheck: Boolean = valueMap.contains(requireIsoCheck.label)
+
+    val dataList =
+      Output.getOutputChunk(institutionPK = user.get.institutionPK, date = new Timestamp(ms + day_ms), count = rowsPerPage(valueMap), procedurePK = wlProcedurePK, machinePK = machinePK, isoCheck)
 
     val dateFormat = new SimpleDateFormat("EEE MMM d YYYY HH:mm")
 

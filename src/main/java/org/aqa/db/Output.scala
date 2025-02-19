@@ -415,15 +415,26 @@ object Output extends Logging {
     * @param institutionPK Only from this institution
     * @param date Only outputs on or before this date, or before if count is negative.
     * @param count Only this many or fewer.  If count is <= 0, then take rows before dateOnOrBefore
-    * @param procedurePK Only for this procedure.
+    * @param procedurePK Only for this procedure
+    * @param machinePK Only for this machine
+    * @param requireIsoCheck Only outputs that are referenced by an IsoCheck row
     * @return List of outputs, sorted by date, most recent first.
     */
-  def getOutputChunk(institutionPK: Long, date: Timestamp, count: Int, procedurePK: Long, machinePK: Option[Long] = None): Seq[Output] = {
+  def getOutputChunk(institutionPK: Long, date: Timestamp, count: Int, procedurePK: Long, machinePK: Option[Long] = None, requireIsoCheck: Boolean = false): Seq[Output] = {
+
+    val search0 = {
+      if (requireIsoCheck) {
+        for {
+          (output, _) <- query join IsoCheck.query on (_.outputPK === _.outputPK)
+        } yield output
+      } else
+        query
+    }
 
     val search1 = {
       for {
         machPK <- Machine.query.filter(m => m.institutionPK === institutionPK).map(m => m.machinePK)
-        output <- Output.query.filter(o =>
+        output <- search0.filter(o =>
           (o.machinePK === machPK) &&
             o.dataDate.isDefined &&
             (o.procedurePK === procedurePK) &&
