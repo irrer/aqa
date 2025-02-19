@@ -98,15 +98,23 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: 
     </tr>
   }
 
-  private def makeSortedHeaderRow(index: Int): Elem = {
+  private def makeSortedHeaderRow(): Elem = {
     <tr>
-      {WLXlsxUtil.makeRowIndex(index)}
+      {WLXlsxUtil.makeRowIndex(19)}
       {toHtml("Sorted")}
       {toHtml("")}
       {toHtml("")}
       {sortedColumnIndexList.map(c => toHtml(columnList(c).name))}
       {blankCells(18)}
     </tr>
+  }
+
+  private def makeFillerRows(): Seq[Elem] = {
+    0 match {
+      case _ if isoTable.isEmpty                                => (12 to 17).map(blankRow) // no table
+      case _ if isoTable.isDefined && isoTable.get.T_30.isEmpty => (14 to 17).map(blankRow) // has table, but only 2 table beams
+      case _                                                    => Seq() //                          has table, with 6 table beams
+    }
   }
 
   private val sortedColumnIndexList = Seq(4, 5, 3, 6, 7)
@@ -135,7 +143,7 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: 
     }
 
     <tr>
-      {WLXlsxUtil.makeRowIndex(pairList.size + index + 5)}
+      {WLXlsxUtil.makeRowIndex(pairList.size + index + 11)}
       {toHtml("")}
       {toHtml("")}
       {toHtml("")}
@@ -154,8 +162,9 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: 
         {makeTitleRow}
         {makeHeaderRow}
         {pairList.indices.map(makeRow)}
-        {blankRow(pairList.size + 3)}
-        {makeSortedHeaderRow(pairList.size + 4)}
+        {makeFillerRows()}
+        {blankRow(18)}
+        {makeSortedHeaderRow()}
         {sortedPairList.indices.map(makeSortedRow)}
         {blankRow(lastRowIndex)}
       </table>

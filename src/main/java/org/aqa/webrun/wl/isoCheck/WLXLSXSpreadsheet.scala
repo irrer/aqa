@@ -1,7 +1,5 @@
 package org.aqa.webrun.wl.isoCheck
 
-import org.apache.poi.ss.util.CellReference
-import org.apache.poi.xssf.usermodel.XSSFCell
 import org.apache.poi.xssf.usermodel.XSSFSheet
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.aqa.webrun.ExtendedData
@@ -22,30 +20,6 @@ object WLXLSXSpreadsheet extends Logging {
   /** Last row of Data sheet content (inclusive). */
   private val lastRowNum = 17
 
-  private def nullifyCell(sheet: XSSFSheet, rowIndex: Int, cellIndex: String): Unit = {
-    val intIndex = CellReference.convertColStringToIndex(cellIndex)
-
-    val row = sheet.getRow(rowIndex - 1)
-    if (row != null) {
-      val cell: XSSFCell = row.getCell(intIndex)
-      if (cell != null) {
-        try {
-          cell.setBlank()
-        } catch {
-          case t: Throwable =>
-            logger.error(s"Unexpected exception: ${sheet.getSheetName}      rowIndex: $rowIndex     cellIndex: $cellIndex : " + fmtEx(t))
-        }
-      }
-    }
-  }
-
-  private def nullifyRow(sheet: XSSFSheet, rowIndex: Int, firstCell: String, lastCell: String): Unit = {
-    val lo = CellReference.convertColStringToIndex(firstCell)
-    val hi = CellReference.convertColStringToIndex(lastCell)
-
-    (lo to hi).foreach(c => nullifyCell(sheet, rowIndex, CellReference.convertNumToColString(c)))
-  }
-
   /**
     * Put the data into a copy of the XLSX template file and write a new *.xlxs file.
     *
@@ -61,7 +35,13 @@ object WLXLSXSpreadsheet extends Logging {
     */
   def makeSpreadsheet(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option[WLIsoTable], collimator: WLCollimator): String = {
 
-    val workbook = new XSSFWorkbook(Config.WLIsoCheckTemplateFile)
+    val workbook = {
+      0 match {
+        case _ if isoTable.isEmpty                                  => new XSSFWorkbook(Config.WLIsoCheckTemplate__9_BeamsFile)
+        case _ if isoTable.isDefined && isoTable.get.T_30.isEmpty   => new XSSFWorkbook(Config.WLIsoCheckTemplate_11_BeamsFile)
+        case _ if isoTable.isDefined && isoTable.get.T_30.isDefined => new XSSFWorkbook(Config.WLIsoCheckTemplate_15_BeamsFile)
+      }
+    }
 
     // get the date+time of the first slice
     val firstDateTime: Date = pairList.head.dataDate
@@ -97,28 +77,6 @@ object WLXLSXSpreadsheet extends Logging {
       (firstRowNum to last).foreach(rowNum => updateContentRow(rowNum, pairList(rowNum - firstRowNum)))
     }
 
-    def removeUnusedDataRows(): Unit = {
-      if (isoTable.isEmpty) {
-        (12 to 17).foreach(rowIndex => nullifyRow(sheetData, rowIndex, "A", "Y"))
-      }
-    }
-
-    def removeUnusedPreprocessRows(): Unit = {
-      if (isoTable.isEmpty) {
-        val sheetPreprocess = workbook.getSheetAt(2)
-        (12 to 17).foreach(rowIndex => nullifyRow(sheetPreprocess, rowIndex, "A", "V"))
-      }
-    }
-
-    def updateSNCImportSheet(): Unit = {
-      if (isoTable.isEmpty) {
-        val sheetSNCImport = workbook.getSheetAt(0)
-        nullifyCell(sheetSNCImport, 5, "C")
-        nullifyCell(sheetSNCImport, 6, "C")
-        nullifyCell(sheetSNCImport, 10, "C")
-      }
-    }
-
     /**
       * Update the values in the Analysis sheet that are calculated using gradient descent
       */
@@ -130,11 +88,6 @@ object WLXLSXSpreadsheet extends Logging {
         row14.getCell(12).setCellValue(isoTable.get.get_dZT__0_Optimized)
         row14.getCell(13).setCellValue(isoTable.get.get_IsoTable_X_Optimized)
         row14.getCell(14).setCellValue(isoTable.get.get_IsoTable_Z_Optimized)
-      } else {
-        // remove table references
-        nullifyRow(sheetAnalysis, 5, "U", "X")
-        nullifyRow(sheetAnalysis, 12, "K", "S")
-        (12 to 21).foreach(rowIndex => nullifyRow(sheetAnalysis, rowIndex, "A", "R"))
       }
     }
 
@@ -149,27 +102,13 @@ object WLXLSXSpreadsheet extends Logging {
       row4.getCell(8).setCellValue(collimator.getColl_Z_Optimized)
     }
 
-    def updateReportSheet(): Unit = {
-      if (isoTable.isEmpty) {
-        val sheetReport = workbook.getSheetAt(5)
-
-        nullifyCell(sheetReport, 4, "F")
-        nullifyCell(sheetReport, 4, "G")
-        nullifyCell(sheetReport, 4, "K")
-      }
-    }
-
     def update(): Unit = {
       // turn on auto sizing for all columns
       updateTitleRow()
 
       updateContentRowList()
-      removeUnusedDataRows()
-      removeUnusedPreprocessRows()
-      updateSNCImportSheet()
       updateAnalysisSheet()
       updateCollimatorSheet()
-      updateReportSheet()
     }
 
     update()

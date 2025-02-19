@@ -336,55 +336,6 @@ class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: WL
     } else None
   }
 
-  private def makeRow14: Elem = {
-    <tr>
-      {makeRowIndex(14)}
-      {isoTableAnglePrefix(findTableBeam(isoTable.get.T__0)) /* A14 to Y14 */}
-    </tr>
-  }
-
-  private def makeRow15: Elem = {
-    <tr>
-      {makeRowIndex(15)}
-      {isoTableAnglePrefix(findTableBeam(isoTable.get.T330)) /* A15 to Y15 */}
-    </tr>
-  }
-
-  private def makeRow16: Elem = {
-    <tr>
-      {makeRowIndex(16)}
-      {isoTableAnglePrefix(findTableBeam(isoTable.get.T300)) /* A16 to Y16 */}
-    </tr>
-  }
-
-  private def makeRow17: Elem = {
-    <tr>
-      {makeRowIndex(17)}
-      {isoTableAnglePrefix(findTableBeam(isoTable.get.T270)) /* A17 to Y17 */}
-    </tr>
-  }
-
-  private def makeRow18: Elem = {
-    <tr>
-      {makeRowIndex(18)}
-      {isoTableAnglePrefix(findTableBeam(isoTable.get.T_90)) /* A18 to Y18 */}
-    </tr>
-  }
-
-  private def makeRow19: Elem = {
-    <tr>
-      {makeRowIndex(19)}
-      {isoTableAnglePrefix(findTableBeam(isoTable.get.T_60)) /* A19 to Y19 */}
-    </tr>
-  }
-
-  private def makeRow20: Elem = {
-    <tr>
-      {makeRowIndex(20)}
-      {isoTableAnglePrefix(findTableBeam(isoTable.get.T_30)) /* A20 to Y20 */}
-    </tr>
-  }
-
   private def makeRow21: Elem = {
     <tr>
         {makeRowIndex(21)}
@@ -407,7 +358,14 @@ class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: WL
     <tr>
       {makeRowIndex(22)}
       {blankCells(19) /*               Fill in columns that are not occupied by line 21.    A22 to Y22 */}
-      </tr>
+    </tr>
+  }
+
+  private def makeBeamRow(rowNum: Int, beam: Option[WLBeam]): Elem = {
+    <tr>
+      {makeRowIndex(rowNum)}
+      {isoTableAnglePrefix(findTableBeam(beam)) /* */}
+    </tr>
   }
 
   /**
@@ -421,13 +379,60 @@ class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: WL
     </tr>
   }
 
+  /**
+    * Extra blank table row for aesthetics.
+    * @return HTML for row
+    */
+  private def makeBlankTableRow(rowNum: Int): Elem = {
+    <tr>
+      {makeRowIndex(rowNum)}
+      {blankCells(11)}
+      {toHtmlPowderBlue("")}
+      {toHtmlPowderBlue("")}
+      {blankCells(2)}
+      {toHtmlPowderBlue("")}
+      {toHtmlPowderBlue("")}
+      {toHtmlPowderBlue("")}
+      {blankCells(7)}
+    </tr>
+  }
+
   private def makeRow23: Elem = makeBlankRow(23)
 
   private def tableRows(): Seq[Elem] = {
     if (hasIt) { // if there is isoTable data, then show it in the spreadsheet.
-      Seq(makeRow12, makeRow13, makeRow14, makeRow15, makeRow16, makeRow17, makeRow18, makeRow19, makeRow20, makeRow21, makeRow22, makeRow23)
+      if (isoTable.get.T_30.isDefined)
+        Seq(
+          makeRow12, /*                          A12 to Y12 */
+          makeRow13, /*                          A13 to Y13 */
+          makeBeamRow(14, isoTable.get.T__0), /* A14 to Y14 */
+          makeBeamRow(15, isoTable.get.T330), /* A15 to Y15 */
+          makeBeamRow(16, isoTable.get.T300), /* A16 to Y16 */
+          makeBeamRow(17, isoTable.get.T270), /* A17 to Y17 */
+          makeBeamRow(18, isoTable.get.T_90), /* A18 to Y18 */
+          makeBeamRow(19, isoTable.get.T_60), /* A19 to Y19 */
+          makeBeamRow(20, isoTable.get.T_30), /* A20 to Y20 */
+          makeRow21, /*                          A21 to Y21 */
+          makeRow22, /*                          A22 to Y22 */
+          makeRow23 /*                           A23 to Y23 */
+        )
+      else
+        Seq(
+          makeRow12, /*                          A12 to Y12 */
+          makeRow13, /*                          A13 to Y13 */
+          makeBeamRow(14, isoTable.get.T__0), /* A14 to Y14 */
+          makeBeamRow(15, isoTable.get.T270), /* A15 to Y15 */
+          makeBeamRow(16, isoTable.get.T_90), /* A16 to Y16 */
+          makeBlankTableRow(17), /*              A17 to Y17 */
+          makeBlankTableRow(18), /*              A18 to Y18 */
+          makeBlankTableRow(19), /*              A19 to Y19 */
+          makeBlankTableRow(20), /*              A20 to Y20 */
+          makeRow21, /*                          A21 to Y21 */
+          makeRow22, /*                          A22 to Y22 */
+          makeRow23 /*                           A23 to Y23 */
+        )
     } else
-      Seq(makeBlankRow(12))
+      Seq(makeBlankRow(12)) /*                   A12 to Y12 */
   }
 
   override def make(): Elem = {

@@ -24,11 +24,23 @@ class SSReport(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Optio
   override val name: String = "Report"
 
   /** CSS styles for making cell borders  */
+
+  /** bold border style */
   private val border = "2px solid black"
+
+  /** border Left */
   private val bL = Some(s"border-left: $border;")
+
+  /** border Left Right */
   private val bLR = Some(s"border-left: $border;border-right: $border;")
+
+  /** border Top Bottom */
   private val bTB = Some(s"border-Top: $border;border-bottom: $border;")
+
+  /** border Top Bottom Left */
   private val bTBL = Some(s"border-Top: $border;border-left: $border;border-bottom: $border;")
+
+  /** border Top Bottom Left Right */
   private val bTBLR = Some(s"border: $border;")
 
   private val MLCWobbleChart: C3ScatterPlot = isoCheckHTML.MLCWobbleChart.makeChart(isoCheck)
@@ -132,31 +144,31 @@ class SSReport(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Optio
     </tr>
   }
 
-  /**
-    * Make the table wobble chart if the data is available, otherwise return a blank space.
-    * @return Table wobble chart.
-    */
-  private def tableWobbleChart: Seq[Elem] = {
-    if (hasIt) {
-      Seq(
-        { <h4 style="text-align: center;">IsoTable Wobble about IsoTable Axis</h4> },
-        IsoTableWobbleChart.html
-      )
-    } else {
-      Seq() // table wobble chart not available
-    }
-  }
-
   private def makeRow6: Elem = {
+
+    /**
+      * Make the table wobble chart if the data is available, otherwise return a blank space.
+      * @return Table wobble chart.
+      */
+    val tableWobbleChartCell: Seq[Elem] = {
+      if (hasIt)
+        Seq(
+          <td colspan="6" style={s"border: $border;"}>
+             <h4 style="text-align: center;">IsoTable Wobble about IsoTable Axis</h4>
+            {IsoTableWobbleChart.html}
+          </td>
+        )
+      else
+        blankCells(6)
+    }
+
     <tr>
       {makeRowIndex(6) /*                A4 to H4 */}
       <td colspan="5" style={s"border: $border;"}>
         <h4 style="text-align: center;">MLC Wobble about Collimator Axis</h4>
         {MLCWobbleChart.html}
       </td>
-      <td colspan="6" style={s"border: $border;"}>
-        {tableWobbleChart}
-      </td>
+      {tableWobbleChartCell}
       {blankCell}
     </tr>
   }

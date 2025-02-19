@@ -1008,8 +1008,20 @@ object Config extends Logging {
     list
   }
 
-  private val WLIsoCheckTemplateFileName: String = logMainText("WLIsoCheckTemplateFileName", "WLIsoCheckTemplateFileName.xlsx")
-  val WLIsoCheckTemplateFile: File = new File(staticDirFile, WLIsoCheckTemplateFileName)
+  private val WLIsoCheckTemplate__9_BeamsFileName: String = logMainText("WLIsoCheckTemplate__9_BeamsFileName", "WLIsoCheckTemplate__9_BeamsFileName.xlsx")
+  val WLIsoCheckTemplate__9_BeamsFile: File = new File(staticDirFile, WLIsoCheckTemplate__9_BeamsFileName)
+  if (!WLIsoCheckTemplate__9_BeamsFile.canRead)
+    logger.error("Error: Can not read file " + WLIsoCheckTemplate__9_BeamsFile.getAbsolutePath)
+
+  private val WLIsoCheckTemplate_11_BeamsFileName: String = logMainText("WLIsoCheckTemplate_11_BeamsFileName", "WLIsoCheckTemplate_11_BeamsFileName.xlsx")
+  val WLIsoCheckTemplate_11_BeamsFile: File = new File(staticDirFile, WLIsoCheckTemplate_11_BeamsFileName)
+  if (!WLIsoCheckTemplate_11_BeamsFile.canRead)
+    logger.error("Error: Can not read file " + WLIsoCheckTemplate_11_BeamsFile.getAbsolutePath)
+
+  private val WLIsoCheckTemplate_15_BeamsFileName: String = logMainText("WLIsoCheckTemplate_15_BeamsFileName", "WLIsoCheckTemplate_15_BeamsFileName.xlsx")
+  val WLIsoCheckTemplate_15_BeamsFile: File = new File(staticDirFile, WLIsoCheckTemplate_15_BeamsFileName)
+  if (!WLIsoCheckTemplate_15_BeamsFile.canRead)
+    logger.error("Error: Can not read file " + WLIsoCheckTemplate_15_BeamsFile.getAbsolutePath)
 
   // =================================================================================
 

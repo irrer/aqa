@@ -42,10 +42,10 @@ object TableWobbleChart {
       height = Some(686),
       xAxisFormat = ".1g",
       yAxisFormat = ".1g",
-      xMin = Some(-0.5),
-      xMax = Some(0.5),
-      yMin = Some(-0.5),
-      yMax = Some(0.5),
+      xMin = Some(-1.1),
+      xMax = Some(1.1),
+      yMin = Some(-0.9),
+      yMax = Some(0.9),
       showPrecision = 10,
       showGrid = true
     )

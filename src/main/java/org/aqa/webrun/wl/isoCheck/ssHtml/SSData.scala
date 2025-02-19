@@ -139,12 +139,12 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option
     )
   }
 
-  private val isoTableFiller : Seq[Elem] = {
-    if (isoTable.isEmpty) {
-      (12 to 17).map(blankRow)
+  private val isoTableFiller: Seq[Elem] = {
+    0 match {
+      case _ if isoTable.isEmpty            => (12 to 17).map(blankRow) // no table data
+      case _ if isoTable.get.T_60.isDefined => Seq() //                          six beams of table data
+      case _                                => (14 to 17).map(blankRow) // two beams of table data
     }
-    else
-      Seq()
   }
 
   override def make(): Elem = {
