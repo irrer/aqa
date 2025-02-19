@@ -1318,7 +1318,14 @@ object WebUtil extends Logging {
   }
 
 
-  class WebInputCheckbox(override val label: String, val showLabel: Boolean, title: Option[String] = None, col: Int, offset: Int, htmlAttrMapP: Map[String, String] = Map(), id: Option[String] = None)
+  class WebInputCheckbox(override val label: String,
+                         val showLabel: Boolean,
+                         title: Option[String] = None,
+                         col: Int,
+                         offset: Int,
+                         htmlAttrMapP: Map[String, String] = Map(),
+                         id: Option[String] = None,
+                         submitOnChange: Boolean = false)
     extends IsInput(label) with ToHtml {
 
     def this(label: String, showLabel: Boolean, col: Int, offset: Int) = this(label, showLabel, None, col, offset)
@@ -1347,7 +1354,14 @@ object WebUtil extends Logging {
             i3
         }
 
-        i4
+        val i5 = {
+          if (submitOnChange)
+            addAttributeMap(i4, Map("onchange" -> "this.form.submit()"))
+          else
+            i4
+        }
+
+        i5
       }
 
       val html = {
