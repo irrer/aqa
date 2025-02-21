@@ -105,10 +105,12 @@ class WLIsoTableGradientDescent(isoTable: WLIsoTable) extends Logging {
     val elapsed = System.currentTimeMillis() - start
     logger.info(s"Finished gradient descent.   Elapsed ms: $elapsed     bestPoint: $bestPoint")
 
-    if (false) { // TODO rm
+    /*
+    if (false) { // used for matching values exactly with what Excel's solver calculates.
       val excel = new WLIsoTablePointLocal(0.1839722351, 0.3329206495, 0.3320187925, 0.3238829870)
       excel
     } else
-      bestPoint.asInstanceOf[WLIsoTablePoint] // TODO put back
+     */
+    bestPoint.asInstanceOf[WLIsoTablePoint]
   }
 }
