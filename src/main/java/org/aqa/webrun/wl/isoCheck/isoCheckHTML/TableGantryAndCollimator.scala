@@ -22,7 +22,7 @@ class TableGantryAndCollimator(isoCheckChart: WLIsoCheckChart, isoCheck: WLIsoCh
         {tdElem("Col-Gantry misalignment", isoCheck.collGantryMisalign)}
         {tdElem("MLC offset", isoCheck.mlcOffsetY)}
         {tdElem("Gantry Isocentricity", isoCheck.gantryIsocentricity)}
-        {tdElem("Collimator Isocentricity", collimator.getCA_Rpp_Optimized)}
+        {tdElem("Collimator Isocentricity", collimator.get_CA_Rpp_Optimized)}
       </tr>
     </table>
   }

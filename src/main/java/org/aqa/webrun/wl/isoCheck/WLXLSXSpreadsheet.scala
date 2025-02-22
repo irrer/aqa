@@ -98,8 +98,8 @@ object WLXLSXSpreadsheet extends Logging {
       val sheetCollimator = workbook.getSheetAt(4)
 
       val row4 = sheetCollimator.getRow(3) // zero relative addressing 3 -> 4
-      row4.getCell(7).setCellValue(collimator.getColl_X_Optimized)
-      row4.getCell(8).setCellValue(collimator.getColl_Z_Optimized)
+      row4.getCell(7).setCellValue(collimator.get_Coll_X_Optimized)
+      row4.getCell(8).setCellValue(collimator.get_Coll_Z_Optimized)
     }
 
     def update(): Unit = {

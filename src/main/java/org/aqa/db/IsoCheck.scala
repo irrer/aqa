@@ -138,8 +138,10 @@ object IsoCheck {
 
     val wlIsoTable = WLIsoTable.make(beamList)
 
-    wlCollimator.setColl_X_Optimized(isoCheck.collX_mm.get)
-    wlCollimator.setColl_Z_Optimized(isoCheck.collZ_mm.get)
+    wlCollimator.set_Coll_X_Optimized(isoCheck.collX_mm.get)
+    wlCollimator.set_Coll_Z_Optimized(isoCheck.collZ_mm.get)
+
+    wlCollimator.set_CA_Rpp_Optimized(wlCollimator.MinCA_Rpp(isoCheck.collX_mm.get, isoCheck.collZ_mm.get))
 
     if (
       wlIsoTable.isDefined &&
@@ -152,6 +154,16 @@ object IsoCheck {
       wlIsoTable.get.set_dZT__0_Optimized(isoCheck.dZ_mm.get)
       wlIsoTable.get.set_IsoTable_X_Optimized(isoCheck.tableX_mm.get)
       wlIsoTable.get.set_IsoTable_Z_Optimized(isoCheck.tableZ_mm.get)
+
+      wlIsoTable.get.set_RSquared_Optimized(
+        wlIsoTable.get.minSquareOfBBDisplacement(
+          isoCheck.dX_mm.get,
+          isoCheck.dZ_mm.get,
+          isoCheck.tableX_mm.get,
+          isoCheck.tableZ_mm.get
+        )
+      )
+
     }
 
     if (wlIsoCheck.isDefined) {

@@ -62,7 +62,7 @@ class WLIsoCheckChart(outputPK: Long) {
         history.map(_.isoCheck.collGantryMisalign),
         history.map(_.isoCheck.mlcOffsetY),
         history.map(_.isoCheck.gantryIsocentricity),
-        history.map(_.collimator.getCA_Rpp_Optimized)
+        history.map(_.collimator.get_CA_Rpp_Optimized)
       )
     }
 

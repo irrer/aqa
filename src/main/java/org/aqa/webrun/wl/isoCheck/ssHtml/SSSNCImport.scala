@@ -77,7 +77,7 @@ class SSSNCImport(extendedData: ExtendedData, isoCheck: WLIsoCheck, collimator: 
         {makeCsvRow(9, "MLC offset (mm)", isoCheck.mlcOffsetY)}
         {makeCsvRow(10, "Table Isocentricity (mm)", if (hasTable) Math.sqrt(isoTable.get.get_RSquared_Optimized) else Double.NaN)}
         {makeCsvRow(11, "Gantry Isocentricity (mm)", isoCheck.gantryIsocentricity)}
-        {makeCsvRow(12, "Collimator Isocentricity (mm)", collimator.getCA_Rpp_Optimized)} 
+        {makeCsvRow(12, "Collimator Isocentricity (mm)", collimator.get_CA_Rpp_Optimized)}
         {makeRow13}
       </table>
     }

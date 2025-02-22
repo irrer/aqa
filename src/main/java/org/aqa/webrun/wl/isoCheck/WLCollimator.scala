@@ -16,22 +16,43 @@ case class WLCollimator(
     T270,
   )
 
-  private var Coll_X_Optimized: Double = -1
+  // ------------------------------------------------------------------------------------------
 
-  def getColl_X_Optimized: Double = Coll_X_Optimized
+  private var Coll_X_Optimized: Option[Double] = None
 
-  def setColl_X_Optimized(coll_x: Double): Unit = Coll_X_Optimized = coll_x
+  def get_Coll_X_Optimized: Double = {
+    if (Coll_X_Optimized.isEmpty)
+      optimizeIfNecessary()
+    Coll_X_Optimized.get
+  }
 
-  private var Coll_Z_Optimized: Double = -1
+  def set_Coll_X_Optimized(coll_x: Double): Unit = Coll_X_Optimized = Some(coll_x)
 
-  def getColl_Z_Optimized: Double = Coll_Z_Optimized
+  // ------------------------------------------------------------------------------------------
 
-  def setColl_Z_Optimized(coll_z: Double): Unit = Coll_Z_Optimized = coll_z
+  private var Coll_Z_Optimized: Option[Double] = None
 
-  private var CA_Rpp_Optimized: Double = -1
+  def get_Coll_Z_Optimized: Double = {
+    if (Coll_Z_Optimized.isEmpty)
+      optimizeIfNecessary()
+    Coll_Z_Optimized.get
+  }
 
-  def getCA_Rpp_Optimized: Double = CA_Rpp_Optimized
+  def set_Coll_Z_Optimized(coll_z: Double): Unit = Coll_Z_Optimized = Some(coll_z)
 
+  // ------------------------------------------------------------------------------------------
+
+  private var CA_Rpp_Optimized: Option[Double] = None
+
+  def get_CA_Rpp_Optimized: Double = {
+    if (CA_Rpp_Optimized.isEmpty)
+      optimizeIfNecessary()
+    CA_Rpp_Optimized.get
+  }
+
+  def set_CA_Rpp_Optimized(r: Double): Unit = CA_Rpp_Optimized = Some(r)
+
+  // ------------------------------------------------------------------------------------------
 
   def CA_X(beam: WLBeam): Double = -beam.wl.errorX_mm
 
@@ -59,14 +80,17 @@ case class WLCollimator(
   private def optimize(): Unit = {
     val optimizedPoint = new WLCollimatorGradientDescent(this).findMin()
 
-    CA_Rpp_Optimized = MinCA_Rpp(optimizedPoint.Coll_X, optimizedPoint.Coll_Z)
+    set_CA_Rpp_Optimized(MinCA_Rpp(optimizedPoint.Coll_X, optimizedPoint.Coll_Z))
 
-    Coll_X_Optimized = optimizedPoint.Coll_X
-    Coll_Z_Optimized = optimizedPoint.Coll_Z
+    set_Coll_X_Optimized(optimizedPoint.Coll_X)
+    set_Coll_Z_Optimized(optimizedPoint.Coll_Z)
   }
 
-  // Perform optimization
-  optimize()
+  private def optimizeIfNecessary(): Unit = {
+    if (Coll_X_Optimized.isEmpty)
+      optimize()
+  }
+
 }
 
 object WLCollimator {

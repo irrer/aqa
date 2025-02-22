@@ -29,6 +29,7 @@ import org.aqa.db.Procedure
 import org.aqa.web.MachineUpdate
 import org.aqa.web.WebServer
 import org.aqa.web.WebUtil
+import org.aqa.webrun.phase2.phase2csv.isoCheckCSV.IsoCheckCsv
 
 import java.io.File
 import java.text.SimpleDateFormat
@@ -553,7 +554,7 @@ object Phase2Csv extends Logging {
       new VMAT_T3MLCSpeedCsv(metadataCache),
       new WedgePointCsv(metadataCache),
       new WinstonLutzCsv(metadataCache),
-      // new IsoCheckCsv(metadataCache) // TODO put back
+      new IsoCheckCsv(metadataCache)
     )
   }
 

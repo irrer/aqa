@@ -30,13 +30,13 @@ class SSCollimator(extendedData: ExtendedData, collimator: WLCollimator) extends
 
     val coll_X =
       if (isoTableAngle0)
-        toHtmlYellow(collimator.getColl_X_Optimized)
+        toHtmlYellow(collimator.get_Coll_X_Optimized)
       else
         blankCell
 
     val coll_Z =
       if (isoTableAngle0)
-        toHtmlYellow(collimator.getColl_Z_Optimized)
+        toHtmlYellow(collimator.get_Coll_Z_Optimized)
       else
         blankCell
 
@@ -50,9 +50,9 @@ class SSCollimator(extendedData: ExtendedData, collimator: WLCollimator) extends
       toHtml(beam.caZ), /*                G */
       coll_X, /*                          H */
       coll_Z, /*                          I */
-      toHtml(collimator.CA_Xpp(beam, collimator.getColl_X_Optimized)), /*                                 J */
-      toHtml(collimator.CA_Zpp(beam, collimator.getColl_Z_Optimized)), /*                                 K */
-      toHtml(collimator.CA_Rpp(beam, collimator.getColl_X_Optimized, collimator.getColl_Z_Optimized)), /* L */
+      toHtml(collimator.CA_Xpp(beam, collimator.get_Coll_X_Optimized)), /*                                 J */
+      toHtml(collimator.CA_Zpp(beam, collimator.get_Coll_Z_Optimized)), /*                                 K */
+      toHtml(collimator.CA_Rpp(beam, collimator.get_Coll_X_Optimized, collimator.get_Coll_Z_Optimized)), /* L */
       blankCell, /*                        M */
       blankCell /*                         N */
     )
@@ -72,7 +72,7 @@ class SSCollimator(extendedData: ExtendedData, collimator: WLCollimator) extends
       <td colSpan="4" style="background:#DDEBF7;"> { /*                H2 to K2 */ }
         Max square of CA displacement   ->
       </td>
-      {toHtmlPeach(collimator.getCA_Rpp_Optimized) /*                  L2 */}
+      {toHtmlPeach(collimator.get_CA_Rpp_Optimized) /*                  L2 */}
       {toHtml("Solve for smallest max (Collimator Isocentricity)") /*  M2 */}
       {blankCell /*                                                    N2 */}
     </tr>

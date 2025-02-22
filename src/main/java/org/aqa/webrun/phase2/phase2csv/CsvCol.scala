@@ -50,3 +50,7 @@ case class CsvCol[T](header: String, description: String = "", toText: T => Any,
     </tr>
   }
 }
+
+object CsvCol {
+  val NA = "NA"
+}

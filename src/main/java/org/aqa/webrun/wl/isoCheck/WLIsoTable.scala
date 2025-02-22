@@ -24,37 +24,66 @@ case class WLIsoTable(
     T330,
   ).flatten
 
+  // ------------------------------------------------------------------------------------------
+
   /** Analysis L14 */
-  private var dXT__0_Optimized: Double = 0.0
+  private var dXT__0_Optimized: Option[Double] = None
 
-  def get_dXT__0_Optimized: Double = dXT__0_Optimized
+  def get_dXT__0_Optimized: Double = {
+    optimizeIfNecessary()
+    dXT__0_Optimized.get
+  }
 
-  def set_dXT__0_Optimized(x: Double): Unit = dXT__0_Optimized = x
+  def set_dXT__0_Optimized(x: Double): Unit = dXT__0_Optimized = Some(x)
+
+  // ------------------------------------------------------------------------------------------
 
   /** Analysis M14 */
-  private var dZT__0_Optimized: Double = 0.0
+  private var dZT__0_Optimized: Option[Double] = None
 
-  def get_dZT__0_Optimized: Double = dZT__0_Optimized
+  def get_dZT__0_Optimized: Double = {
+    optimizeIfNecessary()
+    dZT__0_Optimized.get
+  }
 
-  def set_dZT__0_Optimized(z: Double): Unit = dZT__0_Optimized = z
+  def set_dZT__0_Optimized(z: Double): Unit = dZT__0_Optimized = Some(z)
+
+  // ------------------------------------------------------------------------------------------
 
   /** Analysis N14 */
-  private var IsoTable_X_Optimized: Double = 0.0
+  private var IsoTable_X_Optimized: Option[Double] = None
 
-  def get_IsoTable_X_Optimized: Double = IsoTable_X_Optimized
+  def get_IsoTable_X_Optimized: Double = {
+    optimizeIfNecessary()
+    IsoTable_X_Optimized.get
+  }
 
-  def set_IsoTable_X_Optimized(x: Double): Unit = IsoTable_X_Optimized = x
+  def set_IsoTable_X_Optimized(x: Double): Unit = IsoTable_X_Optimized = Some(x)
+
+  // ------------------------------------------------------------------------------------------
 
   /** Analysis O14 */
-  private var IsoTable_Z_Optimized: Double = 0.0
+  private var IsoTable_Z_Optimized: Option[Double] = None
 
-  def get_IsoTable_Z_Optimized: Double = IsoTable_Z_Optimized
+  def get_IsoTable_Z_Optimized: Double = {
+    optimizeIfNecessary()
+    IsoTable_Z_Optimized.get
+  }
 
-  def set_IsoTable_Z_Optimized(z: Double): Unit = IsoTable_Z_Optimized = z
+  def set_IsoTable_Z_Optimized(z: Double): Unit = IsoTable_Z_Optimized = Some(z)
 
-  private var RSquared_Optimized: Double = 0.0
+  // ------------------------------------------------------------------------------------------
 
-  def get_RSquared_Optimized: Double = RSquared_Optimized
+  private var RSquared_Optimized: Option[Double] = None
+
+  def get_RSquared_Optimized: Double = {
+    optimizeIfNecessary()
+    RSquared_Optimized.get
+  }
+
+  def set_RSquared_Optimized(rSqOptimized: Double): Unit = RSquared_Optimized = Some(rSqOptimized)
+
+  // ------------------------------------------------------------------------------------------
 
   def tableWobbleDiameter: Double = 2 * Math.sqrt(get_RSquared_Optimized)
 
@@ -123,16 +152,20 @@ case class WLIsoTable(
   private def optimizeRSquared(): Unit = {
 
     val optimizedPoint = new WLIsoTableGradientDescent(this).findMin()
-    RSquared_Optimized = minSquareOfBBDisplacement(optimizedPoint.dX, optimizedPoint.dZ, optimizedPoint.isoTableX, optimizedPoint.isoTableZ)
+    set_RSquared_Optimized(minSquareOfBBDisplacement(optimizedPoint.dX, optimizedPoint.dZ, optimizedPoint.isoTableX, optimizedPoint.isoTableZ))
 
-    dXT__0_Optimized = optimizedPoint.dX
-    dZT__0_Optimized = optimizedPoint.dZ
-    IsoTable_X_Optimized = optimizedPoint.isoTableX
-    IsoTable_Z_Optimized = optimizedPoint.isoTableZ
+    set_dXT__0_Optimized(optimizedPoint.dX)
+    set_dZT__0_Optimized(optimizedPoint.dZ)
+    set_IsoTable_X_Optimized(optimizedPoint.isoTableX)
+    set_IsoTable_Z_Optimized(optimizedPoint.isoTableZ)
   }
 
-  // Perform optimization
-  optimizeRSquared()
+  private def optimizeIfNecessary(): Unit = {
+    if (dXT__0_Optimized.isEmpty) {
+      optimizeRSquared()
+    }
+  }
+
 }
 
 object WLIsoTable {

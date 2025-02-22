@@ -40,8 +40,8 @@ object WLRunIsoCheck extends Logging {
             dZ_mm = Some(table.get_dZT__0_Optimized),
             tableX_mm = Some(table.get_IsoTable_X_Optimized),
             tableZ_mm = Some(table.get_IsoTable_Z_Optimized),
-            collX_mm = Some(col.getColl_X_Optimized),
-            collZ_mm = Some(col.getColl_Z_Optimized)
+            collX_mm = Some(col.get_Coll_X_Optimized),
+            collZ_mm = Some(col.get_Coll_Z_Optimized)
           )
 
         case (Some(col), _) =>
@@ -52,8 +52,8 @@ object WLRunIsoCheck extends Logging {
             dZ_mm = None,
             tableX_mm = None,
             tableZ_mm = None,
-            collX_mm = Some(col.getColl_X_Optimized),
-            collZ_mm = Some(col.getColl_Z_Optimized)
+            collX_mm = Some(col.get_Coll_X_Optimized),
+            collZ_mm = Some(col.get_Coll_Z_Optimized)
           )
         case (_, Some(table)) =>
           IsoCheck(
