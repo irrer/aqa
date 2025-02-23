@@ -3,6 +3,7 @@ package org.aqa.webrun.phase2.phase2csv.isoCheckCSV
 import org.aqa.webrun.phase2.phase2csv.CsvCol
 import org.aqa.webrun.phase2.phase2csv.isoCheckCSV.IsoCheckCsv.IC
 import org.aqa.webrun.phase2.phase2csv.CsvCol.NA
+import org.aqa.webrun.wl.isoCheck.WLXlsxUtil
 
 /**
   * X and Y offset corrected box - ball
@@ -20,7 +21,7 @@ object BBXZpp {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, 270, t) match {
+        ic.getBeam(180, 270, WLXlsxUtil.flip(t)) match {
           case Some(wl) if ic.hasTable =>
             ic.isoTable.get.BB_Rpp(
               WLBeam(wl),
