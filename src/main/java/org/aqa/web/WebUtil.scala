@@ -95,20 +95,20 @@ object WebUtil extends Logging {
   val gt = "@@gt@@"
 
   /**
-    * Tag used to indicate that this is coming from an automatic upload client, as opposed to a human using a web browser.
-    */
+   * Tag used to indicate that this is coming from an automatic upload client, as opposed to a human using a web browser.
+   */
   val autoUploadTag = "AutoUpload"
 
   /**
-    * Tag used to indicate that the call should not return until processing is complete.
-    */
+   * Tag used to indicate that the call should not return until processing is complete.
+   */
   val awaitTag = "Await"
 
   /** ID for upload file object in web page. */
   val uploadFileLabel = "uploadFile"
 
   private val aqaAliasAttr: MetaData = {
-    <div aqaalias=""/>
+      <div aqaalias=""/>
   }.attributes
 
   private def ifAqaAliasAttr(elem: Elem, aqaAlias: Boolean): Elem =
@@ -116,13 +116,17 @@ object WebUtil extends Logging {
       elem % aqaAliasAttr
     } else elem
 
-  def wrapAlias(text: String): Elem = <span aqaalias="">
-    {text}
-  </span>
+  def wrapAlias(text: String): Elem = {
+    // @formatter:off
+    <span aqaalias="">{text}</span>
+    // @formatter:on
+  }
 
-  def wrapAlias(elem: Elem): Elem = <span aqaalias="">
-    {elem}
-  </span>
+  def wrapAlias(elem: Elem): Elem = {
+    // @formatter:off
+    <span aqaalias="">{elem}</span>
+    // @formatter:on
+  }
 
   //noinspection SpellCheckingInspection
   def snglQuote(text: String): String = singleQuote + text + singleQuote
@@ -173,20 +177,20 @@ object WebUtil extends Logging {
   def pathOf(subUrl: SubUrl.Value, any: Any): String = "/" + subUrl + "/" + cleanClassName(any.getClass.getName)
 
   /**
-    * Use the referrer reference to build a full path from a relative path.
-    */
+   * Use the referrer reference to build a full path from a relative path.
+   */
   def relativeUrlToFullPath(response: Response, path: String): String = {
     response.getRequest.getReferrerRef.getHostIdentifier
     response.getRequest.getReferrerRef.getHostIdentifier + path
   }
 
   /**
-    * Add a list of attributes to an element and return the new element.
-    *
-    * @param elem Original element.
-    * @param map  List of attributes to add.
-    * @return New element.
-    */
+   * Add a list of attributes to an element and return the new element.
+   *
+   * @param elem Original element.
+   * @param map  List of attributes to add.
+   * @return New element.
+   */
   @tailrec
   private def addAttributeMap(elem: Elem, map: Map[String, String]): Elem = {
     if (map.isEmpty)
@@ -199,10 +203,10 @@ object WebUtil extends Logging {
   }
 
   /**
-    * Include this in the page to show buttons that increase and decrease the number of digits of precision shown.
-    *
-    *
-    */
+   * Include this in the page to show buttons that increase and decrease the number of digits of precision shown.
+   *
+   *
+   */
   val showPrecision: Elem = {
     <div title="Click '+' or '-' to show more or fewer digits of precision.">
       <table style="border:1px solid grey;">
@@ -211,10 +215,14 @@ object WebUtil extends Logging {
             <span style="margin:8px">Precision</span>
           </td>
           <td>
-            <button style="margin:8px;" onclick="precisionInc()"> <b> + </b> </button>
+            <button style="margin:8px;" onclick="precisionInc()">
+              <b>+</b>
+            </button>
           </td>
           <td>
-            <button style="margin:8px;" onclick="precisionDec()"> <b> - </b> </button>
+            <button style="margin:8px;" onclick="precisionDec()">
+              <b>-</b>
+            </button>
           </td>
         </tr>
       </table>
@@ -222,32 +230,32 @@ object WebUtil extends Logging {
   }
 
   /**
-    * Set the precision attribute for the given element.
-    *
-    * @param elem Element to have attribute set.
-    * @param d    Floating point value to show.
-    * @return Clone of original element with presicion attribute set.
-    */
+   * Set the precision attribute for the given element.
+   *
+   * @param elem Element to have attribute set.
+   * @param d    Floating point value to show.
+   * @return Clone of original element with precision attribute set.
+   */
   def setPrecisionAttr(elem: Elem, d: Double): Elem = {
     val attr = {
-      <div precision={d.toString}/>
+        <div precision={d.toString}/>
     }.attributes
     elem % attr
   }
 
   /**
-    * Number of digits to use when constructing anonymized file names.
-    */
+   * Number of digits to use when constructing anonymized file names.
+   */
   private val writeUploadedFileDigits = 4
 
   private case class UniquelyNamedFile(parentDir: File, anonymizeFileNames: Boolean) {
     private val used = scala.collection.mutable.HashSet[String]()
 
     /**
-      * Get a unique (within directory) file name.
-      *
-      * @param suffix Suffix without '.'.
-      */
+     * Get a unique (within directory) file name.
+     *
+     * @param suffix Suffix without '.'.
+     */
     def getUniquelyNamedFile(suffix: String, originalFile: File): File = {
 
       def pickBaseName: String = {
@@ -277,9 +285,9 @@ object WebUtil extends Logging {
   }
 
   /**
-    * Convert the given stream to DICOM and return the attribute list.  If it
-    * is not DICOM, then return None.
-    */
+   * Convert the given stream to DICOM and return the attribute list.  If it
+   * is not DICOM, then return None.
+   */
   private def isDicom(data: Array[Byte]): Option[AttributeList] = {
 
     try {
@@ -298,8 +306,8 @@ object WebUtil extends Logging {
   }
 
   /**
-    * Anonymize and write the given attribute list.
-    */
+   * Anonymize and write the given attribute list.
+   */
   private def writeAnonymizedDicom(al: AttributeList, originalFile: File, unique: UniquelyNamedFile, request: Request): Unit = {
     val start = System.currentTimeMillis()
     val anonFile = unique.getUniquelyNamedFile("dcm", originalFile)
@@ -315,8 +323,8 @@ object WebUtil extends Logging {
   }
 
   /**
-    * Anonymize and write the given XML.
-    */
+   * Anonymize and write the given XML.
+   */
   private def writeAnonymizedXml(xml: Elem, originalFile: File, unique: UniquelyNamedFile, request: Request): Unit = {
     val start = System.currentTimeMillis()
     val anonFile = unique.getUniquelyNamedFile("xml", originalFile)
@@ -331,36 +339,35 @@ object WebUtil extends Logging {
   }
 
   /**
-    * Attempt to interpret as a zip file.  Return true on success.
-    */
+   * Attempt to interpret as a zip file.  Return true on success.
+   */
   private def writeZip(data: Array[Byte], originalFile: File, unique: UniquelyNamedFile, request: Request): Unit = {
     logger.info("Starting to unpack zipped content of " + data.length + " bytes")
     val start = System.currentTimeMillis()
     try {
       val inputStream = new ByteArrayInputStream(data)
       Util.garbageCollect()
-      managed(new ZipInputStream(inputStream)) acquireAndGet { zipIn =>
-        {
-          @tailrec
-          def next(): Unit = {
-            val entry = zipIn.getNextEntry
-            if (entry != null) {
-              if (!entry.isDirectory) {
-                //noinspection SpellCheckingInspection
-                val data = {
-                  val baos = new ByteArrayOutputStream
-                  FileUtil.copyStream(zipIn, baos)
-                  baos.toByteArray
-                }
-                val file = new File(unique.parentDir, entry.getName.replace("/", File.separator))
-                saveData(data, file, "", unique, request)
+      managed(new ZipInputStream(inputStream)) acquireAndGet { zipIn => {
+        @tailrec
+        def next(): Unit = {
+          val entry = zipIn.getNextEntry
+          if (entry != null) {
+            if (!entry.isDirectory) {
+              //noinspection SpellCheckingInspection
+              val data = {
+                val baos = new ByteArrayOutputStream
+                FileUtil.copyStream(zipIn, baos)
+                baos.toByteArray
               }
-              next()
+              val file = new File(unique.parentDir, entry.getName.replace("/", File.separator))
+              saveData(data, file, "", unique, request)
             }
+            next()
           }
-          // Start processing
-          next()
         }
+        // Start processing
+        next()
+      }
       }
     } catch {
       case t: Throwable =>
@@ -375,9 +382,9 @@ object WebUtil extends Logging {
   private def saveData(data: Array[Byte], originalFile: File, contentType: String, unique: UniquelyNamedFile, request: Request): Unit = {
     def isZip: Boolean = {
       contentType.equalsIgnoreCase(MediaType.APPLICATION_ZIP.getName) ||
-      contentType.equalsIgnoreCase(MediaType.APPLICATION_GNU_ZIP.getName) ||
-      contentType.equalsIgnoreCase("application/x-zip-compressed") ||
-      contentType.toLowerCase.matches(".*application.*zip.*")
+        contentType.equalsIgnoreCase(MediaType.APPLICATION_GNU_ZIP.getName) ||
+        contentType.equalsIgnoreCase("application/x-zip-compressed") ||
+        contentType.toLowerCase.matches(".*application.*zip.*")
     }
 
     def isXml: Option[Elem] = {
@@ -405,8 +412,8 @@ object WebUtil extends Logging {
   }
 
   /**
-    * Write the input stream to the file.
-    */
+   * Write the input stream to the file.
+   */
   private def saveFile(inputStream: InputStream, file: File, contentType: String, request: Request, anonymizeFileNames: Boolean): Unit =
     writeUploadedFileDigits.synchronized {
       val parentDir = file.getParentFile
@@ -438,8 +445,8 @@ object WebUtil extends Logging {
   }
 
   /**
-    * Parse values that are part of the URL.  The Restlet way of doing this could not be ascertained.
-    */
+   * Parse values that are part of the URL.  The Restlet way of doing this could not be ascertained.
+   */
   private def parseOriginalReference(request: Request): ValueMapT = {
     val text = request.getOriginalRef.toString
     val paramStart = text.indexOf('?')
@@ -469,7 +476,7 @@ object WebUtil extends Logging {
 
         val userId: String = getUser(request) match {
           case Some(user) => user.id;
-          case _          => "unknown"
+          case _ => "unknown"
         }
         while (itemIterator.hasNext) {
           val ii = itemIterator.next
@@ -486,9 +493,9 @@ object WebUtil extends Logging {
 
   def firstPartOf(text: String, maxLen: Int): String = {
     text match {
-      case _ if text == null          => ""
+      case _ if text == null => ""
       case _ if text.length <= maxLen => text
-      case _                          => text.substring(0, maxLen - 3) + "..."
+      case _ => text.substring(0, maxLen - 3) + "..."
     }
   }
 
@@ -503,8 +510,8 @@ object WebUtil extends Logging {
   }
 
   /**
-    * Return true if the request is an upload
-    */
+   * Return true if the request is an upload
+   */
   private def requestIsUpload(request: Request): Boolean = {
     val methodIsUpload = (request.getMethod == Method.POST) || (request.getMethod == Method.PUT)
 
@@ -612,14 +619,14 @@ object WebUtil extends Logging {
     val refreshMeta = Seq(refresh).flatten
       .filter(r => r > 0)
       .map(r => {
-        <meta http-equiv='refresh' content={r.toString}/>
+          <meta http-equiv='refresh' content={r.toString}/>
       })
 
     val c3Refs: Seq[Elem] = {
       if (c3) {
         // There are newer versions of these files but they don't seem to work in AQA.
         Seq(
-          <link href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.min.css" rel="stylesheet"/>,
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.min.css" rel="stylesheet"/>,
           <script src="https://c3js.org/js/d3-5.8.2.min-c5268e33.js" type="text/javascript"></script>,
           <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.min.js"></script>
         )
@@ -688,7 +695,7 @@ object WebUtil extends Logging {
 
     val runScriptContent = runScript match {
       case Some(s) => s
-      case _       => ""
+      case _ => ""
     }
 
     val text = HTML_PREFIX + xmlToText(page).replaceAllLiterally(runScriptTag, runScriptContent)
@@ -803,7 +810,7 @@ object WebUtil extends Logging {
           case Some(t) => <h2>
             {t}
           </h2>
-          case _       => <span></span>
+          case _ => <span></span>
         }
       }
 
@@ -858,21 +865,21 @@ object WebUtil extends Logging {
       val textErrorList = errorMap.values.flatMap(s => textOfError(s))
 
       (textErrorList.nonEmpty, runScript.nonEmpty) match {
-        case (true, true)   => Some("<script>" + makeAlertBox(textErrorList.mkString("\\n\\n")) + runScript.get + "</script>")
-        case (true, false)  => Some("<script>" + makeAlertBox(textErrorList.mkString("\\n\\n")) + "</script>")
-        case (false, true)  => Some("<script>" + runScript.get + "</script>")
+        case (true, true) => Some("<script>" + makeAlertBox(textErrorList.mkString("\\n\\n")) + runScript.get + "</script>")
+        case (true, false) => Some("<script>" + makeAlertBox(textErrorList.mkString("\\n\\n")) + "</script>")
+        case (false, true) => Some("<script>" + runScript.get + "</script>")
         case (false, false) => None
       }
     }
 
     /**
-      * Respond to an automatic upload client in a form it can digest (as text, not HTML).
-      * Differences
-      *
-      * if successful, then return an empty message and SUCCESS_OK
-      *
-      * if failure, then return an error message as text and SUCCESS_OK.
-      */
+     * Respond to an automatic upload client in a form it can digest (as text, not HTML).
+     * Differences
+     *
+     * if successful, then return an empty message and SUCCESS_OK
+     *
+     * if failure, then return an error message as text and SUCCESS_OK.
+     */
     private def setFormResponseAutoUpload(errorMap: StyleMapT, response: Response): Unit = {
       if (errorMap.isEmpty) {
         response.setStatus(Status.SUCCESS_OK)

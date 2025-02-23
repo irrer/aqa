@@ -59,10 +59,10 @@ abstract case class WLColumn( //
 // ---------------------------------------------------------------------------------------------------
 
 /**
-  * Handle columns that have simple text.
-  * @param name Column name.
-  * @param toVal Convert data to text.
-  */
+ * Handle columns that have simple text.
+ * @param name Column name.
+ * @param toVal Convert data to text.
+ */
 class WLColumnText(name: String, toVal: (WinstonLutz, AttributeList) => String) extends WLColumn(name) {
 
   override val alignLeft: Boolean = true
@@ -72,6 +72,26 @@ class WLColumnText(name: String, toVal: (WinstonLutz, AttributeList) => String) 
   override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toText(wl, al)
 
   override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = cell.setCellValue(toText(wl, al))
+}
+
+
+// ---------------------------------------------------------------------------------------------------
+
+/**
+ * Handle columns that have simple text.
+ * @param name Column name.
+ * @param real Real name of machine
+ * @param alias Anonymous name of machine
+ */
+class WLColumnMachine(name: String, real: String, alias: String) extends WLColumn(name) {
+
+  override val alignLeft: Boolean = true
+
+  override def toText(wl: WinstonLutz, al: AttributeList): String = alias
+
+  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = alias
+
+  override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = cell.setCellValue(real)
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -169,7 +189,7 @@ class WLColumnAlAnonText(name: String, tag: AttributeTag, institutionPK: Long) e
 
   override val alignLeft: Boolean = true
 
-  override def toText(wl: WinstonLutz, al: AttributeList): String = {
+  private def toClearText(al: AttributeList): String = {
     val text = AnonymizeUtil.deAnonymizeAttribute(institutionPK, al.get(tag)) match {
       case Some(attr) => attr.getSingleStringValueOrEmptyString
       case _          => "NA"
@@ -177,9 +197,20 @@ class WLColumnAlAnonText(name: String, tag: AttributeTag, institutionPK: Long) e
     text
   }
 
+  override def toText(wl: WinstonLutz, al: AttributeList): String = {
+    val attr = al.get(tag)
+    val text =
+      if (attr == null)
+        "NA"
+      else
+        attr.getSingleStringValueOrEmptyString()
+
+    text
+  }
+
   override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toText(wl, al)
 
   override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = {
-    cell.setCellValue(toText(wl, al))
+    cell.setCellValue(toClearText(al))
   }
 }

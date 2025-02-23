@@ -5,6 +5,8 @@ import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLColumn
+import org.aqa.webrun.wl.isoCheck.WLColumnAlAnonText
+import org.aqa.webrun.wl.isoCheck.WLColumnMachine
 import org.aqa.webrun.wl.isoCheck.WlColumnWlNumeric
 import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil
@@ -51,21 +53,30 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: 
 
   val columnList: Seq[WLColumn] = org.aqa.webrun.wl.isoCheck.WLColumnList(extendedData.machine, pairList.head.dataDate).columnList
 
-  private def toHtml(text: String, alignLeft: Boolean = true, isNumeric: Boolean = false): Elem = {
+  private def toHtml(text: String, alignLeft: Boolean = true, isNumeric: Boolean = false, alias: Boolean = false): Elem = {
     val c = if (alignLeft) cssPreprocessLeft else cssPreprocessRight
-    if (isNumeric) {
-      val elem = {
-        <td class={c}>
-          {text}
-        </td>
-      }
-      WebUtil.setPrecisionAttr(elem, text.trim.toDouble)
-    } else {
-      <td class={c}>
-      {text}
-    </td>
-    }
 
+    val elem =
+      if (isNumeric) {
+        val elem = {
+          <td class={c}>
+            {text}
+          </td>
+        }
+        WebUtil.setPrecisionAttr(elem, text.trim.toDouble)
+      } else {
+        if (alias) {
+          <td class={c}>
+            {WebUtil.wrapAlias(text)}
+          </td>
+        } else {
+          <td class={c}>
+            {text}
+          </td>
+        }
+      }
+
+    elem
   }
 
   private def makeTitleRow: Elem = {
@@ -120,7 +131,12 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: 
   private val sortedColumnIndexList = Seq(4, 5, 3, 6, 7)
 
   def colToHtml(pair: WLBeam, col: WLColumn): Elem = {
-    toHtml(col.toPreprocessText(pair.wl, pair.al), col.alignLeft, isNumeric = col.isInstanceOf[WlColumnWlNumeric])
+    toHtml(
+      col.toPreprocessText(pair.wl, pair.al),
+      col.alignLeft,
+      isNumeric = col.isInstanceOf[WlColumnWlNumeric],
+      alias = col.isInstanceOf[WLColumnAlAnonText] || col.isInstanceOf[WLColumnMachine]
+    )
   }
 
   private def makeRow(index: Int): Elem = {
@@ -139,7 +155,7 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: 
 
     def makeCell(c: Int): Elem = {
       val col = columnList(c)
-      toHtml(col.toPreprocessText(row.wl, row.al), col.alignLeft, isNumeric = col.isInstanceOf[WlColumnWlNumeric])
+      toHtml(col.toPreprocessText(row.wl, row.al), col.alignLeft, isNumeric = col.isInstanceOf[WlColumnWlNumeric], alias = col.isInstanceOf[WLColumnAlAnonText] || col.isInstanceOf[WLColumnMachine])
     }
 
     <tr>

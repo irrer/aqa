@@ -67,14 +67,18 @@ case class WinstonLutz(
     result
   }
 
+  val gantryAngleRounded: Int = Util.angleRoundedTo90(gantryAngle_deg)
+  val collimatorAngleRounded: Int = Util.angleRoundedTo90(collimatorAngle_deg)
+  val tableAngleRounded: Option[Int] = tableAngle_deg.map(WLXlsxUtil.angleRounded)
+
   /**
    * Construct beam name based on the gantry, collimator, and table angles.
    *
    * @return text name.
    */
-  def isoBeamName: String = {
-    val table: String = if (tableAngle_deg.isDefined && (Util.angleRoundedTo90(tableAngle_deg.get) != 0))
-      " T" + Util.angleRoundedTo90(tableAngle_deg.get)
+  private def isoBeamName: String = {
+    val table: String = if (tableAngle_deg.isDefined && (tableAngleRounded.get != 0))
+      " T" + Util.angleRoundedTo90(tableAngleRounded.get)
     else
       ""
     val name = "WL G" + Util.angleRoundedTo90(gantryAngle_deg) + " C" + Util.angleRoundedTo90(collimatorAngle_deg) + table
@@ -123,18 +127,13 @@ case class WinstonLutz(
   /** right edge measured - planned */
   def rightError_mm: Option[Double] = if (rightEdgePlanned_mm.isDefined) Some(rightEdge_mm - rightEdgePlanned_mm.get) else None
 
-  val gantryAngleRounded: Int = Util.angleRoundedTo90(gantryAngle_deg)
-  val collimatorAngleRounded: Int = Util.angleRoundedTo90(collimatorAngle_deg)
-  val tableAngleRounded: Option[Int] = tableAngle_deg.map(WLXlsxUtil.angleRounded)
-
-
 
   /** Analysis F */
   val caX: Option[Double] = {
     val value = gantryAngleRounded match {
-      case 0   => Some(errorX_mm)
+      case 0 => Some(errorX_mm)
       case 180 => Some(-errorX_mm)
-      case _   => None
+      case _ => None
     }
     value.map(rnd)
   }
@@ -142,16 +141,15 @@ case class WinstonLutz(
   /** Analysis G */
   val caY: Option[Double] = {
     val value = gantryAngleRounded match {
-      case 90  => Some(errorX_mm)
+      case 90 => Some(errorX_mm)
       case 270 => Some(-errorX_mm)
-      case _   => None
+      case _ => None
     }
     value.map(rnd)
   }
 
   /** Analysis H */
   val caZ: Option[Double] = Some(-errorY_mm).map(rnd)
-
 
 
   override def toString: String = {

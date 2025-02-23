@@ -1,9 +1,12 @@
 package org.aqa.webrun.wl.isoCheck.ssHtml
 
 import org.aqa.Util
+import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLColumn
+import org.aqa.webrun.wl.isoCheck.WLColumnAlAnonText
+import org.aqa.webrun.wl.isoCheck.WLColumnMachine
 import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.blankCells
@@ -32,11 +35,18 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option
     </td>
   }
 
-  private def toHtml(text: String, alignLeft: Boolean = true): Elem = {
+  private def toHtml(text: String, alignLeft: Boolean = true, alias: Boolean = false): Elem = {
     val a = if (alignLeft) cssDataLeft else cssDataRight
-    <td class={a}>
-      {text}
-    </td>
+
+    if (alias) {
+      <td class={a}>
+        {WebUtil.wrapAlias(text)}
+      </td>
+    } else {
+      <td class={a}>
+        {text}
+      </td>
+    }
   }
 
   private def makeTitleRow: Elem = {
@@ -67,7 +77,7 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option
     val pair = pairList(index)
 
     def colToHtml(col: WLColumn): Elem = {
-      toHtml(col.toText(pair.wl, pair.al), col.alignLeft)
+      toHtml(col.toText(pair.wl, pair.al), col.alignLeft, alias = col.isInstanceOf[WLColumnAlAnonText] || col.isInstanceOf[WLColumnMachine])
     }
 
     <tr>
