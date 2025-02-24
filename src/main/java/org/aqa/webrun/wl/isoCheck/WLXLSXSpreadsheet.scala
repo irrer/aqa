@@ -7,9 +7,11 @@ import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.webrun.wl.isoCheck.isoCheckHTML.WLIsoCheckHTML
+import org.aqa.AnonymizeUtil
+import org.aqa.Crypto
 
+import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.FileOutputStream
 import java.util.Date
 
 object WLXLSXSpreadsheet extends Logging {
@@ -113,10 +115,20 @@ object WLXLSXSpreadsheet extends Logging {
 
     update()
 
-    val file = new File(WLIsoCheckHTML.dir(extendedData), WLXlsxUtil.baseFileName(extendedData) + ".xlsx")
+    val file = new File(WLIsoCheckHTML.dir(extendedData), WLXlsxUtil.baseFileName(extendedData) + ".xlsx.encrypted")
     file.delete()
-    workbook.write(new FileOutputStream(file))
-    logger.info("Wrote WL IsoCheck spreadsheet file " + file.getAbsolutePath)
+    val clearText: String = {
+      val os = new ByteArrayOutputStream()
+      workbook.write(os)
+      val ba = os.toByteArray
+      Crypto.byteArrayToHex(ba)
+    }
+
+    val encryptedText = AnonymizeUtil.encryptWithNonce(extendedData.institution.institutionPK.get, clearText)
+
+    Util.writeFile(file, encryptedText)
+
+    logger.info("Wrote encrypted WL IsoCheck spreadsheet file " + file.getAbsolutePath)
 
     file.getName
   }

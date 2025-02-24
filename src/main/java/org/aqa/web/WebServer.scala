@@ -50,6 +50,7 @@ import org.aqa.webrun.wl.WLHistoryRestlet
 import org.aqa.webrun.wl.WLNav
 import org.aqa.webrun.wl.WLUpdateRestlet
 import org.aqa.webrun.wl.isoCheck.isoCheckHTML.WLIsoCheckChartHistoryRestlet
+import org.aqa.webrun.wl.isoCheck.WLIsoCheckDownloadXLSX
 import org.restlet.Application
 import org.restlet.Component
 import org.restlet.Request
@@ -582,6 +583,7 @@ class WebServer extends Application with Logging {
         new FSHistoryRestlet,
         new Phase2CsvRestlet,
         new MachineLogXml,
+        new WLIsoCheckDownloadXLSX,
         csvApi,
         new WLUpdateRestlet,
         new OutputHeading,

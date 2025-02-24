@@ -66,6 +66,7 @@ case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], iso
     }
 
     val linkTable = {
+
       <table class="table table-bordered" style="margin-top:10px;text-align: center;">
         <tr>
           <td>
@@ -75,7 +76,7 @@ case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], iso
             <a href={fileNameCsvSNCImport} style="margin-left:50px;">Download CSV for SNC</a>
           </td>
           <td>
-            <a href={fileName_xlsx} style="margin-left:50px;">Download XLSX</a>
+            <a href={"/WLIsoCheckDownloadXLSX?outputPK=" + extendedData.outputPK} style="margin-left:50px;">Download XLSX</a>
           </td>
           <td>
             {gradientHtml}
