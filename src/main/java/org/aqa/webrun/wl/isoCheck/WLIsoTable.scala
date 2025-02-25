@@ -165,6 +165,13 @@ case class WLIsoTable(
       optimizeRSquared()
     }
   }
+  // ------------------------------------------------------------------------------------------
+
+  /** SNCImport C13   Maximum error in old Winston-Lutz. */
+  val maxR: Double = {
+    val biggest = beamList.map(_.wl.errorXY_mm).max
+    biggest
+  }
 
 }
 

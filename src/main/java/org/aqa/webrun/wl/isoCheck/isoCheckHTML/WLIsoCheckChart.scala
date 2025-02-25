@@ -50,7 +50,8 @@ class WLIsoCheckChart(outputPK: Long) {
       "Col-Gantry misalignment",
       "MLC offset",
       "Gantry Isocentricity",
-      "Collimator Isocentricity"
+      "Collimator Isocentricity",
+      "Maximum R"
     )
 
     val yValues: Seq[Seq[Double]] = {
@@ -62,7 +63,8 @@ class WLIsoCheckChart(outputPK: Long) {
         history.map(_.isoCheck.collGantryMisalign),
         history.map(_.isoCheck.mlcOffsetY),
         history.map(_.isoCheck.gantryIsocentricity),
-        history.map(_.collimator.get_CA_Rpp_Optimized)
+        history.map(_.collimator.get_CA_Rpp_Optimized),
+        history.map(_.maxR)
       )
     }
 
@@ -76,7 +78,8 @@ class WLIsoCheckChart(outputPK: Long) {
       new Color(50, 50, 50),
       new Color(100, 100, 100),
       new Color(248, 0, 0),
-      new Color(158, 0, 0)
+      new Color(158, 0, 0),
+      new Color(100, 100, 255)
     )
 
     val isoCheckChart = new C3ChartHistory(

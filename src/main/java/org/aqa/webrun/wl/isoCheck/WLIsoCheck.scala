@@ -30,16 +30,16 @@ import org.aqa.Logging
  */
 case class WLIsoCheck(
                        // @formatter:off
-                     G__0_C_90_caX: Double, G__0_C_90_caZ: Double,
-                     G__0_C270_caX: Double, G__0_C270_caZ: Double,
-                     G_90_C_90_caY: Double, G_90_C_90_caZ: Double,
-                     G_90_C270_caY: Double, G_90_C270_caZ: Double,
-                     G180_C__0_caX: Double, G180_C__0_caZ: Double,
-                     G180_C_90_caX: Double, G180_C_90_caZ: Double,
-                     G180_C270_caX: Double, G180_C270_caZ: Double,
-                     G270_C_90_caY: Double, G270_C_90_caZ: Double,
-                     G270_C270_caY: Double, G270_C270_caZ: Double
-                     // @formatter:on
+                       G__0_C_90_caX: Double, G__0_C_90_caZ: Double,
+                       G__0_C270_caX: Double, G__0_C270_caZ: Double,
+                       G_90_C_90_caY: Double, G_90_C_90_caZ: Double,
+                       G_90_C270_caY: Double, G_90_C270_caZ: Double,
+                       G180_C__0_caX: Double, G180_C__0_caZ: Double,
+                       G180_C_90_caX: Double, G180_C_90_caZ: Double,
+                       G180_C270_caX: Double, G180_C270_caZ: Double,
+                       G270_C_90_caY: Double, G270_C_90_caZ: Double,
+                       G270_C270_caY: Double, G270_C270_caZ: Double
+                       // @formatter:on
                      ) extends Logging {
 
   /** Analysis I3 = (F3 + F4) / 2 */
@@ -182,6 +182,27 @@ case class WLIsoCheck(
   val mlcOffsetY: Double = mlcOffsetY_090 - mlcOffsetY_270 // Analysis T3
 
   // ------------------------------------------------------------------------------------------
+
+  /** SNCImport C13   Maximum X-Y Radius error in old Winston-Lutz. */
+  val maxR: Double = {
+
+    def R(a: Double, b: Double): Double = Math.sqrt((a * a) + (b * b))
+
+    val list = Seq(
+      (G__0_C_90_caX, G__0_C_90_caZ),
+      (G__0_C270_caX, G__0_C270_caZ),
+      (G_90_C_90_caY, G_90_C_90_caZ),
+      (G_90_C270_caY, G_90_C270_caZ),
+      (G180_C__0_caX, G180_C__0_caZ),
+      (G180_C_90_caX, G180_C_90_caZ),
+      (G180_C270_caX, G180_C270_caZ),
+      (G270_C_90_caY, G270_C_90_caZ),
+      (G270_C270_caY, G270_C270_caZ)
+    )
+
+    val biggest = list.map(ab => R(ab._1, ab._2)).max
+    biggest
+  }
 
 }
 

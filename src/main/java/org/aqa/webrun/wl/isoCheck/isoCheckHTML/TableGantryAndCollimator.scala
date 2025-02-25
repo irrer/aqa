@@ -8,7 +8,7 @@ import org.aqa.webrun.wl.isoCheck.isoCheckHTML.WLIsoCheckHTML.tdElem
 
 import scala.xml.Elem
 
-class TableGantryAndCollimator(isoCheckChart: WLIsoCheckChart, isoCheck: WLIsoCheck, collimator: WLCollimator) {
+class TableGantryAndCollimator(isoCheckChart: WLIsoCheckChart, isoCheck: WLIsoCheck, collimator: WLCollimator, maxR: Double) {
 
   private val table: Elem = {
     <table class="table table-bordered" style="text-align: center;">
@@ -23,6 +23,12 @@ class TableGantryAndCollimator(isoCheckChart: WLIsoCheckChart, isoCheck: WLIsoCh
         {tdElem("MLC offset", isoCheck.mlcOffsetY)}
         {tdElem("Gantry Isocentricity", isoCheck.gantryIsocentricity)}
         {tdElem("Collimator Isocentricity", collimator.get_CA_Rpp_Optimized)}
+      </tr>
+      <tr>
+        {tdElem("Maximum R", maxR)}
+        <td></td>
+        <td></td>
+        <td></td>
       </tr>
     </table>
   }

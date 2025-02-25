@@ -126,6 +126,10 @@ object IsoCheck {
           (wl.collimatorAngleRounded == collimatorAngle) &&
           (wl.tableAngleRounded.get == tableAngle)
       )
+
+    /** Maximum radius (X-Y distance (radius) between ball and box. */
+    val maxR: Double = Seq(Some(isoCheck.maxR), isoTable.map(_.maxR)).flatten.max
+
   }
 
   private def makeIsoCheckHistory(output: Output, isoCheck: IsoCheck, wlList: Seq[WinstonLutz]): Option[IsoCheckHistory] = {

@@ -54,11 +54,21 @@ class SSSNCImport(extendedData: ExtendedData, isoCheck: WLIsoCheck, collimator: 
     </tr>
   }
 
-  private def makeRow13: Elem = {
+  private def makeRow14: Elem = {
     <tr>
-      {makeRowIndex(13)}
+      {makeRowIndex(14)}
       {blankCells(4) /*                            A1 to D1 */}
     </tr>
+  }
+
+  /** SNCImport C13    Maximum Winston-Lutz error. */
+  val maxR: Double = {
+    val biggest =
+      if (isoTable.isDefined)
+        Math.max(isoCheck.maxR, isoTable.get.maxR)
+      else
+        isoCheck.maxR
+    biggest
   }
 
   override def make(): Elem = {
@@ -78,7 +88,8 @@ class SSSNCImport(extendedData: ExtendedData, isoCheck: WLIsoCheck, collimator: 
         {makeCsvRow(10, "Table Isocentricity (mm)", if (hasTable) Math.sqrt(isoTable.get.get_RSquared_Optimized) else Double.NaN)}
         {makeCsvRow(11, "Gantry Isocentricity (mm)", isoCheck.gantryIsocentricity)}
         {makeCsvRow(12, "Collimator Isocentricity (mm)", collimator.get_CA_Rpp_Optimized)}
-        {makeRow13}
+        {makeCsvRow(13, "Maximum R (mm)", maxR)}
+        {makeRow14}
       </table>
     }
 

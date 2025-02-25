@@ -85,7 +85,8 @@ case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], iso
       </table>
     }
 
-    val tableGantryAndCollimatorHtml = new TableGantryAndCollimator(isoCheckChart, isoCheck, collimator)
+    val maxR = Seq(Some(isoCheck.maxR), isoTable.map(_.maxR)).flatten.max
+    val tableGantryAndCollimatorHtml = new TableGantryAndCollimator(isoCheckChart, isoCheck, collimator, maxR)
     val tableHtml: TableHtml = new TableHtml(isoCheckChart, isoCheck, isoTable)
     val tableBB_RSqThreeBeams = new TableBB_RSqThreeBeams(isoCheckChart, isoTable)
     val tableBB_RSqSevenBeams = new TableBB_RSqSevenBeams(isoCheckChart, isoTable)

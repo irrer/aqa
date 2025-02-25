@@ -1236,6 +1236,8 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- HTML value used to size the width of summary images on the main report. -->
     <WLSummarySize>350</WLSummarySize>
 
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
     <!-- Name of XLSX files in the static dir to be used as a template for making the WL monthly
     spreadsheet.  Default are:
         WLIsoCheckTemplate__9_Beams.xlsx
@@ -1245,7 +1247,6 @@ Note that when building a package for release, the Maven build process uses the 
     <WLIsoCheckTemplate__9_BeamsFileName>WLIsoCheckTemplate__9_Beams.xlsx</WLIsoCheckTemplate__9_BeamsFileName>
     <WLIsoCheckTemplate_11_BeamsFileName>WLIsoCheckTemplate_11_Beams.xlsx</WLIsoCheckTemplate_11_BeamsFileName>
     <WLIsoCheckTemplate_15_BeamsFileName>WLIsoCheckTemplate_15_Beams.xlsx</WLIsoCheckTemplate_15_BeamsFileName>
-
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
