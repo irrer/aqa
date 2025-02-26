@@ -173,6 +173,10 @@ class C3ScatterPlot(
          |      }
          |    },
          |
+         |    zoom: {
+         |      enabled: true
+         |    },
+         |
          |    point: { // enlarge point on hover
          |      r: 4,
          |      focus : {
