@@ -189,7 +189,6 @@ object WLIsoTable {
       WLBeam.findGCT(pairList, g, c, t)
     }
 
-
     // @formatter:off
     val T__0 : Option[WLBeam] = findPair( 180, 270,   0 )
     val T_30 : Option[WLBeam] = findPair( 180, 270,  30 )
@@ -201,26 +200,54 @@ object WLIsoTable {
     // @formatter:on
 
     // list of all files required for WL IsoTable
-    val requiredList = Seq(
+    val listMinimal = Seq(
       T__0,
       T_90,
       T270,
     )
 
-    // if of the files are there then construct the object, otherwise return None.
-    if (requiredList.flatten.size == requiredList.size) {
-      Some(WLIsoTable(
-        T__0,
-        T_30,
-        T_60,
-        T_90,
-        T270,
-        T300,
-        T330
-      ))
+    // list of all files required for WL IsoTable
+    val listFull = Seq(
+      T__0,
+      T_30,
+      T_60,
+      T_90,
+      T270,
+      T300,
+      T330
+    )
+
+    val isoTable = 0 match {
+      // try for the full set
+      case _ if listFull.flatten.size == listFull.size =>
+        Some(WLIsoTable(
+          T__0,
+          T_30,
+          T_60,
+          T_90,
+          T270,
+          T300,
+          T330
+        ))
+
+      // Could not get the full set, try for the minimal set
+      case _ if listMinimal.flatten.size == listMinimal.size =>
+        Some(WLIsoTable(
+          T__0,
+          None,
+          None,
+          T_90,
+          T270,
+          None,
+          None
+        ))
+
+      // There were not the required beams for either the full or the minimal sets.
+      case _ => None
     }
-    else
-      None
+
+    isoTable
+
   }
 
   def CA_X(beam: WLBeam): Double = -beam.wl.errorX_mm
