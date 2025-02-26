@@ -1,0 +1,367 @@
+<div title="IsoCheck" class="col-md-10 col-md-offset-1">
+    <!--
+    Copyright 2025 Regents of the University of Michigan
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    -->
+
+    <h2>@@title@@</h2>
+    <p>
+        IsoCheck uses the results of conventional Winston Lutz analysis, but also quantifies the degree to which these
+        errors can be attributed to the gantry, collimator, and table.
+    </p>
+
+    <hr style='margin:40px;'/>
+    <h3>Invocation</h3>
+    <p>
+        IsoCheck is invoked by running the Winston Lutz test. Winston Lutz processing is performed on all images, but
+        if the set of required images for IsoCheck are present, then IsoCheck processing is performed as well.
+    </p>
+
+    <hr style='margin:40px;'/>
+    <h3>Web Interface</h3>
+    <p>
+        IsoCheck result will appear the same as the usual Winston Lutz results but also have the additional
+        <b>IsoCheck</b> link shown below:
+    </p>
+
+    <figure style="margin:30px; border: 1px solid lightgray;">
+        <a href='MainReference.png' title='Link to main IsoCheck page.'>
+            <img src='MainReference.png' style="margin:20px;width: 75%;" alt="Link to main IsoCheck page."/>
+        </a>
+        <br/>
+        <figcaption style="text-align: center; margin-bottom:10px;">
+            <i>IsoCheck data sets will have a link to the results.</i>
+        </figcaption>
+    </figure>
+
+
+    <p>
+        The IsoCheck main page gives an overview of the results, and, trend charts (scroll down) showing a history for
+        the machine. Table information will not be shown if the beams are not available. The main components are:
+    </p>
+    <ol>
+        <li>Navigation links to more details.</li>
+        <li>Scatter plots showing MLC and optionally table wobble.</li>
+        <li>Chart of gantry and collimator errors.</li>
+        <li>The X, Y, and Z table errors.</li>
+        <li>The table errors for 3 table beams (11 beam sets).</li>
+        <li>The table errors for 7 table beams (15 beam sets).</li>
+    </ol>
+
+    <figure style="margin:30px; border: 1px solid lightgray;">
+        <a href='MainPage.png' title='Main IsoCheck page.'>
+            <img src='MainPage.png' style="margin:20px;width: 20%; height: 20%" alt="Main IsoCheck page."/>
+        </a>
+        <br/>
+        <figcaption style="text-align: center; margin-bottom:10px;">
+            <i>IsoCheck main page. Click for larger image.</i>
+        </figcaption>
+    </figure>
+
+    <p>
+        Note that the Precision device allows the user to show more or less precise values.
+    </p>
+
+    <figure style="margin:30px; border: 1px solid lightgray;">
+        <a href='MainReference.png' title='Vary Precision.'>
+            <img src='Precision.png' style="margin:20px; " alt="Vary Precision."/>
+        </a>
+        <br/>
+        <figcaption style="text-align: center; margin-bottom:10px;">
+            <i>User can vary the precision that is displayed.</i>
+        </figcaption>
+    </figure>
+
+
+    <h4>View Spreadsheet</h4>
+    <p>
+        IsoCheck was originally implemented as an Excel spreadsheet, and this web implementation mimics the layout of
+        that. The spreadsheet format allows the user to explore other intermediate values beside the final results.
+    </p>
+
+
+    <h4>Download CSV for SNC</h4>
+    <p>
+        Clicking this will download a CSV file suitable for import into the SNC SunCHECK product. The contents are the
+        same as the first sheet of the online spreadsheet.
+    </p>
+
+
+    <h4>Download XLSX</h4>
+    <p>
+        The user may download an XLSX version of the data which will have exactly the same values as the HTML version.
+        The main reasons for doing so are:
+    </p>
+
+
+    <h4>View Gradients</h4>
+    <p>
+        This is an experimental feature that gives a visual representation of all the gradient descents. One reason for
+        showing this is to help determine if there is more than one local minima, however other uses may be found in the
+        future.
+    </p>
+
+
+    <ul>
+        <li>A document that can be archived as a quality assurance record.</li>
+        <li>Transparency as to how calculations are performed.</li>
+    </ul>
+
+
+    <p>
+        Clicking the <b>Download XLSX</b> link will download an Excel XLSX spreadsheet with the raw data already
+        inserted. When first viewing this, the calculated values will be invalid. This is because, while the program can
+        put values into an Excel spreadsheet, it can not execute the formulas. To view the results:
+    </p>
+    <ol>
+        <li>Click the <b>Download XLSX</b> link.</li>
+        <li>Load the file into Excel.</li>
+        <li>Press <b>CTRL-ALT-F9</b> to tell Excel to recalculate values.</li>
+    </ol>
+
+    <p>
+        Note that the spreadsheet has two instances of the Excel <em>Solver</em>, which implements gradient descent to
+        optimize:
+    </p>
+    <ul>
+        <li>Cells L14, M14, N14, O14 on the Analysis sheet.</li>
+        <li>Cells H4, I4 on the Collimator sheet.</li>
+    </ul>
+
+    <p>
+        The AQA software has the equivalent, however yields slightly different (usually slightly better) results.
+        Therefore,
+        if you choose to invoke the Excel's solver, many values will be slightly different.
+    </p>
+
+
+    <hr style='margin:40px;'/>
+    <h3>Beam Selection</h3>
+    <p>
+        There are three possible models (different sets of beams) to satisfy the requirements for IsoCheck:
+    </p>
+
+    <ol>
+        <li>15 Beams: Gantry, collimator, and full table.</li>
+        <li>11 Beams: Gantry, collimator, and minimal table.</li>
+        <li>9 Beams: Gantry and collimator, but no table analysis.</li>
+    </ol>
+
+    <p>
+        When a data set is submitted, the software will first try to satisfy the requirements of the 15 beam set. If
+        that fails, it will try for 11 beam. If that fails, it will try for 9 beams. If 9 beams fails, then no IsoCheck
+        analysis is done.
+    </p>
+
+    <p>
+        If extra beams are uploaded that are not required, they might be analyzed by Winston Lutz, but IsoCheck will
+        silently ignore them. For example, if a beam with Gantry:0, Collimator:0, and Table:0 were uploaded, then
+        IsoCheck would ignore it. Also, if there is more than one beam with the same characteristics, then the most
+        recently delivered one will be used.
+    </p>
+
+    <p style="margin-top:50px;">
+        The order that the beams are uploaded does not matter. Also, the beams' names in the RTPLAN do not matter. The
+        beams are classified using the following DICOM tags:
+    </p>
+
+    <table class="table table-bordered">
+        <caption style="text-align: center;"><h4>DICOM References</h4></caption>
+        <thead>
+        <tr>
+            <th>IsoCheck Name</th>
+            <th>DICOM Metadata Hex</th>
+            <th>DICOM Metadata Name</th>
+        </tr>
+        <tr>
+            <td>
+                Gantry
+            </td>
+            <td>
+                300A,011E
+            </td>
+            <td>
+                Gantry Angle
+            </td>
+        </tr>
+        <tr>
+            <td>
+                Collimator
+            </td>
+            <td>
+                300a,0120
+            </td>
+            <td>
+                Beam Limiting Device Angle
+            </td>
+        </tr>
+        <tr>
+            <td>
+                Table
+            </td>
+            <td>
+                300a,0122
+            </td>
+            <td>
+                Patient Support Angle
+            </td>
+        </tr>
+    </table>
+
+    <p style="margin-top:50px;">
+        The following tables list which sets of beams are required for the three different IsoCheck models.
+    </p>
+
+    <table class="table table-bordered" style="text-align: center;">
+        <caption style="text-align: center;"><h4>IsoCheck Model requirements</h4></caption>
+        <thead>
+        <tr style="text-align: center;">
+            <th style="text-align: center;">Gantry Angle</th>
+            <th style="text-align: center;">Collimator Angle</th>
+            <th style="text-align: center;">Table Angle</th>
+            <th style="text-align: center;">15 Beams</th>
+            <th style="text-align: center;">11 Beams</th>
+            <th style="text-align: center;">9 Beams</th>
+        </tr>
+        </thead>
+        <tr>
+            <td>0</td>
+            <td>90</td>
+            <td>0</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+        </tr>
+        <tr>
+            <td>0</td>
+            <td>270</td>
+            <td>0</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+        </tr>
+
+        <tr>
+            <td>90</td>
+            <td>90</td>
+            <td>0</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+        </tr>
+        <tr>
+            <td>90</td>
+            <td>270</td>
+            <td>0</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+        </tr>
+
+        <tr>
+            <td>180</td>
+            <td>0</td>
+            <td>0</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+        </tr>
+        <tr>
+            <td>180</td>
+            <td>90</td>
+            <td>0</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+        </tr>
+        <tr>
+            <td>180</td>
+            <td>270</td>
+            <td>0</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+        </tr>
+
+        <tr>
+            <td>270</td>
+            <td>90</td>
+            <td>0</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+        </tr>
+        <tr>
+            <td>270</td>
+            <td>270</td>
+            <td>0</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+        </tr>
+
+        <tr>
+            <td>180</td>
+            <td>270</td>
+            <td>30</td>
+            <td>&#9989;</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>180</td>
+            <td>270</td>
+            <td>60</td>
+            <td>&#9989;</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>180</td>
+            <td>270</td>
+            <td>90</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>180</td>
+            <td>270</td>
+            <td>270</td>
+            <td>&#9989;</td>
+            <td>&#9989;</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>180</td>
+            <td>270</td>
+            <td>300</td>
+            <td>&#9989;</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>180</td>
+            <td>270</td>
+            <td>330</td>
+            <td>&#9989;</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+
+    <p style="margin-bottom:200px;">
+    </p>
+
+</div>
