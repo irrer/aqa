@@ -69,16 +69,16 @@ case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], iso
 
       <table class="table table-bordered" style="margin-top:10px;text-align: center;">
         <tr>
-          <td>
+          <td title="View an HTML version of a spreadsheet showing detailed results.">
             <a href={SSHtml.spreadsheetHtmlFileName}>View Spreadsheet</a>
           </td>
-          <td>
+          <td title="Download a CSV file suitable for import into SNC SunCheck.">
             <a href={fileNameCsvSNCImport} style="margin-left:50px;">Download CSV for SNC</a>
           </td>
-          <td>
+          <td title={"Download an XLSX spreadsheet showing detailed results.  After loading, click CTRL-ALT-F9 to calculate results."}>
             <a href={"/WLIsoCheckDownloadXLSX?outputPK=" + extendedData.outputPK} style="margin-left:50px;">Download XLSX</a>
           </td>
-          <td>
+          <td title="Show images of gradient descent.">
             {gradientHtml}
           </td>
         </tr>
