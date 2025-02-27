@@ -125,13 +125,13 @@ class WLIsoCheckChart(outputPK: Long) {
 
     val yValues: Seq[Seq[Double]] = {
       Seq(
-        history.map(h => h.isoTable.get.get_IsoTable_X_Optimized - h.isoCheck.isoX),
-        history.map(h => h.isoTable.get.get_IsoTable_Z_Optimized - h.isoCheck.isoZ),
-        history.map(h => Math.sqrt(h.isoTable.get.get_RSquared_Optimized))
+        isoTableList.map(h => h.isoTable.get.get_IsoTable_X_Optimized - h.isoCheck.isoX),
+        isoTableList.map(h => h.isoTable.get.get_IsoTable_Z_Optimized - h.isoCheck.isoZ),
+        isoTableList.map(h => Math.sqrt(h.isoTable.get.get_RSquared_Optimized))
       )
     }
 
-    val yIndex = history.indexWhere(_.output.outputPK.get == outputPK)
+    val yIndex = isoTableList.indexWhere(_.output.outputPK.get == outputPK)
 
     val colorList = Seq(
       new Color(104, 187, 154),
@@ -186,13 +186,13 @@ class WLIsoCheckChart(outputPK: Long) {
 
     val yValues: Seq[Seq[Double]] = {
       Seq(
-        history.map(h => BB_RppSq(h.isoTable.get, h.isoTable.get.T__0.get)),
-        history.map(h => BB_RppSq(h.isoTable.get, h.isoTable.get.T_90.get)),
-        history.map(h => BB_RppSq(h.isoTable.get, h.isoTable.get.T270.get))
+        isoTableList.map(h => BB_RppSq(h.isoTable.get, h.isoTable.get.T__0.get)),
+        isoTableList.map(h => BB_RppSq(h.isoTable.get, h.isoTable.get.T_90.get)),
+        isoTableList.map(h => BB_RppSq(h.isoTable.get, h.isoTable.get.T270.get))
       )
     }
 
-    val yIndex = history.indexWhere(_.output.outputPK.get == outputPK)
+    val yIndex = isoTableList.indexWhere(_.output.outputPK.get == outputPK)
 
     val colorList = Seq(
       new Color(104, 187, 154), //  0
