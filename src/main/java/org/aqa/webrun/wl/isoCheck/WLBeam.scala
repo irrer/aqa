@@ -5,7 +5,6 @@ import org.aqa.Util
 import org.aqa.db.WinstonLutz
 import org.aqa.Logging
 import org.aqa.webrun.wl.WLRunReq
-import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.flip
 
 import java.util.Date
 
@@ -36,7 +35,7 @@ case class WLBeam(wl: WinstonLutz, al: AttributeList = new AttributeList) extend
   /** Analysis H */
   val caZ: Option[Double] = wl.caZ
 
-  private val radians: Double = Math.toRadians(flip(tableAngle))
+  private val radians: Double = Math.toRadians(Util.negateAngle(tableAngle))
 
   /** cosine of isoTable angle */
   val cos: Double = Math.cos(radians)

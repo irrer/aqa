@@ -3,6 +3,7 @@ package org.aqa.webrun.phase2.phase2csv.isoCheckCSV
 import org.aqa.webrun.phase2.phase2csv.CsvCol
 import org.aqa.webrun.phase2.phase2csv.isoCheckCSV.IsoCheckCsv.IC
 import org.aqa.webrun.phase2.phase2csv.CsvCol.NA
+import org.aqa.Util
 
 object AnalysisBBXZ {
 
@@ -17,7 +18,7 @@ object AnalysisBBXZ {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, 270, t) match {
+        ic.getBeam(180, 270, Util.negateAngle(t)) match {
           case Some(wl) if ic.hasTable =>
             ic.isoTable.get.BB_X(WLBeam(wl))
           case _ => NA
@@ -34,7 +35,7 @@ object AnalysisBBXZ {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, 270, t) match {
+        ic.getBeam(180, 270, Util.negateAngle(t)) match {
           case Some(wl) if ic.hasTable =>
             ic.isoTable.get.BB_Z(WLBeam(wl))
           case _ => org.aqa.webrun.phase2.phase2csv.CsvCol.NA

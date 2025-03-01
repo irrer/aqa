@@ -3,6 +3,7 @@ package org.aqa.webrun.phase2.phase2csv.isoCheckCSV
 import org.aqa.webrun.phase2.phase2csv.CsvCol
 import org.aqa.webrun.phase2.phase2csv.isoCheckCSV.IsoCheckCsv.IC
 import org.aqa.webrun.phase2.phase2csv.CsvCol.NA
+import org.aqa.Util
 
 object AnalysisTableDxDz {
   // Scala compiler has a problem flagging this import as 'unused'.
@@ -16,7 +17,7 @@ object AnalysisTableDxDz {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, 270, t) match {
+        ic.getBeam(180, 270, Util.negateAngle(t)) match {
           case Some(wl) if ic.hasTable =>
             ic.isoTable.get.dXOf(WLBeam(wl), ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
           case _ => NA
@@ -33,7 +34,7 @@ object AnalysisTableDxDz {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, 270, t) match {
+        ic.getBeam(180, 270, Util.negateAngle(t)) match {
           case Some(wl) if ic.hasTable =>
             ic.isoTable.get.dZOf(WLBeam(wl), ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
           case _ => NA

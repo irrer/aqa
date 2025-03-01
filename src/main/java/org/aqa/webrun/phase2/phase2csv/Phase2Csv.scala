@@ -541,7 +541,8 @@ object Phase2Csv extends Logging {
   /** List of an instance for each data type. */
   def makeDataTypeList(metadataCache: MetadataCache): Seq[Phase2Csv[_]] = {
     Seq(
-      new CenterDoseCsv(metadataCache),
+      /*
+      new CenterDoseCsv(metadataCache), // TODO put back
       new GapSkewCsv(metadataCache),
       new CollimatorCenteringCsv(metadataCache),
       new CollimatorPositionCsv(metadataCache),
@@ -553,8 +554,9 @@ object Phase2Csv extends Logging {
       new VMAT_T2_DG_RSCsv(metadataCache),
       new VMAT_T3MLCSpeedCsv(metadataCache),
       new WedgePointCsv(metadataCache),
-      new WinstonLutzCsv(metadataCache),
-      new IsoCheckCsv(metadataCache)
+      new WinstonLutzCsv(metadataCache)
+       */
+      new IsoCheckCsv(metadataCache) // TODO
     )
   }
 

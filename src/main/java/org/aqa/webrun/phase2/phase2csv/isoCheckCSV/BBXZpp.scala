@@ -3,7 +3,7 @@ package org.aqa.webrun.phase2.phase2csv.isoCheckCSV
 import org.aqa.webrun.phase2.phase2csv.CsvCol
 import org.aqa.webrun.phase2.phase2csv.isoCheckCSV.IsoCheckCsv.IC
 import org.aqa.webrun.phase2.phase2csv.CsvCol.NA
-import org.aqa.webrun.wl.isoCheck.WLXlsxUtil
+import org.aqa.Util
 
 /**
   * X and Y offset corrected box - ball
@@ -21,7 +21,7 @@ object BBXZpp {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, 270, WLXlsxUtil.flip(t)) match {
+        ic.getBeam(180, 270, Util.negateAngle(t)) match {
           case Some(wl) if ic.hasTable =>
             ic.isoTable.get.BB_Rpp(
               WLBeam(wl),
@@ -44,7 +44,7 @@ object BBXZpp {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, 270, t) match {
+        ic.getBeam(180, 270, Util.negateAngle(t)) match {
           case Some(wl) if ic.hasTable =>
             ic.isoTable.get.BB_Xpp(WLBeam(wl), ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized, ic.isoTable.get.get_IsoTable_X_Optimized)
           case _ => NA
@@ -61,7 +61,7 @@ object BBXZpp {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, 270, t) match {
+        ic.getBeam(180, 270, Util.negateAngle(t)) match {
           case Some(wl) if ic.hasTable =>
             ic.isoTable.get.BB_Zpp(WLBeam(wl), ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized, ic.isoTable.get.get_IsoTable_Z_Optimized)
           case _ => NA

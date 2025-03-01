@@ -231,13 +231,6 @@ object WLXlsxUtil extends Logging {
   }
 
   /**
-    * Flip an angle
-    * @param angle around 0 degrees.  e.g. 10 degrees becomes 350.
-    * @return Flipped angle.
-    */
-  def flip(angle: Int): Int = (360 - angle) % 360
-
-  /**
     * Acquisition date+time of file.
     * @param al For this DICOM.
     * @return Acquisition date+time.

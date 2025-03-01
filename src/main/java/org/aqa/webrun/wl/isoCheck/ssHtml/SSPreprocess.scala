@@ -14,7 +14,6 @@ import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.blankCell
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.blankCells
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.cssPreprocessLeft
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.cssPreprocessRight
-import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.flip
 
 import scala.xml.Elem
 
@@ -27,8 +26,8 @@ import scala.xml.Elem
 class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option[WLIsoTable]) extends SSSheet {
 
   private def preprocessSorter(a: WLBeam, b: WLBeam): Boolean = {
-    val aIsoTable = flip(a.tableAngle)
-    val bIsoTable = flip(b.tableAngle)
+    val aIsoTable = Util.negateAngle(a.tableAngle)
+    val bIsoTable = Util.negateAngle(b.tableAngle)
 
     0 match {
       case _ if aIsoTable > bIsoTable => false
@@ -155,7 +154,12 @@ class SSPreprocess(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: 
 
     def makeCell(c: Int): Elem = {
       val col = columnList(c)
-      toHtml(col.toPreprocessText(row.wl, row.al), col.alignLeft, isNumeric = col.isInstanceOf[WlColumnWlNumeric], alias = col.isInstanceOf[WLColumnAlAnonText] || col.isInstanceOf[WLColumnMachine])
+      toHtml(
+        col.toPreprocessText(row.wl, row.al),
+        col.alignLeft,
+        isNumeric = col.isInstanceOf[WlColumnWlNumeric],
+        alias = col.isInstanceOf[WLColumnAlAnonText] || col.isInstanceOf[WLColumnMachine]
+      )
     }
 
     <tr>

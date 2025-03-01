@@ -6,6 +6,7 @@ import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLIsoCheck
 import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil._
+import org.aqa.Util
 
 import scala.xml.Elem
 
@@ -86,7 +87,7 @@ class SSAnalysis(extendedData: ExtendedData, beamList: Seq[WLBeam], isoCheck: WL
       Seq(
         toHtml(beam.gantryAngle), /*             A */
         toHtml(beam.collimatorAngle), /*         B */
-        toHtml(flip(beam.tableAngle)), /*     C */
+        toHtml(Util.negateAngle(beam.tableAngle)), /*     C */
         toHtml(beam.wl.errorX_mm), /*            D X offset corrected box-ball */
         toHtml(beam.wl.errorY_mm), /*            E X offset corrected box-ball */
         toHtml(WLIsoTable.CA_X(beam)), /*        F CA-X */

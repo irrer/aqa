@@ -619,6 +619,19 @@ object Util extends Logging {
     ((degrees % 360.0) + 360.0) % 360.0
   }
 
+
+  /**
+   * Negate an angle
+   * @param angle around 0 degrees.  e.g. 10 degrees becomes 350, 0 becomes 0.
+   * @return Flipped angle.
+   */
+  def negateAngle(angle: Int): Int = {
+    val a = (angle + 3600) % 360 // make sure angle is 0-359
+    (360 - a) % 360
+  }
+
+
+
   /**
     * Add graticules to the given image.
     */

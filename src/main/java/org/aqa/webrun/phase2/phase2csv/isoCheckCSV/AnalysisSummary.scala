@@ -11,7 +11,9 @@ object AnalysisSummary {
   def analysisSummaryList(): Seq[CsvCol[IC]] = {
     // @formatter:off
     Seq(
-      CsvCol("Table Wobble", "Table Wobble diameter (mm) =Report!K4", (ic: IC) => ic.isoTable.get.tableWobbleDiameter),
+      CsvCol("Number of Beams", "Total number of beams/RTIMAGES used for IsoCheck analysis.  Must be one of 9, 11, or 15", (ic: IC) => if (ic.hasTable) 8 + ic.isoTable.get.beamList.size else 9),
+
+      CsvCol("Table Wobble", "Table Wobble diameter (mm) =Report!K4", (ic: IC) => if (ic.hasTable) ic.isoTable.get.tableWobbleDiameter else NA),
 
       CsvCol("ballCBCT X", "ballCBCT X (mm) =Analysis!A24", (_: IC) => 0.0),
       CsvCol("ballCBCT Y", "ballCBCT Y (mm) =Analysis!B24", (_: IC) => 0.0),
