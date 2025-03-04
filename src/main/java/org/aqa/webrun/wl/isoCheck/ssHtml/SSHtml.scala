@@ -5,12 +5,13 @@ import org.aqa.Util
 import org.aqa.web.C3Chart
 import org.aqa.web.WebUtil
 import org.aqa.Logging
-import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLCollimator
 import org.aqa.webrun.wl.isoCheck.WLIsoCheck
 import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil
 import org.aqa.webrun.wl.isoCheck.isoCheckHTML.WLIsoCheckHTML
+import org.aqa.webrun.wl.isoCheck.WLMap
+import org.aqa.webrun.wl.WLRunReq
 
 import java.io.File
 import scala.xml.Elem
@@ -60,19 +61,19 @@ object SSHtml extends Logging {
   /**
     * Make a web page containing all the spreadsheets.
     * @param extendedData Metadata.
-    * @param pairList List of images with analysis.
+    * @param wlMap List of images with analysis.
     * @return name of CSV file.
     */
-  def make(extendedData: ExtendedData, pairList: Seq[WLBeam], isoCheck: WLIsoCheck, isoTable: Option[WLIsoTable], collimator: WLCollimator): String = {
+  def make(extendedData: ExtendedData, runReq: WLRunReq, wlMap: WLMap, isoCheck: WLIsoCheck, isoTable: Option[WLIsoTable], collimator: WLCollimator): String = {
 
     val ssSNCImport = new SSSNCImport(extendedData: ExtendedData, isoCheck, collimator, isoTable)
     val ssReport = new SSReport(extendedData: ExtendedData, isoCheck, isoTable)
 
     val sheetList: Seq[SSSheet] = Seq(
       ssSNCImport,
-      new SSData(extendedData: ExtendedData, pairList, isoTable),
-      new SSPreprocess(extendedData: ExtendedData, pairList, isoTable),
-      new SSAnalysis(extendedData: ExtendedData, pairList, isoCheck, isoTable),
+      new SSData(extendedData: ExtendedData, runReq, wlMap, isoTable),
+      new SSPreprocess(extendedData: ExtendedData, runReq, wlMap, isoTable),
+      new SSAnalysis(extendedData: ExtendedData, wlMap, isoCheck, isoTable),
       new SSCollimator(extendedData: ExtendedData, collimator),
       ssReport,
       new SSInstructions()

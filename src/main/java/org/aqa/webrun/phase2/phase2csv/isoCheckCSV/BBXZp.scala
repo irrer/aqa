@@ -5,8 +5,6 @@ import org.aqa.webrun.phase2.phase2csv.isoCheckCSV.IsoCheckCsv.IC
 import org.aqa.webrun.phase2.phase2csv.CsvCol.NA
 
 object BBXZp {
-  // Scala compiler has a problem flagging this import as 'unused'.
-  private val WLBeam = org.aqa.webrun.wl.isoCheck.WLBeam
 
   private def BB_Xp(t: Int, row: Int): CsvCol[IC] = {
     val name = s"BB-X' G180 C270 T$t"
@@ -18,7 +16,7 @@ object BBXZp {
       (ic: IC) => {
         ic.getBeam(180, 270, t) match {
           case Some(wl) if ic.hasTable =>
-            ic.isoTable.get.BB_Xp(WLBeam(wl), ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
+            ic.isoTable.get.BB_Xp(wl, ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
           case _ => NA
         }
       }
@@ -35,7 +33,7 @@ object BBXZp {
       (ic: IC) => {
         ic.getBeam(180, 270, t) match {
           case Some(wl) if ic.hasTable =>
-            ic.isoTable.get.BB_Zp(WLBeam(wl), ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
+            ic.isoTable.get.BB_Zp(wl, ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
           case _ => NA
         }
       }

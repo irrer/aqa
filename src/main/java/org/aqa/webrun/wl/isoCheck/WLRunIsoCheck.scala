@@ -15,21 +15,21 @@ object WLRunIsoCheck extends Logging {
     * Perform isoCheck processing if the required data is there.
     * @param extendedData metadata
     * @param runReq DICOM slices
-    * @param dbList analysis results.
+    * @param wlList analysis results.
     * @return HTML snippet for access to results.
     */
-  def run(extendedData: ExtendedData, runReq: WLRunReq, dbList: Seq[WinstonLutz]): Elem = {
+  def run(extendedData: ExtendedData, runReq: WLRunReq, wlList: Seq[WinstonLutz]): Elem = {
 
-    val pairList = WLBeam.makePairList(runReq, dbList)
+    val wlMap = new WLMap(wlList)
 
-    val isoCheck = WLIsoCheck.make(pairList)
-    val collimator = WLCollimator.make(pairList)
-    val isoTable = WLIsoTable.make(pairList)
+    val isoCheck = WLIsoCheck.make(wlMap)
+    val collimator = WLCollimator.make(wlMap)
+    val isoTable = WLIsoTable.make(wlMap)
 
     // only do this if the required data is there.
     if (isoCheck.isDefined) {
 
-      val wlIsoCheckHTML = org.aqa.webrun.wl.isoCheck.isoCheckHTML.WLIsoCheckHTML(extendedData, pairList, isoCheck.get, collimator.get, isoTable)
+      val wlIsoCheckHTML = org.aqa.webrun.wl.isoCheck.isoCheckHTML.WLIsoCheckHTML(extendedData, runReq, wlMap, isoCheck.get, collimator.get, isoTable)
 
       val isoCheckDb: IsoCheck = (collimator, isoTable) match {
         case (Some(col), Some(table)) =>

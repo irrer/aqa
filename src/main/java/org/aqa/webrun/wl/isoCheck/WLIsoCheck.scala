@@ -1,6 +1,7 @@
 package org.aqa.webrun.wl.isoCheck
 
 import org.aqa.Logging
+import org.aqa.db.WinstonLutz
 
 /**
  * Contain and process WL isoCheck data.
@@ -211,28 +212,24 @@ object WLIsoCheck extends Logging {
   /**
    * Determine if all the data is present to construct a WL IsoCheck data set.  If so, make one and return it.
    *
-   * @param beamList List of incoming DICOM and results.
+   * @param wlMap List of incoming DICOM and results.
    * @return IsoCheck data set or None.
    */
-  def make(beamList: Seq[WLBeam]): Option[WLIsoCheck] = {
-
-    def findPair(g: Int, c: Int, t: Int): Option[WLBeam] = {
-      WLBeam.findGCT(beamList, g, c, t)
-    }
+  def make(wlMap: WLMap): Option[WLIsoCheck] = {
 
     // @formatter:off
-    val G__0_C_90_T__0: Option[WLBeam] = findPair(  0,  90,   0)
-    val G__0_C270_T__0: Option[WLBeam] = findPair(  0, 270,   0)
+    val G__0_C_90_T__0: Option[WinstonLutz] = wlMap.find(  0,  90,   0)
+    val G__0_C270_T__0: Option[WinstonLutz] = wlMap.find(  0, 270,   0)
 
-    val G_90_C_90_T__0: Option[WLBeam] = findPair( 90,  90,   0)
-    val G_90_C270_T__0: Option[WLBeam] = findPair( 90, 270,   0)
+    val G_90_C_90_T__0: Option[WinstonLutz] = wlMap.find( 90,  90,   0)
+    val G_90_C270_T__0: Option[WinstonLutz] = wlMap.find( 90, 270,   0)
 
-    val G180_C__0_T__0: Option[WLBeam] = findPair(180,   0,   0)
-    val G180_C_90_T__0: Option[WLBeam] = findPair(180,  90,   0)
-    val G180_C270_T__0: Option[WLBeam] = findPair(180, 270,   0)
+    val G180_C__0_T__0: Option[WinstonLutz] = wlMap.find(180,   0,   0)
+    val G180_C_90_T__0: Option[WinstonLutz] = wlMap.find(180,  90,   0)
+    val G180_C270_T__0: Option[WinstonLutz] = wlMap.find(180, 270,   0)
 
-    val G270_C_90_T__0: Option[WLBeam] = findPair(270,  90,   0)
-    val G270_C270_T__0: Option[WLBeam] = findPair(270, 270,   0)
+    val G270_C_90_T__0: Option[WinstonLutz] = wlMap.find(270,  90,   0)
+    val G270_C270_T__0: Option[WinstonLutz] = wlMap.find(270, 270,   0)
     // @formatter:on
 
     // list of all files required for WL IsoCheck

@@ -1,9 +1,9 @@
 package org.aqa.webrun.wl.isoCheck.isoCheckHTML
 
+import org.aqa.db.WinstonLutz
 import org.aqa.web.C3ScatterPlot
 import org.aqa.web.C3ScatterPlotDataPoint
 import org.aqa.web.C3ScatterPlotDataSet
-import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLIsoTable
 
 object TableWobbleChart {
@@ -12,15 +12,15 @@ object TableWobbleChart {
 
     val hasIt = isoTable.isDefined
 
-    def dXOf(beam: WLBeam): Option[Double] = {
+    def dXOf(beam: WinstonLutz): Option[Double] = {
       isoTable.map(it => it.BB_Xp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized) - it.get_IsoTable_X_Optimized)
     }
 
-    def dZOf(beam: WLBeam): Option[Double] = {
+    def dZOf(beam: WinstonLutz): Option[Double] = {
       isoTable.map(it => it.BB_Zpp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_Z_Optimized))
     }
 
-    def point(beam: WLBeam): Option[C3ScatterPlotDataPoint] = {
+    def point(beam: WinstonLutz): Option[C3ScatterPlotDataPoint] = {
       if (hasIt)
         Some(C3ScatterPlotDataPoint(dXOf(beam).get, dZOf(beam).get))
       else None

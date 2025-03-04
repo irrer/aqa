@@ -6,10 +6,11 @@ import org.aqa.webrun.wl.isoCheck.WLCollimator
 import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.Logging
 import org.aqa.Util
-import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLIsoCheck
 import org.aqa.webrun.wl.isoCheck.WLXLSXSpreadsheet
 import org.aqa.webrun.wl.isoCheck.ssHtml.SSHtml
+import org.aqa.webrun.wl.WLRunReq
+import org.aqa.webrun.wl.isoCheck.WLMap
 
 import java.io.File
 import scala.xml.Elem
@@ -18,13 +19,14 @@ import scala.xml.Elem
   * Make the HTML for the main page of the isoCheck report.
   *
   * @param extendedData Metadata
-  * @param pairList List of beam results and DICOM
+  * @param runReq Raw input data
+  * @param wlMap List of beam results and DICOM
   * @param isoCheck IsoCheck data.
   * @param isoTable IsoTable data.
   * @param collimator Collimator data.
   */
 
-case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], isoCheck: WLIsoCheck, collimator: WLCollimator, isoTable: Option[WLIsoTable]) extends Logging {
+case class WLIsoCheckHTML(extendedData: ExtendedData, runReq: WLRunReq, wlMap: WLMap, isoCheck: WLIsoCheck, collimator: WLCollimator, isoTable: Option[WLIsoTable]) extends Logging {
 
   def mainPage(): Elem = {
 
@@ -34,9 +36,9 @@ case class WLIsoCheckHTML(extendedData: ExtendedData, pairList: Seq[WLBeam], iso
 
     val htmlFile = new File(WLIsoCheckHTML.dir(extendedData), "index.html")
 
-    val fileNameCsvSNCImport = SSHtml.make(extendedData, pairList, isoCheck, isoTable, collimator)
+    val fileNameCsvSNCImport = SSHtml.make(extendedData, runReq, wlMap, isoCheck, isoTable, collimator)
 
-    val fileName_xlsx = WLXLSXSpreadsheet.makeSpreadsheet(extendedData, pairList, isoTable, collimator)
+    val fileName_xlsx = WLXLSXSpreadsheet.makeSpreadsheet(extendedData, runReq, wlMap, isoTable, collimator)
 
     val isoCheckChart = new WLIsoCheckChart(extendedData.outputPK)
 

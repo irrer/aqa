@@ -4,8 +4,8 @@ import org.aqa.db.IsoCheck
 import org.aqa.db.IsoCheck.IsoCheckHistory
 import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Output
+import org.aqa.db.WinstonLutz
 import org.aqa.web.C3ChartHistory
-import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLIsoTable
 
 import java.awt.Color
@@ -180,7 +180,7 @@ class WLIsoCheckChart(outputPK: Long) {
       "T270"
     )
 
-    def BB_RppSq(it: WLIsoTable, beam: WLBeam): Double = {
+    def BB_RppSq(it: WLIsoTable, beam: WinstonLutz): Double = {
       it.BB_Rpp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_X_Optimized, it.get_IsoTable_Z_Optimized)
     }
 
@@ -245,7 +245,7 @@ class WLIsoCheckChart(outputPK: Long) {
       "T330"
     )
 
-    def BB_RppSq(it: WLIsoTable, beam: WLBeam): Double = {
+    def BB_RppSq(it: WLIsoTable, beam: WinstonLutz): Double = {
       it.BB_Rpp(beam, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_X_Optimized, it.get_IsoTable_Z_Optimized)
     }
 

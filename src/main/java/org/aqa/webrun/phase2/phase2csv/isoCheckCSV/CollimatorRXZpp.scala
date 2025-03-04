@@ -6,9 +6,6 @@ import org.aqa.webrun.phase2.phase2csv.CsvCol.NA
 
 object CollimatorRXZpp {
 
-  // Scala compiler has a problem flagging this import as 'unused'.
-  private val WLBeam = org.aqa.webrun.wl.isoCheck.WLBeam
-
   private def CA_RppSq(c: Int, row: Int): CsvCol[IC] = {
     val name = s"CA-R''^2 G180 C$c T0"
     val description = s"CA-R''^2 G180 C$c T0 (mm) =Collimator!L$row"
@@ -19,7 +16,7 @@ object CollimatorRXZpp {
       (ic: IC) => {
         ic.getBeam(180, c) match {
           case Some(wl) =>
-            ic.collimator.CA_Rpp(WLBeam(wl), ic.collimator.get_Coll_X_Optimized, ic.collimator.get_Coll_Z_Optimized)
+            ic.collimator.CA_Rpp(wl, ic.collimator.get_Coll_X_Optimized, ic.collimator.get_Coll_Z_Optimized)
           case _ => NA
         }
       }
@@ -36,7 +33,7 @@ object CollimatorRXZpp {
       (ic: IC) => {
         ic.getBeam(180, c) match {
           case Some(wl) =>
-            ic.collimator.CA_Xpp(WLBeam(wl), ic.collimator.get_Coll_X_Optimized)
+            ic.collimator.CA_Xpp(wl, ic.collimator.get_Coll_X_Optimized)
           case _ => NA
         }
       }
@@ -53,7 +50,7 @@ object CollimatorRXZpp {
       (ic: IC) => {
         ic.getBeam(180, c) match {
           case Some(wl) =>
-            ic.collimator.CA_Zpp(WLBeam(wl), ic.collimator.get_Coll_Z_Optimized)
+            ic.collimator.CA_Zpp(wl, ic.collimator.get_Coll_Z_Optimized)
           case _ => NA
         }
       }

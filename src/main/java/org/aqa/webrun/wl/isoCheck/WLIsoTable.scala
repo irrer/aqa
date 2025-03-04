@@ -1,20 +1,21 @@
 package org.aqa.webrun.wl.isoCheck
 
 import org.aqa.Logging
+import org.aqa.db.WinstonLutz
 
 case class WLIsoTable(
                        // @formatter:off
-                    T__0: Option[ WLBeam],
-                    T_30: Option[ WLBeam],
-                    T_60: Option[ WLBeam],
-                    T_90: Option[ WLBeam],
-                    T270: Option[ WLBeam],
-                    T300: Option[ WLBeam],
-                    T330: Option[ WLBeam]
+                    T__0: Option[WinstonLutz],
+                    T_30: Option[WinstonLutz],
+                    T_60: Option[WinstonLutz],
+                    T_90: Option[WinstonLutz],
+                    T270: Option[WinstonLutz],
+                    T300: Option[WinstonLutz],
+                    T330: Option[WinstonLutz]
                     // @formatter:on
                      ) extends Logging {
 
-  val beamList: Seq[WLBeam] = Seq(
+  val beamList: Seq[WinstonLutz] = Seq(
     T__0,
     T_30,
     T_60,
@@ -88,38 +89,38 @@ case class WLIsoTable(
   def tableWobbleDiameter: Double = 2 * Math.sqrt(get_RSquared_Optimized)
 
   /** Analysis L */
-  def dXOf(beam: WLBeam, dX: Double, dZ: Double): Double = {
-    (dX * beam.cos) + (dZ * beam.sin)
+  def dXOf(wl: WinstonLutz, dX: Double, dZ: Double): Double = {
+    (dX * wl.yawCos.get) + (dZ * wl.yawSin.get)
   }
 
   /** Analysis M */
-  def dZOf(beam: WLBeam, dX: Double, dZ: Double): Double = {
-    (dZ * beam.cos) - (dX * beam.sin)
+  def dZOf(wl: WinstonLutz, dX: Double, dZ: Double): Double = {
+    (dZ * wl.yawCos.get) - (dX * wl.yawSin.get)
   }
 
   /** Analysis H */
-  def BB_X(beam: WLBeam): Double = { // H
-    val bb_x = beam.wl.errorX_mm - T__0.get.wl.errorX_mm
+  def BB_X(wl: WinstonLutz): Double = { // H
+    val bb_x = wl.errorX_mm - T__0.get.errorX_mm
     bb_x
   }
 
   /** Analysis I */
-  def BB_Z(beam: WLBeam): Double = beam.wl.errorY_mm - T__0.get.wl.errorY_mm // I
+  def BB_Z(wl: WinstonLutz): Double = wl.errorY_mm - T__0.get.errorY_mm // I
 
   /** Analysis J */
-  def BB_Xp(beam: WLBeam, dX: Double, dZ: Double): Double = BB_X(beam) + dXOf(beam, dX, dZ) // J
+  def BB_Xp(wl: WinstonLutz, dX: Double, dZ: Double): Double = BB_X(wl) + dXOf(wl, dX, dZ) // J
 
   /** Analysis K */
-  def BB_Zp(beam: WLBeam, dX: Double, dZ: Double): Double = BB_Z(beam) + dZOf(beam, dX, dZ) // K
+  def BB_Zp(wl: WinstonLutz, dX: Double, dZ: Double): Double = BB_Z(wl) + dZOf(wl, dX, dZ) // K
 
   /** Analysis P BB-X" */
-  def BB_Xpp(beam: WLBeam, dX: Double, dZ: Double, IsoTable_X: Double): Double = BB_Xp(beam, dX, dZ) - IsoTable_X
+  def BB_Xpp(wl: WinstonLutz, dX: Double, dZ: Double, IsoTable_X: Double): Double = BB_Xp(wl, dX, dZ) - IsoTable_X
 
   /** Analysis Q BB-X" */
-  def BB_Zpp(beam: WLBeam, dX: Double, dZ: Double, IsoTable_Z: Double): Double = BB_Zp(beam, dX, dZ) - IsoTable_Z
+  def BB_Zpp(wl: WinstonLutz, dX: Double, dZ: Double, IsoTable_Z: Double): Double = BB_Zp(wl, dX, dZ) - IsoTable_Z
 
   /** Analysis P BB-Z" */
-  def BB_Rpp(beam: WLBeam, dX: Double, dZ: Double, IsoTable_X: Double, IsoTable_Z: Double): Double = {
+  def BB_Rpp(beam: WinstonLutz, dX: Double, dZ: Double, IsoTable_X: Double, IsoTable_Z: Double): Double = {
     val x = BB_Xpp(beam, dX, dZ, IsoTable_X)
     val z = BB_Zpp(beam, dX, dZ, IsoTable_Z)
     (x * x) + (z * z)
@@ -169,7 +170,7 @@ case class WLIsoTable(
 
   /** SNCImport C13   Maximum error in old Winston-Lutz. */
   val maxR: Double = {
-    val biggest = beamList.map(_.wl.errorXY_mm).max
+    val biggest = beamList.map(_.errorXY_mm).max
     biggest
   }
 
@@ -183,20 +184,16 @@ object WLIsoTable {
    * @param pairList List of incoming DICOM and results.
    * @return IsoTable data set or None.
    */
-  def make(pairList: Seq[WLBeam]): Option[WLIsoTable] = {
-
-    def findPair(g: Int, c: Int, t: Int): Option[WLBeam] = {
-      WLBeam.findGCT(pairList, g, c, t)
-    }
+  def make(wlMap: WLMap): Option[WLIsoTable] = {
 
     // @formatter:off
-    val T__0 : Option[WLBeam] = findPair( 180, 270,   0 )
-    val T_30 : Option[WLBeam] = findPair( 180, 270,  30 )
-    val T_60 : Option[WLBeam] = findPair( 180, 270,  60 )
-    val T_90 : Option[WLBeam] = findPair( 180, 270,  90 )
-    val T270 : Option[WLBeam] = findPair( 180, 270, 270 )
-    val T300 : Option[WLBeam] = findPair( 180, 270, 300 )
-    val T330 : Option[WLBeam] = findPair( 180, 270, 330 )
+    val T__0 : Option[WinstonLutz] = wlMap.find( 180, 270,   0 )
+    val T_30 : Option[WinstonLutz] = wlMap.find( 180, 270,  30 )
+    val T_60 : Option[WinstonLutz] = wlMap.find( 180, 270,  60 )
+    val T_90 : Option[WinstonLutz] = wlMap.find( 180, 270,  90 )
+    val T270 : Option[WinstonLutz] = wlMap.find( 180, 270, 270 )
+    val T300 : Option[WinstonLutz] = wlMap.find( 180, 270, 300 )
+    val T330 : Option[WinstonLutz] = wlMap.find( 180, 270, 330 )
     // @formatter:on
 
     // list of all files required for WL IsoTable
@@ -250,8 +247,8 @@ object WLIsoTable {
 
   }
 
-  def CA_X(beam: WLBeam): Double = -beam.wl.errorX_mm
+  def CA_X(beam: WinstonLutz): Double = -beam.errorX_mm
 
-  def CA_Z(beam: WLBeam): Double = -beam.wl.errorY_mm
+  def CA_Z(beam: WinstonLutz): Double = -beam.errorY_mm
 
 }

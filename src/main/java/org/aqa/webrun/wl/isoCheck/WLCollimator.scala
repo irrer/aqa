@@ -1,13 +1,14 @@
 package org.aqa.webrun.wl.isoCheck
 
 import org.aqa.Logging
+import org.aqa.db.WinstonLutz
 
 case class WLCollimator(
-                         // @formatter:off
-                    T__0: WLBeam,
-                    T_90: WLBeam,
-                    T270: WLBeam,
-                    // @formatter:on
+    // @formatter:off
+    T__0: WinstonLutz,
+    T_90: WinstonLutz,
+    T270: WinstonLutz,
+    // @formatter:on
                        ) extends Logging {
 
   private val beamList = Seq(
@@ -54,17 +55,17 @@ case class WLCollimator(
 
   // ------------------------------------------------------------------------------------------
 
-  def CA_X(beam: WLBeam): Double = -beam.wl.errorX_mm
+  def CA_X(wl: WinstonLutz): Double = -wl.errorX_mm
 
-  def CA_Z(beam: WLBeam): Double = -beam.wl.errorY_mm
+  def CA_Z(wl: WinstonLutz): Double = -wl.errorY_mm
 
-  def CA_Xpp(beam: WLBeam, Coll_X: Double): Double = CA_X(beam) - Coll_X
+  def CA_Xpp(wl: WinstonLutz, Coll_X: Double): Double = CA_X(wl) - Coll_X
 
-  def CA_Zpp(beam: WLBeam, Coll_Z: Double): Double = CA_Z(beam) - Coll_Z
+  def CA_Zpp(wl: WinstonLutz, Coll_Z: Double): Double = CA_Z(wl) - Coll_Z
 
-  def CA_Rpp(beam: WLBeam, Coll_X: Double, Coll_Z: Double): Double = {
-    val x = CA_Xpp(beam, Coll_X)
-    val z = CA_Zpp(beam, Coll_Z)
+  def CA_Rpp(wl: WinstonLutz, Coll_X: Double, Coll_Z: Double): Double = {
+    val x = CA_Xpp(wl, Coll_X)
+    val z = CA_Zpp(wl, Coll_Z)
     Math.sqrt((x * x) + (z * z))
   }
 
@@ -98,24 +99,20 @@ object WLCollimator {
   /**
    * Determine if all the data is present to construct a WL IsoTable data set.  If so, make one and return it.
    *
-   * @param pairList List of incoming DICOM and results.
+   * @param wlList List of incoming DICOM and results.
    * @return IsoTable data set or None.
    */
-  def make(pairList: Seq[WLBeam]): Option[WLCollimator] = {
-
-    def findPair(g: Int, c: Int, t: Int): Option[WLBeam] = {
-      WLBeam.findGCT(pairList, g, c, t)
-    }
+  def make(wlMap: WLMap): Option[WLCollimator] = {
 
 
     // @formatter:off
-    val T__0 : Option[WLBeam] = findPair( 180,   0,  0 )
-    val T_90 : Option[WLBeam] = findPair( 180,  90,  0 )
-    val T270 : Option[WLBeam] = findPair( 180, 270,  0 )
+    val T__0 : Option[WinstonLutz] = wlMap.find( 180,   0,  0 )
+    val T_90 : Option[WinstonLutz] = wlMap.find( 180,  90,  0 )
+    val T270 : Option[WinstonLutz] = wlMap.find( 180, 270,  0 )
     // @formatter:on
 
     // list of all files required for WL IsoTable
-    val requiredList: Seq[Option[WLBeam]] = Seq(
+    val requiredList: Seq[Option[WinstonLutz]] = Seq(
       T__0,
       T_90,
       T270,

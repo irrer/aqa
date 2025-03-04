@@ -6,8 +6,6 @@ import org.aqa.webrun.phase2.phase2csv.CsvCol.NA
 import org.aqa.Util
 
 object AnalysisTableDxDz {
-  // Scala compiler has a problem flagging this import as 'unused'.
-  private val WLBeam = org.aqa.webrun.wl.isoCheck.WLBeam
 
   private def dX(t: Int, row: Int): CsvCol[IC] = {
     val name = s"dX G180 C270 T$t"
@@ -19,7 +17,7 @@ object AnalysisTableDxDz {
       (ic: IC) => {
         ic.getBeam(180, 270, Util.negateAngle(t)) match {
           case Some(wl) if ic.hasTable =>
-            ic.isoTable.get.dXOf(WLBeam(wl), ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
+            ic.isoTable.get.dXOf(wl, ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
           case _ => NA
         }
       }
@@ -36,7 +34,7 @@ object AnalysisTableDxDz {
       (ic: IC) => {
         ic.getBeam(180, 270, Util.negateAngle(t)) match {
           case Some(wl) if ic.hasTable =>
-            ic.isoTable.get.dZOf(WLBeam(wl), ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
+            ic.isoTable.get.dZOf(wl, ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
           case _ => NA
         }
       }

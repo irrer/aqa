@@ -19,7 +19,6 @@ package org.aqa.webrun.phase2.phase2csv.isoCheckCSV
 import org.apache.poi.ss.util.CellReference
 import org.aqa.db.IsoCheck
 import org.aqa.db.Output
-import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.Util
 import org.aqa.webrun.phase2.phase2csv.CsvCol
 import org.aqa.webrun.phase2.phase2csv.MetadataCache
@@ -111,7 +110,7 @@ class IsoCheckCsv(metadataCache: MetadataCache) extends Phase2Csv[IsoCheck.IsoCh
       (ic: IC) => {
         ic.getBeam(180, c) match {
           case Some(wl) =>
-            ic.collimator.CA_Xpp(WLBeam(wl), ic.collimator.get_Coll_X_Optimized)
+            ic.collimator.CA_Xpp(wl, ic.collimator.get_Coll_X_Optimized)
           case _ => NA
         }
       }
@@ -128,7 +127,7 @@ class IsoCheckCsv(metadataCache: MetadataCache) extends Phase2Csv[IsoCheck.IsoCh
       (ic: IC) => {
         ic.getBeam(180, c) match {
           case Some(wl) =>
-            ic.collimator.CA_Zpp(WLBeam(wl), ic.collimator.get_Coll_Z_Optimized)
+            ic.collimator.CA_Zpp(wl, ic.collimator.get_Coll_Z_Optimized)
           case _ => NA
         }
       }
@@ -145,7 +144,7 @@ class IsoCheckCsv(metadataCache: MetadataCache) extends Phase2Csv[IsoCheck.IsoCh
       (ic: IC) => {
         ic.getBeam(180, c) match {
           case Some(wl) =>
-            ic.collimator.CA_Rpp(WLBeam(wl), ic.collimator.get_Coll_X_Optimized, ic.collimator.get_Coll_Z_Optimized)
+            ic.collimator.CA_Rpp(wl, ic.collimator.get_Coll_X_Optimized, ic.collimator.get_Coll_Z_Optimized)
           case _ => NA
         }
       }

@@ -11,9 +11,9 @@ class TableBB_RSqSevenBeams(isoCheckChart: WLIsoCheckChart, isoTable: Option[WLI
   private def tdMake(tableAngle: Int): Option[Elem] = {
     val name = "T" + tableAngle
     val it = isoTable.get
-    val beam = it.beamList.find(bb => bb.tableAngle == tableAngle)
-    if (beam.isDefined) {
-      val value = it.BB_Rpp(beam.get, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_X_Optimized, it.get_IsoTable_Z_Optimized)
+    val wl = it.beamList.find(bb => bb.tableAngleRounded.isDefined && (bb.tableAngleRounded.get == tableAngle))
+    if (wl.isDefined) {
+      val value = it.BB_Rpp(wl.get, it.get_dXT__0_Optimized, it.get_dZT__0_Optimized, it.get_IsoTable_X_Optimized, it.get_IsoTable_Z_Optimized)
       Some(tdElem(name, value))
     } else
       None

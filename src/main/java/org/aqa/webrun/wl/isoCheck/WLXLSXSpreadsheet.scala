@@ -9,6 +9,8 @@ import org.aqa.Util
 import org.aqa.webrun.wl.isoCheck.isoCheckHTML.WLIsoCheckHTML
 import org.aqa.AnonymizeUtil
 import org.aqa.Crypto
+import org.aqa.db.WinstonLutz
+import org.aqa.webrun.wl.WLRunReq
 
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -30,12 +32,13 @@ object WLXLSXSpreadsheet extends Logging {
     * This file can serve as a double check as to the correctness of the calculations.
     *
     * @param extendedData Metadata data.
-    * @param pairList WL data and DICOM.
+    * @param runReq Raw input data.
+    * @param wlMap WL data and DICOM.
     * @param isoTable Processed isoTable data.
     * @param collimator Processed column data.
     * @return The name of the file.
     */
-  def makeSpreadsheet(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option[WLIsoTable], collimator: WLCollimator): String = {
+  def makeSpreadsheet(extendedData: ExtendedData, runReq: WLRunReq, wlMap: WLMap, isoTable: Option[WLIsoTable], collimator: WLCollimator): String = {
 
     val workbook = {
       0 match {
@@ -46,7 +49,7 @@ object WLXLSXSpreadsheet extends Logging {
     }
 
     // get the date+time of the first slice
-    val firstDateTime: Date = pairList.head.dataDate
+    val firstDateTime: Date = wlMap.list.head.dataDate
 
     val columnList = WLColumnList(extendedData.machine, firstDateTime).columnList
 
@@ -65,18 +68,19 @@ object WLXLSXSpreadsheet extends Logging {
       analysisDateCell.setCellValue(s"Data Date: $analysisDateText")
     }
 
-    def updateContentRow(rowNum: Int, pair: WLBeam): Unit = {
+    def updateContentRow(rowNum: Int, wl: WinstonLutz): Unit = {
       val row = sheetData.getRow(rowNum - 1) // subtracting 1 converts a row number to a 0-relative row index
 
-      columnList.indices.foreach(i => columnList(i).updateCell(row.getCell(i), pair.wl, pair.al))
+      columnList.indices.foreach(i => columnList(i).updateCell(row.getCell(i), wl, runReq.alOf(wl).get))
     }
 
     /**
       * Update all the content rows.  Sort by acquisition time, associate each data set with a row, and then process each row.
       */
     def updateContentRowList(): Unit = {
-      val last = Math.min(lastRowNum, pairList.size + firstRowNum - 1)
-      (firstRowNum to last).foreach(rowNum => updateContentRow(rowNum, pairList(rowNum - firstRowNum)))
+      val last = Math.min(lastRowNum, wlMap.list.size + firstRowNum - 1)
+      val list = wlMap.list.toSeq
+      (firstRowNum to last).foreach(rowNum => updateContentRow(rowNum, list(rowNum - firstRowNum)))
     }
 
     /**

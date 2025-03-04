@@ -16,6 +16,7 @@
 
 package org.aqa.db
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.Util
@@ -70,6 +71,7 @@ case class WinstonLutz(
   val gantryAngleRounded: Int = Util.angleRoundedTo90(gantryAngle_deg)
   val collimatorAngleRounded: Int = Util.angleRoundedTo90(collimatorAngle_deg)
   val tableAngleRounded: Option[Int] = tableAngle_deg.map(WLXlsxUtil.angleRounded)
+  val yaw: Option[Int] = tableAngleRounded.map(Util.negateAngle)
 
   /**
    * Construct beam name based on the gantry, collimator, and table angles.
@@ -108,24 +110,24 @@ case class WinstonLutz(
   def boxCenterY_mm: Double = (topEdge_mm + bottomEdge_mm) / 2
 
   //noinspection ScalaWeakerAccess
-  def errorX_mm: Double = boxCenterX_mm - ballX_mm
+  val errorX_mm: Double = boxCenterX_mm - ballX_mm
 
   //noinspection ScalaWeakerAccess
-  def errorY_mm: Double = boxCenterY_mm - ballY_mm
+  val errorY_mm: Double = boxCenterY_mm - ballY_mm
 
-  def errorXY_mm: Double = Math.sqrt((errorX_mm * errorX_mm) + (errorY_mm * errorY_mm))
+  val errorXY_mm: Double = Math.sqrt((errorX_mm * errorX_mm) + (errorY_mm * errorY_mm))
 
   /** top edge measured - planned */
-  def topError_mm: Option[Double] = if (topEdgePlanned_mm.isDefined) Some(topEdge_mm - topEdgePlanned_mm.get) else None
+  val topError_mm: Option[Double] = if (topEdgePlanned_mm.isDefined) Some(topEdge_mm - topEdgePlanned_mm.get) else None
 
   /** bottom edge measured - planned */
-  def bottomError_mm: Option[Double] = if (bottomEdgePlanned_mm.isDefined) Some(bottomEdge_mm - bottomEdgePlanned_mm.get) else None
+  val bottomError_mm: Option[Double] = if (bottomEdgePlanned_mm.isDefined) Some(bottomEdge_mm - bottomEdgePlanned_mm.get) else None
 
   /** left edge measured - planned */
-  def leftError_mm: Option[Double] = if (leftEdgePlanned_mm.isDefined) Some(leftEdge_mm - leftEdgePlanned_mm.get) else None
+  val leftError_mm: Option[Double] = if (leftEdgePlanned_mm.isDefined) Some(leftEdge_mm - leftEdgePlanned_mm.get) else None
 
   /** right edge measured - planned */
-  def rightError_mm: Option[Double] = if (rightEdgePlanned_mm.isDefined) Some(rightEdge_mm - rightEdgePlanned_mm.get) else None
+  val rightError_mm: Option[Double] = if (rightEdgePlanned_mm.isDefined) Some(rightEdge_mm - rightEdgePlanned_mm.get) else None
 
 
   /** Analysis F */
@@ -151,6 +153,12 @@ case class WinstonLutz(
   /** Analysis H */
   val caZ: Option[Double] = Some(-errorY_mm).map(rnd)
 
+  private val rawRadians: Option[Double] = yaw.map(_.toDouble).map(Math.toRadians)
+  val yawSin: Option[Double] = rawRadians.map(Math.sin)
+  val yawCos: Option[Double] = rawRadians.map(Math.cos)
+
+  if (tableAngleRounded.isDefined && (tableAngleRounded.get == 30) && rtimageUID.equals("1.3.6.1.4.1.22361.17483843774714.1716930820.1733782037412.7")) // TODO rm
+    Trace.trace()
 
   override def toString: String = {
     // @formatter:off
@@ -418,6 +426,19 @@ object WinstonLutz extends Logging {
     val tsList = Db.run(search.result)
 
     tsList.toIndexedSeq
+  }
+
+
+  /**
+   *
+   * @param list
+   * @param gantryAngle
+   * @param collimatorAngle
+   * @param tableAngle
+   * @return
+   */
+  def findGCT(list: Seq[WinstonLutz], gantryAngle: Int, collimatorAngle: Int, tableAngle: Int): WinstonLutz = {
+    list.find(wl => (wl.gantryAngleRounded == gantryAngle) && (wl.collimatorAngleRounded == collimatorAngle) && (wl.tableAngleRounded == tableAngle)).get
   }
 
 }

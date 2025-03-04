@@ -10,9 +10,6 @@ import org.aqa.Util
   */
 object BBXZpp {
 
-  // Scala compiler has a problem flagging this import as 'unused'.
-  private val WLBeam = org.aqa.webrun.wl.isoCheck.WLBeam
-
   private def BB_RppSq(t: Int, row: Int): CsvCol[IC] = {
     val name = s"BB-R''^2 G180 C270 T$t"
     val description = s"BB-R''^2 G180 C270 T$t (mm) =Analysis!R$row"
@@ -24,7 +21,7 @@ object BBXZpp {
         ic.getBeam(180, 270, Util.negateAngle(t)) match {
           case Some(wl) if ic.hasTable =>
             ic.isoTable.get.BB_Rpp(
-              WLBeam(wl),
+              wl,
               ic.isoTable.get.get_dXT__0_Optimized,
               ic.isoTable.get.get_dZT__0_Optimized,
               ic.isoTable.get.get_IsoTable_X_Optimized,
@@ -46,7 +43,7 @@ object BBXZpp {
       (ic: IC) => {
         ic.getBeam(180, 270, Util.negateAngle(t)) match {
           case Some(wl) if ic.hasTable =>
-            ic.isoTable.get.BB_Xpp(WLBeam(wl), ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized, ic.isoTable.get.get_IsoTable_X_Optimized)
+            ic.isoTable.get.BB_Xpp(wl, ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized, ic.isoTable.get.get_IsoTable_X_Optimized)
           case _ => NA
         }
       }
@@ -63,7 +60,7 @@ object BBXZpp {
       (ic: IC) => {
         ic.getBeam(180, 270, Util.negateAngle(t)) match {
           case Some(wl) if ic.hasTable =>
-            ic.isoTable.get.BB_Zpp(WLBeam(wl), ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized, ic.isoTable.get.get_IsoTable_Z_Optimized)
+            ic.isoTable.get.BB_Zpp(wl, ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized, ic.isoTable.get.get_IsoTable_Z_Optimized)
           case _ => NA
         }
       }

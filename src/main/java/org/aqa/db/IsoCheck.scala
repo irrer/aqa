@@ -16,11 +16,11 @@
 
 package org.aqa.db
 
-import com.pixelmed.dicom.AttributeList
 import org.aqa.db.Db.driver.api._
 import org.aqa.webrun.wl.isoCheck.WLCollimator
 import org.aqa.webrun.wl.isoCheck.WLIsoCheck
 import org.aqa.webrun.wl.isoCheck.WLIsoTable
+import org.aqa.webrun.wl.isoCheck.WLMap
 
 import java.sql.Timestamp
 
@@ -129,18 +129,17 @@ object IsoCheck {
 
     /** Maximum radius (X-Y distance (radius) between ball and box. */
     val maxR: Double = Seq(Some(isoCheck.maxR), isoTable.map(_.maxR)).flatten.max
-
   }
 
   private def makeIsoCheckHistory(output: Output, isoCheck: IsoCheck, wlList: Seq[WinstonLutz]): Option[IsoCheckHistory] = {
 
-    val beamList = wlList.map(wl => org.aqa.webrun.wl.isoCheck.WLBeam(wl, new AttributeList))
+    val beamMap = new WLMap(wlList)
 
-    val wlIsoCheck = WLIsoCheck.make(beamList)
+    val wlIsoCheck = WLIsoCheck.make(beamMap)
 
-    val wlCollimator = WLCollimator.make(beamList).get
+    val wlCollimator = WLCollimator.make(beamMap).get
 
-    val wlIsoTable = WLIsoTable.make(beamList)
+    val wlIsoTable = WLIsoTable.make(beamMap)
 
     wlCollimator.set_Coll_X_Optimized(isoCheck.collX_mm.get)
     wlCollimator.set_Coll_Z_Optimized(isoCheck.collZ_mm.get)

@@ -1,7 +1,7 @@
 package org.aqa.webrun.wl.isoCheck.ssHtml
 
+import org.aqa.db.WinstonLutz
 import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLCollimator
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil._
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.blankCell
@@ -24,9 +24,9 @@ class SSCollimator(extendedData: ExtendedData, collimator: WLCollimator) extends
     * @param beam Beam to show.
     * @return cells for common content.
     */
-  private def isoTableAngleCells(beam: WLBeam): Seq[Elem] = {
+  private def isoTableAngleCells(beam: WinstonLutz): Seq[Elem] = {
 
-    val isoTableAngle0 = beam.collimatorAngle == 0
+    val isoTableAngle0 = beam.collimatorAngleRounded == 0
 
     val coll_X =
       if (isoTableAngle0)
@@ -41,11 +41,11 @@ class SSCollimator(extendedData: ExtendedData, collimator: WLCollimator) extends
         blankCell
 
     Seq(
-      toHtml(beam.gantryAngle), /*        A */
-      toHtml(beam.collimatorAngle), /*    B */
-      toHtml(beam.tableAngle), /*      C */
-      toHtml(beam.wl.errorX_mm), /*       D */
-      toHtml(beam.wl.errorY_mm), /*       E */
+      toHtml(beam.gantryAngleRounded), /*        A */
+      toHtml(beam.collimatorAngleRounded), /*    B */
+      toHtml(beam.tableAngleRounded.get), /*      C */
+      toHtml(beam.errorX_mm), /*       D */
+      toHtml(beam.errorY_mm), /*       E */
       toHtml(beam.caX), /*                F */
       toHtml(beam.caZ), /*                G */
       coll_X, /*                          H */

@@ -7,9 +7,6 @@ import org.aqa.Util
 
 object AnalysisBBXZ {
 
-  // Scala compiler has a problem flagging this import as 'unused'.
-  private val WLBeam = org.aqa.webrun.wl.isoCheck.WLBeam
-
   private def BB_X(t: Int, row: Int): CsvCol[IC] = {
     val name = s"BB-X G180 C270 T$t"
     val description = s"BB-X G180 C270 T$t (mm) =Analysis!H$row"
@@ -20,7 +17,7 @@ object AnalysisBBXZ {
       (ic: IC) => {
         ic.getBeam(180, 270, Util.negateAngle(t)) match {
           case Some(wl) if ic.hasTable =>
-            ic.isoTable.get.BB_X(WLBeam(wl))
+            ic.isoTable.get.BB_X(wl)
           case _ => NA
         }
       }
@@ -37,7 +34,7 @@ object AnalysisBBXZ {
       (ic: IC) => {
         ic.getBeam(180, 270, Util.negateAngle(t)) match {
           case Some(wl) if ic.hasTable =>
-            ic.isoTable.get.BB_Z(WLBeam(wl))
+            ic.isoTable.get.BB_Z(wl)
           case _ => org.aqa.webrun.phase2.phase2csv.CsvCol.NA
         }
       }

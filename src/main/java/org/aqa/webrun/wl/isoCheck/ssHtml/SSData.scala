@@ -3,7 +3,6 @@ package org.aqa.webrun.wl.isoCheck.ssHtml
 import org.aqa.Util
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
-import org.aqa.webrun.wl.isoCheck.WLBeam
 import org.aqa.webrun.wl.isoCheck.WLColumn
 import org.aqa.webrun.wl.isoCheck.WLColumnAlAnonText
 import org.aqa.webrun.wl.isoCheck.WLColumnMachine
@@ -14,6 +13,8 @@ import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.cssDataLeft
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.cssDataRight
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.cssPreprocessLeft
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.cssPreprocessRight
+import org.aqa.webrun.wl.WLRunReq
+import org.aqa.webrun.wl.isoCheck.WLMap
 
 import scala.xml.Elem
 
@@ -22,11 +23,11 @@ import scala.xml.Elem
   * @param extendedData Metadata
   * @param pairList WL data
   */
-class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option[WLIsoTable]) extends SSSheet {
+class SSData(extendedData: ExtendedData, runReq: WLRunReq, wlMap: WLMap, isoTable: Option[WLIsoTable]) extends SSSheet {
 
   override val name: String = "Data"
 
-  val columnList: Seq[WLColumn] = org.aqa.webrun.wl.isoCheck.WLColumnList(extendedData.machine, pairList.head.dataDate).columnList
+  val columnList: Seq[WLColumn] = org.aqa.webrun.wl.isoCheck.WLColumnList(extendedData.machine, wlMap.list.head.dataDate).columnList
 
   private def toPlainHtml(text: String, alignLeft: Boolean = true): Elem = {
     val a = if (alignLeft) cssPreprocessLeft else cssPreprocessRight
@@ -74,10 +75,10 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option
 
   private def makeRow(index: Int): Elem = {
 
-    val pair = pairList(index)
+    val wl = wlMap.list(index)
 
     def colToHtml(col: WLColumn): Elem = {
-      toHtml(col.toText(pair.wl, pair.al), col.alignLeft, alias = col.isInstanceOf[WLColumnAlAnonText] || col.isInstanceOf[WLColumnMachine])
+      toHtml(col.toText(wl, runReq.alOf(wl).get), col.alignLeft, alias = col.isInstanceOf[WLColumnAlAnonText] || col.isInstanceOf[WLColumnMachine])
     }
 
     <tr>
@@ -163,7 +164,7 @@ class SSData(extendedData: ExtendedData, pairList: Seq[WLBeam], isoTable: Option
         {WLXlsxUtil.makeAlphaRow(26)}
         {makeTitleRow}
         {makeHeaderRow}
-        {pairList.indices.map(makeRow)}
+        {wlMap.list.indices.map(makeRow)}
         {isoTableFiller}
         {makeCbct}
       </table>
