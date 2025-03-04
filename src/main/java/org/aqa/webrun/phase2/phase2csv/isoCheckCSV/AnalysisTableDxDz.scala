@@ -3,19 +3,18 @@ package org.aqa.webrun.phase2.phase2csv.isoCheckCSV
 import org.aqa.webrun.phase2.phase2csv.CsvCol
 import org.aqa.webrun.phase2.phase2csv.isoCheckCSV.IsoCheckCsv.IC
 import org.aqa.webrun.phase2.phase2csv.CsvCol.NA
-import org.aqa.Util
 
 object AnalysisTableDxDz {
 
-  private def dX(t: Int, row: Int): CsvCol[IC] = {
-    val name = s"dX G180 C270 T$t"
-    val description = s"dX G180 C270 T$t (mm) =Analysis!L$row"
+  private def dX(yaw: Int, row: Int): CsvCol[IC] = {
+    val name = s"dX G180 C270 T$yaw"
+    val description = s"dX G180 C270 T$yaw (mm) =Analysis!L$row"
 
     CsvCol(
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, 270, Util.negateAngle(t)) match {
+        ic.wlMap.findYaw(180, 270, yaw) match {
           case Some(wl) if ic.hasTable =>
             ic.isoTable.get.dXOf(wl, ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
           case _ => NA
@@ -24,15 +23,15 @@ object AnalysisTableDxDz {
     )
   }
 
-  private def dZ(t: Int, row: Int): CsvCol[IC] = {
-    val name = s"dZ G180 C270 T$t"
-    val description = s"dZ G180 C270 T$t (mm) =Analysis!M$row"
+  private def dZ(yaw: Int, row: Int): CsvCol[IC] = {
+    val name = s"dZ G180 C270 T$yaw"
+    val description = s"dZ G180 C270 T$yaw (mm) =Analysis!M$row"
 
     CsvCol(
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, 270, Util.negateAngle(t)) match {
+        ic.wlMap.findYaw(180, 270, yaw) match {
           case Some(wl) if ic.hasTable =>
             ic.isoTable.get.dZOf(wl, ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
           case _ => NA
@@ -47,8 +46,8 @@ object AnalysisTableDxDz {
       dX( 30, 15),
       dX( 60, 16),
       dX( 90, 17),
-      dX( 270, 18),
-      dX( 300, 19),
+      dX(270, 18),
+      dX(300, 19),
       dX(330, 20),
 
       dZ( 30, 15),

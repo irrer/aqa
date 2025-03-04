@@ -1,6 +1,7 @@
 package org.aqa.webrun.wl.isoCheck
 
 import org.aqa.db.WinstonLutz
+import org.aqa.Util
 
 /**
   * Provide support for accessing Winston Lutz results for IsoCheck code.
@@ -33,6 +34,8 @@ class WLMap(fullList: Seq[WinstonLutz]) {
     * @param table Table angle.
     * @return
     */
-  def find(gantry: Int, collimator: Int, table: Int): Option[WinstonLutz] = wlMap.get(nameOf(gantry, collimator, table))
+  def find(gantry: Int, collimator: Int, table: Int = 0): Option[WinstonLutz] = wlMap.get(nameOf(gantry, collimator, table))
+
+  def findYaw(gantry: Int, collimator: Int, yaw: Int): Option[WinstonLutz] = wlMap.get(nameOf(gantry, collimator, Util.negateAngle(yaw)))
 
 }

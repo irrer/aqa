@@ -17,7 +17,7 @@ object AnalysisCAXYZ {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(g, c, t) match {
+        ic.wlMap.find(g, c, t) match {
           case Some(wl) if wl.caX.isDefined => wl.caX.get
           case _                            => NA
         }
@@ -33,7 +33,7 @@ object AnalysisCAXYZ {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(g, c) match {
+        ic.wlMap.find(g, c) match {
           case Some(wl) if wl.caY.isDefined => wl.caY.get
           case _                            => NA
         }
@@ -49,7 +49,7 @@ object AnalysisCAXYZ {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(g, c, t) match {
+        ic.wlMap.find(g, c, t) match {
           case Some(wl) if wl.caZ.isDefined => wl.caZ.get
           case _                            => NA
         }

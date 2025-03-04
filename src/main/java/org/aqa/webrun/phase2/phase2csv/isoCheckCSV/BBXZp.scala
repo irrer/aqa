@@ -14,7 +14,7 @@ object BBXZp {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, 270, t) match {
+        ic.wlMap.find(180, 270, t) match {
           case Some(wl) if ic.hasTable =>
             ic.isoTable.get.BB_Xp(wl, ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
           case _ => NA
@@ -31,7 +31,7 @@ object BBXZp {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, 270, t) match {
+        ic.wlMap.find(180, 270, t) match {
           case Some(wl) if ic.hasTable =>
             ic.isoTable.get.BB_Zp(wl, ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
           case _ => NA

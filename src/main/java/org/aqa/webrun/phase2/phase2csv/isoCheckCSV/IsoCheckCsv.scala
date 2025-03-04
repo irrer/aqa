@@ -44,7 +44,7 @@ class IsoCheckCsv(metadataCache: MetadataCache) extends Phase2Csv[IsoCheck.IsoCh
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(g, c, t) match {
+        ic.wlMap.find(g, c, t) match {
           case Some(wl) if wl.caX.isDefined => wl.caX.get
           case _                            => NA
         }
@@ -60,7 +60,7 @@ class IsoCheckCsv(metadataCache: MetadataCache) extends Phase2Csv[IsoCheck.IsoCh
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(g, c) match {
+        ic.wlMap.find(g, c) match {
           case Some(wl) if wl.caY.isDefined => wl.caY.get
           case _                            => NA
         }
@@ -76,7 +76,7 @@ class IsoCheckCsv(metadataCache: MetadataCache) extends Phase2Csv[IsoCheck.IsoCh
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(g, c, t) match {
+        ic.wlMap.find(g, c, t) match {
           case Some(wl) if wl.caZ.isDefined => wl.caZ.get
           case _                            => NA
         }
@@ -92,7 +92,7 @@ class IsoCheckCsv(metadataCache: MetadataCache) extends Phase2Csv[IsoCheck.IsoCh
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, 270, t) match {
+        ic.wlMap.find(180, 270, t) match {
           case Some(wl) if wl.caZ.isDefined => wl.caZ.get
           case _                            => NA
         }
@@ -108,7 +108,7 @@ class IsoCheckCsv(metadataCache: MetadataCache) extends Phase2Csv[IsoCheck.IsoCh
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, c) match {
+        ic.wlMap.find(180, c) match {
           case Some(wl) =>
             ic.collimator.CA_Xpp(wl, ic.collimator.get_Coll_X_Optimized)
           case _ => NA
@@ -125,7 +125,7 @@ class IsoCheckCsv(metadataCache: MetadataCache) extends Phase2Csv[IsoCheck.IsoCh
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, c) match {
+        ic.wlMap.find(180, c) match {
           case Some(wl) =>
             ic.collimator.CA_Zpp(wl, ic.collimator.get_Coll_Z_Optimized)
           case _ => NA
@@ -142,7 +142,7 @@ class IsoCheckCsv(metadataCache: MetadataCache) extends Phase2Csv[IsoCheck.IsoCh
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, c) match {
+        ic.wlMap.find(180, c) match {
           case Some(wl) =>
             ic.collimator.CA_Rpp(wl, ic.collimator.get_Coll_X_Optimized, ic.collimator.get_Coll_Z_Optimized)
           case _ => NA
@@ -176,7 +176,7 @@ class IsoCheckCsv(metadataCache: MetadataCache) extends Phase2Csv[IsoCheck.IsoCh
   }
 
   override def getSopUidList(data: IC): Seq[String] = {
-    val firstBeam = data.getBeam(0, 90).get.rtimageUID
+    val firstBeam = data.wlMap.find(0, 90).get.rtimageUID
     Seq(firstBeam)
   }
 

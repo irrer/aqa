@@ -120,12 +120,7 @@ object IsoCheck {
 
     override def getOutput: Output = output
 
-    def getBeam(gantry: Int, collimatorAngle: Int, tableAngle: Int = 0): Option[WinstonLutz] =
-      wlList.find(wl =>
-        (wl.gantryAngleRounded == gantry) &&
-          (wl.collimatorAngleRounded == collimatorAngle) &&
-          (wl.tableAngleRounded.get == tableAngle)
-      )
+    val wlMap = new WLMap(wlList)
 
     /** Maximum radius (X-Y distance (radius) between ball and box. */
     val maxR: Double = Seq(Some(isoCheck.maxR), isoTable.map(_.maxR)).flatten.max

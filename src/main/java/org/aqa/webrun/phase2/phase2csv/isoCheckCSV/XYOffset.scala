@@ -14,7 +14,7 @@ object XYOffset {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(g, c, t) match {
+        ic.wlMap.find(g, c, t) match {
           case Some(wl) => wl.errorX_mm
           case _        => NA
         }
@@ -30,7 +30,7 @@ object XYOffset {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(g, c, t) match {
+        ic.wlMap.find(g, c, t) match {
           case Some(wl) => wl.errorY_mm
           case _        => NA
         }

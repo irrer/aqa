@@ -14,7 +14,7 @@ object CollimatorRXZpp {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, c) match {
+        ic.wlMap.find(180, c) match {
           case Some(wl) =>
             ic.collimator.CA_Rpp(wl, ic.collimator.get_Coll_X_Optimized, ic.collimator.get_Coll_Z_Optimized)
           case _ => NA
@@ -31,7 +31,7 @@ object CollimatorRXZpp {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, c) match {
+        ic.wlMap.find(180, c) match {
           case Some(wl) =>
             ic.collimator.CA_Xpp(wl, ic.collimator.get_Coll_X_Optimized)
           case _ => NA
@@ -48,7 +48,7 @@ object CollimatorRXZpp {
       name,
       description,
       (ic: IC) => {
-        ic.getBeam(180, c) match {
+        ic.wlMap.find(180, c) match {
           case Some(wl) =>
             ic.collimator.CA_Zpp(wl, ic.collimator.get_Coll_Z_Optimized)
           case _ => NA
