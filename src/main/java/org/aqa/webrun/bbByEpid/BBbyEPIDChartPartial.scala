@@ -161,7 +161,7 @@ class BBbyEPIDChartPartial(outputPK: Long) extends Logging {
       Seq("Value"),
       yDataLabel = yDataLabel,
       dataToBeGraphed,
-      index,
+      index / 2,
       ".3r",
       yColorList = Seq(new Color(0, 120, 240), Color.gray)
     )
