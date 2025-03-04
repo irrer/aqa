@@ -20,7 +20,6 @@ import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.BBbyEPIDComposite
-import org.aqa.db.Input
 import org.aqa.db.Machine
 import org.aqa.db.MaintenanceCategory
 import org.aqa.db.MaintenanceRecord
@@ -38,7 +37,6 @@ class BBbyEPIDChart(outputPK: Long) extends Logging {
 
   private val output: Output = Output.get(outputPK).get
   private val procedure: Procedure = Procedure.get(output.procedurePK).get
-  private val input: Input = Input.get(output.inputPK).get
   private val machine: Machine = Machine.get(output.machinePK.get).get
   private val history: Seq[BBbyEPIDComposite.BBbyEPIDCompositeHistory] = {
     val hist = BBbyEPIDComposite.history(machine.machinePK.get, procedure.procedurePK.get)
