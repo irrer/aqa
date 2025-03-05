@@ -61,11 +61,11 @@ class IsoCheckCsv(metadataCache: MetadataCache) extends Phase2Csv[IsoCheck.IsoCh
   }
 
   override def getSopUidList(data: IC): Seq[String] = {
-    val firstBeam = data.wlMap.find(0, 90).get.rtimageUID
+    val firstBeam = data.wlMap.find(180, 0).get.rtimageUID
     Seq(firstBeam)
   }
 
-  override protected val dicomHeaderPrefixList: Seq[String] = Seq("")
+  override protected val dicomHeaderPrefixList: Seq[String] = Seq("G180 C0 T0:")
 
   override def getOutput(data: IC): Output = data.output
 }
