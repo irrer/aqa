@@ -24,7 +24,6 @@ import org.aqa.webrun.phase2.phase2csv.CsvCol
 import org.aqa.webrun.phase2.phase2csv.MetadataCache
 import org.aqa.webrun.phase2.phase2csv.Phase2Csv
 import org.aqa.webrun.phase2.phase2csv.isoCheckCSV.IsoCheckCsv.IC
-import org.aqa.webrun.phase2.phase2csv.CsvCol.NA
 import org.aqa.Logging
 
 import java.io.File
@@ -35,121 +34,6 @@ import scala.xml.XML
 class IsoCheckCsv(metadataCache: MetadataCache) extends Phase2Csv[IsoCheck.IsoCheckHistory](metadataCache: MetadataCache) {
 
   override val dataName: String = "IsoCheck"
-
-  private def CA_X(g: Int, c: Int, t: Int, row: Int, extraRef: String = ""): CsvCol[IC] = {
-    val name = s"CA-X G$g C$c T$t"
-    val description = s"CA-X Gantry:$g Collimator:$c Table$t (mm) =Analysis!F$row" + extraRef
-
-    CsvCol(
-      name,
-      description,
-      (ic: IC) => {
-        ic.wlMap.find(g, c, t) match {
-          case Some(wl) if wl.caX.isDefined => wl.caX.get
-          case _                            => NA
-        }
-      }
-    )
-  }
-
-  private def CA_Y(g: Int, c: Int, row: Int): CsvCol[IC] = {
-    val name = s"CA-Y G$g C$c T0"
-    val description = s"CA-Y Gantry:$g Collimator:$c Table:0 (mm) =Analysis!G$row"
-
-    CsvCol(
-      name,
-      description,
-      (ic: IC) => {
-        ic.wlMap.find(g, c) match {
-          case Some(wl) if wl.caY.isDefined => wl.caY.get
-          case _                            => NA
-        }
-      }
-    )
-  }
-
-  private def CA_Z(g: Int, c: Int, t: Int, row: Int, extraRef: String = ""): CsvCol[IC] = {
-    val name = s"CA-Z G$g C$c T$t"
-    val description = s"CA-Z Gantry:$g Collimator:$c Table$t (mm) =Analysis!H$row" + extraRef
-
-    CsvCol(
-      name,
-      description,
-      (ic: IC) => {
-        ic.wlMap.find(g, c, t) match {
-          case Some(wl) if wl.caZ.isDefined => wl.caZ.get
-          case _                            => NA
-        }
-      }
-    )
-  }
-
-  private def CA_ZT(t: Int, row: Int): CsvCol[IC] = {
-    val name = s"CA-Z G180 C270 T$t"
-    val description = s"CA-Z Gantry:180 Collimator:270 Table$t (mm) =Analysis!G$row"
-
-    CsvCol(
-      name,
-      description,
-      (ic: IC) => {
-        ic.wlMap.find(180, 270, t) match {
-          case Some(wl) if wl.caZ.isDefined => wl.caZ.get
-          case _                            => NA
-        }
-      }
-    )
-  }
-
-  private def CA_Xpp(c: Int, row: Int): CsvCol[IC] = {
-    val name = s"CA-X'' G180 C$c T0"
-    val description = s"CA-X'' G180 C$c T0 (mm) =Collimator!K$row"
-
-    CsvCol(
-      name,
-      description,
-      (ic: IC) => {
-        ic.wlMap.find(180, c) match {
-          case Some(wl) =>
-            ic.collimator.CA_Xpp(wl, ic.collimator.get_Coll_X_Optimized)
-          case _ => NA
-        }
-      }
-    )
-  }
-
-  private def CA_Zpp(c: Int, row: Int): CsvCol[IC] = {
-    val name = s"CA-Z'' G180 C$c T0"
-    val description = s"CA-X'' G180 C$c T0 (mm) =Collimator!K$row"
-
-    CsvCol(
-      name,
-      description,
-      (ic: IC) => {
-        ic.wlMap.find(180, c) match {
-          case Some(wl) =>
-            ic.collimator.CA_Zpp(wl, ic.collimator.get_Coll_Z_Optimized)
-          case _ => NA
-        }
-      }
-    )
-  }
-
-  private def CA_RppSq(c: Int, row: Int): CsvCol[IC] = {
-    val name = s"CA-R''^2 G180 C$c T0"
-    val description = s"CA-R''^2 G180 C$c T0 (mm) =Collimator!L$row"
-
-    CsvCol(
-      name,
-      description,
-      (ic: IC) => {
-        ic.wlMap.find(180, c) match {
-          case Some(wl) =>
-            ic.collimator.CA_Rpp(wl, ic.collimator.get_Coll_X_Optimized, ic.collimator.get_Coll_Z_Optimized)
-          case _ => NA
-        }
-      }
-    )
-  }
 
   override protected def makeColList: Seq[CsvCol[IC]] = {
     SNCImport.sncImportList() ++
@@ -291,7 +175,7 @@ object IsoCheckCsv extends Logging {
     private val name: String = list(1).text
     private val definition: String = list(2).text
 
-    val refTextList = definition.split(" ").filter(_.matches("=.*!.*")).toSeq
+    private val refTextList: Seq[String] = definition.split(" ").filter(_.matches("=.*!.*")).toSeq
 
     val refList: Seq[CellRef] = {
       refTextList.map(cellText => CellRef(cellText, this))
@@ -337,8 +221,6 @@ object IsoCheckCsv extends Logging {
 
     val sameText = if (same) "ok  " else "fail"
 
-//    if (!same)
-//      Trace.trace()
     println(s"""$sameText : csvIndex: ${csvIndex.formatted("%3d")} = $csvLetterColumn   csv value: $csvText    excel: $excelText    $cellRef ::  ${cellRef.parent}""")
 
     same

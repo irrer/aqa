@@ -25,7 +25,7 @@ object CollimatorRXZpp {
 
   private def CA_Xpp(c: Int, row: Int): CsvCol[IC] = {
     val name = s"CA-X'' G180 C$c T0"
-    val description = s"CA-X'' G180 C$c T0 (mm) =Collimator!K$row"
+    val description = s"CA-X'' G180 C$c T0 (mm) =Collimator!J$row"
 
     CsvCol(
       name,

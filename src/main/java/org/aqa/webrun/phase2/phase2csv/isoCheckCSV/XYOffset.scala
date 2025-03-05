@@ -6,15 +6,15 @@ import org.aqa.webrun.phase2.phase2csv.CsvCol.NA
 
 object XYOffset {
 
-  private def XOffset(g: Int, c: Int, t: Int, row: Int, extraRef: String = ""): CsvCol[IC] = {
-    val name = s"X offset G$g C$c T$t"
-    val description = s"X offset corrected box-ball Gantry:$g Collimator:$c Table$t (mm) =Analysis!D$row" + extraRef
+  private def XOffset(g: Int, c: Int, yaw: Int, row: Int, extraRef: String = ""): CsvCol[IC] = {
+    val name = s"X offset G$g C$c Yaw:$yaw"
+    val description = s"X offset corrected box-ball Gantry:$g Collimator:$c Yaw:$yaw (mm) =Analysis!D$row . Note yaw = -table angle" + extraRef
 
     CsvCol(
       name,
       description,
       (ic: IC) => {
-        ic.wlMap.find(g, c, t) match {
+        ic.wlMap.findYaw(g, c, yaw) match {
           case Some(wl) => wl.errorX_mm
           case _        => NA
         }
@@ -22,15 +22,15 @@ object XYOffset {
     )
   }
 
-  private def YOffset(g: Int, c: Int, t: Int, row: Int, extraRef: String = ""): CsvCol[IC] = {
-    val name = s"Y offset G$g C$c T$t"
-    val description = s"Y offset corrected box-ball Gantry:$g Collimator:$c Table$t (mm) =Analysis!E$row" + extraRef
+  private def YOffset(g: Int, c: Int, yaw: Int, row: Int, extraRef: String = ""): CsvCol[IC] = {
+    val name = s"Y offset G$g C$c T$yaw"
+    val description = s"Y offset corrected box-ball Gantry:$g Collimator:$c Yaw:$yaw (mm) =Analysis!E$row . Note yaw = -table angle" + extraRef
 
     CsvCol(
       name,
       description,
       (ic: IC) => {
-        ic.wlMap.find(g, c, t) match {
+        ic.wlMap.findYaw(g, c, yaw) match {
           case Some(wl) => wl.errorY_mm
           case _        => NA
         }
@@ -65,9 +65,9 @@ object XYOffset {
       YOffset(  0, 270, 0,  4),
       YOffset( 90,  90, 0,  5),
       YOffset( 90, 270, 0,  6),
-      YOffset(180,   0, 0,  7, " =Collimator!D4"),
-      YOffset(180,  90, 0,  8, " =Collimator!D5"),
-      YOffset(180, 270, 0,  9, " =Collimator!D6"),
+      YOffset(180,   0, 0,  7, " =Collimator!E4"),
+      YOffset(180,  90, 0,  8, " =Collimator!E5"),
+      YOffset(180, 270, 0,  9, " =Collimator!E6"),
       YOffset(270,  90, 0, 10),
       YOffset(270, 270, 0, 11),
 
