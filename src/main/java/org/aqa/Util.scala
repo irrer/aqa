@@ -619,18 +619,16 @@ object Util extends Logging {
     ((degrees % 360.0) + 360.0) % 360.0
   }
 
-
   /**
-   * Negate an angle
-   * @param angle around 0 degrees.  e.g. 10 degrees becomes 350, 0 becomes 0.
-   * @return Flipped angle.
-   */
+    * Negate an angle
+    *
+    * @param angle around 0 degrees.  e.g. 10 degrees becomes 350, 0 becomes 0.
+    * @return Flipped angle.
+    */
   def negateAngle(angle: Int): Int = {
     val a = (angle + 3600) % 360 // make sure angle is 0-359
     (360 - a) % 360
   }
-
-
 
   /**
     * Add graticules to the given image.
@@ -1620,14 +1618,15 @@ object Util extends Logging {
 
   /**
    * Limit the number of items in a BB (Daily OBI) history.
+   *
    * @param index Index of history item displayed in the web page.
-   * @param data List of all history.
+   * @param data  List of all history.
    * @tparam T Type of history items.
    * @return Shortened list.
    */
   def bracketBBHistory[T](index: Int, data: Seq[T]): Seq[T] = {
     val total = Config.BBPreHistory + Config.BBPostHistory
-    if((index >= 0) && (index < data.size) )
+    if ((index >= 0) && (index < data.size))
       data.take(index + Config.BBPostHistory).takeRight(total)
     else
       data.takeRight(total)
