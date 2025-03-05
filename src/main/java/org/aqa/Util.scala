@@ -608,6 +608,7 @@ object Util extends Logging {
     *
     * @param angleInDegrees Angle to round off.
     */
+  //noinspection ScalaWeakerAccess
   def angleRoundedTo2(angleInDegrees: Double): Int = {
     (((angleInDegrees + 720) / 2).round.toInt * 2) % 360
   }
@@ -1642,7 +1643,7 @@ object Util extends Logging {
         println(a.formatted("%8.3f") + " : " + angleRoundedTo2(a).formatted("%3d"))
       }
 
-      (-1000 until 3800).map(a => testAngle(a / 10.0))
+      (-1000 until 3800).foreach(a => testAngle(a / 10.0))
       System.exit(0)
     }
 
