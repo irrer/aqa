@@ -56,7 +56,7 @@ class WLCsv(resultList: Seq[WLImageResult], extendedData: ExtendedData) extends 
         Dp(extendedData.machine.getRealId, "machine id"),
         Dp(fieldName, "field name"),
         Dp(ir.imageStatus.toString, "status"),
-        Dp(ir.attr(TagByName.PatientSupportAngle), "table yaw"),
+        Dp(ir.attr(TagByName.PatientSupportAngle), "table angle"),
         Dp(ir.attr(TagByName.GantryAngle), "gantry angle"),
         Dp(ir.attr(TagByName.BeamLimitingDeviceAngle), "coll angle"),
         new Dp(ir.offX, "X offset corrected box-ball", ok),

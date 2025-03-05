@@ -11,7 +11,7 @@ object BBXZpp {
 
   private def BB_RppSq(t: Int, row: Int): CsvCol[IC] = {
     val name = s"BB-R''^2 G180 C270 T$t"
-    val description = s"BB-R''^2 G180 C270 T$t (mm) =Analysis!R$row"
+    val description = s"BB-R''^2 G180 C270 T$t (mm) . =Analysis!R$row"
 
     CsvCol(
       name,

@@ -7,8 +7,8 @@ import org.aqa.webrun.phase2.phase2csv.CsvCol.NA
 object XYOffset {
 
   private def XOffset(g: Int, c: Int, yaw: Int, row: Int, extraRef: String = ""): CsvCol[IC] = {
-    val name = s"X offset G$g C$c Yaw:$yaw"
-    val description = s"X offset corrected box-ball Gantry:$g Collimator:$c Yaw:$yaw (mm) =Analysis!D$row . Note yaw = -table angle" + extraRef
+    val name = s"X offset G$g C$c T$yaw"
+    val description = s"X offset corrected box-ball Gantry:$g Collimator:$c T$yaw (mm) =Analysis!D$row ." + extraRef
 
     CsvCol(
       name,
@@ -24,7 +24,7 @@ object XYOffset {
 
   private def YOffset(g: Int, c: Int, yaw: Int, row: Int, extraRef: String = ""): CsvCol[IC] = {
     val name = s"Y offset G$g C$c T$yaw"
-    val description = s"Y offset corrected box-ball Gantry:$g Collimator:$c Yaw:$yaw (mm) =Analysis!E$row . Note yaw = -table angle" + extraRef
+    val description = s"Y offset corrected box-ball Gantry:$g Collimator:$c T$yaw (mm) =Analysis!E$row ." + extraRef
 
     CsvCol(
       name,

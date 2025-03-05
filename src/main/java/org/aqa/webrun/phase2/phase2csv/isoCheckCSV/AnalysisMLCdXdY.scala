@@ -20,33 +20,33 @@ object AnalysisMLCdXdY {
     // @formatter:off
     val list = Seq(
 
-      MLC_dx("G0C90"   , 3, (ic: IC) => ic.isoCheck.mlcDxG__0_C_90 ),
-      MLC_dx("G0C270"  , 4, (ic: IC) => ic.isoCheck.mlcDxG__0_C270 ),
+      MLC_dx("G0 C90"   , 3, (ic: IC) => ic.isoCheck.mlcDxG__0_C_90 ),
+      MLC_dx("G0 C270"  , 4, (ic: IC) => ic.isoCheck.mlcDxG__0_C270 ),
 
-      MLC_dx("G0C90"   , 5, (ic: IC) => ic.isoCheck.mlcDxG_90_C_90 ),
-      MLC_dx("G0C270"  , 6, (ic: IC) => ic.isoCheck.mlcDxG_90_C270 ),
+      MLC_dx("G0 C90"   , 5, (ic: IC) => ic.isoCheck.mlcDxG_90_C_90 ),
+      MLC_dx("G0 C270"  , 6, (ic: IC) => ic.isoCheck.mlcDxG_90_C270 ),
 
-      MLC_dx("G180C0"  , 7, (ic: IC) => ic.isoCheck.mlcDxG180_C__0 ),
-      MLC_dx("G180C90" , 8, (ic: IC) => ic.isoCheck.mlcDxG180_C_90 ),
-      MLC_dx("G180C270", 9, (ic: IC) => ic.isoCheck.mlcDxG180_C270 ),
+      MLC_dx("G180 C0"  , 7, (ic: IC) => ic.isoCheck.mlcDxG180_C__0 ),
+      MLC_dx("G180 C90" , 8, (ic: IC) => ic.isoCheck.mlcDxG180_C_90 ),
+      MLC_dx("G180 C270", 9, (ic: IC) => ic.isoCheck.mlcDxG180_C270 ),
 
-      MLC_dx("G270C90" , 10, (ic: IC) => ic.isoCheck.mlcDxG270_C_90),
-      MLC_dx("G270C270", 11, (ic: IC) => ic.isoCheck.mlcDxG270_C270),
+      MLC_dx("G270 C90" , 10, (ic: IC) => ic.isoCheck.mlcDxG270_C_90),
+      MLC_dx("G270 C270", 11, (ic: IC) => ic.isoCheck.mlcDxG270_C270),
 
       // -----------------------------------------------------------------
 
-      MLC_dy("G0C90"   ,  3, (ic: IC) => ic.isoCheck.mlcDyG__0_C_90),
-      MLC_dy("G0C270"  ,  4, (ic: IC) => ic.isoCheck.mlcDyG__0_C270),
+      MLC_dy("G0 C90"   ,  3, (ic: IC) => ic.isoCheck.mlcDyG__0_C_90),
+      MLC_dy("G0 C270"  ,  4, (ic: IC) => ic.isoCheck.mlcDyG__0_C270),
 
-      MLC_dy("G0C90"   ,  5, (ic: IC) => ic.isoCheck.mlcDyG_90_C_90),
-      MLC_dy("G0C270"  ,  6, (ic: IC) => ic.isoCheck.mlcDyG_90_C270),
+      MLC_dy("G90C 90"  ,  5, (ic: IC) => ic.isoCheck.mlcDyG_90_C_90),
+      MLC_dy("G90C 270" ,  6, (ic: IC) => ic.isoCheck.mlcDyG_90_C270),
 
-      MLC_dy("G180C0"  ,  7, (ic: IC) => ic.isoCheck.mlcDyG180_C__0),
-      MLC_dy("G180C90" ,  8, (ic: IC) => ic.isoCheck.mlcDyG180_C_90),
-      MLC_dy("G180C270",  9, (ic: IC) => ic.isoCheck.mlcDyG180_C270),
+      MLC_dy("G180 C0"  ,  7, (ic: IC) => ic.isoCheck.mlcDyG180_C__0),
+      MLC_dy("G180 C90" ,  8, (ic: IC) => ic.isoCheck.mlcDyG180_C_90),
+      MLC_dy("G180 C270",  9, (ic: IC) => ic.isoCheck.mlcDyG180_C270),
 
-      MLC_dy("G270C90" , 10, (ic: IC) => ic.isoCheck.mlcDyG270_C_90),
-      MLC_dy("G270C270", 11, (ic: IC) => ic.isoCheck.mlcDyG270_C270),
+      MLC_dy("G270 C90" , 10, (ic: IC) => ic.isoCheck.mlcDyG270_C_90),
+      MLC_dy("G270 C270", 11, (ic: IC) => ic.isoCheck.mlcDyG270_C270),
 
     )
     // @formatter:on

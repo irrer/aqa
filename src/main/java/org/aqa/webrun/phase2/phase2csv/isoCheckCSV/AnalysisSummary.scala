@@ -15,13 +15,13 @@ object AnalysisSummary {
 
       CsvCol("Table Wobble", "Table Wobble diameter (mm) =Report!K4", (ic: IC) => if (ic.hasTable) ic.isoTable.get.tableWobbleDiameter else NA),
 
-      CsvCol("ballCBCT X", "ballCBCT X (mm) =Analysis!A24", (_: IC) => 0.0),
-      CsvCol("ballCBCT Y", "ballCBCT Y (mm) =Analysis!B24", (_: IC) => 0.0),
-      CsvCol("ballCBCT Z", "ballCBCT Z (mm) =Analysis!C24", (_: IC) => 0.0),
+      CsvCol("ballCBCT X", "ballCBCT X (mm) =Data!A23", (_: IC) => 0.0),
+      CsvCol("ballCBCT Y", "ballCBCT Y (mm) =Data!B23", (_: IC) => 0.0),
+      CsvCol("ballCBCT Z", "ballCBCT Z (mm) =Data!C23", (_: IC) => 0.0),
 
-      CsvCol("CBCT-ball-table0 X", "CBCT-ball-table0 X (mm) =Analysis!A27", (_: IC) => 0.0),
-      CsvCol("CBCT-ball-table0 Y", "CBCT-ball-table0 Y (mm) =Analysis!B27", (_: IC) => 0.0),
-      CsvCol("CBCT-ball-table0 Z", "CBCT-ball-table0 Z (mm) =Analysis!C27", (_: IC) => 0.0),
+      CsvCol("CBCT-ball-table0 X", "CBCT-ball-table0 X (mm) =Data!A24", (_: IC) => 0.0),
+      CsvCol("CBCT-ball-table0 Y", "CBCT-ball-table0 Y (mm) =Data!B24", (_: IC) => 0.0),
+      CsvCol("CBCT-ball-table0 Z", "CBCT-ball-table0 Z (mm) =Data!C24", (_: IC) => 0.0),
 
       CsvCol("ISO-X", "ISO-X (mm) =Analysis!L3", (ic: IC) => ic.isoCheck.isoX),
       CsvCol("ISO-Y", "ISO-Y (mm) =Analysis!M3", (ic: IC) => ic.isoCheck.isoY),
@@ -32,13 +32,20 @@ object AnalysisSummary {
       CsvCol("Delta Z", "ISO-Z max-min (mm) =Analysis!O7", (ic: IC) => ic.isoCheck.isoZRange),
 
       CsvCol("Gantry Isocentricity", "Gantry Isocentricity (mm) =Analysis!O8", (ic: IC) => ic.isoCheck.gantryIsocentricity),
-      CsvCol("Couch Isocentricity", "Couch Isocentricity (mm) =Analysis!R12", (ic: IC) => if (ic.hasTable) ic.isoTable.get.get_RSquared_Optimized else NA),
+      CsvCol("Couch Isocentricity", "Max square of BB displacement - Solve for smallest max (Couch Isocentricity) (mm) =Analysis!R12", (ic: IC) => if (ic.hasTable) ic.isoTable.get.get_RSquared_Optimized else NA),
 
       CsvCol("dX", "dX =Analysis!L14", (ic: IC) => if (ic.hasTable) ic.isoTable.get.get_dXT__0_Optimized else NA),
       CsvCol("dZ", "dZ =Analysis!M14", (ic: IC) => if (ic.hasTable) ic.isoTable.get.get_dZT__0_Optimized else NA),
       CsvCol("Table-X", "Table X =Analysis!N14", (ic: IC) => if (ic.hasTable) ic.isoTable.get.get_IsoTable_X_Optimized else NA),
       CsvCol("Table-Z", "Table Z =Analysis!O14", (ic: IC) => if (ic.hasTable) ic.isoTable.get.get_IsoTable_Z_Optimized else NA),
-    )
+
+      CsvCol("Table max range", "Table MAX(maximum - minimum) for BB-X' and BB-Z' =Analysis!K12", (ic: IC) =>
+        if (ic.hasTable)
+          ic.isoTable.get.K12(ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
+        else
+          IsoCheckCsv.NA)
+
+      )
     // @formatter:on
   }
 

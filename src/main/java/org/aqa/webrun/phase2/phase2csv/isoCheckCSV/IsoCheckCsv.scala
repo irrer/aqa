@@ -16,6 +16,7 @@
 
 package org.aqa.webrun.phase2.phase2csv.isoCheckCSV
 
+import edu.umro.ScalaUtil.Trace
 import org.apache.poi.ss.util.CellReference
 import org.aqa.db.IsoCheck
 import org.aqa.db.Output
@@ -216,8 +217,13 @@ object IsoCheckCsv extends Logging {
       text.trim
     }
 
-    val same = csvText.equals(excelText) ||
-      doublesMatch(csvText.toDouble, excelText.toDouble)
+    val same = {
+      (csvText.trim.nonEmpty && excelText.trim.nonEmpty) &&
+      (csvText.equals(excelText) || doublesMatch(csvText.toDouble, excelText.toDouble))
+    }
+
+    if (cellRef.toString.contains("A24"))
+      Trace.trace("bad")
 
     val sameText = if (same) "ok  " else "fail"
 

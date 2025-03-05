@@ -42,7 +42,7 @@ case class WLColumnList(machine: Machine, firstDateTime: Date) {
       new WLColumnMachine("machine id",                        machine.getRealId, machine.id),
       new WLColumnText("field name",                           (_: WinstonLutz, al: AttributeList) => fieldNameOf(al)),
       new WLColumnText( "status",                              (wl: WinstonLutz, _: AttributeList) => passFail(wl)),
-      new WLColumnAlNegAngle("table yaw",                      TagByName.PatientSupportAngle),
+      new WLColumnAlNegAngle("table angle",                    TagByName.PatientSupportAngle),
       new WLColumnAlAngle("gantry angle",                      TagByName.GantryAngle),
       new WLColumnAlAngle("coll angle",                        TagByName.BeamLimitingDeviceAngle),
       new WlColumnWlNumeric("X offset corrected box-ball",     _.errorX_mm),
