@@ -168,10 +168,13 @@ object CustomizeRtPlanUtil extends Logging {
 
       if (removed.nonEmpty) {
         val BeamNumber = removed.head.get(TagByName.BeamNumber).getIntegerValues.head
-        val PatientSetupNumber = removed.head.get(TagByName.ReferencedPatientSetupNumber).getIntegerValues.head
-
         deleteFractionSeq(BeamNumber)
-        deletePatientSetup(PatientSetupNumber)
+
+        val PatientSetupNumberAttr = removed.head.get(TagByName.ReferencedPatientSetupNumber)
+        if (PatientSetupNumberAttr != null) {
+          val PatientSetupNumber = PatientSetupNumberAttr.getIntegerValues.head
+          deletePatientSetup(PatientSetupNumber)
+        }
       }
     }
 

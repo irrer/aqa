@@ -92,13 +92,21 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     new WebInputText(CustomizeRtPlanInterface.machineNameTag, true, 2, 0, "To match planning system", false)
   }
 
+  private def createHeader: WebPlainText = {
+    val content = {
+      <h4>Click one of the buttons below to create a new RTPLAN</h4>
+    }
+    new WebPlainText("createHeader", showLabel = false, col = 6, offset = 0, html = _ => content)
+  }
+
   private def patientID = new WebInputText(CustomizeRtPlanInterface.patientIdTag, true, 3, 0, "")
 
   private def patientName = new WebInputText(CustomizeRtPlanInterface.patientNameTag, true, 3, 0, "")
 
   private val row0: WebRow = List(machineId)
-  private val row2: WebRow = List(toleranceTable, planName, machineName)
   private val row1: WebRow = List(patientID, patientName)
+  private val row2: WebRow = List(toleranceTable, planName, machineName)
+  private val row3: WebRow = List(createHeader)
 
   // List of all types of RTPLANS that can be made
   private val makeList = List(
@@ -108,7 +116,10 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     new MakeRtplanDailyQA,
     new MakeRtplanGapSkew,
     new MakeRtplanWinstonLutz,
-    new MakeRtplanFocalSpot
+    new MakeRtplanFocalSpot,
+    new MakeRtplanIsoCheckNoTable,
+    new MakeRtplanIsoCheckMinimalTable,
+    new MakeRtplanIsoCheckFullTable
   )
 
   class FormButtonProcedure(name: String, val procedure: Option[Procedure]) extends FormButton(name, col = 2, offset = 0, subUrl = subUrl, pathOf, ButtonType.BtnPrimary) {}
@@ -122,7 +133,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
   private def backButton = makeButton("Back", ButtonType.BtnDefault)
 
   private def rowList: List[WebRow] = {
-    def parameterList: WebRow = List(row0, row1, row2)
+    def parameterList: WebRow = List(row0, row1, row2, row3)
     def procedureButtonList = makeList.map(_.makeButton)
     def cancelButtonList: WebRow = List(cancelButton, machinePK)
     List(
@@ -130,6 +141,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
       procedureButtonList.take(3),
       procedureButtonList.slice(3, 6),
       procedureButtonList.slice(6, 9),
+      procedureButtonList.slice(9, 12),
       cancelButtonList
     )
   }

@@ -60,7 +60,7 @@ abstract class MakeRtplan extends Logging {
 
   // protected def milPlanFileConfig: Seq[Config.PlanFileConfig] = Config.PlanFileList.filter(pf => pf.procedure.equals(planFileProcedureName) && pf.collimatorModel.toLowerCase.contains("mil"))
 
-  private val buttonLabel = s"Create $name"
+  private val buttonLabel = name
 
   def makeButton: FormButton = {
     new FormButton(buttonLabel, 2, 0, CustomizeRtPlanInterface.interface.subUrl, CustomizeRtPlanInterface.interface.pathOf, WebUtil.ButtonType.BtnPrimary)
