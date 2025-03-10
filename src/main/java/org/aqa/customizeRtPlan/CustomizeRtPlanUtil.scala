@@ -36,6 +36,7 @@ import org.aqa.db.DicomSeries
 import org.aqa.db.Machine
 import org.aqa.db.MachineBeamEnergy
 import org.aqa.db.MachineType
+import org.aqa.db.MultileafCollimator
 import org.aqa.db.PatientProcedure
 import org.aqa.db.Procedure
 
@@ -216,6 +217,24 @@ object CustomizeRtPlanUtil extends Logging {
       name + " : " + Util.fmtDbl(energy) + fffAsText
     }
   }
+
+
+  /**
+   * Get the template rtplan for the given machine matching the given pattern.  If none exists, return None, which
+   * can happen if the system does not have such a plan configured.  This informs the user
+   * interface so that it can tell the user.
+   */
+  def getCollimatorCompatiblePlanForMachine(machine: Machine, procName: String): Seq[Config.PlanFileConfig] = {
+    val collimator = MultileafCollimator.get(machine.multileafCollimatorPK).get
+    val planFileList = Config.PlanFileList.filter(pf =>
+      pf.procedure.equalsIgnoreCase(procName.toLowerCase()) &&
+        pf.manufacturer.equalsIgnoreCase(collimator.manufacturer) &&
+        pf.collimatorModel.equalsIgnoreCase(collimator.model)
+    )
+    planFileList
+  }
+
+
 
   def getPlanBeamListX(machine: Machine, plan: Option[Config.PlanFileConfig]): List[PlanBeam] = {
     if (plan.isDefined) {
