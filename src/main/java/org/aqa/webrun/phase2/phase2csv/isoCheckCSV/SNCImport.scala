@@ -20,7 +20,8 @@ object SNCImport {
       CsvCol("Table Isocentricity"     , "Table Isocentricity (mm) in room coordinates =SNCImport!C10."                            , (ic: IC) => if (ic.hasTable) Math.sqrt(ic.isoTable.get.get_RSquared_Optimized) else NA),
       CsvCol("Gantry Isocentricity"    , "Gantry Isocentricity (mm) in room coordinates =SNCImport!C11"                            , (ic: IC) => ic.isoCheck.gantryIsocentricity),
       CsvCol("Collimator Isocentricity", "Collimator Isocentricity (mm) in room coordinates =SNCImport!C12 =Collimator!L2"         , (ic: IC) => ic.collimator.get_CA_Rpp_Optimized),
-      CsvCol("Maximum R (mm)"          , "Maximum Radius (mm) of X-Y error =SNCImport!C13"                                         , (ic: IC) => ic.maxR)
+      CsvCol("Maximum R (mm)"          , "Maximum Radius (mm) of X-Y error =SNCImport!C13"                                         , (ic: IC) => ic.maxR),
+      CsvCol("Maximum R Table 0(mm)"   , "Maximum Radius (mm) of X-Y error for beams with table angle 0"                           , (ic: IC) => ic.isoCheck.maxR)
     )
     // @formatter:on
   }

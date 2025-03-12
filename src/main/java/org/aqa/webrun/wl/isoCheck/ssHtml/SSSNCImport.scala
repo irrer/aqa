@@ -89,6 +89,7 @@ class SSSNCImport(extendedData: ExtendedData, isoCheck: WLIsoCheck, collimator: 
         {makeCsvRow(11, "Gantry Isocentricity (mm)", isoCheck.gantryIsocentricity)}
         {makeCsvRow(12, "Collimator Isocentricity (mm)", collimator.get_CA_Rpp_Optimized)}
         {makeCsvRow(13, "Maximum R (mm)", maxR)}
+        {makeCsvRow(14, "Maximum R Table 0 (mm)", isoCheck.maxR)}
         {makeRow14}
       </table>
     }

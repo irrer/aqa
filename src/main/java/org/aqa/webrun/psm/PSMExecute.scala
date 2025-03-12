@@ -2,6 +2,7 @@ package org.aqa.webrun.psm
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 import org.aqa.Util
@@ -20,6 +21,12 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq, response: Respon
   private val insertedList = resultList.map(result => result.psmBeam.insert)
 
   logger.info(s"Inserted ${insertedList.length} PSMBeam rows.")
+
+  if (true) { // TODO for testing
+    Trace.trace("Sorting beams")
+    val j = PSMCorrectImage(resultList.map(_.psmBeam))
+    Trace.trace("Sorted beams")
+  }
 
   PSMHTML.makeHtml(extendedData, rtplan, resultList)
 }
