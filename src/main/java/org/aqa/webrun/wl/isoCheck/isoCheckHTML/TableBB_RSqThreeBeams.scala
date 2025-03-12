@@ -28,7 +28,7 @@ class TableBB_RSqThreeBeams(isoCheckChart: WLIsoCheckChart, isoTable: Option[WLI
   }
 
   val content: Seq[Elem] = {
-    if (isoCheckChart.isoTableBB_RSqChartThreeBeams.isDefined) {
+    if (isoTable.isDefined && isoCheckChart.isoTableBB_RSqChartThreeBeams.isDefined) {
       Seq(
         <div style="margin-top:100px;">
           <hr style="border:3px solid #777777; border-radius: 8px;" > </hr>

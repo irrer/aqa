@@ -29,7 +29,7 @@ class TableBB_RSqSevenBeams(isoCheckChart: WLIsoCheckChart, isoTable: Option[WLI
   }
 
   val content: Seq[Elem] = {
-    if (isoCheckChart.isoTableBB_RSqChartSevenBeams.isDefined) {
+    if (isoTable.isDefined && isoCheckChart.isoTableBB_RSqChartSevenBeams.isDefined) {
       Seq(
         <div style="margin-top:100px;">
           <hr style="border:3px solid #777777; border-radius: 8px;" > </hr>
