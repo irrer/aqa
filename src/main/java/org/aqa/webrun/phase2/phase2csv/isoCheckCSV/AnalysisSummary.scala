@@ -41,9 +41,10 @@ object AnalysisSummary {
 
       CsvCol("Table max range", "Table MAX(maximum - minimum) for BB-X' and BB-Z' =Analysis!K12", (ic: IC) =>
         if (ic.hasTable)
-          ic.isoTable.get.K12(ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
+            ic.isoTable.get.K12(ic.isoTable.get.get_dXT__0_Optimized, ic.isoTable.get.get_dZT__0_Optimized)
         else
-          IsoCheckCsv.NA)
+          ""
+      )
 
       )
     // @formatter:on
