@@ -112,9 +112,9 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
     val RescaleSlope = rtimage.get(TagByName.RescaleSlope).getDoubleValues.head
     val RescaleIntercept = rtimage.get(TagByName.RescaleIntercept).getDoubleValues.head
 
-    val center_mm = findCenter_iso(rtplanBeam)
+    val center_iso = findCenter_iso(rtplanBeam)
 
-    val center_pix = trans.iso2Pix(center_pix)
+    val center_pix = trans.iso2Pix(center_iso)
 
     def pixToCU(coordinate: Point2i): Double = (dicomImage.get(coordinate.getX, coordinate.getY) * RescaleSlope) + RescaleIntercept
 
@@ -124,15 +124,15 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
 
     val stdDev_cu = ImageUtil.stdDev(pixelList.values.map(_.toFloat).toSeq)
 
-    val edges = measureEdges(center_mm, rtplanBeam, dicomImage, beamName)
+    val edges = measureEdges(center_iso, rtplanBeam, dicomImage, beamName)
 
     val ms = if (edges.isDefined) Some(edges.get.measurementSet) else None
 
     val psmBeam = org.aqa.db.PSMBeam(
       psmBeamPK = None,
       outputPK = extendedData.output.outputPK.get,
-      xCenter_mm = center_mm.getX,
-      yCenter_mm = center_mm.getY,
+      xCenter_mm = center_iso.getX,
+      yCenter_mm = center_iso.getY,
       SOPInstanceUID = Util.sopOfAl(rtimage),
       beamName = beamName,
       mean_cu = mean_cu,
