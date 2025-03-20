@@ -8,7 +8,6 @@ import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
-import org.apache.commons.math3.analysis.interpolation.PiecewiseBicubicSplineInterpolator
 import org.aqa.Logging
 import org.aqa.webrun.ExtendedData
 import org.aqa.Config
@@ -155,69 +154,6 @@ object PSMHTML extends Logging {
   }
 
   /**
-    * Use bicubic spline to make a smooth image.
-    * @param resultList For these results.
-    * @return An image.
-    */
-  private def makeSmoothCompositeImage(resultList: Seq[PSMBeamAnalysisResult]): BufferedImage = {
-
-    val trans = new IsoImagePlaneTranslator(resultList.head.rtimage)
-
-    val sorted = PSMUtil.sortByXYLocation(resultList)
-
-    def establishRegularlySpacedCoordinates(list: Seq[Double]): Seq[Double] = {
-      val interval = (list.max - list.min) / list.size
-      val first = list.min.round
-      val coordinateList = list.indices.map(i => first + (i * interval))
-      coordinateList
-    }
-
-    val xCoordinateList: Seq[Double] = {
-      def getColumn(columnIndex: Int) = sorted.map(row => row(columnIndex))
-      val columnList = sorted.head.indices.map(getColumn)
-      val meanList = columnList.map(_.map(_.psmBeam.xCenter_mm).sum / sorted.head.size).map(iso => trans.iso2PixCoordX(iso))
-      establishRegularlySpacedCoordinates(meanList)
-    }
-
-    val yCoordinateList: Seq[Double] = {
-      val meanList = sorted.map(row => row.map(_.psmBeam.yCenter_mm).sum / sorted.size).map(iso => trans.iso2PixCoordY(iso))
-      establishRegularlySpacedCoordinates(meanList)
-    }
-
-    val interpolator = new PiecewiseBicubicSplineInterpolator()
-
-    val valueList = {
-      def toCol(colIndex: Int): Array[Double] = sorted.map(row => row(colIndex).psmBeam.mean_cu).toArray
-      sorted.head.indices.map(toCol).toArray
-    }
-
-    val function = interpolator.interpolate(xCoordinateList.toArray, yCoordinateList.toArray, valueList)
-
-    val Rows = resultList.head.rtimage.get(TagByName.Rows).getIntegerValues.head
-    val Columns = resultList.head.rtimage.get(TagByName.Columns).getIntegerValues.head
-
-    val min = resultList.map(_.psmBeam.mean_cu).min.toFloat
-
-    def makeRow(y: Int): IndexedSeq[Float] = {
-      (0 until Columns).map(x => {
-        ///if ((y >= xCoordinateList.head) && (y <= xCoordinateList.last) && (x >= xCoordinateList.head) && (x <= yCoordinateList.last))
-        ///if ((y >= minXY) && (y <= maxXY) && (x >= minXY) && (x <= maxXY))
-        if ((y > yCoordinateList.head) && (y < yCoordinateList.last) && (x > xCoordinateList.head) && (x < xCoordinateList.last))
-          function.value(x, y).toFloat
-        else
-          min
-      })
-    }
-
-    val pixelArray = (0 until Rows).map(makeRow)
-
-    val di = new DicomImage(pixelArray)
-
-    val bufImg = di.toBufferedImage(Color.white)
-    bufImg
-  }
-
-  /**
     * Make a web page for one result.
     * @param extendedData metadata.
     * @param result For this result.
@@ -282,14 +218,14 @@ object PSMHTML extends Logging {
   }
 
   /**
-   * Make a CSV as part of development.
-   * TODO: This should be either:
-   *     - be part of the other CSV downloads
-   *     - made  better to include metadata.
-   * @param extendedData Meta data.
-   * @param rtplan DICOM RTPLAN.
-   * @param resultList List of results.
-   */
+    * Make a CSV as part of development.
+    * TODO: This should be either:
+    *     - be part of the other CSV downloads
+    *     - made  better to include metadata.
+    * @param extendedData Meta data.
+    * @param rtplan DICOM RTPLAN.
+    * @param resultList List of results.
+    */
   def makeQuickCSV(extendedData: ExtendedData, rtplan: AttributeList, resultList: Seq[PSMBeamAnalysisResult]): Unit = {
 
     val row1 = Seq("Beam Name", "X Center", "Y Center", "Mean CU")
@@ -308,25 +244,49 @@ object PSMHTML extends Logging {
   }
 
   /**
-    * Write all of the HTML.
+    * Write all the HTML.
     * @param extendedData Metadata.
     * @param resultList List of results.
     */
-  def makeHtml(extendedData: ExtendedData, rtplan: AttributeList, resultList: Seq[PSMBeamAnalysisResult]): Unit = {
+  def makeHtml(extendedData: ExtendedData, rtplan: AttributeList, resultList: Seq[PSMBeamAnalysisResult], psmDicom: AttributeList): Unit = {
 
+    /*
     val compositeImage = makeCompositeImage(resultList)
+
     annotateCompositeImage(compositeImage, resultList)
     val compositeFile = new File(extendedData.output.dir, "composite.png")
     Util.writePng(compositeImage, compositeFile)
+    */
 
     makeQuickCSV(extendedData, rtplan, resultList)
 
-    // TODO would be nice to do the WHOLE image, but bicubic spline does not support that ...
-    val smoothCompositeImage = makeSmoothCompositeImage(resultList)
+    val smoothCompositeDicomImage = PSMDicom.dicomToPsm(psmDicom)
+
+    val smoothCompositeBufferedImage = smoothCompositeDicomImage.toBufferedImage(Color.white)
     val smoothCompositeFile = new File(extendedData.output.dir, "smoothComposite.png")
-    Util.writePng(smoothCompositeImage, smoothCompositeFile)
+    Util.writePng(smoothCompositeBufferedImage, smoothCompositeFile)
+
+    if (true) {
+
+      val colorMap = {
+        val white = ImageUtil.rgbColorMap(Color.white)
+        val blue = ImageUtil.rgbColorMap(new Color(140, 180, 255))
+
+        (0 until 256).map(i => if ((i % 30) == 0) blue(i) else white(i))
+      }
+
+      val bufImg = smoothCompositeDicomImage.toBufferedImage(colorMap)
+      Util.addGraticules(bufImg, new IsoImagePlaneTranslator(resultList.head.rtimage), Color.GRAY)
+
+      val smoothContourFile = new File(extendedData.output.dir, "smoothContour.png")
+      Util.writePng(bufImg, smoothContourFile)
+
+    }
 
     val planElem = makeRtplanHtml(extendedData, rtplan)
+
+    val compositeImageHTML = new PSMCompositeImageHTML(extendedData)
+    compositeImageHTML.make(resultList)
 
     val content = {
       // <div style="display:flex; align-items:center; justify-content:center; margin-bottom:200px;">
@@ -336,25 +296,22 @@ object PSMHTML extends Logging {
         </div>
 
         <div class="row">
-          <div class="col-md-10 col-md-offset-1" >
-            <h4>Mean CU Readings for each beam center.</h4>
-            <img src={compositeFile.getName}/>
+          <div class="col-md-5 col-md-offset-1" title="Click for larger image.">
+            <a href={compositeImageHTML.compositeDirRef}>
+              <h4 style="text-align: center;">Mean CU Readings for each beam center</h4>
+              <img src={compositeImageHTML.compositeImageRef}/>
+            </a>
           </div>
-        </div>
-
-        <!--
-        <div class="row">
-          <div class="col-md-10 col-md-offset-1" style="margin-top:25px; margin-bottom:25px;">
-            <h4>Smoothed composite image.</h4>
+          <div class="col-md-5 col-md-offset-1" title="Click for larger image.">
+            <h4 style="text-align: center;">Smoothed Contoured PSM Image</h4>
             <img src={smoothCompositeFile.getName}/>
           </div>
         </div>
-        -->
-        
+
         <div class="row">
-          <div class="col-md-10 col-md-offset-1" >
+          <div class="col-md-10 col-md-offset-1" title="Click for larger image.">
             <table class="table responsive table-bordered" style="margin-top:25px;">
-              {PSMUtil.sortByXYLocation(resultList).map(row => rowToElem(extendedData, row))}
+              {PSMUtil.layoutSpatiallyPSMResult(resultList).map(row => rowToElem(extendedData, row))}
             </table>
           </div>
         </div>

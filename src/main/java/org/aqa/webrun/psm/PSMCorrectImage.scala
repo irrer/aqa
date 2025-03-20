@@ -3,11 +3,11 @@ package org.aqa.webrun.psm
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import edu.umro.ScalaUtil.Trace
 import org.apache.commons.math3.analysis.interpolation.BicubicInterpolator
 import org.apache.commons.math3.analysis.BivariateFunction
 import org.aqa.db.PSMBeam
 import org.aqa.Logging
+import org.aqa.Util
 
 import scala.annotation.tailrec
 
@@ -38,8 +38,6 @@ From each of the images above, can you please send me a central column and a cen
 
 
    */
-
-  Trace.trace()
 
   /**
     * Put the beams into a 2-dimensional array that is the same as their spacial layout.
@@ -90,18 +88,24 @@ From each of the images above, can you please send me a central column and a cen
     sorted
   }
 
-  private val sorted = layoutSpatially()
-
   /**
-   * Make the PSM image from the list of PSM images using bivariate interpolation.
-   * @return PSM image.
-   */
-  private def makePsmImage(): DicomImage = {
+    * Make the PSM image from the list of PSM images using bivariate interpolation.
+    * @return PSM image.
+    */
+  def makePsmImage(psmBeamList: Seq[PSMBeam], trans: IsoImagePlaneTranslator): DicomImage = {
 
-    val trans = new IsoImagePlaneTranslator(floodField)
+    val sorted = PSMUtil.layoutSpatiallyPSMBeam(psmBeamList)
 
-    val xCoordinateList = sorted.head.map(_.xCenter_mm).toArray
-    val yCoordinateList = sorted.map(_.head.yCenter_mm).toArray
+    def mean(array: Seq[Double]): Double = array.sum / array.size
+
+    def meanX(xIndex: Int): Double = mean(sorted.map(row => row(xIndex).xCenter_mm))
+
+    def meanY(yIndex: Int): Double = mean(sorted(yIndex).map(psmBeam => psmBeam.yCenter_mm))
+
+    val xCoordinateList = sorted.head.indices.map(meanX).toArray
+    val yCoordinateList = sorted.indices.map(meanY).toArray
+
+    logger.info(s"mean X coordinates: ${xCoordinateList.map(Util.fmtDbl).mkString("   ")}       mean Y coordinates: ${yCoordinateList.map(Util.fmtDbl).mkString("   ")}")
 
     val valueArray = sorted.map(row => row.map(_.mean_cu).toArray).toArray
 
@@ -115,15 +119,9 @@ From each of the images above, can you please send me a central column and a cen
       })
     )
 
-    new DicomImage(pixelArray)
-  }
+    val psmImage = new DicomImage(pixelArray)
 
-  private val psmImage = makePsmImage()
-
-  def correctImage(image: AttributeList): DicomImage = {
-
-    new DicomImage(IndexedSeq(IndexedSeq(1.0.toFloat))) // TODO
-
+    psmImage
   }
 
 }
