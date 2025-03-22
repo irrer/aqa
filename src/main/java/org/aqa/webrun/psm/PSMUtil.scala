@@ -11,6 +11,7 @@ import org.aqa.Logging
 import org.aqa.db.PSMBeam
 
 import java.awt.geom.Point2D
+import java.awt.Rectangle
 import javax.vecmath.Point2i
 import scala.annotation.tailrec
 
@@ -118,9 +119,16 @@ object PSMUtil extends Logging {
     */
   def normalize(trans: IsoImagePlaneTranslator, image: DicomImage): DicomImage = {
 
-    val centerPixelList = pixelCoordinatesWithinRadius(trans, image, new Point2D.Double())
+    val centerPixelList = pixelCoordinatesWithinRadius(trans, image, new Point2D.Double(trans.width / 2, trans.height / 2))
 
     val meanOfCenter = centerPixelList.map(xy => image.get(xy.getX, xy.getY)).sum / centerPixelList.size
+
+    val j = image.pixelData.flatten.sorted.take(centerPixelList.size)
+    Trace.trace("min pix: " + j.mkString("   "))
+    val minMean = image.pixelData.flatten.sorted.take(centerPixelList.size).sum / centerPixelList.size
+    Trace.trace(s"minMean: $minMean")
+    val j1 = image.pixelData.flatten.sorted.drop(centerPixelList.size).take(centerPixelList.size).sum / centerPixelList.size
+    Trace.trace(s"j1: $j1")
 
     def makeRow(y: Int): IndexedSeq[Float] = (0 until image.width).map(x => image.get(x, y) / meanOfCenter)
 
@@ -128,6 +136,20 @@ object PSMUtil extends Logging {
 
     new DicomImage(scaledPixels)
   }
+
+  /**
+    * Format the center pixels of an image to text.  Mostly for debugging.
+    * @param dicomImage For this image.
+    * @return Human-readable text.
+    */
+  def centerPixelsToString(dicomImage: DicomImage): String = {
+    val size = 10
+    val rectangle = new Rectangle((dicomImage.width - size) / 2, (dicomImage.height - size) / 2, size, size)
+    val center = dicomImage.getSubimage(rectangle)
+    center.pixelsToText
+  }
+
+
 
   /**
     * Make a DICOM image representing the normalized PSM.
@@ -138,7 +160,7 @@ object PSMUtil extends Logging {
     * @param psmList List of PSM results.
     * @return
     */
-  def makePSMImage(psmList: Seq[PSMBeamAnalysisResult]): DicomImage = {
+  def XmakePSMImage(psmList: Seq[PSMBeamAnalysisResult]): DicomImage = {
 
     val trans = new IsoImagePlaneTranslator(psmList.head.rtimage)
 
@@ -147,24 +169,11 @@ object PSMUtil extends Logging {
     def mean(array: Seq[Double]): Double = array.sum / array.size
 
     def meanX(xIndex: Int): Double = {
-      val j: Seq[PSMBeamAnalysisResult] = sorted.map(row => row(xIndex))
-      val j1 = j.map(_.psmBeam.xCenter_mm)
-      val j2 = mean(j1)
-
-      Trace.trace(j2)
-
       mean(sorted.map(row => row(xIndex).psmBeam.xCenter_mm))
-      j2
     }
 
     def meanY(yIndex: Int): Double = {
-      val j = sorted(yIndex)
-      val j2 = sorted(yIndex).map(_.psmBeam.yCenter_mm)
-      val j3 = mean(j2)
-      Trace.trace(j3)
-
       mean(sorted(yIndex).map(psmBeam => psmBeam.psmBeam.yCenter_mm))
-      j3
     }
 
     val xCoordinateList = sorted.head.indices.map(meanX).map(trans.iso2PixCoordX).toArray
@@ -199,10 +208,7 @@ object PSMUtil extends Logging {
 
     def makeRow(y: Int): IndexedSeq[Float] = {
       (0 until Columns).map(x => {
-        ///if ((y >= xCoordinateList.head) && (y <= xCoordinateList.last) && (x >= xCoordinateList.head) && (x <= yCoordinateList.last))
-        ///if ((y >= minXY) && (y <= maxXY) && (x >= minXY) && (x <= maxXY))
         if ((y > yCoordinateList.head) && (y < yCoordinateList.last) && (x > xCoordinateList.head) && (x < xCoordinateList.last)) {
-
           function.value(x, y).toFloat
         } else
           min
@@ -213,8 +219,11 @@ object PSMUtil extends Logging {
 
     val di = new DicomImage(pixelArray)
 
+    logger.info("PSM original center pixels: \n" + centerPixelsToString(di))
+
     val diNormalized = PSMUtil.normalize(trans, di)
 
+    logger.info("PSM normalized center pixels: \n" + centerPixelsToString(diNormalized))
     diNormalized
   }
 

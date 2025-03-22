@@ -32,7 +32,10 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq, response: Respon
     */
   private def savePsm(resultList: Array[PSMBeamAnalysisResult]): AttributeList = {
 
-    val psmImage = PSMUtil.makePSMImage(resultList)
+    val psmImage = {
+      val interpolator = new PSMInterpolator(resultList)
+      interpolator.normalizedDicomImage
+    }
 
     // the first image by chronological delivery date
     val firstRtimage = {

@@ -18,11 +18,11 @@ import javax.vecmath.Point2i
 
 class PSMCompositeImageHTML(extendedData: ExtendedData) extends Logging {
 
-  private val compositeImageDirName = "compositeImage"
-  private val compositeDir = new File(extendedData.output.dir, compositeImageDirName)
-  private val compositeImageFileName = "compositeImage.png"
-  val compositeDirRef = s"$compositeImageDirName/index.html"
-  val compositeImageRef = s"$compositeImageDirName/$compositeImageFileName"
+  val imageFileName = "compositeImage.png"
+  val imageFile = new File(extendedData.output.dir, imageFileName)
+
+  val htmlFileName = "compositeImage.html"
+  val htmlFile = new File(extendedData.output.dir, htmlFileName)
 
   private def fmt(d: Double): String = d.formatted("%8.2f").trim
 
@@ -91,35 +91,34 @@ class PSMCompositeImageHTML(extendedData: ExtendedData) extends Logging {
 
     val bufImg = new DicomImage(pixelArray).toBufferedImage(Color.white)
 
+    val trans = new IsoImagePlaneTranslator(resultList.head.rtimage)
+    Util.addGraticules(bufImg, trans, Color.GRAY)
     bufImg
   }
 
-  def make(resultList: Seq[PSMBeamAnalysisResult]): String = {
-
-    compositeDir.mkdirs()
+  def make(resultList: Seq[PSMBeamAnalysisResult]): Unit = {
 
     val compositeImage = makeCompositeImage(resultList)
 
     annotateCompositeImage(compositeImage, resultList)
-    val compositeFile = new File(extendedData.output.dir, compositeImageFileName)
-    Util.writePng(compositeImage, compositeFile)
-    logger.info(s"Wrote composite image file ${compositeFile.getAbsolutePath}")
+    Util.writePng(compositeImage, imageFile)
+    logger.info(s"Wrote composite image file ${imageFile.getAbsolutePath}")
 
     val content = {
       <div class="row">
         <div class="col-md-10 col-md-offset-1" >
           <h4 style="text-align: center;">Mean CU Readings for each beam center</h4>
-          <img src={compositeImageFileName}/>
+          <img src={imageFileName} class="img-responsive" alt="Composite image showing centers of all beams."/>
+        </div>
+        <div class="row">
+          <p style="margin:75px;"> </p>
         </div>
       </div>
     }
 
-    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "PSM RTPLAN", runScript = None)
-    val indexFile = new File(compositeDir, "index.html")
-    Util.writeFile(indexFile, text)
-    logger.info(s"Wrote composite index file ${indexFile.getAbsolutePath}")
-
-    compositeDirRef
+    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "PSM Composite", runScript = None)
+    Util.writeFile(htmlFile, text)
+    logger.info(s"Wrote composite index file ${htmlFile.getAbsolutePath}")
   }
 
 }

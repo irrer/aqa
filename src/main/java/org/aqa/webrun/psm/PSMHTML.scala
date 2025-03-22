@@ -1,13 +1,12 @@
 package org.aqa.webrun.psm
 
 import com.pixelmed.dicom.AttributeList
-import edu.umro.DicomDict.TagByName
-import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.webrun.ExtendedData
 import org.aqa.Config
@@ -15,9 +14,7 @@ import org.aqa.Util
 import org.aqa.web.WebUtil
 
 import java.awt.Color
-import java.awt.image.BufferedImage
 import java.io.File
-import javax.vecmath.Point2i
 import scala.xml.Elem
 
 object PSMHTML extends Logging {
@@ -43,38 +40,6 @@ object PSMHTML extends Logging {
     val width = trans.iso2PixDistX(Config.PSMRadius_mm).toInt
     val height = trans.iso2PixDistY(Config.PSMRadius_mm).toInt
     gc.drawOval((center_pix.getX - width / 2).toInt, (center_pix.getY - height / 2).toInt, width, height)
-  }
-
-  /**
-    * Put the CU for each image on the composite image.
-    * @param image Composite image.
-    * @param resultList List of analysis results.
-    */
-  private def annotateCompositeImage(image: BufferedImage, resultList: Seq[PSMBeamAnalysisResult]): Unit = {
-    val trans = new IsoImagePlaneTranslator(resultList.head.rtimage)
-    val gc = ImageUtil.getGraphics(image)
-    gc.setColor(Color.white)
-    val fontOffset = ImageText.getTextDimensions(gc, "123").getHeight / 2
-
-    def annotateCU(result: PSMBeamAnalysisResult): Unit = {
-      val textCU = fmt(result.psmBeam.mean_cu)
-      val x = trans.iso2PixCoordX(result.psmBeam.xCenter_mm)
-      val y = trans.iso2PixCoordX(result.psmBeam.yCenter_mm - Config.PSMRadius_mm) - fontOffset
-      ImageText.drawTextCenteredAt(gc, x, y, textCU)
-    }
-
-    def annotateLocation(result: PSMBeamAnalysisResult): Unit = {
-      val textCU = fmt(result.psmBeam.xCenter_mm) + ", " + fmt(result.psmBeam.yCenter_mm)
-      val x = trans.iso2PixCoordX(result.psmBeam.xCenter_mm)
-      val y = trans.iso2PixCoordX(result.psmBeam.yCenter_mm + Config.PSMRadius_mm) + fontOffset + 2
-      ImageText.drawTextCenteredAt(gc, x, y, textCU)
-    }
-
-    def annotateCompositeResult(result: PSMBeamAnalysisResult): Unit = {
-      annotateCU(result)
-      annotateLocation(result)
-    }
-    resultList.foreach(annotateCompositeResult)
   }
 
   /**
@@ -118,39 +83,6 @@ object PSMHTML extends Logging {
         <img src={src} width="120" alt="Full DICOM Image" class="center"/>
       </a>
     </td>
-  }
-
-  /**
-    * Make a composite image that contains all of the
-    * @param resultList results from all beams.
-    * @return
-    */
-  private def makeCompositeImage(resultList: Seq[PSMBeamAnalysisResult]): BufferedImage = {
-    // Get all values from all images so a global max and min can be established
-    val dropCount = 10 // drop this many high and low values to get rid of outliers (bad pixels)
-    val allValues = resultList.flatMap(_.pixelList.values).sorted.drop(dropCount).dropRight(dropCount)
-    val min = allValues.head.toFloat
-
-    val pixelArray = {
-      val width = resultList.head.rtimage.get(TagByName.Columns).getIntegerValues.head
-      val height = resultList.head.rtimage.get(TagByName.Rows).getIntegerValues.head
-
-      val allPix = resultList.flatMap(_.pixelList).toMap
-
-      def pixVal(x: Int, y: Int): Float = {
-        allPix.get(new Point2i(x, y)) match {
-          case Some(value) => value.toFloat
-          case _           => min
-        }
-      }
-
-      val pa = (0 until height).map(y => (0 until width).map(x => pixVal(x, y)))
-      pa
-    }
-
-    val bufImg = new DicomImage(pixelArray).toBufferedImage(Color.white)
-
-    bufImg
   }
 
   /**
@@ -226,7 +158,7 @@ object PSMHTML extends Logging {
     * @param rtplan DICOM RTPLAN.
     * @param resultList List of results.
     */
-  def makeQuickCSV(extendedData: ExtendedData, rtplan: AttributeList, resultList: Seq[PSMBeamAnalysisResult]): Unit = {
+  private def makeQuickCSV(extendedData: ExtendedData, rtplan: AttributeList, resultList: Seq[PSMBeamAnalysisResult]): Unit = {
 
     val row1 = Seq("Beam Name", "X Center", "Y Center", "Mean CU")
 
@@ -250,14 +182,6 @@ object PSMHTML extends Logging {
     */
   def makeHtml(extendedData: ExtendedData, rtplan: AttributeList, resultList: Seq[PSMBeamAnalysisResult], psmDicom: AttributeList): Unit = {
 
-    /*
-    val compositeImage = makeCompositeImage(resultList)
-
-    annotateCompositeImage(compositeImage, resultList)
-    val compositeFile = new File(extendedData.output.dir, "composite.png")
-    Util.writePng(compositeImage, compositeFile)
-    */
-
     makeQuickCSV(extendedData, rtplan, resultList)
 
     val smoothCompositeDicomImage = PSMDicom.dicomToPsm(psmDicom)
@@ -266,45 +190,55 @@ object PSMHTML extends Logging {
     val smoothCompositeFile = new File(extendedData.output.dir, "smoothComposite.png")
     Util.writePng(smoothCompositeBufferedImage, smoothCompositeFile)
 
-    if (true) {
-
-      val colorMap = {
-        val white = ImageUtil.rgbColorMap(Color.white)
-        val blue = ImageUtil.rgbColorMap(new Color(140, 180, 255))
-
-        (0 until 256).map(i => if ((i % 30) == 0) blue(i) else white(i))
-      }
-
-      val bufImg = smoothCompositeDicomImage.toBufferedImage(colorMap)
-      Util.addGraticules(bufImg, new IsoImagePlaneTranslator(resultList.head.rtimage), Color.GRAY)
-
-      val smoothContourFile = new File(extendedData.output.dir, "smoothContour.png")
-      Util.writePng(bufImg, smoothContourFile)
-
-    }
-
     val planElem = makeRtplanHtml(extendedData, rtplan)
 
     val compositeImageHTML = new PSMCompositeImageHTML(extendedData)
     compositeImageHTML.make(resultList)
 
+    val interpolator = new PSMInterpolator(resultList)
+
+    val dicomImage = interpolator.normalizedDicomImage
+
+    val ascent = new PSMGradientAscent(interpolator)
+    val max = ascent.findMax()
+    Trace.trace(s"max. pix: $max    iso: ${interpolator.trans.pix2Iso(max)}")
+
+    val dicomFileName = {
+      extendedData.machine.id + "_" + Util.timeAsFileName(extendedData.output.dataDate.get) + "_NormalizedPSM.dcm"
+    }
+    val dicomFile = new File(extendedData.output.dir, dicomFileName)
+    val dicom = PSMDicom.psmToDicom(dicomImage, resultList.head.rtimage)
+
+    DicomUtil.writeAttributeListToFile(dicom, dicomFile, "AQA")
+    logger.info("Wrote PSM DICOM file " + dicomFile.getAbsolutePath)
+
+    val smoothContouredImageHTML = new PSMSmoothImageHTML(extendedData, dicomImage, resultList)
+    smoothContouredImageHTML.make()
+
     val content = {
       // <div style="display:flex; align-items:center; justify-content:center; margin-bottom:200px;">
       <div>
         <div class="row">
+          <div class="col-md-2">
             {planElem}
+          </div>
+          <div class="col-md-4">
+            <a href={dicomFileName}>Download DICOM version of normalized PSM</a>
+          </div>
         </div>
 
         <div class="row">
           <div class="col-md-5 col-md-offset-1" title="Click for larger image.">
-            <a href={compositeImageHTML.compositeDirRef}>
+            <a href={compositeImageHTML.htmlFileName}>
               <h4 style="text-align: center;">Mean CU Readings for each beam center</h4>
-              <img src={compositeImageHTML.compositeImageRef}/>
+              <img src={compositeImageHTML.imageFileName} class="img-responsive fit-image" style="margin-right:20px;"/>
             </a>
           </div>
-          <div class="col-md-5 col-md-offset-1" title="Click for larger image.">
-            <h4 style="text-align: center;">Smoothed Contoured PSM Image</h4>
-            <img src={smoothCompositeFile.getName}/>
+          <div class="col-md-5" title="Click for larger image.">
+            <a href={smoothContouredImageHTML.htmlFileName}>
+              <h4 style="text-align: center;">Smoothed Contoured PSM Image</h4>
+              <img src={smoothContouredImageHTML.imageFileName} class="img-responsive fit-image" style="margin-left:20px;"/>
+            </a>
           </div>
         </div>
 

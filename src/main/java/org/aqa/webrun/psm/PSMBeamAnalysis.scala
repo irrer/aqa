@@ -50,7 +50,6 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
     val tblr = MeasureTBLREdges.TBLR(topPlanned_mm, bottomPlanned_mm, leftPlanned_mm, rightPlanned_mm)
 
     val result = try {
-      Trace.trace()
       val ar = MeasureTBLREdges.measure(
         dicomImage,
         translator = trans,
@@ -61,7 +60,6 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
         thresholdPercent = 0.5,
         markCenter = false
       )
-      Trace.trace()
       Some(ar)
     }
     catch {
