@@ -69,7 +69,7 @@ object Util extends Logging {
 
   private val timeAsFileNameFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss-SSS")
 
-  def timeAsFileName(date: Date): String = timeAsFileNameFormat.format(date)
+  def timeAsFileName(date: Date): String = formatDate(timeAsFileNameFormat, date)
 
   def currentTimeAsFileName: String = timeAsFileName(new Date)
 
