@@ -574,8 +574,28 @@ object MeasureTBLREdges extends Logging {
     AnalysisResult(measurementSet, bufferedImage)
   }
 
-  //  def measure(image: DicomImage, translator: IsoImagePlaneTranslator, expected_mm: Option[TBLR], collimatorAngle: Double, annotate: DicomImage, floodOffset: Point): AnalysisResult = {
-  //    measure(image, translator, expected_mm, collimatorAngle, annotate, floodOffset, 0.5)
-  //  }
+  /**
+    * Return true if the edges to measured are within the boundary of the EPID.
+    * @param tblr Set of edges.
+    * @param trans specifies EPID properties
+    * @return True if within image plane.
+    */
+  def inBounds(tblr: TBLR, trans: IsoImagePlaneTranslator): Boolean = {
+
+    val offset_mm = Config.PenumbraThickness_mm / 2
+
+    val top = trans.iso2PixCoordY(tblr.top - offset_mm)
+    val left = trans.iso2PixCoordX(tblr.left - offset_mm)
+    val bottom = trans.iso2PixCoordY(tblr.bottom + offset_mm)
+    val right = trans.iso2PixCoordX(tblr.right + offset_mm)
+
+    val within =
+      (top >= 0) &&
+        (bottom < trans.height) &&
+        (left >= 0) &&
+        (right < trans.width)
+
+    within
+  }
 
 }
