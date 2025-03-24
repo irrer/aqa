@@ -1,13 +1,8 @@
 package org.aqa.webrun.psm
 
 import com.pixelmed.dicom.AttributeList
-import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import org.apache.commons.math3.analysis.interpolation.BicubicInterpolator
-import org.apache.commons.math3.analysis.BivariateFunction
 import org.aqa.db.PSMBeam
 import org.aqa.Logging
-import org.aqa.Util
 
 import scala.annotation.tailrec
 
@@ -86,42 +81,6 @@ From each of the images above, can you please send me a central column and a cen
     val sorted = rowList.sortBy(_.beamList.head.yCenter_mm).map(_.xSorted)
 
     sorted
-  }
-
-  /**
-    * Make the PSM image from the list of PSM images using bivariate interpolation.
-    * @return PSM image.
-    */
-  def makePsmImage(psmBeamList: Seq[PSMBeam], trans: IsoImagePlaneTranslator): DicomImage = {
-
-    val sorted = PSMUtil.layoutSpatiallyPSMBeam(psmBeamList)
-
-    def mean(array: Seq[Double]): Double = array.sum / array.size
-
-    def meanX(xIndex: Int): Double = mean(sorted.map(row => row(xIndex).xCenter_mm))
-
-    def meanY(yIndex: Int): Double = mean(sorted(yIndex).map(psmBeam => psmBeam.yCenter_mm))
-
-    val xCoordinateList = sorted.head.indices.map(meanX).toArray
-    val yCoordinateList = sorted.indices.map(meanY).toArray
-
-    logger.info(s"mean X coordinates: ${xCoordinateList.map(Util.fmtDbl).mkString("   ")}       mean Y coordinates: ${yCoordinateList.map(Util.fmtDbl).mkString("   ")}")
-
-    val valueArray = sorted.map(row => row.map(_.mean_cu).toArray).toArray
-
-    val function: BivariateFunction = new BicubicInterpolator().interpolate(xCoordinateList, yCoordinateList, valueArray)
-
-    val pixelArray = (0 until trans.height).map(y =>
-      (0 until trans.width).map(x => {
-        val x_iso = trans.pix2IsoCoordX(x)
-        val y_iso = trans.pix2IsoCoordY(y)
-        function.value(x_iso, y_iso).toFloat
-      })
-    )
-
-    val psmImage = new DicomImage(pixelArray)
-
-    psmImage
   }
 
 }

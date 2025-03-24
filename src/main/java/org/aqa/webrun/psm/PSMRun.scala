@@ -4,7 +4,6 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.run.ProcedureStatus
@@ -69,9 +68,7 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
   }
 
   override def run(extendedData: ExtendedData, runReq: PSMRunReq, response: Response): ProcedureStatus.Value = {
-    Trace.trace()
     new PSMExecute(extendedData, runReq, response)
-    Trace.trace()
     ProcedureStatus.done
   }
 
@@ -213,11 +210,6 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
         val floodField = getFloodField(alList, rtimageList).get
         val runReq = PSMRunReq(rtplan = rtplan, wholeDetector = wholeDetector, rtimageList = imgList, floodField = floodField)
         Right(runReq)
-    }
-
-    if (result.isLeft) {
-      val j = result.left.get.values.head.toString
-      Trace.trace(s"formError: $result :: $j")
     }
 
     result

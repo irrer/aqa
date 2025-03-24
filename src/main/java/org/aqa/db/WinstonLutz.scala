@@ -16,7 +16,6 @@
 
 package org.aqa.db
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.Util
@@ -156,9 +155,6 @@ case class WinstonLutz(
   private val rawRadians: Option[Double] = yaw.map(_.toDouble).map(Math.toRadians)
   val yawSin: Option[Double] = rawRadians.map(Math.sin)
   val yawCos: Option[Double] = rawRadians.map(Math.cos)
-
-  if (tableAngleRounded.isDefined && (tableAngleRounded.get == 30) && rtimageUID.equals("1.3.6.1.4.1.22361.17483843774714.1716930820.1733782037412.7")) // TODO rm
-    Trace.trace()
 
   override def toString: String = {
     // @formatter:off
@@ -426,19 +422,6 @@ object WinstonLutz extends Logging {
     val tsList = Db.run(search.result)
 
     tsList.toIndexedSeq
-  }
-
-
-  /**
-   *
-   * @param list
-   * @param gantryAngle
-   * @param collimatorAngle
-   * @param tableAngle
-   * @return
-   */
-  def findGCT(list: Seq[WinstonLutz], gantryAngle: Int, collimatorAngle: Int, tableAngle: Int): WinstonLutz = {
-    list.find(wl => (wl.gantryAngleRounded == gantryAngle) && (wl.collimatorAngleRounded == collimatorAngle) && (wl.tableAngleRounded == tableAngle)).get
   }
 
 }

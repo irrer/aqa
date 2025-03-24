@@ -10,6 +10,13 @@ import edu.umro.util.UMROGUID
 import edu.umro.DicomDict.TagByName
 import org.aqa.db.DicomSeries
 
+/**
+  * Provide functions to convert a PSM image to and from DICOM.
+  *
+  * Note that a small degree of precision is lost because the pixels are stored as 16-bit integers.
+  * When a PSM analysis is done, a round-trip to DICOM and back is performed, and the largest errors are logged.
+  * In testing, the largest error was  2.0861626E-6 == 0.0000020861626   .
+  */
 object PSMDicom {
 
   val RTImageLabel = "PSM"
@@ -79,7 +86,7 @@ object PSMDicom {
     set(TagByName.RescaleSlope, RescaleSlope)
 
     def toPix(psmValue: Float): Short = {
-      val i = ((psmValue - RescaleIntercept) / RescaleSlope).round.toInt
+      val i = ((psmValue - RescaleIntercept) / RescaleSlope).round
       (i & 0xffff).toShort
     }
 
@@ -112,20 +119,4 @@ object PSMDicom {
     new DicomImage(scaledPixels)
   }
 
-  def main(args: Array[String]): Unit = {
-
-    val mask = 0xffff
-    def foo(i: Int): Unit = {
-      val and = i & mask
-      val sht = i.toShort
-
-      val ri = sht & mask
-
-      val rii = sht.toInt
-
-      println(s"i: $i   and: $and   sht: $sht    ri: $ri     rii: $rii")
-    }
-
-    (65533 to 65542).map(foo)
-  }
 }

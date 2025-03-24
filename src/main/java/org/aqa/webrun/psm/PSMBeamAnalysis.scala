@@ -7,7 +7,6 @@ import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomBeam
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.webrun.phase2.MeasureTBLREdges
@@ -49,23 +48,31 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
 
     val tblr = MeasureTBLREdges.TBLR(topPlanned_mm, bottomPlanned_mm, leftPlanned_mm, rightPlanned_mm)
 
-    val result = try {
-      val ar = MeasureTBLREdges.measure(
-        dicomImage,
-        translator = trans,
-        expected_mm = Some(tblr),
-        collimatorAngle = 0,
-        annotate = dicomImage,
-        floodOffset = new Point,
-        thresholdPercent = 0.5,
-        markCenter = false
-      )
-      Some(ar)
-    }
-    catch {
-      case t: Throwable =>
-        Trace.trace(s"Unable to find edges for beam $beamName: ${fmtEx(t)}")
+    val result = {
+      if (MeasureTBLREdges.inBounds(tblr, trans)) {
+        try {
+          val ar = MeasureTBLREdges.measure(
+            dicomImage,
+            translator = trans,
+            expected_mm = Some(tblr),
+            collimatorAngle = 0,
+            annotate = dicomImage,
+            floodOffset = new Point,
+            thresholdPercent = 0.5,
+            markCenter = false
+          )
+          Some(ar)
+        }
+        catch {
+          case t: Throwable =>
+            logger.warn(s"Unable to find edges for beam $beamName: ${fmtEx(t)}")
+            None
+        }
+      }
+      else {
+        logger.info(s"Image $beamName has at least one edge outside the EPID plane.")
         None
+      }
     }
 
     result
@@ -135,6 +142,10 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
       yCenter_mm = center_iso.getY,
       SOPInstanceUID = Util.sopOfAl(rtimage),
       beamName = beamName,
+      Rows = rtimage.get(TagByName.Rows).getIntegerValues.head,
+      Columns = rtimage.get(TagByName.Columns).getIntegerValues.head,
+      ImagePlanePixelSpacingX = rtimage.get(TagByName.ImagePlanePixelSpacing).getDoubleValues.toSeq.head,
+      ImagePlanePixelSpacingY = rtimage.get(TagByName.ImagePlanePixelSpacing).getDoubleValues.toSeq(1),
       mean_cu = mean_cu,
       stdDev_cu = stdDev_cu,
       top_mm = ms.map(_.top),

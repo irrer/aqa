@@ -4,11 +4,9 @@ import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import edu.umro.ScalaUtil.Trace
 import org.apache.commons.math3.analysis.interpolation.PiecewiseBicubicSplineInterpolator
 import org.aqa.Config
 import org.aqa.Logging
-import org.aqa.db.PSMBeam
 
 import java.awt.geom.Point2D
 import java.awt.Rectangle
@@ -106,11 +104,6 @@ object PSMUtil extends Logging {
     layoutSpatially(resultList)
   }
 
-  def layoutSpatiallyPSMBeam(psmList: Seq[PSMBeam]): Seq[Seq[PSMBeam]] = {
-    // layoutSpatially(psmList, (beam: PSMBeam) => new Point2D.Double(beam.xCenter_mm, beam.xCenter_mm))
-    ???
-  }
-
   /**
     * Normalize an image to it's central pixels.
     * @param trans Iso to pixel plane.
@@ -124,11 +117,8 @@ object PSMUtil extends Logging {
     val meanOfCenter = centerPixelList.map(xy => image.get(xy.getX, xy.getY)).sum / centerPixelList.size
 
     val j = image.pixelData.flatten.sorted.take(centerPixelList.size)
-    Trace.trace("min pix: " + j.mkString("   "))
     val minMean = image.pixelData.flatten.sorted.take(centerPixelList.size).sum / centerPixelList.size
-    Trace.trace(s"minMean: $minMean")
     val j1 = image.pixelData.flatten.sorted.drop(centerPixelList.size).take(centerPixelList.size).sum / centerPixelList.size
-    Trace.trace(s"j1: $j1")
 
     def makeRow(y: Int): IndexedSeq[Float] = (0 until image.width).map(x => image.get(x, y) / meanOfCenter)
 
@@ -148,8 +138,6 @@ object PSMUtil extends Logging {
     val center = dicomImage.getSubimage(rectangle)
     center.pixelsToText
   }
-
-
 
   /**
     * Make a DICOM image representing the normalized PSM.
@@ -178,19 +166,6 @@ object PSMUtil extends Logging {
 
     val xCoordinateList = sorted.head.indices.map(meanX).map(trans.iso2PixCoordX).toArray
     val yCoordinateList = sorted.indices.map(meanY).map(trans.iso2PixCoordY).toArray
-
-    if (true) { // TODO rm
-      def f(d: Double) = d.formatted("   %7.2f").takeRight(7)
-      def fmt(b: PSMBeamAnalysisResult): String = {
-        s" ${f(b.psmBeam.xCenter_mm)}, ${f(b.psmBeam.yCenter_mm)} : ${f(b.psmBeam.mean_cu)}"
-      }
-
-      Trace.trace(s"""x list: ${xCoordinateList.map(f).mkString("    ")}""")
-      Trace.trace(s"""y list: ${yCoordinateList.map(f).mkString("    ")}""")
-
-      val text = sorted.map(row => row.map(fmt).mkString("      ")).mkString("\n")
-      Trace.trace(s"sorted\n$text\n")
-    }
 
     val interpolator = new PiecewiseBicubicSplineInterpolator()
 

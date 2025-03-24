@@ -6,7 +6,6 @@ import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.webrun.ExtendedData
 import org.aqa.Config
@@ -17,6 +16,9 @@ import java.awt.Color
 import java.io.File
 import scala.xml.Elem
 
+/**
+  * Generate HTML page to show PSM data.
+  */
 object PSMHTML extends Logging {
 
   private def fmt(d: Double): String = d.formatted("%8.2f").trim
@@ -200,8 +202,6 @@ object PSMHTML extends Logging {
     val dicomImage = interpolator.normalizedDicomImage
 
     val ascent = new PSMGradientAscent(interpolator)
-    val max = ascent.findMax()
-    Trace.trace(s"max. pix: $max    iso: ${interpolator.trans.pix2Iso(max)}")
 
     val dicomFileName = {
       extendedData.machine.id + "_" + Util.timeAsFileName(extendedData.output.dataDate.get) + "_NormalizedPSM.dcm"
@@ -212,7 +212,7 @@ object PSMHTML extends Logging {
     DicomUtil.writeAttributeListToFile(dicom, dicomFile, "AQA")
     logger.info("Wrote PSM DICOM file " + dicomFile.getAbsolutePath)
 
-    val smoothContouredImageHTML = new PSMSmoothImageHTML(extendedData, dicomImage, resultList)
+    val smoothContouredImageHTML = new PSMSmoothImageHTML(extendedData, dicomImage, ascent.getMaxPoint_iso, resultList)
     smoothContouredImageHTML.make()
 
     val content = {

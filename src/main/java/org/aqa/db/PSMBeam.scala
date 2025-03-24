@@ -27,13 +27,17 @@ case class PSMBeam(
     yCenter_mm: Double, // Y coordinate of beam's center in mm
     SOPInstanceUID: String, // SOPInstanceUID if it is in the DICOM
     beamName: String, // name of beam
+    Rows: Int, // Number of rows in the image.  DICOM metadata 0028,0010
+    Columns: Int, // Number of columns in the image.  DICOM metadata 0028,0011
+    ImagePlanePixelSpacingX: Double, // Physical distance (in mm) between the center of each image pixel in the X axis.  DICOM metadata 3002,0011 first value
+    ImagePlanePixelSpacingY: Double, // Physical distance (in mm) between the center of each image pixel in the Y axis.  DICOM metadata 3002,0011 second value
     mean_cu: Double, // average value of pixels in CU
     stdDev_cu: Double, // standard deviation of pixels in CU
-    top_mm: Option[Double], // top of field edge measurement.  May be None if artifacts made measurement impossible.
-    bottom_mm: Option[Double], // bottom of field edge measurement.  May be None if artifacts made measurement impossible.
-    left_mm: Option[Double], // left field edge measurement.  May be None if artifacts made measurement impossible.
-    right_mm: Option[Double] // right field edge measurement.  May be None if artifacts made measurement impossible.
-)  {
+    top_mm: Option[Double], // top of field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
+    bottom_mm: Option[Double], // bottom of field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
+    left_mm: Option[Double], // left field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
+    right_mm: Option[Double] // right field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
+) {
 
   def insert: PSMBeam = {
     val insertQuery = PSMBeam.query returning PSMBeam.query.map(_.psmBeamPK) into
@@ -53,6 +57,10 @@ case class PSMBeam(
       "    yCenter_mm: " + Util.fmtDbl(yCenter_mm) + "\n" +
       "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
       "    beamName: " + beamName + "\n" +
+      "    Rows: " + Rows + "\n" +
+      "    Columns: " + Columns + "\n" +
+      "    ImagePlanePixelSpacingX: " + ImagePlanePixelSpacingX + "\n" +
+      "    ImagePlanePixelSpacingY: " + ImagePlanePixelSpacingY + "\n" +
       "    mean_cu: " + Util.fmtDbl(mean_cu) + "\n" +
       "    stdDev_cu: " + Util.fmtDbl(stdDev_cu) + "\n" +
       "    top_mm: " + Util.fmtDbl(top_mm) + "\n" +
@@ -78,6 +86,14 @@ object PSMBeam extends Logging {
 
     def beamName = column[String]("beamName")
 
+    def Rows = column[Int]("Rows")
+
+    def Columns = column[Int]("Columns")
+
+    def ImagePlanePixelSpacingX = column[Double]("ImagePlanePixelSpacingX")
+
+    def ImagePlanePixelSpacingY = column[Double]("ImagePlanePixelSpacingY")
+
     def mean_cu = column[Double]("mean_cu")
 
     def stdDev_cu = column[Double]("stdDev_cu")
@@ -91,13 +107,17 @@ object PSMBeam extends Logging {
     def right_mm = column[Option[Double]]("right_mm")
 
     def * =
-      (
+     (
         psmBeamPK.?,
         outputPK,
         xCenter_mm,
         yCenter_mm,
         SOPInstanceUID,
-        beamName,
+       beamName,
+        Rows,
+        Columns,
+        ImagePlanePixelSpacingX,
+        ImagePlanePixelSpacingY,
         mean_cu,
         stdDev_cu,
         top_mm,

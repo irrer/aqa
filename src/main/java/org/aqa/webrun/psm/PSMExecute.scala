@@ -5,7 +5,6 @@ import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 import org.aqa.Util
@@ -58,12 +57,9 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq, response: Respon
 
   private val rtplan: AttributeList = runReq.rtplan
 
-  Trace.trace()
   private val resultList = runReq.rtimageList.sortBy(timeOf).par.map(rtimage => PSMBeamAnalysis(rtplan, extendedData, trans, rtimage: AttributeList).measure()).toArray
-  Trace.trace()
 
   private val psm = savePsm(resultList)
-  Trace.trace()
 
   private val insertedList = resultList.map(result => result.psmBeam.insert)
 
