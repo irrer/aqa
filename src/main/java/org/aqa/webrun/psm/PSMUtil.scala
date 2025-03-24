@@ -1,10 +1,8 @@
 package org.aqa.webrun.psm
 
 import com.pixelmed.dicom.AttributeList
-import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import org.apache.commons.math3.analysis.interpolation.PiecewiseBicubicSplineInterpolator
 import org.aqa.Config
 import org.aqa.Logging
 
@@ -116,10 +114,6 @@ object PSMUtil extends Logging {
 
     val meanOfCenter = centerPixelList.map(xy => image.get(xy.getX, xy.getY)).sum / centerPixelList.size
 
-    val j = image.pixelData.flatten.sorted.take(centerPixelList.size)
-    val minMean = image.pixelData.flatten.sorted.take(centerPixelList.size).sum / centerPixelList.size
-    val j1 = image.pixelData.flatten.sorted.drop(centerPixelList.size).take(centerPixelList.size).sum / centerPixelList.size
-
     def makeRow(y: Int): IndexedSeq[Float] = (0 until image.width).map(x => image.get(x, y) / meanOfCenter)
 
     val scaledPixels = (0 until image.height).map(makeRow)
@@ -137,69 +131,6 @@ object PSMUtil extends Logging {
     val rectangle = new Rectangle((dicomImage.width - size) / 2, (dicomImage.height - size) / 2, size, size)
     val center = dicomImage.getSubimage(rectangle)
     center.pixelsToText
-  }
-
-  /**
-    * Make a DICOM image representing the normalized PSM.
-    *
-    * It would be nice to do the WHOLE image, but bicubic spline does not support that. It will
-    * only show the points that are within the bounds of the 42 PSM centers. It's a math thing.
-    *
-    * @param psmList List of PSM results.
-    * @return
-    */
-  def XmakePSMImage(psmList: Seq[PSMBeamAnalysisResult]): DicomImage = {
-
-    val trans = new IsoImagePlaneTranslator(psmList.head.rtimage)
-
-    val sorted = PSMUtil.layoutSpatiallyPSMResult(psmList)
-
-    def mean(array: Seq[Double]): Double = array.sum / array.size
-
-    def meanX(xIndex: Int): Double = {
-      mean(sorted.map(row => row(xIndex).psmBeam.xCenter_mm))
-    }
-
-    def meanY(yIndex: Int): Double = {
-      mean(sorted(yIndex).map(psmBeam => psmBeam.psmBeam.yCenter_mm))
-    }
-
-    val xCoordinateList = sorted.head.indices.map(meanX).map(trans.iso2PixCoordX).toArray
-    val yCoordinateList = sorted.indices.map(meanY).map(trans.iso2PixCoordY).toArray
-
-    val interpolator = new PiecewiseBicubicSplineInterpolator()
-
-    val valueList = {
-      def toCol(colIndex: Int): Array[Double] = sorted.map(row => row(colIndex).psmBeam.mean_cu).toArray
-      sorted.head.indices.map(toCol).toArray
-    }
-
-    val function = interpolator.interpolate(xCoordinateList, yCoordinateList, valueList)
-
-    val Rows = psmList.head.rtimage.get(TagByName.Rows).getIntegerValues.head
-    val Columns = psmList.head.rtimage.get(TagByName.Columns).getIntegerValues.head
-
-    val min = psmList.map(_.psmBeam.mean_cu).min.toFloat
-
-    def makeRow(y: Int): IndexedSeq[Float] = {
-      (0 until Columns).map(x => {
-        if ((y > yCoordinateList.head) && (y < yCoordinateList.last) && (x > xCoordinateList.head) && (x < xCoordinateList.last)) {
-          function.value(x, y).toFloat
-        } else
-          min
-      })
-    }
-
-    val pixelArray = (0 until Rows).map(makeRow)
-
-    val di = new DicomImage(pixelArray)
-
-    logger.info("PSM original center pixels: \n" + centerPixelsToString(di))
-
-    val diNormalized = PSMUtil.normalize(trans, di)
-
-    logger.info("PSM normalized center pixels: \n" + centerPixelsToString(diNormalized))
-    diNormalized
   }
 
 }
