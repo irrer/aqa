@@ -1025,6 +1025,7 @@ object Config extends Logging {
 
   // =================================================================================
 
+  val PSMWholeDetectorBeamNamePattern: String = logMainText("PSMWholeDetectorBeamNamePattern", ".*Whole.*")
   val PSMRadius_mm: Double = logMainText("PSMRadius_mm", "5.0").toDouble
 
   // =================================================================================
