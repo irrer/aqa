@@ -215,6 +215,12 @@ object PSMHTML extends Logging {
     val smoothContouredImageHTML = new PSMSmoothImageHTML(extendedData, dicomImage, ascent.getMaxPoint_iso, resultList)
     smoothContouredImageHTML.make()
 
+    // TODO
+    // val wholeImageHTML = new PSMWholeImageHTML(extendedData, dicomImage, ascent.getMaxPoint_iso, resultList)
+    // wholeImageHTML.make()
+
+    val charts = new PSMCharts(extendedData.output.outputPK.get)
+
     val content = {
       // <div style="display:flex; align-items:center; justify-content:center; margin-bottom:200px;">
       <div>
@@ -225,6 +231,16 @@ object PSMHTML extends Logging {
           <div class="col-md-4">
             <a href={dicomFileName}>Download DICOM version of normalized PSM</a>
           </div>
+        </div>
+
+        <div class="row">
+          <h3>Mean Beam Values</h3>
+          {charts.meanChart.html}
+        </div>
+
+        <div class="row">
+          <h3>Standard Deviation of each Beam Center</h3>
+          {charts.stdDevChart.html}
         </div>
 
         <div class="row">
@@ -251,7 +267,10 @@ object PSMHTML extends Logging {
         </div>
       </div>
     }
-    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "PSM", runScript = None)
+
+    val script = PSMChartRestlet.makeReference(extendedData.output.outputPK.get)
+
+    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "PSM", c3 = true, runScript = Some(script))
     val htmlFile = new File(extendedData.output.dir, "display.html")
     Util.writeFile(htmlFile, text)
   }

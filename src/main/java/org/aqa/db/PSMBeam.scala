@@ -107,13 +107,13 @@ object PSMBeam extends Logging {
     def right_mm = column[Option[Double]]("right_mm")
 
     def * =
-     (
+      (
         psmBeamPK.?,
         outputPK,
         xCenter_mm,
         yCenter_mm,
         SOPInstanceUID,
-       beamName,
+        beamName,
         Rows,
         Columns,
         ImagePlanePixelSpacingX,
@@ -162,6 +162,39 @@ object PSMBeam extends Logging {
 
   def insert(list: Seq[PSMBeam]): Seq[Int] = {
     list.map(_.insertOrUpdate())
+  }
+
+  case class PSMBeamHistory(output: Output, psmBeamList: Seq[PSMBeam]) {}
+
+  /**
+    * Get the history of PSMBeam results.
+    *
+    * @param machinePK : For this machine
+    * @return Complete history sorted by date.
+    *
+    */
+  def historyByMachine(machinePK: Long): Seq[PSMBeamHistory] = {
+
+    val search = for {
+      output <- Output.valid.filter(o => o.machinePK === machinePK)
+      gapSkew <- PSMBeam.query.filter(c => c.outputPK === output.outputPK)
+    } yield {
+      (output, gapSkew)
+    }
+
+    // Fetch entire history from the database.  Also sort by dataDate.  This sorting also has the
+    // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
+    // throw an exception.
+    val both = Db.run(search.result)
+
+    // list of all distinct outputs (outputPK, output)
+    val outputMap = both.map(b => b._1).groupBy(_.outputPK.get).values.map(oList => (oList.head.outputPK.get, oList.head)).toMap
+
+    // make PSMBeamHistory list
+    val history = both.map(_._2).groupBy(_.outputPK).values.map(psmList => PSMBeamHistory(outputMap(psmList.head.outputPK), psmList))
+
+    // sort by data date
+    history.toSeq.sortBy(_.output.dataDate.get.getTime)
   }
 
 }
