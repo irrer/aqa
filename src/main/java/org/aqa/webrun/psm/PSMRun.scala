@@ -139,18 +139,20 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
 
     val Columns = getInt(TagByName.Columns)
     val Rows = getInt(TagByName.Rows)
+    val ImagePlanePixelSpacing = rtimageList.head.get(TagByName.ImagePlanePixelSpacing).getDoubleValues
 
     def matchingResolution(al: AttributeList): Boolean = {
       val col = al.get(TagByName.Columns).getIntegerValues.head
       val row = al.get(TagByName.Rows).getIntegerValues.head
-      (col == Columns) && (row == Rows)
+      val pixXY = al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues
+      (col == Columns) && (row == Rows) && (pixXY.head == ImagePlanePixelSpacing(1)) && (pixXY.head == ImagePlanePixelSpacing(1))
     }
 
     def timeOf(al: AttributeList) = Util.extractDateTimeAndPatientIdFromDicomAl(al)._1.head.getTime
 
     val floodField = {
       val uploaded = alList.filter(FloodUtil.isFloodField).filter(matchingResolution)
-      val list: Seq[AttributeList] = FloodField.getMostRecent(machinePK, Rows, Columns) match {
+      val list: Seq[AttributeList] = FloodField.getMostRecent(machinePK, Rows, Columns, ImagePlanePixelSpacing.head, ImagePlanePixelSpacing(1)) match {
         case Some(ff) => uploaded :+ ff.dicom
         case _        => uploaded
       }

@@ -30,18 +30,24 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.zip.ZipInputStream
 
+/**
+ * Describe a flood field used for PSM processing.  Note that this is different from the flood field use in Phase2 and Phase3.
+ */
+
 case class FloodField(
-                       floodFieldPK: Option[Long], // primary key
-                       outputPK: Long, // output primary key
-                       Rows: Int, // Rows from DICOM
-                       Columns: Int, // Columns from DICOM
-                       SOPInstanceUID: Option[String], // SOPInstanceUID if it is in the DICOM
-                       StationName: String, // StationName from DICOM.  This infers the identity of the treatment machine.
-                       RTImageDescription: String, // RTImageDescription from DICOM.
-                       StudyID: String, // StudyID from DICOM.
-                       imageHash_md5: String, // MD5 hash of image bytes
-                       dicom_zip: Array[Byte] // zipped DICOM content
-                     ) extends Logging {
+    floodFieldPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    Rows: Int, // Number of rows in the image.  DICOM metadata 0028,0010
+    Columns: Int, // Number of columns in the image.  DICOM metadata 0028,0011
+    ImagePlanePixelSpacingX: Double, // Physical distance (in mm) between the center of each image pixel in the X axis.  DICOM metadata 3002,0011 first value
+    ImagePlanePixelSpacingY: Double, // Physical distance (in mm) between the center of each image pixel in the Y axis.  DICOM metadata 3002,0011 second value
+    SOPInstanceUID: Option[String], // SOPInstanceUID if it is in the DICOM
+    StationName: String, // StationName from DICOM.  This infers the identity of the treatment machine.
+    RTImageDescription: String, // RTImageDescription from DICOM.
+    StudyID: String, // StudyID from DICOM.
+    imageHash_md5: String, // MD5 hash of image bytes
+    dicom_zip: Array[Byte] // zipped DICOM content
+) extends Logging {
 
   def insert: FloodField = {
     val insertQuery = FloodField.query returning FloodField.query.map(_.floodFieldPK) into
@@ -59,6 +65,8 @@ case class FloodField(
       "    outputPK: " + outputPK + "\n" +
       "    Rows: " + Rows + "\n" +
       "    Columns: " + Columns + "\n" +
+      "    ImagePlanePixelSpacingX: " + ImagePlanePixelSpacingX + "\n" +
+      "    ImagePlanePixelSpacingY: " + ImagePlanePixelSpacingY + "\n" +
       "    SOPInstanceUID: " + {
       if (SOPInstanceUID.isDefined) SOPInstanceUID.get else "NA"
     } + "\n" +
@@ -72,20 +80,21 @@ case class FloodField(
   lazy val dicom: AttributeList = {
     val inputStream = new ByteArrayInputStream(dicom_zip)
 
-    managed(new ZipInputStream(inputStream)) acquireAndGet { zipIn => {
-      val entry = zipIn.getNextEntry
-      if (entry == null)
-        logger.error("Found null zip entry in FloodField.dicom_zip.")
-      val data = {
-        val os = new ByteArrayOutputStream
-        FileUtil.copyStream(zipIn, os)
-        os.toByteArray
+    managed(new ZipInputStream(inputStream)) acquireAndGet { zipIn =>
+      {
+        val entry = zipIn.getNextEntry
+        if (entry == null)
+          logger.error("Found null zip entry in FloodField.dicom_zip.")
+        val data = {
+          val os = new ByteArrayOutputStream
+          FileUtil.copyStream(zipIn, os)
+          os.toByteArray
+        }
+        val dicomIn = new DicomInputStream(new ByteArrayInputStream(data))
+        val al = new AttributeList
+        al.read(dicomIn)
+        al
       }
-      val dicomIn = new DicomInputStream(new ByteArrayInputStream(data))
-      val al = new AttributeList
-      al.read(dicomIn)
-      al
-    }
     }
   }
 
@@ -102,6 +111,10 @@ object FloodField extends Logging {
 
     def Columns = column[Int]("Columns")
 
+    def ImagePlanePixelSpacingX = column[Double]("ImagePlanePixelSpacingX")
+
+    def ImagePlanePixelSpacingY = column[Double]("ImagePlanePixelSpacingY")
+
     def SOPInstanceUID = column[Option[String]]("SOPInstanceUID")
 
     def StationName = column[String]("StationName")
@@ -114,7 +127,21 @@ object FloodField extends Logging {
 
     def dicom_zip = column[Array[Byte]]("dicom_zip")
 
-    def * = (floodFieldPK.?, outputPK, Rows, Columns, SOPInstanceUID, StationName, RTImageDescription, StudyID, imageHash_md5, dicom_zip) <> (FloodField.apply _ tupled, FloodField.unapply)
+    def * =
+      (
+        floodFieldPK.?,
+        outputPK,
+        Rows,
+        Columns,
+        ImagePlanePixelSpacingX,
+        ImagePlanePixelSpacingY,
+        SOPInstanceUID,
+        StationName,
+        RTImageDescription,
+        StudyID,
+        imageHash_md5,
+        dicom_zip
+      ) <> (FloodField.apply _ tupled, FloodField.unapply)
 
     def outputFK = foreignKey("FloodField_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -129,8 +156,8 @@ object FloodField extends Logging {
   }
 
   /**
-   * Get a list of all rows for the given output
-   */
+    * Get a list of all rows for the given output
+    */
   def getByOutput(outputPK: Long): Seq[FloodField] = {
     val action = for {
       inst <- FloodField.query if inst.outputPK === outputPK
@@ -139,8 +166,8 @@ object FloodField extends Logging {
   }
 
   /**
-   * Get a list of all rows for the given hash.  There should be either zero or one.
-   */
+    * Get a list of all rows for the given hash.  There should be either zero or one.
+    */
   def getByImageHash(imageHash: String): Seq[FloodField] = {
     val action = for {
       inst <- FloodField.query if inst.imageHash_md5 === imageHash
@@ -148,14 +175,18 @@ object FloodField extends Logging {
     Db.run(action.result)
   }
 
-
   /**
-   * Get a list of all rows for the given hash.  There should be either zero or one.
-   */
-  def getMostRecent(machinePK: Long, Rows: Int, Columns: Int): Option[FloodField] = {
+    * Get a list of all rows for the given hash.  There should be either zero or one.
+    */
+  def getMostRecent(machinePK: Long, Rows: Int, Columns: Int, ImagePlanePixelSpacingX: Double, ImagePlanePixelSpacingY: Double): Option[FloodField] = {
     val action = for {
       output <- Output.query if output.machinePK === machinePK
-      ff <- FloodField.query if (ff.Rows === Rows) && (ff.Columns === Columns) && (ff.outputPK === output.outputPK)
+      ff <- FloodField.query
+      if (ff.Rows === Rows) &&
+        (ff.Columns === Columns) &&
+        (ff.ImagePlanePixelSpacingX === ImagePlanePixelSpacingX) &&
+        (ff.ImagePlanePixelSpacingY === ImagePlanePixelSpacingY) &&
+        (ff.outputPK === output.outputPK)
     } yield (output, ff)
     val sorted = action.sortBy(_._1.dataDate.desc)
     val flood = Db.run(sorted.result.headOption)
@@ -183,16 +214,20 @@ object FloodField extends Logging {
   }
 
   /**
-   * Create a FloodField object by extracting information from the given DICOM.
-   *
-   * @param outputPK For this output.
-   * @param al       From this DICOM.
-   * @return a new FloodField.
-   */
+    * Create a FloodField object by extracting information from the given DICOM.
+    *
+    * @param outputPK For this output.
+    * @param al       From this DICOM.
+    * @return a new FloodField.
+    */
   def makeFloodField(outputPK: Long, al: AttributeList): FloodField = {
 
     val Rows = al.get(TagByName.Rows).getIntegerValues.head
     val Columns = al.get(TagByName.Columns).getIntegerValues.head
+
+    val ImagePlanePixelSpacingX = al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues.head
+    val ImagePlanePixelSpacingY = al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues.toSeq(1)
+
     val StationName = al.get(TagByName.StationName).getSingleStringValueOrEmptyString
     val RTImageDescription = al.get(TagByName.RTImageDescription).getSingleStringValueOrEmptyString
     val SOPInstanceUID: Option[String] = {
@@ -212,16 +247,18 @@ object FloodField extends Logging {
 
     // @formatter:off
     val floodField = new FloodField(
-      floodFieldPK       = None,
-      outputPK           = outputPK,
-      Rows               = Rows ,
-      Columns            = Columns,
-      SOPInstanceUID     = SOPInstanceUID,
-      StationName        = StationName,
-      RTImageDescription = RTImageDescription,
-      StudyID            = StudyID,
-      imageHash_md5      = imageHash_md5,
-      dicom_zip          = dicom_zip
+      floodFieldPK            = None,
+      outputPK                = outputPK,
+      Rows                    = Rows ,
+      Columns                 = Columns,
+      ImagePlanePixelSpacingX = ImagePlanePixelSpacingX,
+      ImagePlanePixelSpacingY = ImagePlanePixelSpacingY,
+      SOPInstanceUID          = SOPInstanceUID,
+      StationName             = StationName,
+      RTImageDescription      = RTImageDescription,
+      StudyID                 = StudyID,
+      imageHash_md5           = imageHash_md5,
+      dicom_zip               = dicom_zip
     )
     // @formatter:on
     floodField
