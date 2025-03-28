@@ -177,9 +177,9 @@ object PSMBeam extends Logging {
 
     val search = for {
       output <- Output.valid.filter(o => o.machinePK === machinePK)
-      gapSkew <- PSMBeam.query.filter(c => c.outputPK === output.outputPK)
+      beam <- PSMBeam.query.filter(c => c.outputPK === output.outputPK)
     } yield {
-      (output, gapSkew)
+      (output, beam)
     }
 
     // Fetch entire history from the database.  Also sort by dataDate.  This sorting also has the
