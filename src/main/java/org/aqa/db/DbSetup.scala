@@ -136,7 +136,8 @@ object DbSetup extends Logging {
     WinstonLutz.query,
     IsoCheck.query,
     FloodField.query,
-    PSMBeam.query
+    PSMBeam.query,
+    PSM.query
   )
 
   /**

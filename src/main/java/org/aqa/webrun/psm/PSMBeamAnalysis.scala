@@ -18,6 +18,8 @@ import java.awt.image.BufferedImage
 import javax.vecmath.Point2i
 
 /**
+  * Measure the CU at center of the beam.
+  * If they are inside the EPID image plane, also measure edges.
   *
   * @param rtplan       DICOM RTPLAN for delivering beams.
   * @param extendedData Metadata

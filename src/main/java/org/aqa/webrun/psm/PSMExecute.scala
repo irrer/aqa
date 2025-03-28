@@ -1,16 +1,14 @@
 package org.aqa.webrun.psm
 
 import com.pixelmed.dicom.AttributeList
-import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 import org.aqa.Util
-import org.restlet.Response
+import org.aqa.db.PSM
 
-class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq, response: Response) extends Logging {
+class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging {
 
   /**
     * When converting a PSM which is represented in floating point to a DICOM image which is in
@@ -25,30 +23,47 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq, response: Respon
     logger.info("Top 10 diffs round trip PSM to DICOM back to PSM:  " + top10.mkString("\n    "))
   }
 
+  private def makeRawImage(wdImg: DicomImage, ffImg: DicomImage): DicomImage = {
+    def doRow(y: Int): IndexedSeq[Float] =
+      (0 until wdImg.width).map(x => wdImg.get(x, y) * ffImg.get(x, y))
+
+    val rawImgPixels = (0 until wdImg.height).map(doRow)
+
+    val rawImg = new DicomImage(rawImgPixels)
+    rawImg
+
+  }
+
   /**
-    * Construct and save the PSM.
-    * @param resultList Get prototype from this list.
+    * Perform the math of <code>raw / br</code>
+    * @param rawImg Raw image.
+    * @param brImg BR (Beam Response) image.
+    * @return PSM image.
     */
-  private def savePsm(resultList: Array[PSMBeamAnalysisResult]): AttributeList = {
+  private def makePsmImage(rawImg: DicomImage, brImg: DicomImage): DicomImage = {
+    def doRow(y: Int): IndexedSeq[Float] = {
 
-    val psmImage = {
-      val interpolator = new PSMInterpolator(resultList)
-      interpolator.normalizedDicomImage
-    }
-
-    // the first image by chronological delivery date
-    val firstRtimage = {
-      def dateOf(al: AttributeList): Long = {
-        DicomUtil.getTimeAndDate(al, TagByName.AcquisitionDate, TagByName.AcquisitionTime).get.getTime
+      /**
+        * Process one pixel in a row.  If the BR value is 0 then return 0.
+        * @param x X coordinate of pixel.
+        * @return
+        */
+      def doPixel(x: Int): Float = {
+        val br = brImg.get(x, y)
+        if (br == 0)
+          0
+        else
+          wdImg.get(x, y) / br
       }
-      resultList.minBy(r => dateOf(r.rtimage)).rtimage
+
+      (0 until wdImg.width).map(doPixel)
     }
 
-    val psmDicom = PSMDicom.psmToDicom(psmImage, firstRtimage)
+    val rawImgPixels = (0 until wdImg.height).map(doRow)
 
-    showRoundTripError(psmImage, PSMDicom.dicomToPsm(psmDicom))
+    val rawImg = new DicomImage(rawImgPixels)
+    rawImg
 
-    psmDicom
   }
 
   private val trans = new IsoImagePlaneTranslator(runReq.rtimageList.head)
@@ -57,13 +72,67 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq, response: Respon
 
   private val rtplan: AttributeList = runReq.rtplan
 
-  private val resultList = runReq.rtimageList.sortBy(timeOf).par.map(rtimage => PSMBeamAnalysis(rtplan, extendedData, trans, rtimage: AttributeList).measure()).toArray
+  private val resultList = {
+    def process(rtimage: AttributeList) = PSMBeamAnalysis(rtplan, extendedData, trans, rtimage: AttributeList).measure()
 
-  private val psm = savePsm(resultList)
+    val list = runReq.rtimageList.par.map(process)
+    list.toList.sortBy(r => timeOf(r.rtimage))
+  }
+
+  private val interpolator = new PSMInterpolator(resultList)
+
+  private val gradientAscent = new PSMGradientAscent(interpolator)
+
+  // ----------------------------------------------------------------------------------------
+
+  // main processing.  Create a scaled DicomImage and Attribute list for each value.
+
+  private val ffAl = runReq.floodField
+  private val ffImg = new DicomImage(ffAl).scalePixels(ffAl)
+
+  private val wdAl = runReq.wholeDetector
+  private val wdImg = new DicomImage(wdAl).scalePixels(wdAl)
+
+  private val rawImg = makeRawImage(wdImg, ffImg)
+  private val rawAl = PSMDicom.psmToDicom(rawImg, resultList.head.rtimage, "Raw Image", "WholeDetector x FloodField")
+
+  private val brImg = interpolator.normalizedDicomImage
+  private val brAl = PSMDicom.psmToDicom(brImg, resultList.head.rtimage, "Beam Response", "Normalized image of bicubic interpolation array of beam center values")
+
+  private val psmImg = makePsmImage(rawImg, brImg)
+  private val psmAl = PSMDicom.psmToDicom(brImg, resultList.head.rtimage, "PSM", "Pixel Sensitivity Matrix derived from FloodField, WholeDetector, and BeamResponse")
+
+  // ----------------------------------------------------------------------------------------
+
+  private val psm = PSM.makePSM(
+    outputPK = extendedData.outputPK,
+    floodFieldPK = -1,
+    al = psmAl,
+    xMax_mm = gradientAscent.getMaxPoint_iso.getX,
+    yMax_mm = gradientAscent.getMaxPoint_iso.getY
+  )
+
+  psm.insert
+  logger.info(s"Inserted PSM into database.")
 
   private val insertedList = resultList.map(result => result.psmBeam.insert)
+  logger.info(s"Inserted ${insertedList.length} PSMBeam rows into database.")
 
-  logger.info(s"Inserted ${insertedList.length} PSMBeam rows.")
+  PSMMainHTML.makeHtml(
+    extendedData = extendedData,
+    rtplan = rtplan,
+    resultList = resultList,
+    psmGradientAscent = gradientAscent,
+    ffAl = ffAl,
+    ffImg = ffImg,
+    wdAl = wdAl,
+    wdImg = wdImg,
+    rawAl = rawAl,
+    rawImg = rawImg,
+    brAl = brAl,
+    brImg = brImg,
+    psmAl = psmAl,
+    psmImg = psmImg
+  )
 
-  PSMHTML.makeHtml(extendedData, rtplan, resultList, psm)
 }

@@ -7,6 +7,10 @@ import org.apache.commons.math3.analysis.interpolation.PiecewiseBicubicSplineInt
 import org.aqa.webrun.psm.PSMUtil.centerPixelsToString
 import org.aqa.Logging
 
+/**
+ * Interpolate using bi-cubic spline to determine pixels between beam center.
+ * @param psmList List of 
+ */
 class PSMInterpolator(psmList: Seq[PSMBeamAnalysisResult]) extends Logging {
   val trans: IsoImagePlaneTranslator = new IsoImagePlaneTranslator(psmList.head.rtimage)
 

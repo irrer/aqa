@@ -8,7 +8,6 @@ import edu.umro.ImageUtil.DicomImage
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.util.UMROGUID
 import edu.umro.DicomDict.TagByName
-import org.aqa.db.DicomSeries
 
 /**
   * Provide functions to convert a PSM image to and from DICOM.
@@ -19,29 +18,6 @@ import org.aqa.db.DicomSeries
   */
 object PSMDicom {
 
-  val RTImageLabel = "PSM"
-  val RTImageDescription = "PSM Pixel Sensitivity Map"
-
-  /**
-    * Determine if the given series is a PSM series.
-    *
-    * @param ds Dicom
-    * @return True if it is a PSM series.
-    */
-  def isPSMSeries(ds: DicomSeries): Boolean = {
-
-    def correctLabelAndDescription(): Boolean = {
-      val al = ds.attributeListList.head
-
-      (al.get(TagByName.RTImageLabel) != null) &&
-      al.get(TagByName.RTImageLabel).getSingleStringValueOrEmptyString().equals(RTImageLabel) &&
-      (al.get(TagByName.RTImageDescription) != null) &&
-      al.get(TagByName.RTImageDescription).getSingleStringValueOrEmptyString().equals(RTImageDescription)
-    }
-
-    (ds.size == 1) && correctLabelAndDescription()
-  }
-
   /**
     * Make DICOM out of PSM image.
     *
@@ -51,7 +27,7 @@ object PSMDicom {
     * @param prototype One of the original PSM images.
     * @return
     */
-  def psmToDicom(dicomImage: DicomImage, prototype: AttributeList): AttributeList = {
+  def psmToDicom(dicomImage: DicomImage, prototype: AttributeList, RTImageLabel: String, RTImageDescription: String): AttributeList = {
 
     val al = DicomUtil.clone(prototype)
 
@@ -100,16 +76,16 @@ object PSMDicom {
   }
 
   /**
-    * Given the DICOM representation of a PSM, convert it to a scaled PSM image.
-    * @param psm as DICOM.
-    * @return psm as DicomImage
+    * Given the DICOM representation of a PSM, convert it to a scaled DICOM image.
+    * @param image as DICOM.
+    * @return image as DicomImage
     */
-  def dicomToPsm(psm: AttributeList): DicomImage = {
+  def dicomToImage(image: AttributeList): DicomImage = {
 
-    val RescaleIntercept = psm.get(TagByName.RescaleIntercept).getDoubleValues.head
-    val RescaleSlope = psm.get(TagByName.RescaleSlope).getDoubleValues.head
+    val RescaleIntercept = image.get(TagByName.RescaleIntercept).getDoubleValues.head
+    val RescaleSlope = image.get(TagByName.RescaleSlope).getDoubleValues.head
 
-    val diUnscaled = new DicomImage(psm)
+    val diUnscaled = new DicomImage(image)
 
     def mapRow(row: IndexedSeq[Float]): IndexedSeq[Float] =
       row.map(value => ((value * RescaleSlope) + RescaleIntercept).toFloat)

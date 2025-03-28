@@ -10,15 +10,15 @@ import org.restlet.data.Status
 import org.restlet.Request
 import org.restlet.Response
 
-object PSMChartRestlet {
-  private val path = new String((new PSMChartRestlet).pathOf)
+object PSMBeamResponseChartRestlet {
+  private val path = new String((new PSMBeamResponseChartRestlet).pathOf)
 
   def makeReference(outputPK: Long): String = {
     "<script src='" + path + "?outputPK=" + outputPK + "'></script>"
   }
 }
 
-class PSMChartRestlet extends Restlet with SubUrlRoot with Logging {
+class PSMBeamResponseChartRestlet extends Restlet with SubUrlRoot with Logging {
   override def handle(request: Request, response: Response): Unit = {
     try {
       super.handle(request, response)

@@ -9,7 +9,7 @@ import scala.annotation.tailrec
   * Find the maximum point in the PSM image.
   * @param psmInterpolator Provides 2D interpolator algorithm.
   */
-class PSMGradientAscent(psmInterpolator: PSMInterpolator) extends Logging {
+class PSMGradientAscent(val psmInterpolator: PSMInterpolator) extends Logging {
 
   /** Initial size (edge length) of hypercube in mm. */
   private val initialCubeLen_mm: Double = 1.0

@@ -68,7 +68,7 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
   }
 
   override def run(extendedData: ExtendedData, runReq: PSMRunReq, response: Response): ProcedureStatus.Value = {
-    new PSMExecute(extendedData, runReq, response)
+    new PSMExecute(extendedData, runReq)
     ProcedureStatus.done
   }
 

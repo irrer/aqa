@@ -45,7 +45,7 @@ import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessSubHTML
 import org.aqa.webrun.phase2.vmat.VMATChartHistoryRestlet
 import org.aqa.webrun.phase2.wedge.WedgeChartHistoryRestlet
 import org.aqa.webrun.phase2.wedge.WedgeUseAsBaseline
-import org.aqa.webrun.psm.PSMChartRestlet
+import org.aqa.webrun.psm.PSMBeamResponseChartRestlet
 import org.aqa.webrun.seriesMaker.SeriesMaker
 import org.aqa.webrun.wl.WLHistoryRestlet
 import org.aqa.webrun.wl.WLNav
@@ -572,7 +572,7 @@ class WebServer extends Application with Logging {
         new BBbyEPIDChartHistoryPartialRestlet,
         new WLIsoCheckChartHistoryRestlet,
         new VMATChartHistoryRestlet,
-        new PSMChartRestlet,
+        new PSMBeamResponseChartRestlet,
         new WedgeChartHistoryRestlet,
         new SymmetryAndFlatnessHistoryRestlet,
         new WLHistoryRestlet,

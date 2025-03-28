@@ -18,12 +18,19 @@ import java.awt.geom.Point2D
 import java.io.File
 import scala.collection.Seq
 
-class PSMSmoothImageHTML(extendedData: ExtendedData, dicomImage: DicomImage, maxPoint_iso: Point2D.Double, resultList: Seq[PSMBeamAnalysisResult]) extends Logging {
+/**
+ * Generate HTML to display Beam Response.
+ * @param extendedData Meta data.
+ * @param dicomImage DICOM version of Beam Response.
+ * @param maxPoint_iso Coordinates of maximum point.
+ * @param resultList List of PSM centers.
+ */
+class PSMBeamResponseHTML(extendedData: ExtendedData, dicomImage: DicomImage, maxPoint_iso: Point2D.Double, resultList: Seq[PSMBeamAnalysisResult]) extends Logging {
 
-  val imageFileName = "smoothContouredImage.png"
+  val imageFileName = "BeamResponse.png"
   private val imageFile = new File(extendedData.output.dir, imageFileName)
 
-  val htmlFileName = "smoothContouredImage.html"
+  val htmlFileName = "BeamResponse.html"
   private val htmlFile = new File(extendedData.output.dir, htmlFileName)
 
   val trans = new IsoImagePlaneTranslator(resultList.head.rtimage)
@@ -113,7 +120,9 @@ class PSMSmoothImageHTML(extendedData: ExtendedData, dicomImage: DicomImage, max
 
     val bufImage = makeBufferedImage()
     Util.writePng(bufImage, imageFile)
-    logger.info("Wrote PSM smooth contoured image " + imageFile.getAbsolutePath)
+    logger.info("Wrote PSM Beam Response image " + imageFile.getAbsolutePath)
+
+    val charts = new PSMCharts(extendedData.output.outputPK.get)
 
     val content = {
       <div>
@@ -141,19 +150,30 @@ class PSMSmoothImageHTML(extendedData: ExtendedData, dicomImage: DicomImage, max
         </div>
 
         <div class="row">
+          <h3>Mean Beam Values</h3>
+          {charts.meanChart.html}
+        </div>
+
+        <div class="row">
+          <h3>Standard Deviation of each Beam Center</h3>
+          {charts.stdDevChart.html}
+        </div>
+
+        <div class="row">
           <div class="col-md-10 col-md-offset-1" >
             <p style="margin-bottom:150px;"> </p>
           </div>
         </div>
-        
+
       </div>
     }
 
-    val js = s"<script>\n${axialChart.javascript}\n${transverseChart.javascript}\n</script>"
+    val script = PSMBeamResponseChartRestlet.makeReference(extendedData.output.outputPK.get) +
+      s"<script>\n${axialChart.javascript}\n${transverseChart.javascript}\n</script>"
 
-    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "PSM Image", c3 = true, runScript = Some(js))
+    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "PSM Image", c3 = true, runScript = Some(script))
     Util.writeFile(htmlFile, text)
-    logger.info(s"Wrote smooth contoured index file ${htmlFile.getAbsolutePath}")
+    logger.info(s"Wrote Beam Response index file ${htmlFile.getAbsolutePath}")
   }
 
 }

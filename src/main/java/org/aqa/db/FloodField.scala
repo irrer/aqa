@@ -17,22 +17,16 @@
 package org.aqa.db
 
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.DicomInputStream
 import edu.umro.DicomDict.TagByName
-import edu.umro.ScalaUtil.FileUtil
+import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil.ToZipOutputStream
 import org.aqa.db.Db.driver.api._
 import org.aqa.Logging
 import org.aqa.Util
-import resource.managed
-
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.util.zip.ZipInputStream
 
 /**
- * Describe a flood field used for PSM processing.  Note that this is different from the flood field use in Phase2 and Phase3.
- */
+  * Describe a flood field used for PSM processing.  Note that this is different from the flood field use in Phase2 and Phase3.
+  */
 
 case class FloodField(
     floodFieldPK: Option[Long], // primary key
@@ -77,26 +71,7 @@ case class FloodField(
   }
 
   /** Binary content as DICOM. */
-  lazy val dicom: AttributeList = {
-    val inputStream = new ByteArrayInputStream(dicom_zip)
-
-    managed(new ZipInputStream(inputStream)) acquireAndGet { zipIn =>
-      {
-        val entry = zipIn.getNextEntry
-        if (entry == null)
-          logger.error("Found null zip entry in FloodField.dicom_zip.")
-        val data = {
-          val os = new ByteArrayOutputStream
-          FileUtil.copyStream(zipIn, os)
-          os.toByteArray
-        }
-        val dicomIn = new DicomInputStream(new ByteArrayInputStream(data))
-        val al = new AttributeList
-        al.read(dicomIn)
-        al
-      }
-    }
-  }
+  lazy val dicom: AttributeList = DicomUtil.zippedByteArrayToDicom(dicom_zip).head
 
 }
 
