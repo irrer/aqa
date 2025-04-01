@@ -1,4 +1,4 @@
-package org.aqa.webrun.psm
+package org.aqa.webrun.psm.html
 
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
@@ -10,6 +10,7 @@ import org.aqa.Util
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
+import org.aqa.webrun.psm.PSMBeamAnalysisResult
 
 import java.awt.Color
 import java.awt.image.BufferedImage

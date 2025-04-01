@@ -1,4 +1,4 @@
-package org.aqa.webrun.psm
+package org.aqa.webrun.psm.html
 
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageText
@@ -10,6 +10,8 @@ import org.aqa.Util
 import org.aqa.web.WebUtil
 import org.aqa.Config
 import org.aqa.web.C3Chart
+import org.aqa.webrun.psm.PSMBeamAnalysisResult
+import org.aqa.webrun.psm.PSMCharts
 
 import java.awt.Color
 import java.awt.image.BufferedImage

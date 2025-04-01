@@ -1,9 +1,10 @@
-package org.aqa.webrun.psm
+package org.aqa.webrun.psm.html
 
 import org.aqa.web.WebUtil.SubUrlRoot
 import org.aqa.Logging
 import org.aqa.web.WebUtil.getValueMap
 import org.aqa.web.WebUtil.internalFailure
+import org.aqa.webrun.psm.PSMCharts
 import org.restlet.Restlet
 import org.restlet.data.MediaType
 import org.restlet.data.Status

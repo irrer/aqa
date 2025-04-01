@@ -7,6 +7,7 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.PSM
+import org.aqa.webrun.psm.html.PSMMainHTML
 
 class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging {
 
@@ -118,6 +119,7 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
   private val insertedList = resultList.map(result => result.psmBeam.insert)
   logger.info(s"Inserted ${insertedList.length} PSMBeam rows into database.")
 
+  /*
   PSMMainHTML.makeHtml(
     extendedData = extendedData,
     rtplan = rtplan,
@@ -134,5 +136,25 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
     psmAl = psmAl,
     psmImg = psmImg
   )
+   */
+
+  private val mainHTML = new PSMMainHTML(
+    extendedData = extendedData,
+    rtplan = rtplan,
+    resultList = resultList,
+    psmGradientAscent = gradientAscent,
+    ffAl = ffAl,
+    ffImg = ffImg,
+    wdAl = wdAl,
+    wdImg = wdImg,
+    rawAl = rawAl,
+    rawImg = rawImg,
+    brAl = brAl,
+    brImg = brImg,
+    psmAl = psmAl,
+    psmImg = psmImg
+  )
+
+  mainHTML.make()
 
 }
