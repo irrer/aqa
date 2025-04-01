@@ -90,6 +90,9 @@ class C3ChartHistory(
   private val now = new Date()
   private val allDates = xDateList.flatten
 
+  // If there is only one set of values, then use different colors.
+  private val yIndexCon = if (yValues.head.size == 1) -1 else yIndex
+
   // allow for charts with no data.  Data might later be define.
   private val minDate = if (allDates.isEmpty) now else allDates.minBy(d => d.getTime)
   private val maxDate = if (allDates.isEmpty) now else allDates.maxBy(d => d.getTime)
@@ -303,7 +306,7 @@ var $chartIdTag = c3.generate({
             if (x === undefined) return "black";
             return x.color;
           }
-          if (d.index === $yIndex)
+          if (d.index === $yIndexCon)
             return 'orange';
           return color;
         }
