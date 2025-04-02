@@ -191,9 +191,7 @@ class ImageHTML(
           </div>
           <div class="row">
             <div class="col-md-10 col-md-offset-1" >
-              <pre style="margin-top:40px;">
-                {"\n" + DicomUtil.attributeListToString(al)}
-              </pre>
+              <pre style="margin-top:40px;">{WebUtil.nl + DicomUtil.attributeListToString(al)}</pre>
             </div>
           </div>
           <div class="row">
