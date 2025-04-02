@@ -28,7 +28,7 @@ class PSMBeamResponseChartRestlet extends Restlet with SubUrlRoot with Logging {
 
       val charts = new PSMCharts(outputPK)
 
-      val js = charts.meanChart.javascript + charts.stdDevChart.javascript
+      val js = charts.meanChart.javascript + charts.stdDevChart.javascript + charts.maxInterpolationCoordinates.javascript
       response.setStatus(Status.SUCCESS_OK)
       response.setEntity(js, MediaType.APPLICATION_JAVASCRIPT)
     } catch {

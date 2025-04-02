@@ -18,7 +18,7 @@ import scala.xml.Elem
 
 class ResultHtml(extendedData: ExtendedData, resultList: Seq[PSMBeamAnalysisResult]) {
 
-  private def fmt(d: Double): String = d.formatted("%8.2f").trim
+  private def fmt(d: Double): String = "%8.2f".format(d).trim
 
   /**
     * Annotate the image with the mean CU in the center of the beam.  Use the existing buffered image.

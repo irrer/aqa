@@ -21,12 +21,12 @@ import java.io.File
 import scala.collection.Seq
 
 /**
- * Generate HTML to display Beam Response.
- * @param extendedData Meta data.
- * @param dicomImage DICOM version of Beam Response.
- * @param maxPoint_iso Coordinates of maximum point.
- * @param resultList List of PSM centers.
- */
+  * Generate HTML to display Beam Response.
+  * @param extendedData Meta data.
+  * @param dicomImage DICOM version of Beam Response.
+  * @param maxPoint_iso Coordinates of maximum point.
+  * @param resultList List of PSM centers.
+  */
 class PSMBeamResponseHTML(extendedData: ExtendedData, dicomImage: DicomImage, maxPoint_iso: Point2D.Double, resultList: Seq[PSMBeamAnalysisResult]) extends Logging {
 
   val imageFileName = "BeamResponse.png"
@@ -54,7 +54,7 @@ class PSMBeamResponseHTML(extendedData: ExtendedData, dicomImage: DicomImage, ma
     Seq(-1, 0, 1).foreach(i => gc.drawLine(x_pix - (len / 2), y_pix + i, x_pix + (len / 2), y_pix + i))
     Seq(-1, 0, 1).foreach(i => gc.drawLine(x_pix + i, y_pix - (len / 2), x_pix + i, y_pix + (len / 2)))
 
-    val text = maxPoint_iso.getX.formatted("%6.2f").trim + ", " + maxPoint_iso.getY.formatted("%6.2f").trim
+    val text = "%6.2f".format(maxPoint_iso.getX).trim + ", " + "%6.2f".format(maxPoint_iso.getY).trim
     ImageText.drawTextCenteredAt(gc, x_pix, y_pix + len + (ImageText.getFontHeight(gc) / 2), text)
   }
 
@@ -159,6 +159,11 @@ class PSMBeamResponseHTML(extendedData: ExtendedData, dicomImage: DicomImage, ma
         <div class="row">
           <h3>Standard Deviation of each Beam Center</h3>
           {charts.stdDevChart.html}
+        </div>
+
+        <div class="row">
+          <h3>Points of Max Interpolation</h3>
+          {charts.maxInterpolationCoordinates.html}
         </div>
 
         <div class="row">

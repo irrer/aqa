@@ -80,7 +80,7 @@ class PSMGradientAscent(val psmInterpolator: PSMInterpolator) extends Logging {
       finder(cube.nextCube(cube.len * cubeReductionFactor), iteration - 1)
     } else {
       val iterationsPerformed = "iterations performed: " + (maxNumberOfIterations - iteration)
-      val precision = "Result is precise to within " + cube.len.formatted("%20.17f") + " mm"
+      val precision = "Result is precise to within " + "%20.17f".format(cube.len) + " mm"
       val valuesText = "Calculated values: " + psmInterpolator.trans.pix2Iso(maxPoint.pt)
       logger.info(s"$iterationsPerformed    $precision    $valuesText")
     }

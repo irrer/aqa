@@ -555,7 +555,7 @@ object Config extends Logging {
     * Encapsulate the configuration for pair of VMAT beams.
     */
   case class VMATBeamPair(name: String, MLC: String, OPEN: String, IsolationBorder_mm: Double) {
-    override def toString: String = name + "    MLC: " + MLC.format("%-14s") + "    OPEN: " + OPEN.format("%-14s") + "    IsolationBorder_mm: " + IsolationBorder_mm.formatted("%6.3f")
+    override def toString: String = name + "    MLC: " + "%-14s".format(MLC) + "    OPEN: " + "%-14s".format(OPEN) + "    IsolationBorder_mm: " + "%6.3f".format(IsolationBorder_mm)
   }
 
   /**
@@ -662,7 +662,7 @@ object Config extends Logging {
 
   private object ToBeAnonymized {
     private def fmtTag(tag: AttributeTag) = {
-      tag.getGroup.formatted("%04x") + "," + tag.getElement.formatted("%04x")
+      "%04x".format(tag.getGroup) + "," + "%04x".format(tag.getElement)
     }
 
     def tagFromName(name: String): AttributeTag = {
@@ -1025,8 +1025,13 @@ object Config extends Logging {
 
   // =================================================================================
 
-  val PSMWholeDetectorBeamNamePattern: String = logMainText("PSMWholeDetectorBeamNamePattern", ".*Whole.*")
+  val PSMWholeDetectorBeamNamePattern: String = logMainText("PSMWholeDetectorBeamNamePattern", ".*whole.*")
   val PSMRadius_mm: Double = logMainText("PSMRadius_mm", "5.0").toDouble
+
+  private val PSMMaxFloodFieldAge_day: Double = logMainText("PSMMaxFloodFieldAge_day", "732.0").toDouble
+  val PSMMaxFloodFieldAge_ms: Long = (PSMMaxFloodFieldAge_day * 24 * 1000 * 1000).round
+  private val PSMMaxFloodFieldFutureAge_day: Double = logMainText("PSMMaxFloodFieldFutureAge_day", "8.0").toDouble
+  val PSMMaxFloodFieldFutureAge_ms: Long = (PSMMaxFloodFieldFutureAge_day * 24 * 1000 * 1000).round
 
   // =================================================================================
 

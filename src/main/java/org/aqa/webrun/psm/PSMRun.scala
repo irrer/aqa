@@ -20,6 +20,7 @@ import org.aqa.db.DicomSeries
 import org.aqa.db.FloodField
 import org.aqa.db.Machine
 import org.aqa.web.WebUtil
+import org.aqa.Config.PSMWholeDetectorBeamNamePattern
 import org.restlet.Response
 
 import java.sql.Timestamp
@@ -73,7 +74,7 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
   }
 
   private def getRtplan(rtplanList: Seq[AttributeList], planUIDReference: String): Option[AttributeList] = {
-    if (Config.ProductionMode || rtplanList.isEmpty) { // Either this is is ProductionMode, or is TestMode and the user did not upload a plan.
+    if (Config.ProductionMode || rtplanList.isEmpty) { // Either this is ProductionMode, or is TestMode and the user did not upload a plan.
       val matchingUploaded = rtplanList.filter(plan => planUIDReference.contains(Util.sopOfAl(plan)))
 
       def dbPlan: Seq[AttributeList] = DicomSeries.getBySopInstanceUID(planUIDReference).map(_.attributeListList.head)
@@ -86,7 +87,7 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
   }
 
   /**
-    * Determine of all of the beams referenced in the plan have been uploaded.  If so, return None, else return an error message describing what is missing.
+    * Determine of all the beams referenced in the plan have been uploaded.  If so, return None, else return an error message describing what is missing.
     * @param rtplan For this RTPLAN.
     * @param rtimageList List of RTIMAGE files uploaded by user.
     * @return None if ok, error message if beams are missing.
@@ -163,7 +164,7 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
   }
 
   private def isWholeDetectorBeamName(beamName: String): Boolean = {
-    beamName.toLowerCase.contains("whole") // TODO put string in configuration
+  beamName.toLowerCase.matches(PSMWholeDetectorBeamNamePattern)
   }
 
   override def validate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Either[StyleMapT, RunReqClass] = {

@@ -1253,13 +1253,24 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
-    <!-- Regular expression to test whether the name of the beam indicates it is a Whole Detector beam.
-    Defaults to:  .*Whole.*  -->
-    <PSMWholeDetectorBeamNamePattern>.*Whole.*</PSMWholeDetectorBeamNamePattern>
+    <!-- Regular expression to test whether the name of the beam indicates it is a Whole Detector beam.  Case insensitive.
+    Defaults to:  .*whole.*  -->
+    <PSMWholeDetectorBeamNamePattern>.*whole.*</PSMWholeDetectorBeamNamePattern>
 
     <!-- Radius of circle in mm that defines how large of an area to sample from the center of each
     PSM beam. Floating point value greater than 0, default is 5.0 -->
     <PSMRadius_mm>5.0</PSMRadius_mm>
+
+    <!-- When using a flood field to construct a PSM, the flood field must be more recent than this many days
+     to be valid.  Specified as a floating point number in days.  Default: 732.0 (about 2 years) -->
+    <PSMMaxFloodFieldAge_day>732.0</PSMMaxFloodFieldAge_day>
+
+    <!-- When using a flood field to construct a PSM, the flood field may be created after the PSM images
+     were created, but only within this many days.  In other words, if a PSM is uploaded, but there is no
+     flood field, then AQA will reject it.  The user then has this many days to create a flood field,
+     upload it (by running the Flood Field procedure), and then retry running PSM with the same PSM files.
+     Specified as a floating point number in days.  Default: 8.0 -->
+    <PSMMaxFloodFieldFutureAge_day>8.0</PSMMaxFloodFieldFutureAge_day>
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 

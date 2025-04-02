@@ -5,6 +5,7 @@ import org.aqa.db.Machine
 import org.aqa.db.MaintenanceCategory
 import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Output
+import org.aqa.db.PSM
 import org.aqa.db.PSMBeam
 import org.aqa.web.C3ChartHistory
 
@@ -23,6 +24,7 @@ class PSMCharts(outputPK: Long) extends Logging {
 
   private val history = PSMBeam.historyByMachine(machine.machinePK.get)
 
+  // If there is only one result, then make the values different colors.
   private val index = history.indexWhere(h => h.output.outputPK.get == outputPK)
 
   private val beamNameList = {
@@ -46,6 +48,8 @@ class PSMCharts(outputPK: Long) extends Logging {
     def getBeam(beamName: String) = history.flatMap(h => h.psmBeamList.find(_.beamName.equals(beamName))).map(f)
     beamNameList.map(getBeam)
   }
+
+  private val colorList = Seq(Color.blue, Color.green, Color.lightGray, Color.gray, Color.darkGray, Color.black, Color.red, Color.pink, Color.orange, Color.yellow, Color.magenta, Color.cyan)
 
   /** All maintenance records for the entire history interval for all beams except for 'Set Baseline' to reduce clutter. */
   private val maintenanceRecordList = {
@@ -71,7 +75,7 @@ class PSMCharts(outputPK: Long) extends Logging {
     yValues = getYValues((psmBeam: PSMBeam) => psmBeam.mean_cu),
     yIndex = index,
     yFormat = ".3r",
-    yColorList = Seq[Color](),
+    yColorList = colorList,
     setBaselineList = Seq()
   )
 
@@ -90,7 +94,32 @@ class PSMCharts(outputPK: Long) extends Logging {
     yValues = getYValues((psmBeam: PSMBeam) => psmBeam.stdDev_cu),
     yIndex = index,
     yFormat = ".3r",
-    yColorList = Seq[Color](),
+    yColorList = colorList,
+    setBaselineList = Seq()
+  )
+
+  // list of all X,Y pairs showing coordinate where interpolation was largest
+  private val maxCoordinateValues = {
+    val list = PSM.historyByMachine(machine.machinePK.get)
+    Seq(list.map(_.psm.xMax_mm), list.map(_.psm.yMax_mm))
+  }
+
+  val maxInterpolationCoordinates = new C3ChartHistory(
+    chartIdOpt = Some("MaxInterpolationCoordinates"),
+    maintenanceList = maintenanceRecordList,
+    width = None, // width
+    height = None, // height
+    xLabel = "Date",
+    xDateList = Seq(allDates),
+    baseline = None, // BaselineSpec
+    tolerance = None, // tolerance Some(new C3Chart.Tolerance(-Config.VMATDeviationThreshold_pct, Config.VMATDeviationThreshold_pct)),
+    yRange = None, // range
+    yAxisLabels = Seq("X", "Y"),
+    yDataLabel = "mm",
+    yValues = maxCoordinateValues,
+    yIndex = index,
+    yFormat = ".4r",
+    yColorList = Seq(new Color(48, 123, 43), new Color(255, 150, 150)),
     setBaselineList = Seq()
   )
 

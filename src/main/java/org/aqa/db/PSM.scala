@@ -177,7 +177,7 @@ object PSM extends Logging {
     newPSM
   }
 
-  case class PSMHistory(output: Output, psmList: PSM) {}
+  case class PSMHistory(output: Output, psm: PSM) {}
 
   /**
     * Get the history of PSM results.
@@ -199,7 +199,7 @@ object PSM extends Logging {
     val pairList = Db.run(search.result)
 
     // make PSMHistory list
-    val history = pairList.map(pair => new PSMHistory(pair._1, pair._2))
+    val history = pairList.map(pair => PSMHistory(pair._1, pair._2))
 
     // sort by data date
     history.sortBy(_.output.dataDate.get.getTime)

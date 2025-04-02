@@ -25,7 +25,7 @@ class PSMCompositeImageHTML(extendedData: ExtendedData) extends Logging {
   val htmlFileName = "compositeImage.html"
   val htmlFile = new File(extendedData.output.dir, htmlFileName)
 
-  private def fmt(d: Double): String = d.formatted("%8.2f").trim
+  private def fmt(d: Double): String = "%8.2f".format(d).trim
 
   /**
     * Put the CU for each image on the composite image.
@@ -67,7 +67,7 @@ class PSMCompositeImageHTML(extendedData: ExtendedData) extends Logging {
     * @param resultList results from all beams.
     * @return
     */
-  private def makeCompositeImage(resultList: Seq[PSMBeamAnalysisResult]): BufferedImage = {
+  def makeCompositeImage(resultList: Seq[PSMBeamAnalysisResult]): DicomImage = {
     // Get all values from all images so a global max and min can be established
     val dropCount = 10 // drop this many high and low values to get rid of outliers (bad pixels)
     val allValues = resultList.flatMap(_.pixelList.values).sorted.drop(dropCount).dropRight(dropCount)
@@ -90,16 +90,22 @@ class PSMCompositeImageHTML(extendedData: ExtendedData) extends Logging {
       pa
     }
 
-    val bufImg = new DicomImage(pixelArray).toBufferedImage(Color.white)
+    new DicomImage(pixelArray)
+  }
+
+  private def makeCompositeBufferedImage(resultList: Seq[PSMBeamAnalysisResult]): BufferedImage = {
+    val dicomImage = makeCompositeImage(resultList)
+    val bufImg = dicomImage.toBufferedImage(Color.white)
 
     val trans = new IsoImagePlaneTranslator(resultList.head.rtimage)
     Util.addGraticules(bufImg, trans, Color.GRAY)
     bufImg
+
   }
 
   def make(resultList: Seq[PSMBeamAnalysisResult]): Unit = {
 
-    val compositeImage = makeCompositeImage(resultList)
+    val compositeImage = makeCompositeBufferedImage(resultList)
 
     annotateCompositeImage(compositeImage, resultList)
     Util.writePng(compositeImage, imageFile)

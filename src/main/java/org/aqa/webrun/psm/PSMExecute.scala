@@ -7,6 +7,7 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.PSM
+import org.aqa.webrun.psm.html.PSMCompositeImageHTML
 import org.aqa.webrun.psm.html.PSMMainHTML
 
 class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging {
@@ -97,6 +98,9 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
   private val rawImg = makeRawImage(wdImg, ffImg)
   private val rawAl = PSMDicom.psmToDicom(rawImg, resultList.head.rtimage, "Raw Image", "WholeDetector x FloodField")
 
+  private val cbrImg = new PSMCompositeImageHTML(extendedData).makeCompositeImage(resultList)
+  private val cbrAl = PSMDicom.psmToDicom(cbrImg, resultList.head.rtimage, "Composite Beam Response", "Composite image of beam center values")
+
   private val brImg = interpolator.normalizedDicomImage
   private val brAl = PSMDicom.psmToDicom(brImg, resultList.head.rtimage, "Beam Response", "Normalized image of bicubic interpolation array of beam center values")
 
@@ -149,6 +153,8 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
     wdImg = wdImg,
     rawAl = rawAl,
     rawImg = rawImg,
+    cbrAl = cbrAl,
+    cbrImg = cbrImg,
     brAl = brAl,
     brImg = brImg,
     psmAl = psmAl,
