@@ -1263,7 +1263,7 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- When using a flood field to construct a PSM, the flood field must be more recent than this many days
      to be valid.  Specified as a floating point number in days.  Default: 732.0 (about 2 years) -->
-    <PSMMaxFloodFieldAge_day>0.0000732</PSMMaxFloodFieldAge_day>
+    <PSMMaxFloodFieldAge_day>732.0</PSMMaxFloodFieldAge_day>
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
