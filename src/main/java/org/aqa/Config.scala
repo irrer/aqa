@@ -1030,8 +1030,6 @@ object Config extends Logging {
 
   private val PSMMaxFloodFieldAge_day: Double = logMainText("PSMMaxFloodFieldAge_day", "732.0").toDouble
   val PSMMaxFloodFieldAge_ms: Long = (PSMMaxFloodFieldAge_day * 24 * 1000 * 1000).round
-  private val PSMMaxFloodFieldFutureAge_day: Double = logMainText("PSMMaxFloodFieldFutureAge_day", "8.0").toDouble
-  val PSMMaxFloodFieldFutureAge_ms: Long = (PSMMaxFloodFieldFutureAge_day * 24 * 1000 * 1000).round
 
   // =================================================================================
 
