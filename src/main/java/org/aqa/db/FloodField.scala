@@ -24,6 +24,8 @@ import org.aqa.db.Db.driver.api._
 import org.aqa.Logging
 import org.aqa.Util
 
+import java.sql.Timestamp
+
 /**
   * Describe a flood field used for PSM processing.  Note that this is different from the flood field use in Phase2 and Phase3.
   */
@@ -46,7 +48,6 @@ case class FloodField(
   def insert: FloodField = {
     val insertQuery = FloodField.query returning FloodField.query.map(_.floodFieldPK) into
       ((floodField, floodFieldPK) => floodField.copy(floodFieldPK = Some(floodFieldPK)))
-
     val action = insertQuery += this
     val result = Db.run(action)
     result
@@ -151,9 +152,26 @@ object FloodField extends Logging {
   }
 
   /**
-    * Get a list of all rows for the given hash.  There should be either zero or one.
+    * Get all flood field entries that match passed parameters.
+    *
+    * @param machinePK               For this machine
+    * @param Rows                    Number of rows of pixels
+    * @param Columns                 Number of columns of pixels
+    * @param ImagePlanePixelSpacingX Horizontal spacing of pixels in mm
+    * @param ImagePlanePixelSpacingY Vertical spacing of pixels in mm
+    * @param minDate                 On or before this
+    * @param maxDate                 On or after this
+    * @return List of all matching flood fields, sorted by delivery date.
     */
-  def getMostRecent(machinePK: Long, Rows: Int, Columns: Int, ImagePlanePixelSpacingX: Double, ImagePlanePixelSpacingY: Double): Option[FloodField] = {
+  def getMatching(
+      machinePK: Long,
+      Rows: Int,
+      Columns: Int,
+      ImagePlanePixelSpacingX: Double,
+      ImagePlanePixelSpacingY: Double,
+      minDate: Timestamp,
+      maxDate: Timestamp //
+  ): Seq[FloodField] = {
     val action = for {
       output <- Output.query if output.machinePK === machinePK
       ff <- FloodField.query
@@ -161,15 +179,14 @@ object FloodField extends Logging {
         (ff.Columns === Columns) &&
         (ff.ImagePlanePixelSpacingX === ImagePlanePixelSpacingX) &&
         (ff.ImagePlanePixelSpacingY === ImagePlanePixelSpacingY) &&
-        (ff.outputPK === output.outputPK)
+        (ff.outputPK === output.outputPK) &&
+        (output.dataDate >= minDate) &&
+        (output.dataDate <= maxDate)
     } yield (output, ff)
-    val sorted = action.sortBy(_._1.dataDate.desc)
-    val flood = Db.run(sorted.result.headOption)
+    val outputFloodList = Db.run(action.result)
+    val floodList: Seq[FloodField] = outputFloodList.sortBy(_._1.dataDate.get.getTime).map(_._2)
 
-    if (flood.isDefined)
-      Some(flood.get._2)
-    else
-      None
+    floodList
   }
 
   def delete(floodFieldPK: Long): Int = {
