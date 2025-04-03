@@ -341,6 +341,9 @@ Note that when building a package for release, the Maven build process uses the 
 
         <PlanFile procedure='IsoCheck' manufacturer='Varian' collimatorModel='HD'>rtplanIsoCheckHdmlc.dcm</PlanFile>
         <PlanFile procedure='IsoCheck' manufacturer='Varian' collimatorModel='Millenium'>rtplanIsoCheckMillenium.dcm</PlanFile>
+
+        <PlanFile procedure='PSM' manufacturer='Varian' collimatorModel='HD'>rtplanPSM.dcm</PlanFile>
+        <PlanFile procedure='PSM' manufacturer='Varian' collimatorModel='Millenium'>rtplanPSM.dcm</PlanFile>
     </PlanFileList>
 
     <!-- Name of subdirectory that contains the DICOM template files for creating a simple RTPLAN.  This is located under

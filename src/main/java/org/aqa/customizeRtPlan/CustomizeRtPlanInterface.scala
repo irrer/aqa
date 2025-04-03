@@ -119,7 +119,8 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     new MakeRtplanFocalSpot,
     new MakeRtplanIsoCheckNoTable,
     new MakeRtplanIsoCheckMinimalTable,
-    new MakeRtplanIsoCheckFullTable
+    new MakeRtplanIsoCheckFullTable,
+    new MakeRtplanPSM
   )
 
   class FormButtonProcedure(name: String, val procedure: Option[Procedure]) extends FormButton(name, col = 2, offset = 0, subUrl = subUrl, pathOf, ButtonType.BtnPrimary) {}
