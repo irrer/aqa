@@ -6,6 +6,7 @@ import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 import org.aqa.Util
+import org.aqa.db.FloodField
 import org.aqa.db.PSM
 import org.aqa.webrun.psm.html.PSMCompositeImageHTML
 import org.aqa.webrun.psm.html.PSMMainHTML
@@ -109,9 +110,15 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
 
   // ----------------------------------------------------------------------------------------
 
+  private def getReferencedFloodField: FloodField = {
+    val uploadedFloodFieldHash = FloodField.makeFloodField(extendedData.output.outputPK.get, runReq.floodField).imageHash_md5
+    val ff = FloodField.getByImageHash(uploadedFloodFieldHash)
+    ff.head
+  }
+
   private val psm = PSM.makePSM(
     outputPK = extendedData.outputPK,
-    floodFieldPK = -1,
+    floodFieldPK = getReferencedFloodField.floodFieldPK.get,
     al = psmAl,
     xMax_mm = gradientAscent.getMaxPoint_iso.getX,
     yMax_mm = gradientAscent.getMaxPoint_iso.getY
