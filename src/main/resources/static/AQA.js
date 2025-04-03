@@ -97,7 +97,7 @@ if (window.location.pathname.toLowerCase().indexOf("/static/") == -1) {
   jsonhttp.send();
 }
 
-var precision = 2; // default precision to show
+var precision = 3; // default precision to show
 
 /* Update all elements with the 'precision' attribute to the 'precision' number of digits. */
 function updateFloatingPrecision() {
