@@ -21,9 +21,15 @@ import org.aqa.db.FloodField
 import org.aqa.db.Machine
 import org.aqa.web.WebUtil
 import org.aqa.Config.PSMWholeDetectorBeamNamePattern
+import org.aqa.run.RunProcedure
+import org.aqa.web.Session
+import org.aqa.web.WebUtil.emptyValueMap
+import org.aqa.webrun.floodField.FloodRun
 import org.restlet.Response
 
+import java.io.File
 import java.sql.Timestamp
+import java.util.Date
 import scala.xml.Elem
 
 class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunReq] {
@@ -68,7 +74,42 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
     list3.toSeq
   }
 
+  /**
+    * Process the given flood field as if the user were running the FloodField procedure.
+    * @param extendedData Metadata
+    * @param floodFieldDicom DICOM of flood field.
+    * @param response Web response.
+    * @return
+    */
+  private def processNewFloodField(extendedData: ExtendedData, floodFieldDicom: AttributeList, response: Response): Unit = {
+    logger.info("Making new FloodField results from flood field uploaded while running PSM procedure.")
+
+    val floodRun = new FloodRun(Procedure.ProcOfFloodField.get)
+    val floodRunTrait = floodRun.asInstanceOf[RunTrait[RunReqClass]]
+
+    val sessionId = Session.makeUniqueId
+    val sessionDir = Session.idToFile(sessionId)
+    sessionDir.mkdirs()
+    val dicomFile = new File(sessionDir, "0001.dcm")
+    DicomUtil.writeAttributeListToFile(floodFieldDicom, dicomFile, "AQA")
+
+    val valueMap: ValueMapT = Map(
+      RunProcedure.machineSelectorLabel -> extendedData.machine.machinePK.get.toString,
+      WebUtil.sessionLabel -> sessionId,
+      WebUtil.userIdRealTag -> extendedData.user.getRealId.get
+    )
+
+    if (true)
+      RunProcedure.runIfDataValid(valueMap = valueMap, response = response, runTrait = floodRunTrait, sync = false)
+  }
+
   override def run(extendedData: ExtendedData, runReq: PSMRunReq, response: Response): ProcedureStatus.Value = {
+
+    val uploadedFloodFieldHash = FloodField.makeFloodField(extendedData.output.outputPK.get, runReq.floodField).imageHash_md5
+
+    if (FloodField.getByImageHash(uploadedFloodFieldHash).isEmpty)
+      processNewFloodField(extendedData, runReq.floodField, response)
+
     new PSMExecute(extendedData, runReq)
     ProcedureStatus.done
   }
@@ -122,7 +163,10 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
   }
 
   /**
-    * Get the flood field to be used with this data set.  Use the latest one, whether it was uploaded by the user, or, was in the database.
+    * Get the flood field to be used with this data set.  If the user uploaded one, then use that.  If they did not,
+    * then find the most recent one that is not more than <code>Config.Config.PSMMaxFloodFieldAge_days</code> than
+    * the data set, and not newer than the data set.
+    *
     * @param alList List of all uploaded DICOM files.
     * @param rtimageList List of all RTIMAGE files except for flood field.
     * @return
@@ -151,20 +195,27 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
 
     def timeOf(al: AttributeList) = Util.extractDateTimeAndPatientIdFromDicomAl(al)._1.head.getTime
 
-    val floodField = {
-      val uploaded = alList.filter(FloodUtil.isFloodField).filter(matchingResolution)
-      val list: Seq[AttributeList] = FloodField.getMostRecent(machinePK, Rows, Columns, ImagePlanePixelSpacing.head, ImagePlanePixelSpacing(1)) match {
-        case Some(ff) => uploaded :+ ff.dicom
-        case _        => uploaded
-      }
-      list.sortBy(timeOf).headOption
+    val floodField: Option[AttributeList] = {
+      val uploadedFloodField = alList.filter(FloodUtil.isFloodField).filter(matchingResolution).sortBy(timeOf).lastOption
+
+      val ff =
+        if (uploadedFloodField.isDefined)
+          uploadedFloodField // the user uploaded a flood field with matching geometry, so use it, regardless of its date.
+        else {
+          val maxDate = getDataDate(valueMap = emptyValueMap, alList = alList, xmlList = Seq()).get
+          val minDate = new Timestamp(maxDate.getTime - Config.PSMMaxFloodFieldAge_ms)
+          val dbFloodField = FloodField.getMatching(machinePK, Rows, Columns, ImagePlanePixelSpacing.head, ImagePlanePixelSpacing(1), minDate, maxDate).lastOption.map(_.dicom)
+          dbFloodField
+        }
+
+      ff
     }
 
     floodField
   }
 
   private def isWholeDetectorBeamName(beamName: String): Boolean = {
-  beamName.toLowerCase.matches(PSMWholeDetectorBeamNamePattern)
+    beamName.toLowerCase.matches(PSMWholeDetectorBeamNamePattern)
   }
 
   override def validate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Either[StyleMapT, RunReqClass] = {
@@ -198,14 +249,15 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
       case _ if referencedSeriesList.size > 1                            => formError("RTIMAGES are from more than one series")
       case _ if getRtplan(rtplanList, planUIDReferenceList.head).isEmpty => formError("Could not get RTPLAN.  Upload the RTPLAN with the RTIMAGE files.")
       case _ if allBeams.nonEmpty                                        => formError(allBeams.get)
-      case _ if getFloodField(alList, rtimageList).isEmpty               => formError("Could not find compatible flood field.  Try adding the latest flood field to this upload set.")
+      case _ if getFloodField(alList, rtimageList).isEmpty               => formError("Could not find compatible flood field.  Try uploading the latest flood field image with this upload set.")
       case _ if getWholeDetector.isEmpty                                 => formError("Can not find whole detector image.")
       case _ =>
         val rtplan = getRtplan(rtplanList, planUIDReferenceList.head).get
         val planBeamNumberSet = getPlanBeamNumberList(rtplan).toSet
         val wholeDetector = getWholeDetector.get
         val imgList = {
-          val list1 = rtimageList.filter(rtimage => planBeamNumberSet.contains(beamNumberOf(rtimage).get))
+          val list0 = rtimageList.filterNot(FloodUtil.isFloodField)
+          val list1 = list0.filter(rtimage => planBeamNumberSet.contains(beamNumberOf(rtimage).get))
           val list2 = Util.sortByDateTime(list1)
           val list3 = list2.filterNot(rtimage => Util.sopOfAl(rtimage).equals(Util.sopOfAl(wholeDetector)))
           list3
@@ -246,7 +298,10 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
   }
 
   override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[Timestamp] = {
-    val min = getRtimageList(alList).map(Util.extractDateTimeAndPatientIdFromDicomAl).flatMap(_._1.headOption).min
+    val min: Date = getRtimageList(alList) // all RTIMAGE files
+      .filterNot(FloodUtil.isFloodField) // ignore any flood field that may have been uploaded
+      .flatMap(d => Util.extractDateTimeAndPatientIdFromDicomAl(d)._1.headOption) // get the date+time from each DICOM files
+      .min // use the earliest date+time
     Some(new Timestamp(min.getTime))
   }
 
