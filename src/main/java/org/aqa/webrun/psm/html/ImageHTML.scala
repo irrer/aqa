@@ -92,24 +92,58 @@ class ImageHTML(
 
     def fmt(d: Double): String = "%8.2f".format(d).trim
 
-    def drawCircle(result: PSMBeamAnalysisResult): Unit = {
+    def drawHeading(): Unit = {
+      val text = "Circles show mean CU of each beam center"
       val gc = ImageUtil.getGraphics(bufImg)
       gc.setColor(Color.black)
+      val offset = (ImageText.getTextDimensions(gc, text).getHeight * 1.5).toInt
+
+      ImageText.setFont(gc, ImageText.DefaultFont, 20)
+
+      ImageText.drawTextCenteredAt(gc, trans.width / 2, offset, text)
+    }
+
+    def drawCircle(result: PSMBeamAnalysisResult): Unit = {
       val center_pix = trans.iso2Pix(result.psmBeam.xCenter_mm, result.psmBeam.yCenter_mm)
+      val gc = ImageUtil.getGraphics(bufImg)
+      gc.setColor(Color.black)
 
       val width = trans.iso2PixDistX(Config.PSMRadius_mm * 2).toInt
       val height = trans.iso2PixDistY(Config.PSMRadius_mm * 2).toInt
 
-      val text1 = "Mean CU"
-      val text2 = fmt(result.psmBeam.mean_cu)
-      val offset = ImageText.getTextDimensions(gc, text1).getHeight / 2
-      ImageText.drawTextCenteredAt(gc, center_pix.getX, center_pix.getY - offset, text1)
-      ImageText.drawTextCenteredAt(gc, center_pix.getX, center_pix.getY + offset, text2)
+      val text = fmt(result.psmBeam.mean_cu)
+      //ImageText.drawTextCenteredAt(gc, center_pix.getX, center_pix.getY - offset, text1)
+      ImageText.drawTextCenteredAt(gc, center_pix.getX, center_pix.getY, text)
 
       gc.drawOval((center_pix.getX - width / 2).toInt, (center_pix.getY - height / 2).toInt, width, height)
     }
 
+    drawHeading()
+
     resultList.foreach(drawCircle)
+
+    /*
+    // Draw filled black circles where sym/flat/const measurements are done.
+    if (true) {
+
+      def doCircle(point: SymmetryAndFlatnessPoint): Unit = {
+        val gc = ImageUtil.getGraphics(bufImg)
+        val width = trans.iso2PixDistX(Config.SymmetryAndFlatnessDiameter_mm).toInt * 2
+        val height = trans.iso2PixDistY(Config.SymmetryAndFlatnessDiameter_mm).toInt * 2
+        gc.setColor(Color.black)
+        val center_pix = trans.iso2Pix(point.x_mm, point.y_mm)
+        gc.fillOval((center_pix.getX - width / 2).toInt, (center_pix.getY - height / 2).toInt, width, height)
+        gc.setColor(Color.white)
+        ImageText.drawTextCenteredAt(gc, center_pix.getX, center_pix.getY, point.name)
+      }
+
+      doCircle(Config.SymmetryPointTop)
+      doCircle(Config.SymmetryPointBottom)
+      doCircle(Config.SymmetryPointLeft)
+      doCircle(Config.SymmetryPointRight)
+    }
+     */
+
   }
 
   private def annotateMaxCoordinates(maxPoint_iso: Point2D.Double, bufImg: BufferedImage, trans: IsoImagePlaneTranslator): Unit = {
@@ -215,7 +249,7 @@ class ImageHTML(
   private val wdRow = Row("Whole Detector", wdImg, wdAl)
   private val rawRow = Row("Raw Image = Flood Field * Whole Detector", rawImg, rawAl)
   private val cbrRow = Row("Beam Response Beam Centers", cbrImg, cbrAl, drawBeamCenters = true)
-  private val brRow = Row("Beam Response Interpolated and Normalized", brImg, brAl, center = Some(psmGradientAscent.getMaxPoint_iso))
+  private val brRow = Row("Beam Response Interpolated and Normalized", brImg, brAl, center = Some(psmGradientAscent.getMaxPoint_iso), drawBeamCenters = true)
   private val psmRow = Row("PSM = Raw / Beam Response", psmImg, psmAl)
 
   def make(): (Elem, String) = {
