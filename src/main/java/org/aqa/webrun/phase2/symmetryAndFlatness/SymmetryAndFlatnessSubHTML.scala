@@ -44,8 +44,8 @@ import scala.collection.immutable
 import scala.xml.Elem
 
 /**
- * Analyze DICOM files for symmetry and flatness.
- */
+  * Analyze DICOM files for symmetry and flatness.
+  */
 object SymmetryAndFlatnessSubHTML extends Logging {
 
   private def titleDetails = "Click to view graphs and other details"
@@ -116,9 +116,9 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   }
 
   private def detailsColumn(
-                             subDir: File,
-                             symFlatDataSet: SymmetryAndFlatnessDataSet
-                           ): Elem = {
+      subDir: File,
+      symFlatDataSet: SymmetryAndFlatnessDataSet
+  ): Elem = {
     val errorClass = if (symFlatDataSet.symmetryAndFlatness.allPass(symFlatDataSet.baseline)) "normal" else "danger"
     val detailUrl = WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, symFlatDataSet.symmetryAndFlatness.beamName))
     val pk = symFlatDataSet.symmetryAndFlatness.symmetryAndFlatnessPK.get
@@ -127,9 +127,9 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 
     val input =
       if (symFlatDataSet.symmetryAndFlatness.isBaseline) {
-          <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"} checked={baseline}/>
+        <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"} checked={baseline}/>
       } else {
-          <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"}/>
+        <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"}/>
       }
 
     val elem = {
@@ -158,7 +158,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       )
     )
     val imgSmall = {
-        <img src={imgUrl} width="100"/>
+      <img src={imgUrl} width="100"/>
     }
     val ref = {
       <a href={dicomHref}>
@@ -173,40 +173,62 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   private val symmetryPercentLimitColumn = {
-    <td style="text-align: center;">
-      {Config.SymmetryPercentLimit.formatted("%5.2f")}
-    </td>
+    val v = Config.SymmetryPercentLimit
+    val elem = {
+      <td style="text-align: center;">
+        {v.formatted("%5.2f")}
+      </td>
+    }
+    WebUtil.setPrecisionAttr(elem, v)
   }
 
   private val flatnessPercentLimitColumn = {
-    <td style="text-align: center;">
-      {Config.FlatnessPercentLimit.formatted("%5.2f")}
-    </td>
+    val v = Config.FlatnessPercentLimit
+    val elem = {
+      <td style="text-align: center;">
+        {Config.FlatnessPercentLimit.formatted("%5.2f")}
+      </td>
+    }
+    WebUtil.setPrecisionAttr(elem, v)
   }
 
   private val profileConstancyPercentLimitColumn = {
-    <td style="text-align: center;">
-      {Config.ProfileConstancyPercentLimit.formatted("%5.2f")}
-    </td>
+    val v = Config.ProfileConstancyPercentLimit
+    val elem = {
+      <td style="text-align: center;">
+        {v.formatted("%5.2f")}
+      </td>
+    }
+    WebUtil.setPrecisionAttr(elem, v)
   }
 
   private def fmtBaselineColumn(baseline: Double): Elem = {
-    <td style="text-align: center;" title={"Baseline % : " + baseline.formatted("%10.8f")}>
-      {pctRounded(baseline).formatted("%5.3f").trim}
-    </td>
+    val v = pctRounded(baseline)
+    val elem = {
+      <td style="text-align: center;" title={"Baseline % : " + baseline.formatted("%10.8f")}>
+        {pctRounded(baseline).formatted("%5.3f").trim}
+      </td>
+    }
+    WebUtil.setPrecisionAttr(elem, v)
   }
 
   private def fmtDifferenceColumn(percent: Double, limit: Double): Elem = {
     val errorClass = if (percent.abs > limit.abs) "danger" else "normal"
-    <td style="text-align: center;" class={errorClass} title={"Difference: " + percent.formatted("%10.8f")}>
-      {pctRounded(percent).formatted("%5.2f").trim}
-    </td>
+    val v = pctRounded(percent)
+    val elem =
+      <td style="text-align: center;" class={errorClass} title={"Difference: " + percent.formatted("%10.8f")}>
+        {pctRounded(percent).formatted("%5.2f").trim}
+      </td>
+    WebUtil.setPrecisionAttr(elem, v)
   }
 
   private def fmtValueColumn(value: Double): Elem = {
-    <td style="text-align: center;" title={"Value % : " + value.formatted("%10.8f")}>
-      {pctRounded(value).formatted("%5.3f").trim}
-    </td>
+    val v = pctRounded(value)
+    val elem =
+      <td style="text-align: center;" title={"Value % : " + value.formatted("%10.8f")}>
+        {pctRounded(value).formatted("%5.3f").trim}
+      </td>
+    WebUtil.setPrecisionAttr(elem, v)
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -283,7 +305,14 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 
     val content = {
       <div>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/>{csv}<br/>
+        <div class="row">
+          <div class="col-md-2 col-md-offset-1">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/>{csv}<br/>
+          </div>
+          <div class="col-md-2">
+            {WebUtil.showPrecision}
+          </div>
+        </div>
         <table class="table table-responsive table-bordered">
           {tableHead}{symFlatDataList.map(sfd => makeRow(sfd))}
         </table>
