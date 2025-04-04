@@ -56,7 +56,7 @@ object Phase2Util extends Logging {
       else {
         val planSeqList = DicomUtil.seqToAttr(rtimage, TagByName.ReferencedRTPlanSequence)
         val planUidList = planSeqList.map(al => al.get(TagFromName.ReferencedSOPInstanceUID).getSingleStringValueOrNull).filter(uid => uid != null).distinct
-        planUidList
+        planUidList.toList
       }
     } catch {
       case _: Throwable => Seq()
@@ -69,7 +69,7 @@ object Phase2Util extends Logging {
   def referencedPlanUIDOpt(rtimage: AttributeList): Option[String] = {
     val planSeqList: Seq[AttributeList] = {
       if (rtimage.get(TagByName.ReferencedRTPlanSequence) != null)
-        DicomUtil.seqToAttr(rtimage, TagByName.ReferencedRTPlanSequence)
+        DicomUtil.seqToAttr(rtimage, TagByName.ReferencedRTPlanSequence).toList
       else
         Seq()
     }
@@ -105,7 +105,7 @@ object Phase2Util extends Logging {
   def getPlanList(dicomList: Seq[DicomFile]): Seq[DicomFile] = {
     val configuredPlans: Seq[DicomFile] = {
       try {
-        DicomFile.readDicomInDir(Config.sharedDir).filter(df => df.isRtplan)
+        DicomFile.readDicomInDir(Config.sharedDir).filter(df => df.isRtplan).toList
       } catch {
         case t: Throwable =>
           logger.warn("Unexpected problem while getting pre-configured RTPLAN(s): " + t)
@@ -123,7 +123,7 @@ object Phase2Util extends Logging {
           Seq[DicomFile]()
       }
 
-    DicomFile.distinctSOPInstanceUID(configuredPlans ++ downloadedPlans)
+    DicomFile.distinctSOPInstanceUID(configuredPlans ++ downloadedPlans).toList
   }
 
   /**
@@ -236,7 +236,7 @@ object Phase2Util extends Logging {
     val numPixels = originalImage.width * originalImage.height
     val maxBadPixels = ((Config.MaxEstimatedBadPixelPerMillion / 1000000.0) * numPixels).round.toInt
     val badPixels = originalImage.identifyBadPixels(maxBadPixels, Config.BadPixelStdDev, Config.BadPixelMaximumPercentChange, radius, Config.BadPixelMinimumDeviation_CU)
-    badPixels.filter(bp => bp.rating > 100)
+    badPixels.filter(bp => bp.rating > 100).toList
   }
 
   def getImagePlanePixelSpacing(attributeList: AttributeList): Point2D.Double = {
@@ -288,13 +288,6 @@ object Phase2Util extends Logging {
 
   private def dicomViewHtmlFile(al: AttributeList, extendedData: ExtendedData, runReq: RunReq): File = {
     val f1 = dicomViewHtmlFile(al, runReq.beamNameOfAl(al), extendedData.output.dir, runReq.rtplan)
-    if (true) { // TODO rm
-      val htmlFile = dicomViewBaseName(runReq.beamNameOfAl(al), al, runReq.rtplan) + ".html"
-      val viewDir = new File(extendedData.output.dir, "view")
-      val f2 = new File(viewDir, htmlFile)
-      if (!f1.getAbsolutePath.equals(f2.getAbsolutePath))
-        throw new RuntimeException("change to function is wrong! : \nnew: " + f1.getAbsolutePath + "\nold: " + f2.getAbsolutePath)
-    }
     f1
   }
 
