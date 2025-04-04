@@ -42,7 +42,8 @@ case class SymmetryAndFlatness(
     bottomStdDev_cu: Double, // standard deviation of bottom point pixels in CU
     leftStdDev_cu: Double, // standard deviation of left point pixels in CU
     rightStdDev_cu: Double, // standard deviation of right point pixels in CU
-    centerStdDev_cu: Double // standard deviation of center point pixels in CU
+    centerStdDev_cu: Double, // standard deviation of center point pixels in CU
+    psmPK: Option[Long] // if defined, references the PSM that was used to analyse this beam
 ) {
 
   def insert: SymmetryAndFlatness = {
@@ -135,7 +136,8 @@ case class SymmetryAndFlatness(
       "    bottomStdDev_cu: " + bottomStdDev_cu + "\n" +
       "    leftStdDev_cu: " + leftStdDev_cu + "\n" +
       "    rightStdDev_cu: " + rightStdDev_cu + "\n" +
-      "    centerStdDev_cu: " + centerStdDev_cu + "\n"
+      "    centerStdDev_cu: " + centerStdDev_cu + "\n" +
+      "    psmPK: " + psmPK + "\n"
   }
 
 }
@@ -174,6 +176,8 @@ object SymmetryAndFlatness extends Logging {
 
     def centerStdDev_cu = column[Double]("centerStdDev_cu")
 
+    def psmPK = column[Option[Long]]("psmPK")
+
     //noinspection LanguageFeature
     def * =
       (
@@ -191,7 +195,8 @@ object SymmetryAndFlatness extends Logging {
         bottomStdDev_cu,
         leftStdDev_cu,
         rightStdDev_cu,
-        centerStdDev_cu
+        centerStdDev_cu,
+        psmPK
       ) <> (SymmetryAndFlatness.apply _ tupled, SymmetryAndFlatness.unapply)
 
     def outputFK = foreignKey("SymmetryAndFlatness_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)

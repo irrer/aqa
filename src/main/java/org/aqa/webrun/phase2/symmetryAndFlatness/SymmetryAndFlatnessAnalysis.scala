@@ -25,6 +25,7 @@ import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Procedure
+import org.aqa.db.PSM
 import org.aqa.db.SymmetryAndFlatness
 import org.aqa.run.ProcedureStatus
 import org.aqa.webrun.ExtendedData
@@ -140,9 +141,15 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       attributeList: AttributeList,
       correctedImage: DicomImage,
       collimatorCenter: Point2D.Double,
-      symmetryAndFlatnessBaselineRedoBeamList: Seq[String]
+      symmetryAndFlatnessBaselineRedoBeamList: Seq[String],
+      psm: Option[PSM]
   ): SymmetryAndFlatnessBeamResult = {
     logger.info("Begin analysis of beam " + beamName)
+
+    val scaledImage = {
+      val img = new DicomImage(attributeList)
+    }
+
     // val attributeList: AttributeList = getAttributeList(beamName, runReq)
     val dicomImage = new DicomImage(attributeList)
     val translator = new IsoImagePlaneTranslator(attributeList)
@@ -186,7 +193,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val transverseProfile = {
       val y = ((translator.height - widthOfBand) / 2.0).round.toInt
       val rectangle = new Rectangle(0, y, translator.width, widthOfBand)
-      val cuList = Phase2Util.pixToDose(dicomImage.getSubimage(rectangle).columnSums.map(_ / widthOfBandDouble), attributeList)
+      val cuList = Phase2Util.pixToDose(dicomImage.getSubimage(rectangle).columnSums.map(_ / widthOfBandDouble).toList, attributeList)
       cuList
     }
 
@@ -194,7 +201,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val axialProfile = {
       val x = ((translator.width - widthOfBand) / 2.0).round.toInt
       val rectangle = new Rectangle(x, 0, widthOfBand, translator.height)
-      val cuList = Phase2Util.pixToDose(dicomImage.getSubimage(rectangle).rowSums.map(_ / widthOfBandDouble), attributeList)
+      val cuList = Phase2Util.pixToDose(dicomImage.getSubimage(rectangle).rowSums.map(_ / widthOfBandDouble).toList, attributeList)
       cuList
     }
 
@@ -218,7 +225,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       bottomStdDev_cu = evalPointStdDev(Config.SymmetryPointBottom),
       leftStdDev_cu = evalPointStdDev(Config.SymmetryPointLeft),
       rightStdDev_cu = evalPointStdDev(Config.SymmetryPointRight),
-      centerStdDev_cu = evalPointStdDev(Config.SymmetryPointCenter)
+      centerStdDev_cu = evalPointStdDev(Config.SymmetryPointCenter),
+      None
     )
 
     logger.info("Getting baseline values for beam " + beamName)
@@ -250,7 +258,18 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     * @return
     */
   def testAnalyze(beamName: String, machinePK: Long, dataDate: Timestamp, attributeList: AttributeList, correctedImage: DicomImage, collimatorCenter: Point2D.Double): SymmetryAndFlatnessBeamResult = {
-    analyze(outputPK = -1, procedurePK = Procedure.ProcOfPhase2.get.procedurePK.get, beamName, machinePK, dataDate, attributeList, correctedImage, collimatorCenter, Seq())
+    analyze(
+      outputPK = -1,
+      procedurePK = Procedure.ProcOfPhase2.get.procedurePK.get,
+      beamName,
+      machinePK,
+      dataDate,
+      attributeList,
+      correctedImage,
+      collimatorCenter,
+      Seq(),
+      None
+    )
   }
 
   /**
@@ -277,9 +296,11 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       // val beamNameList = Config.SymmetryAndFlatnessBeamList.filter(beamName => runReq.derivedMap.contains(beamName))
       val beamNameList = Util.makeSymFlatConstBeamNameList(runReq.rtplan).filter(beamName => runReq.derivedMap.contains(beamName))
       logger.info("Sym+Flat using beams:\n    " + beamNameList.mkString("\n    "))
-      // only process beams that are both configured and have been uploaded
-      val resultList = beamNameList.par
-        .map(beamName =>
+
+      val psm = PSM.get(5)
+
+      def doBeam(beamName: String): Seq[SymmetryAndFlatnessBeamResult] = {
+        val noPsm = Some(
           analyze(
             extendedData.output.outputPK.get,
             extendedData.output.procedurePK,
@@ -289,10 +310,35 @@ object SymmetryAndFlatnessAnalysis extends Logging {
             attributeList = getAttributeList(beamName, runReq),
             correctedImage = runReq.derivedMap(beamName).pixelCorrectedImage,
             collimatorCenteringResource.centerOfBeam(beamName),
-            runReq.symmetryAndFlatnessBaselineRedoBeamList
+            runReq.symmetryAndFlatnessBaselineRedoBeamList,
+            None
           )
         )
-        .toList
+
+        val withPsm =
+          if (psm.isEmpty)
+            None
+          else
+            Some(
+              analyze(
+                extendedData.output.outputPK.get,
+                extendedData.output.procedurePK,
+                beamName = beamName,
+                extendedData.machine.machinePK.get,
+                extendedData.output.dataDate.get,
+                attributeList = getAttributeList(beamName, runReq),
+                correctedImage = runReq.derivedMap(beamName).pixelCorrectedImage,
+                collimatorCenteringResource.centerOfBeam(beamName),
+                runReq.symmetryAndFlatnessBaselineRedoBeamList,
+                psm
+              )
+            )
+
+        Seq(noPsm, withPsm).flatten
+      }
+
+      // only process beams that are both configured and have been uploaded
+      val resultList: List[SymmetryAndFlatnessBeamResult] = beamNameList.par.flatMap(doBeam).toList
 
       def showIt(r: SymmetryAndFlatnessBeamResult): String = {
         val bs = r.baseline
