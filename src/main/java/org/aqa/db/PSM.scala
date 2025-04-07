@@ -18,17 +18,21 @@ package org.aqa.db
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
+import edu.umro.ImageUtil.DicomImage
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil.ToZipOutputStream
 import org.aqa.db.Db.driver.api._
+import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
+
+import java.sql.Timestamp
 
 /**  */
 case class PSM(
     psmPK: Option[Long], // primary key
     outputPK: Long, // output primary key
-    floodFieldPK: Long, // Flood field from which this was derived
+    floodFieldImageHash_md5: String, // Image hash of flood field from which this was derived
     xMax_mm: Double, // X coordinate of maximum point determined by bicubic interpolation in mm
     yMax_mm: Double, // Y coordinate of maximum point determined by bicubic interpolation in mm
     SOPInstanceUID: String, // SOPInstanceUID if it is in the DICOM
@@ -53,7 +57,7 @@ case class PSM(
   override def toString: String = {
     "    psmPK: " + psmPK + "\n" +
       "    outputPK: " + outputPK + "\n" +
-      "    floodFieldPK: " + floodFieldPK + "\n" +
+      "    floodFieldPK: " + floodFieldImageHash_md5 + "\n" +
       "    xMax_mm: " + Util.fmtDbl(xMax_mm) + "\n" +
       "    yMax_mm: " + Util.fmtDbl(yMax_mm) + "\n" +
       "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
@@ -65,6 +69,24 @@ case class PSM(
 
   /** Binary content as DICOM. */
   lazy val dicom: AttributeList = DicomUtil.zippedByteArrayToDicom(dicom_zip).head
+
+  private var floodFieldScaled: Option[DicomImage] = None
+
+  def getFloodFieldScaled: DicomImage = {
+    if (floodFieldScaled.isDefined)
+      floodFieldScaled.get
+    else {
+      // get the flood field as a scaled DICOM image.  Do this is separate steps so that if there is an exception it will point to the problem
+      val ffSeq = FloodField.getByImageHash(floodFieldImageHash_md5)
+      val ff = ffSeq.head
+      val ffDicom = ff.dicom
+      val image = new DicomImage(ffDicom)
+      val scaled = image.scalePixels(ffDicom)
+      floodFieldScaled = Some(scaled) // save for next time
+      scaled
+    }
+  }
+
 }
 
 object PSM extends Logging {
@@ -74,7 +96,7 @@ object PSM extends Logging {
 
     def outputPK = column[Long]("outputPK")
 
-    def floodFieldPK = column[Long]("floodFieldPK")
+    def floodFieldImageHash_md5 = column[String]("floodFieldImageHash_md5")
 
     def xMax_mm = column[Double]("xMax_mm")
 
@@ -96,7 +118,7 @@ object PSM extends Logging {
       (
         psmPK.?,
         outputPK,
-        floodFieldPK,
+        floodFieldImageHash_md5,
         xMax_mm,
         yMax_mm,
         SOPInstanceUID,
@@ -153,7 +175,7 @@ object PSM extends Logging {
     * @param yMax_mm y coordinate at max value.
     * @return A shiny new PSM object.
     */
-  def makePSM(outputPK: Long, floodFieldPK: Long, al: AttributeList, xMax_mm: Double, yMax_mm: Double): PSM = {
+  def makePSM(outputPK: Long, floodFieldImageHash_md5: String, al: AttributeList, xMax_mm: Double, yMax_mm: Double): PSM = {
     val dicom_zip = {
       val zos = new ToZipOutputStream()
       zos.writeDicom(al, "FloodField.dcm", "AQA")
@@ -163,7 +185,7 @@ object PSM extends Logging {
     val newPSM = PSM(
       psmPK = None,
       outputPK = outputPK,
-      floodFieldPK = floodFieldPK,
+      floodFieldImageHash_md5 = floodFieldImageHash_md5,
       xMax_mm = xMax_mm,
       yMax_mm = yMax_mm,
       SOPInstanceUID = Util.sopOfAl(al),
@@ -203,6 +225,80 @@ object PSM extends Logging {
 
     // sort by data date
     history.sortBy(_.output.dataDate.get.getTime)
+  }
+
+  /**
+    * Get the most recent PSM that satisfies all the following conditions:
+    *    matches the machine                     AND
+    *    is earlier than the dataDate parameter  AND
+    *    references a valid flood field          AND
+    *    is not too old as dictated by Config.PSMMaxFloodFieldAge_ms/Config.PSMMaxFloodFieldAge_day
+    *
+    * @param machinePK Match this machine.
+    * @param dataDate Older than this date.
+    * @param Rows This many rows of pixels in image
+    * @param Columns This many columns of pixels in image
+    * @param ImagePlanePixelSpacingX_mm This X pixel spacing in mm.
+    * @param ImagePlanePixelSpacingY_mm This Y pixel spacing in mm.
+    * @return
+    */
+  //noinspection ScalaWeakerAccess
+  def getUsablePsm(
+      machinePK: Long,
+      dataDate: Timestamp,
+      Rows: Int,
+      Columns: Int,
+      ImagePlanePixelSpacingX_mm: Double,
+      ImagePlanePixelSpacingY_mm: Double //
+  ): Option[PSM] = {
+
+    val newerThan: Timestamp = new Timestamp(dataDate.getTime - Config.PSMMaxFloodFieldAge_ms)
+
+    val search = for {
+      output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.dataDate <= dataDate) && (o.dataDate >= newerThan))
+      psm <- PSM.query.filter(p => (p.outputPK === output.outputPK) && (p.Rows === Rows) && (p.Columns === Columns))
+      ff <- FloodField.query.filter(f => psm.floodFieldImageHash_md5 === f.imageHash_md5)
+    } yield {
+      (output, psm, ff)
+    }
+
+    def isSamePixelSpacing(psm: PSM): Boolean = {
+      def isClose(a: Double, b: Double): Boolean = ((a - b) / b).abs < 0.00000001
+
+      isClose(psm.ImagePlanePixelSpacingX, ImagePlanePixelSpacingX_mm) && isClose(psm.ImagePlanePixelSpacingY, ImagePlanePixelSpacingY_mm)
+    }
+
+    val opf = Db.run(search.result).toList.filter(r => isSamePixelSpacing(r._2)).sortBy(_._1.dataDate.get.getTime).lastOption
+
+    opf.map(_._2)
+  }
+
+  /**
+    * Get the most recent PSM that satisfies all the following conditions:
+    *    matches the machine                     AND
+    *    is earlier than the dataDate parameter  AND
+    *    references a valid flood field          AND
+    *    is not too old as dictated by Config.PSMMaxFloodFieldAge_ms/Config.PSMMaxFloodFieldAge_day
+    *
+    * @param machinePK For this machine
+    * @param rtimage Extract date, rows, columns and pixel spacing from this image.
+    * @return
+    */
+  def getUsablePsm(machinePK: Long, rtimage: AttributeList): Option[PSM] = {
+
+    val dataDate = new Timestamp(Util.extractDateTimeAndPatientIdFromDicomAl(rtimage)._1.head.getTime)
+    val Rows: Int = rtimage.get(TagByName.Rows).getIntegerValues.head
+    val Columns: Int = rtimage.get(TagByName.Columns).getIntegerValues.head
+    val ImagePlanePixelSpacing = rtimage.get(TagByName.ImagePlanePixelSpacing).getDoubleValues
+
+    getUsablePsm(
+      machinePK = machinePK,
+      dataDate = dataDate,
+      Rows = Rows,
+      Columns = Columns,
+      ImagePlanePixelSpacingX_mm = ImagePlanePixelSpacing.head,
+      ImagePlanePixelSpacingY_mm = ImagePlanePixelSpacing(1)
+    )
   }
 
 }

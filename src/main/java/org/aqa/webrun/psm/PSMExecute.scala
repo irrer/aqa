@@ -118,7 +118,7 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
 
   private val psm = PSM.makePSM(
     outputPK = extendedData.outputPK,
-    floodFieldPK = getReferencedFloodField.floodFieldPK.get,
+    floodFieldImageHash_md5 = getReferencedFloodField.imageHash_md5,
     al = psmAl,
     xMax_mm = gradientAscent.getMaxPoint_iso.getX,
     yMax_mm = gradientAscent.getMaxPoint_iso.getY
