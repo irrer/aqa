@@ -280,10 +280,16 @@ object SymmetryAndFlatness extends Logging {
     * @return Complete history with baselines sorted by date.
     *
     */
-  def history(machinePK: Long, beamName: String, procedurePK: Long): Seq[SymmetryAndFlatnessHistory] = {
+  def history(machinePK: Long, beamName: String, hasPsm: Boolean, procedurePK: Long): Seq[SymmetryAndFlatnessHistory] = {
+    val notHasPsm = !hasPsm
     val search = for {
       output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
-      symmetryAndFlatness <- SymmetryAndFlatness.query.filter(c => c.outputPK === output.outputPK && c.beamName === beamName)
+      symmetryAndFlatness <- SymmetryAndFlatness.query.filter(c =>
+        (c.outputPK === output.outputPK) &&
+          (c.beamName === beamName) &&
+          ((c.psmImageHash_md5.isDefined && hasPsm) ||
+            (c.psmImageHash_md5.isEmpty && notHasPsm))
+      )
     } yield {
       (output, symmetryAndFlatness)
     }
@@ -330,12 +336,14 @@ object SymmetryAndFlatness extends Logging {
     *
     * @param machinePK Match this machine
     * @param beamName  Match this beam
+    * @param hasPsm  Matching this
     * @param dataDate  Most recent that is at or before this time
+    * @param procedurePK For this procedure
     * @return The baseline value to use, or None if not found.
     */
-  def getBaseline(machinePK: Long, beamName: String, dataDate: Timestamp, procedurePK: Long): Option[SymmetryAndFlatnessHistory] = {
+  def getBaseline(machinePK: Long, beamName: String, hasPsm: Boolean, dataDate: Timestamp, procedurePK: Long): Option[SymmetryAndFlatnessHistory] = {
     //noinspection ReverseFind
-    val reverseHistory = history(machinePK, beamName, procedurePK).reverse
+    val reverseHistory = history(machinePK, beamName, hasPsm, procedurePK).reverse
     val baseline = reverseHistory.find(h => h.output.dataDate.get.getTime <= dataDate.getTime)
     if (baseline.isDefined)
       baseline

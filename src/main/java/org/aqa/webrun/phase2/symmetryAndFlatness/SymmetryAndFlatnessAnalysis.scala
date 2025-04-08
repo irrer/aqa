@@ -17,6 +17,7 @@
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
 import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
@@ -146,15 +147,47 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   ): SymmetryAndFlatnessBeamResult = {
     logger.info("Begin analysis of beam " + beamName)
 
-    val scaledImage = {
+    val scaledImage: DicomImage = {
       val img = new DicomImage(attributeList)
+
+      val slope = attributeList.get(TagByName.RescaleSlope).getDoubleValues.head
+      val offset = attributeList.get(TagByName.RescaleIntercept).getDoubleValues.head
+
+      def doRow(row: IndexedSeq[Float]): IndexedSeq[Float] = row.map(pix => ((pix * slope) + offset).toFloat)
+
+      val array = img.pixelData.map(doRow)
+
+      val scaled = new DicomImage(array)
+
+      val image = if (psm.isEmpty) {
+        scaled
+      } else {
+        val psmDicom = psm.get.dicom
+        val psmScaledImage = new DicomImage(psmDicom).scalePixels(psmDicom)
+
+        val ffScaledImage = psm.get.getFloodFieldScaled
+
+        def doRow(y: Int): IndexedSeq[Float] = {
+          def doPix(x: Int): Float = {
+            val psmVal: Float = if (psmScaledImage.get(x, y) == 0) 1 else psmScaledImage.get(x, y)
+            (scaled.get(x, y) * ffScaledImage.get(x, y)) / psmVal
+          }
+          (0 until psmScaledImage.width).map(x => doPix(x))
+        }
+
+        val pixels = (0 until psmScaledImage.height).map(doRow)
+
+        new DicomImage(pixels)
+      }
+
+      image
     }
 
     // val attributeList: AttributeList = getAttributeList(beamName, runReq)
-    val dicomImage = new DicomImage(attributeList)
+    // val dicomImage = new DicomImage(attributeList)
     val translator = new IsoImagePlaneTranslator(attributeList)
-    val widthOfBand = circleRadiusInPixels(translator).round.toInt
-    val widthOfBandDouble = widthOfBand.toDouble
+    val widthOfBand_pix: Int = translator.iso2PixDistX(Config.SymmetryAndFlatnessDiameter_mm).round.toInt
+    val heightOfBand_pix: Int = translator.iso2PixDistY(Config.SymmetryAndFlatnessDiameter_mm).round.toInt
 
     /**
       * Get the average pixel value for one spot in HU or CU or whatever units the image is using.
@@ -166,9 +199,8 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     def evalPoint(point: SymmetryAndFlatnessPoint): Double = {
       val center = new Point2D.Double(point.x_mm + collimatorCenter.getX, point.y_mm + collimatorCenter.getY)
       val pixList = Phase2Util.makeCenterDosePointList(attributeList, center)
-      val avg = pixList.map(p => dicomImage.get(p.getX.toInt, p.getY.toInt)).sum / pixList.size
-      val cu = Phase2Util.pixToDose(avg, attributeList)
-      cu
+      val avg = pixList.map(p => scaledImage.get(p.x, p.y)).sum / pixList.size
+      avg
     }
 
     /**
@@ -181,27 +213,26 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     def evalPointStdDev(point: SymmetryAndFlatnessPoint): Double = {
       val center = new Point2D.Double(point.x_mm + collimatorCenter.getX, point.y_mm + collimatorCenter.getY)
       val pixList = Phase2Util.makeCenterDosePointList(attributeList, center)
-
-      val dicomImage = new DicomImage(attributeList)
-      val cuList = Phase2Util.pixToDose(pixList.map(p => dicomImage.get(p.x, p.y).toDouble), attributeList)
-      val stdDev_cu = ImageUtil.stdDev(cuList.map(_.toFloat))
-
+      val cuList = pixList.map(p => scaledImage.get(p.x, p.y))
+      val stdDev_cu = ImageUtil.stdDev(cuList)
       stdDev_cu
     }
 
     logger.info("Making transverse profile of beam " + beamName)
     val transverseProfile = {
-      val y = ((translator.height - widthOfBand) / 2.0).round.toInt
-      val rectangle = new Rectangle(0, y, translator.width, widthOfBand)
-      val cuList = Phase2Util.pixToDose(dicomImage.getSubimage(rectangle).columnSums.map(_ / widthOfBandDouble).toList, attributeList)
+      val y = ((translator.height - heightOfBand_pix) / 2.0).round.toInt
+      val rectangle = new Rectangle(0, y, translator.width, heightOfBand_pix)
+      val subImage = scaledImage.getSubimage(rectangle)
+      val cuList = subImage.columnSums.map(_ / heightOfBand_pix.toDouble)
       cuList
     }
 
     logger.info("Making axial profile of beam " + beamName)
     val axialProfile = {
-      val x = ((translator.width - widthOfBand) / 2.0).round.toInt
-      val rectangle = new Rectangle(x, 0, widthOfBand, translator.height)
-      val cuList = Phase2Util.pixToDose(dicomImage.getSubimage(rectangle).rowSums.map(_ / widthOfBandDouble).toList, attributeList)
+      val x = ((translator.width - widthOfBand_pix) / 2.0).round.toInt
+      val rectangle = new Rectangle(x, 0, widthOfBand_pix, translator.height)
+      val subImage = scaledImage.getSubimage(rectangle)
+      val cuList = subImage.rowSums.map(_ / widthOfBand_pix.toDouble)
       cuList
     }
 
@@ -226,13 +257,13 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       leftStdDev_cu = evalPointStdDev(Config.SymmetryPointLeft),
       rightStdDev_cu = evalPointStdDev(Config.SymmetryPointRight),
       centerStdDev_cu = evalPointStdDev(Config.SymmetryPointCenter),
-      None
+      psmImageHash_md5 = if (psm.isDefined) Some(psm.get.imageHash_md5) else None
     )
 
     logger.info("Getting baseline values for beam " + beamName)
 
     // Get the baseline for the given beam of the given type (dataName).  If it does not exist, then use this one to establish it.
-    val baseline = SymmetryAndFlatness.getBaseline(machinePK, beamName, dataDate, procedurePK) match {
+    val baseline = SymmetryAndFlatness.getBaseline(machinePK, beamName, psm.isDefined, dataDate, procedurePK) match {
       case Some(bl) => bl.baseline
       case _        => symmetryAndFlatness
     }

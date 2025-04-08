@@ -33,12 +33,12 @@ import java.sql.Timestamp
 /**
   * Analyze DICOM files for symmetry and flatness.
   */
-class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) extends Logging {
+class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, hasPsm: Boolean) extends Logging {
 
   val output: Output = Output.get(outputPK).get
   val machinePK: Long = output.machinePK.get
 
-  private val history = SymmetryAndFlatness.history(machinePK, beamName, output.procedurePK)
+  private val history = SymmetryAndFlatness.history(machinePK, beamName, hasPsm, output.procedurePK)
   private val dateList = history.map(h => h.output.dataDate.get)
 
   // index of the entry being charted.
@@ -185,7 +185,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long) exten
   val javascript: String = {
     import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysis._
 
-    val sfAndBaseline = SymmetryAndFlatness.getBaseline(machinePK, beamName, output.dataDate.get, output.procedurePK).get
+    val sfAndBaseline = SymmetryAndFlatness.getBaseline(machinePK, beamName, hasPsm, output.dataDate.get, output.procedurePK).get
 
     val chartAxial = {
       val valueList = history.map(h => h.symmetryAndFlatness.axialSymmetry)

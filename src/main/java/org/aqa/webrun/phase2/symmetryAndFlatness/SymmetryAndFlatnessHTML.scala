@@ -49,16 +49,16 @@ object SymmetryAndFlatnessHTML extends Logging {
     subDir
   }
 
-  def annotatedImageFile(subDir: File, beamName: String): File = {
-    val fileName = "Sym_Flat_" + WebUtil.stringToUrlSafe(beamName) + ".png"
+  def annotatedImageFile(subDir: File, beamName: String, hasPsm: Boolean): File = {
+    val fileName = "Sym_Flat_" + WebUtil.stringToUrlSafe(beamName + "__" + hasPsm.toString) + ".png"
     new File(subDir, fileName)
   }
 
   /**
     * Get the file of the HTML for the given beam.
     */
-  def beamHtmlFile(subDir: File, beamName: String): File = {
-    val fileName = WebUtil.stringToUrlSafe(beamName) + ".html"
+  def beamHtmlFile(subDir: File, beamName: String, hasPsm: Boolean): File = {
+    val fileName = WebUtil.stringToUrlSafe(beamName) + "__" + hasPsm + ".html"
     new File(subDir, fileName)
   }
 
@@ -81,7 +81,7 @@ object SymmetryAndFlatnessHTML extends Logging {
   def makeDisplay(extendedData: ExtendedData, resultList: List[SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult], status: ProcedureStatus.Value, runReq: RunReq): Elem = {
     val subDir = makeSubDir(extendedData.output.dir)
     val mainHtmlFile = new File(subDir, htmlFileName)
-    resultList.par.foreach(rb => Util.writePng(rb.annotatedImage, annotatedImageFile(subDir, rb.symmetryAndFlatness.beamName)))
+    resultList.par.foreach(rb => Util.writePng(rb.annotatedImage, annotatedImageFile(subDir, rb.symmetryAndFlatness.beamName, rb.symmetryAndFlatness.psmImageHash_md5.isDefined)))
 
     val dynamicContent = {
       val url = (new SymmetryAndFlatnessSubHTML).pathOf + "?outputPK=" + extendedData.output.outputPK.get

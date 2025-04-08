@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-
-package aqa.test
-
-;
+package aqa.test;
 
 import org.aqa.Util
 import org.aqa.db.DbSetup
@@ -30,10 +27,10 @@ import java.sql.Timestamp
 import java.util.Date
 
 /**
- * Test the TestCenter_recentHistory method.
- *
- * This is highly dependent on the contents of the database on Jim's desktop.
- */
+  * Test the TestCenter_recentHistory method.
+  *
+  * This is highly dependent on the contents of the database on Jim's desktop.
+  */
 
 class TestSymmetryAndFlatness_recentHistory extends FlatSpec with Matchers {
 
@@ -47,7 +44,7 @@ class TestSymmetryAndFlatness_recentHistory extends FlatSpec with Matchers {
   val dateTime = new Timestamp(date.getTime)
 
   println("\nStarting. Using date of:\n    " + Util.standardDateFormat.format(date))
-  val seq: Seq[SymmetryAndFlatness.SymmetryAndFlatnessHistory] = SymmetryAndFlatness.history(machinePK, beamName, Procedure.ProcOfPhase2.get.procedurePK.get)
+  val seq: Seq[SymmetryAndFlatness.SymmetryAndFlatnessHistory] = SymmetryAndFlatness.history(machinePK, beamName, hasPsm = false, Procedure.ProcOfPhase2.get.procedurePK.get)
 
   println("results:\n    " + seq.map(_.output.dataDate.get).mkString("\n    "))
   println("Number of results: " + seq.size)

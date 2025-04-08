@@ -67,6 +67,9 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   /** Used to specify the name of a beam in an URL. */
   val beamNameTag = "BeamName"
 
+  /** Used to specify the name of a beam in an URL. */
+  val hasPsmTag = "hasPsm"
+
   private def titleAxialSymmetry =
     "Axial symmetry from top to bottom: (top-bottom)/bottom.  Max percent limit is " + Config.SymmetryPercentLimit
 
@@ -120,10 +123,14 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       symFlatDataSet: SymmetryAndFlatnessDataSet
   ): Elem = {
     val errorClass = if (symFlatDataSet.symmetryAndFlatness.allPass(symFlatDataSet.baseline)) "normal" else "danger"
-    val detailUrl = WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, symFlatDataSet.symmetryAndFlatness.beamName))
+    val detailUrl = WebServer.urlOfResultsFile(
+      SymmetryAndFlatnessHTML.beamHtmlFile(subDir, symFlatDataSet.symmetryAndFlatness.beamName, symFlatDataSet.symmetryAndFlatness.psmImageHash_md5.isDefined)
+    )
     val pk = symFlatDataSet.symmetryAndFlatness.symmetryAndFlatnessPK.get
     val id = "baseline" + pk
     val baseline = symFlatDataSet.symmetryAndFlatness.isBaseline.toString
+
+    val hasPsm = if (symFlatDataSet.symmetryAndFlatness.psmImageHash_md5.isDefined) <b>PSM</b> else <span></span>
 
     val input =
       if (symFlatDataSet.symmetryAndFlatness.isBaseline) {
@@ -136,9 +143,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       <td style="vertical-align: middle;" class={errorClass} rowspan="4">
         <a href={detailUrl} title={titleDetails}>
           {symFlatDataSet.symmetryAndFlatness.beamName}<br/>{Phase2Util.jawDescription(symFlatDataSet.al, symFlatDataSet.rtplan)}<br/>{Phase2Util.angleDescription(symFlatDataSet.al)}
-        </a>
-        <p></p>
-        <label title="Check to use this beam as a baseline." for={id}>Baseline</label>{input}
+        </a>{hasPsm}<label title="Check to use this beam as a baseline." for={id}>Baseline</label>{input}
       </td>
     }
     elem
@@ -154,7 +159,8 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     val imgUrl = WebServer.urlOfResultsFile(
       SymmetryAndFlatnessHTML.annotatedImageFile(
         SymmetryAndFlatnessHTML.makeSubDir(symFlatData.output.dir),
-        symFlatData.symmetryAndFlatness.beamName
+        symFlatData.symmetryAndFlatness.beamName,
+        symFlatData.symmetryAndFlatness.psmImageHash_md5.isDefined
       )
     )
     val imgSmall = {
@@ -382,7 +388,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     def makeDataSet(sf: SymmetryAndFlatness): Option[SymmetryAndFlatnessDataSet] = {
       try {
         logger.info("Making data set for: " + sf)
-        val baseline = SymmetryAndFlatness.getBaseline(output.machinePK.get, sf.beamName, dataDate, output.procedurePK).get.baseline
+        val baseline = SymmetryAndFlatness.getBaseline(output.machinePK.get, sf.beamName, sf.psmImageHash_md5.isDefined, dataDate, output.procedurePK).get.baseline
 
         val al: Option[AttributeList] = {
           val aa = alList.find(a => Util.sopOfAl(a).equals(sf.SOPInstanceUID))
@@ -497,7 +503,8 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     val output = Output.get(outputPK).get
     val machinePK = Output.get(outputPK).get.machinePK.get
     val beamName = valueMap(beamNameTag).replaceAll("%20", " ")
-    val history = SymmetryAndFlatness.history(machinePK, beamName, output.procedurePK)
+    val hasPsm = valueMap.contains(hasPsmTag) && valueMap(hasPsmTag).toBoolean
+    val history = SymmetryAndFlatness.history(machinePK, beamName, hasPsm, output.procedurePK)
     val beamData = history.find(h => h.output.outputPK.get == outputPK).get
 
     val content = {

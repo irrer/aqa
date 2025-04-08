@@ -76,7 +76,11 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
 
         <div class="row">
           <div class="col-md-5 col-md-offset-1">
-            {<center id="beamImage"><img class="img-responsive" src={WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.symmetryAndFlatness.beamName))}/> </center>}
+            {
+              <center id="beamImage"><img class="img-responsive" src={
+                WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.symmetryAndFlatness.beamName, result.symmetryAndFlatness.psmImageHash_md5.isDefined))
+                }/> </center>
+            }
           </div>
           <div class="col-md-5">
             <div class="row">
@@ -126,7 +130,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
     $(document).ready(function(){ $('#beamImage').zoom(); });
 """
 
-    val historyScriptRef = SymmetryAndFlatnessHistoryRestlet.makeReference(result.symmetryAndFlatness.beamName, extendedData.output.outputPK.get)
+    val historyScriptRef = SymmetryAndFlatnessHistoryRestlet.makeReference(result.symmetryAndFlatness.beamName, extendedData.output.outputPK.get, result.symmetryAndFlatness.psmImageHash_md5.isDefined)
 
     val javascript = "<script>\n" + graphTransverse.javascript + graphAxial.javascript + zoomScript + "\n</script>\n" + historyScriptRef
     (content, javascript)
@@ -136,6 +140,6 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
     val status = if (result.symmetryAndFlatness.allPass(result.baseline)) ProcedureStatus.pass else ProcedureStatus.fail
     val elemJavascript = makeContent(subDir, extendedData, result)
     val html = Phase2Util.wrapSubProcedure(extendedData, elemJavascript._1, title = "Symmetry and Flatness " + result.symmetryAndFlatness.beamName, status, Some(elemJavascript._2), runReq.rtimageMap)
-    Util.writeBinaryFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, result.symmetryAndFlatness.beamName), html.getBytes)
+    Util.writeBinaryFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, result.symmetryAndFlatness.beamName, result.symmetryAndFlatness.psmImageHash_md5.isDefined), html.getBytes)
   }
 }
