@@ -52,6 +52,7 @@ class SymmetryAndFlatnessCsv(metadataCache: MetadataCache) extends Phase2Csv[Sym
   override protected def makeColList: Seq[CsvCol[SF]] = {
     Seq(
       CsvCol("Beam Name", "Common name of RTPLAN beam.", (sf: SF) => sf.symmetryAndFlatness.beamName),
+      CsvCol("Uses PSM", "True if PSM (Pixel Sensitivity Matrix) was used to correct image.", (sf: SF) => sf.symmetryAndFlatness.psmImageHash_md5.isDefined.toString),
       CsvCol("Axial Symmetry", "((top - bottom) / bottom) * 100", (sf: SF) => sf.symmetryAndFlatness.axialSymmetry),
       CsvCol("Transverse Symmetry", "((right - left ) / left ) * 100", (sf: SF) => sf.symmetryAndFlatness.transverseSymmetry),
       CsvCol("Flatness", "(max - min) / (max + min) * 100", (sf: SF) => sf.symmetryAndFlatness.flatness),
