@@ -32,6 +32,7 @@ import java.sql.Timestamp
 case class PSM(
     psmPK: Option[Long], // primary key
     outputPK: Long, // output primary key
+    imageHash_md5: String, // MD5 hash of image bytes
     floodFieldImageHash_md5: String, // Image hash of flood field from which this was derived
     xMax_mm: Double, // X coordinate of maximum point determined by bicubic interpolation in mm
     yMax_mm: Double, // Y coordinate of maximum point determined by bicubic interpolation in mm
@@ -57,7 +58,8 @@ case class PSM(
   override def toString: String = {
     "    psmPK: " + psmPK + "\n" +
       "    outputPK: " + outputPK + "\n" +
-      "    floodFieldPK: " + floodFieldImageHash_md5 + "\n" +
+      "    imageHash_md5: " + imageHash_md5.take(16) + "...\n" +
+      "    floodFieldImageHash_md5: " + floodFieldImageHash_md5.take(16) + "...\n" +
       "    xMax_mm: " + Util.fmtDbl(xMax_mm) + "\n" +
       "    yMax_mm: " + Util.fmtDbl(yMax_mm) + "\n" +
       "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
@@ -96,6 +98,8 @@ object PSM extends Logging {
 
     def outputPK = column[Long]("outputPK")
 
+    def imageHash_md5 = column[String]("imageHash_md5")
+
     def floodFieldImageHash_md5 = column[String]("floodFieldImageHash_md5")
 
     def xMax_mm = column[Double]("xMax_mm")
@@ -118,6 +122,7 @@ object PSM extends Logging {
       (
         psmPK.?,
         outputPK,
+        imageHash_md5,
         floodFieldImageHash_md5,
         xMax_mm,
         yMax_mm,
@@ -182,9 +187,12 @@ object PSM extends Logging {
       zos.finish()
     }
 
+    val imageHash_md5 = Util.imagePixelMD5Hash(al)
+
     val newPSM = PSM(
       psmPK = None,
       outputPK = outputPK,
+      imageHash_md5 = imageHash_md5,
       floodFieldImageHash_md5 = floodFieldImageHash_md5,
       xMax_mm = xMax_mm,
       yMax_mm = yMax_mm,
