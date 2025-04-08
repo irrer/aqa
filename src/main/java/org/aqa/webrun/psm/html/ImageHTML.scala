@@ -48,6 +48,31 @@ class ImageHTML(
     val yAxial = dicomImage.getSubimage(area).rowSums.map(_ / 2.0)
     val yTransverse = dicomImage.getSubimage(new Rectangle(0, (dicomImage.height / 2) - 1, dicomImage.width, 2)).columnSums.map(_ / 2.0)
 
+    val yValues: Seq[Seq[Double]] = {
+      0 match {
+
+        case _ if yAxial.size == yTransverse.size =>
+          Seq(yAxial, yTransverse)
+
+        case _ if yAxial.size > yTransverse.size =>
+          val diff = yAxial.size - yTransverse.size
+          val left = diff / 2
+          val right = diff - left
+          val value = yTransverse.min
+          val t = (0 until left).map(_ => value) ++ yTransverse ++ (0 until right).map(_ => value)
+          Seq(yAxial, t.toSeq)
+
+        case _ if yAxial.size < yTransverse.size =>
+          val diff = yTransverse.size - yAxial.size
+          val left = diff / 2
+          val right = diff - left
+          val value = yAxial.min
+          val a = (0 until left).map(_ => value) ++ yAxial ++ (0 until right).map(_ => value)
+          Seq(a, yTransverse)
+
+      }
+    }
+
     val yFormat = {
       val min = (yAxial ++ yTransverse).min.round.toString.length
       val max = (yAxial ++ yTransverse).max.round.toString.length
@@ -63,7 +88,7 @@ class ImageHTML(
       xValueList = xValueList, //
       yAxisLabels = Seq("Axial", "Transverse"), //
       yDataLabel = yLabel, //
-      yValues = Seq(yAxial, yTransverse),
+      yValues = yValues,
       yColorList = Seq(Color.green, Color.blue),
       yFormat = yFormat
     )
