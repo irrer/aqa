@@ -43,7 +43,7 @@ case class SymmetryAndFlatness(
     leftStdDev_cu: Double, // standard deviation of left point pixels in CU
     rightStdDev_cu: Double, // standard deviation of right point pixels in CU
     centerStdDev_cu: Double, // standard deviation of center point pixels in CU
-    psmPK: Option[Long] // if defined, references the PSM that was used to analyse this beam
+    psmImageHash_md5: Option[String] // if defined, references the PSM by its image hash that was used to analyse this beam
 ) {
 
   def insert: SymmetryAndFlatness = {
@@ -89,7 +89,7 @@ case class SymmetryAndFlatness(
   }
 
   /**
-    * True if the comparison of the value to the baseline passes.  Otherwise it has failed.
+    * True if the comparison of the value to the baseline passes.  Otherwise, it has failed.
     *
     * @param value         Value being checked.
     * @param baselineValue Known good baseline used as a reference.
@@ -137,7 +137,7 @@ case class SymmetryAndFlatness(
       "    leftStdDev_cu: " + leftStdDev_cu + "\n" +
       "    rightStdDev_cu: " + rightStdDev_cu + "\n" +
       "    centerStdDev_cu: " + centerStdDev_cu + "\n" +
-      "    psmPK: " + psmPK + "\n"
+      "    hasPsm: " + psmImageHash_md5.isDefined + "\n"
   }
 
 }
@@ -176,7 +176,7 @@ object SymmetryAndFlatness extends Logging {
 
     def centerStdDev_cu = column[Double]("centerStdDev_cu")
 
-    def psmPK = column[Option[Long]]("psmPK")
+    def psmImageHash_md5 = column[Option[String]]("psmImageHash_md5")
 
     //noinspection LanguageFeature
     def * =
@@ -196,7 +196,7 @@ object SymmetryAndFlatness extends Logging {
         leftStdDev_cu,
         rightStdDev_cu,
         centerStdDev_cu,
-        psmPK
+        psmImageHash_md5
       ) <> (SymmetryAndFlatness.apply _ tupled, SymmetryAndFlatness.unapply)
 
     def outputFK = foreignKey("SymmetryAndFlatness_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
@@ -292,7 +292,7 @@ object SymmetryAndFlatness extends Logging {
     // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
     // throw an exception.
     val sr = search.result
-    val tsList = Db.run(sr).map(os => OutputSymFlat(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime + "  " + os.sf.beamName)
+    val tsList = Db.run(sr).map(os => OutputSymFlat(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime + "  " + os.sf.beamName + "  " + os.sf.psmImageHash_md5.isDefined.toString)
 
     associateBaseline(tsList)
   }
