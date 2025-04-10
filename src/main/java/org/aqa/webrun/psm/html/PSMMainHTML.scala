@@ -11,6 +11,8 @@ import org.aqa.webrun.psm.PSMCharts
 import org.aqa.webrun.psm.PSMGradientAscent
 
 import java.io.File
+import scala.collection.immutable.Seq
+import scala.xml.Elem
 
 /**
   * Generate HTML page to show all PSM data.
@@ -39,25 +41,43 @@ class PSMMainHTML(
 
     val resultHtml = new ResultHtml(extendedData, resultList)
 
-    val imageHtml = new ImageHTML(
-      extendedData: ExtendedData,
-      resultList: Seq[PSMBeamAnalysisResult],
-      psmGradientAscent: PSMGradientAscent,
-      ffAl: AttributeList,
-      ffImg: DicomImage,
-      wdAl: AttributeList,
-      wdImg: DicomImage,
-      rawAl: AttributeList,
-      rawImg: DicomImage,
-      cbrAl: AttributeList,
-      cbrImg: DicomImage,
-      brAl: AttributeList,
-      brImg: DicomImage,
-      psmAl: AttributeList,
-      psmImg: DicomImage
-    )
+    val ffRow = PSMHtmlImage(extendedData, "Flood Field", ffImg, ffAl)
+    val wdRow = PSMHtmlImage(extendedData, "Whole Detector", wdImg, wdAl)
+    val rawRow = PSMHtmlImage(extendedData, "Raw Image = Flood Field * Whole Detector", rawImg, rawAl)
+    val cbrRow = PSMHtmlImage(extendedData, "Beam Response Beam Centers", cbrImg, cbrAl, resultList = resultList)
+    val brRow = PSMHtmlImage(extendedData, "Beam Response Interpolated and Normalized", brImg, brAl, center = Some(psmGradientAscent.getMaxPoint_iso), resultList = resultList)
+    val psmRow = PSMHtmlImage(extendedData, "PSM = Raw / Beam Response", psmImg, psmAl)
 
-    val imageStuff = imageHtml.make()
+    def make(): (Elem, String) = {
+      val content = {
+        <table class="table responsive table-bordered" style="margin-top:25px;">
+            <thead>
+              <tr>
+                <th title="Click for larger chart, larger chart, and metadata.">
+                  Image
+                </th>
+                <th>
+                  Center Pixels
+                </th>
+                <th>
+                  Profiles
+                </th>
+              </tr>
+              {}
+            </thead>
+            {ffRow.elem}
+            {wdRow.elem}
+            {rawRow.elem}
+            {cbrRow.elem}
+            {brRow.elem}
+            {psmRow.elem}
+          </table>
+      }
+
+      (content, Seq(ffRow, wdRow, rawRow, cbrRow, brRow, psmRow).map(_.js).mkString("\n"))
+    }
+
+    val imageStuff = make()
 
     val historyCharts = new PSMCharts(extendedData.outputPK)
 

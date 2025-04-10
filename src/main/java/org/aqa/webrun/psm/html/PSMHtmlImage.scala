@@ -6,39 +6,31 @@ import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
-import org.aqa.webrun.psm.PSMBeamAnalysisResult
-import org.aqa.webrun.ExtendedData
-import org.aqa.Logging
-import org.aqa.web.C3Chart
 import org.aqa.web.WebUtil
-import org.aqa.webrun.psm.PSMGradientAscent
 import org.aqa.Config
 import org.aqa.Util
+import org.aqa.web.C3Chart
+import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.psm.PSMBeamAnalysisResult
+import org.aqa.Logging
 
-import java.awt.Color
-import java.awt.Rectangle
 import java.awt.geom.Point2D
+import java.awt.Color
 import java.awt.image.BufferedImage
+import java.awt.Rectangle
 import java.io.File
+import scala.collection.immutable.Seq
+import scala.collection.immutable.Seq
+import scala.collection.immutable.Seq
+import scala.collection.immutable.Seq
+import scala.collection.immutable.Seq
+import scala.collection.immutable.Seq
+import scala.collection.immutable.Seq
+import scala.collection.immutable.Seq
 import scala.xml.Elem
 
-class ImageHTML(
-    extendedData: ExtendedData,
-    resultList: Seq[PSMBeamAnalysisResult],
-    psmGradientAscent: PSMGradientAscent,
-    ffAl: AttributeList,
-    ffImg: DicomImage,
-    wdAl: AttributeList,
-    wdImg: DicomImage,
-    rawAl: AttributeList,
-    rawImg: DicomImage,
-    cbrAl: AttributeList,
-    cbrImg: DicomImage,
-    brAl: AttributeList,
-    brImg: DicomImage,
-    psmAl: AttributeList,
-    psmImg: DicomImage
-) extends Logging {
+case class PSMHtmlImage(extendedData: ExtendedData, name: String, image: DicomImage, al: AttributeList, center: Option[Point2D.Double] = None, resultList: Seq[PSMBeamAnalysisResult] = Seq())
+    extends Logging {
 
   private def makeChart(dicomImage: DicomImage, al: AttributeList, yLabel: String): C3Chart = {
     val trans = new IsoImagePlaneTranslator(al)
@@ -49,28 +41,31 @@ class ImageHTML(
     val yTransverse = dicomImage.getSubimage(new Rectangle(0, (dicomImage.height / 2) - 1, dicomImage.width, 2)).columnSums.map(_ / 2.0)
 
     val yValues: Seq[Seq[Double]] = {
-      0 match {
 
-        case _ if yAxial.size == yTransverse.size =>
-          Seq(yAxial, yTransverse)
+      val yData =
+        0 match {
 
-        case _ if yAxial.size > yTransverse.size =>
-          val diff = yAxial.size - yTransverse.size
-          val left = diff / 2
-          val right = diff - left
-          val value = yTransverse.min
-          val t = (0 until left).map(_ => value) ++ yTransverse ++ (0 until right).map(_ => value)
-          Seq(yAxial, t.toSeq)
+          case _ if yAxial.size == yTransverse.size =>
+            Seq(yAxial, yTransverse)
 
-        case _ if yAxial.size < yTransverse.size =>
-          val diff = yTransverse.size - yAxial.size
-          val left = diff / 2
-          val right = diff - left
-          val value = yAxial.min
-          val a = (0 until left).map(_ => value) ++ yAxial ++ (0 until right).map(_ => value)
-          Seq(a, yTransverse)
+          case _ if yAxial.size > yTransverse.size =>
+            val diff = yAxial.size - yTransverse.size
+            val left = diff / 2
+            val right = diff - left
+            val value = yTransverse.min
+            val t = (0 until left).map(_ => value) ++ yTransverse ++ (0 until right).map(_ => value)
+            Seq(yAxial, t.toSeq)
 
-      }
+          case _ if yAxial.size < yTransverse.size =>
+            val diff = yTransverse.size - yAxial.size
+            val left = diff / 2
+            val right = diff - left
+            val value = yAxial.min
+            val a = (0 until left).map(_ => value) ++ yAxial ++ (0 until right).map(_ => value)
+            Seq(a, yTransverse)
+
+        }
+      yData.map(_.toList)
     }
 
     val yFormat = {
@@ -190,53 +185,53 @@ class ImageHTML(
     ImageText.drawTextCenteredAt(gc, x_pix, y_pix + len + (ImageText.getFontHeight(gc) / 2), text)
   }
 
-  private case class Row(name: String, image: DicomImage, al: AttributeList, center: Option[Point2D.Double] = None, drawBeamCenters: Boolean = false) {
+  // ------------------------------------------------------------------------------------------------------
 
-    private val id = Util.textToId(name)
-    private val trans = new IsoImagePlaneTranslator(al)
-    private val bufImage = image.toDeepColorBufferedImage(0.1)
-    Util.addGraticules(bufImage, trans, Color.GRAY)
-    if (drawBeamCenters)
-      annotateBeamCenters(bufImage)
+  private val id = Util.textToId(name)
+  private val trans = new IsoImagePlaneTranslator(al)
+  private val bufImage = image.toDeepColorBufferedImage(0.1)
+  Util.addGraticules(bufImage, trans, Color.GRAY)
+  if (resultList.nonEmpty)
+    annotateBeamCenters(bufImage)
 
-    if (center.isDefined)
-      annotateMaxCoordinates(center.get, bufImage, trans)
+  if (center.isDefined)
+    annotateMaxCoordinates(center.get, bufImage, trans)
 
-    Config.applyWatermark(bufImage)
+  Config.applyWatermark(bufImage)
 
-    private val pngFileName = id + ".png"
-    private val pngFile = new File(extendedData.output.dir, pngFileName)
+  private val pngFileName = id + ".png"
+  private val pngFile = new File(extendedData.output.dir, pngFileName)
 
-    private val htmlFileName: String = id + ".html"
+  private val htmlFileName: String = id + ".html"
 
-    Util.writePng(bufImage, pngFile)
-    logger.info("Wrote file " + pngFile.getAbsolutePath)
+  Util.writePng(bufImage, pngFile)
+  logger.info("Wrote file " + pngFile.getAbsolutePath)
 
-    private val imageRef = {
-      <div>
+  private val imageRef = {
+    <div>
         <a href={htmlFileName}>
           <h4>{name}</h4>
           <img src={pngFile.getName} width="256"/>
         </a>
       </div>
-    }
+  }
 
-    private val chart = makeChart(image, al, name)
+  private val chart = makeChart(image, al, name)
 
-    val elem: Elem = {
-      <tr>
+  val elem: Elem = {
+    <tr>
         <td title="Click for larger chart, larger chart, and metadata.">{imageRef}</td>
         <td>{centralPixels(image)}</td>
         <td>{chart.html}</td>
       </tr>
-    }
+  }
 
-    val js: String = chart.javascript
+  val js: String = chart.javascript
 
-    private def makeImageHtml(): Unit = {
+  private def makeImageHtml(): Unit = {
 
-      val content = {
-        <div>
+    val content = {
+      <div>
           <div class="row">
             <div class="col-md-10 col-md-offset-1" >
               <h3>{name}</h3>
@@ -257,53 +252,17 @@ class ImageHTML(
             <p style="margin-bottom:150px;"> </p>
           </div>
         </div>
-      }
-
-      val imageJs = s"<script>$js</script>"
-
-      val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = name, c3 = true, runScript = Some(imageJs))
-      val htmlFile = new File(extendedData.output.dir, htmlFileName)
-      Util.writeFile(htmlFile, text)
-      logger.info("Wrote file " + htmlFile.getAbsolutePath)
     }
 
-    makeImageHtml()
+    val imageJs = s"<script>$js</script>"
+
+    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = name, c3 = true, runScript = Some(imageJs))
+    val htmlFile = new File(extendedData.output.dir, htmlFileName)
+    Util.writeFile(htmlFile, text)
+    logger.info("Wrote file " + htmlFile.getAbsolutePath)
   }
 
-  private val ffRow = Row("Flood Field", ffImg, ffAl)
-  private val wdRow = Row("Whole Detector", wdImg, wdAl)
-  private val rawRow = Row("Raw Image = Flood Field * Whole Detector", rawImg, rawAl)
-  private val cbrRow = Row("Beam Response Beam Centers", cbrImg, cbrAl, drawBeamCenters = true)
-  private val brRow = Row("Beam Response Interpolated and Normalized", brImg, brAl, center = Some(psmGradientAscent.getMaxPoint_iso), drawBeamCenters = true)
-  private val psmRow = Row("PSM = Raw / Beam Response", psmImg, psmAl)
+  makeImageHtml()
 
-  def make(): (Elem, String) = {
-    val content = {
-      <table class="table responsive table-bordered" style="margin-top:25px;">
-        <thead>
-          <tr>
-            <th title="Click for larger chart, larger chart, and metadata.">
-              Image
-            </th>
-            <th>
-              Center Pixels
-            </th>
-            <th>
-              Profiles
-            </th>
-          </tr>
-          {}
-        </thead>
-        {ffRow.elem}
-        {wdRow.elem}
-        {rawRow.elem}
-        {cbrRow.elem}
-        {brRow.elem}
-        {psmRow.elem}
-      </table>
-    }
-
-    (content, Seq(ffRow, wdRow, rawRow, cbrRow, brRow, psmRow).map(_.js).mkString("\n"))
-  }
-
+  // ------------------------------------------------------------------------------------------------------
 }

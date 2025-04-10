@@ -44,22 +44,30 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
     val graphTransverse = new C3Chart(
       xAxisLabel = "Position mm",
       xDataLabel = "Position mm",
-      xValueList = result.transverse_pct,
-      yAxisLabels = Seq("Level"),
+      xValueList = result.transverse_pct.toList,
+      yAxisLabels = Seq("Level").toList,
       yDataLabel = "Level",
-      yValues = Seq(result.transverseProfile),
-      yColorList = Seq(new Color(0x4477bb))
+      yValues = Seq(result.transverseProfile.toList).toList,
+      yColorList = Seq(new Color(0x4477bb)).toList
     )
 
     val graphAxial = new C3Chart(
       xAxisLabel = "Position mm",
       xDataLabel = "Position mm",
-      xValueList = result.axial_pct,
-      yAxisLabels = Seq("Level"),
+      xValueList = result.axial_pct.toList,
+      yAxisLabels = Seq("Level").toList,
       yDataLabel = "Level",
-      yValues = Seq(result.axialProfile),
-      yColorList = Seq(new Color(0x4477bb))
+      yValues = Seq(result.axialProfile.toList).toList,
+      yColorList = Seq(new Color(0x4477bb)).toList
     )
+
+    def psmProcessing: Seq[Elem] = {
+      Seq(
+        <div class="row">
+          { /* TODO  If PSM is used, then show the pixel transformations.*/ }
+        </div>
+      )
+    }
 
     // val graphHistory = new SymmetryAndFlatnessBeamHistoryHTML(result.beamName, extendedData.output.outputPK.get)  TODO rm
     val content = {
@@ -77,10 +85,10 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
         <div class="row">
           <div class="col-md-5 col-md-offset-1">
             {
-              <center id="beamImage"><img class="img-responsive" src={
-                WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.symmetryAndFlatness.beamName, result.symmetryAndFlatness.psmImageHash_md5.isDefined))
-                }/> </center>
-            }
+        <center id="beamImage"><img class="img-responsive" src={
+          WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.symmetryAndFlatness.beamName, result.symmetryAndFlatness.psmImageHash_md5.isDefined))
+        }/> </center>
+      }
           </div>
           <div class="col-md-5">
             <div class="row">
@@ -120,6 +128,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
               <h2>EPID Noise History</h2>
               {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + "EpidNoise")}
             </div>
+            {psmProcessing}
           </div>
         </div>
         <p> </p>
@@ -142,4 +151,5 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
     val html = Phase2Util.wrapSubProcedure(extendedData, elemJavascript._1, title = "Symmetry and Flatness " + result.symmetryAndFlatness.beamName, status, Some(elemJavascript._2), runReq.rtimageMap)
     Util.writeBinaryFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, result.symmetryAndFlatness.beamName, result.symmetryAndFlatness.psmImageHash_md5.isDefined), html.getBytes)
   }
+
 }
