@@ -23,7 +23,7 @@ case class MaintenanceCategory(Name: String, Color: String, Description: String)
 }
 
 /**
-  * Define roles of users, each of which authorizes them to do do various things.
+  * Define roles of users, each of which authorizes them to do various things.
   */
 object MaintenanceCategory {
 
@@ -36,7 +36,7 @@ object MaintenanceCategory {
   /**
     * Find the closest matching maintenance category.
     *
-    * TODO : add Smith-Waterman implementation to get best match.  Java code in ImportToUMPlan -> DiffSW.
+    * @param name Name of maintenance category.
     */
   def findMaintenanceCategoryMatch(name: String): MaintenanceCategory = {
     Config.MaintenanceCategoryList.find(mc => mc.Name.equalsIgnoreCase(name)) match {
