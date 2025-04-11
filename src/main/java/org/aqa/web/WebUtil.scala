@@ -133,7 +133,7 @@ object WebUtil extends Logging {
 
   def dblQuote(text: String): String = doubleQuote + text + doubleQuote
 
-  private def specialCharTagsToLiteralXml(text: String): String = {
+  def specialCharTagsToLiteralXml(text: String): String = {
     //noinspection SpellCheckingInspection
     text
       .replace(singleQuote, "'")
