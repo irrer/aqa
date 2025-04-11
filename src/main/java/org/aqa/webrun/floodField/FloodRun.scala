@@ -43,14 +43,6 @@ class FloodRun(procedure: Procedure) extends WebRunProcedure with RunTrait[Flood
     val rtimageList = alList.filter(Util.isRtimage).filterNot(FloodUtil.isFloodField)
     val floodFieldList = alList.filter(FloodUtil.isFloodField)
 
-    def alreadyInDatabase: Boolean = {
-      if (floodFieldList.size == 1) {
-        val ff = FloodField.makeFloodField(-1, floodFieldList.head)
-        FloodField.getByImageHash(ff.imageHash_md5).nonEmpty
-      } else
-        false
-    }
-
     val result = 0 match {
       case _ if alList.isEmpty           => formError("No DICOM files were uploaded.  There should be exactly one.")
       case _ if alList.size > 1          => formError("More than one DICOM file was uploaded.  There should be only one.")
@@ -58,7 +50,6 @@ class FloodRun(procedure: Procedure) extends WebRunProcedure with RunTrait[Flood
       case _ if rtimageList.nonEmpty     => formError("One or more RTIMAGE files was uploaded that are not flood field images.  There should only be a flood field image.")
       case _ if floodFieldList.isEmpty   => formError("No flood field was uploaded.  There should be exactly one flood field image.")
       case _ if floodFieldList.size > 1  => formError("More than one flood field was uploaded.  There should be exactly one flood field image.")
-      case _ if alreadyInDatabase        => formError("That flood field has already been uploaded.")
       case _ if floodFieldList.size == 1 => Right(FloodRunReq(floodFieldList.head))
     }
 
