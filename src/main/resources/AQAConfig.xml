@@ -367,6 +367,7 @@ Note that when building a package for release, the Maven build process uses the 
         -->
     <MaintenanceCategoryList>
         <MaintenanceCategory Name='Maintenance' Color='#808080'>General Maintenance</MaintenanceCategory>
+        <MaintenanceCategory Name='Set Baseline' Color='#ccffff'>Set Baseline</MaintenanceCategory>
         <MaintenanceCategory Name='Output Adjustment' Color='#ff8000'>Output Adjustment</MaintenanceCategory>
         <MaintenanceCategory Name='Beam Steering Adjustment' Color='#ff8080'>Beam Steering Adjustment
         </MaintenanceCategory>
