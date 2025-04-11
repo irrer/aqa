@@ -121,7 +121,7 @@ class C3ChartHistory(
     val baselineColor = {
       Config.MaintenanceCategoryList.find(c => c.Name.equalsIgnoreCase(MaintenanceCategory.setBaseline)) match {
         case Some(cat) => cat.Color
-        case _         => "black"
+        case _         => "#ccffff"
       }
     }
 
