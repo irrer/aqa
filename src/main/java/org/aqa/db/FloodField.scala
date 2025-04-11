@@ -143,10 +143,15 @@ object FloodField extends Logging {
 
   /**
     * Get a list of all rows for the given hash.  There should be either zero or one.
+    * Also require it to specify the machine as an extra precaution against using a flood field from the wrong machine.
+    *
+    * @param machinePK Specify machine.
+    * @param imageHash For this hash
     */
-  def getByImageHash(imageHash: String): Seq[FloodField] = {
+  def getByImageHash(machinePK: Long, imageHash: String): Seq[FloodField] = {
     val action = for {
-      inst <- FloodField.query if inst.imageHash_md5 === imageHash
+      output <- Output.query if output.machinePK === machinePK
+      inst <- FloodField.query if (inst.imageHash_md5 === imageHash) && inst.outputPK === output.outputPK
     } yield inst
     Db.run(action.result)
   }
