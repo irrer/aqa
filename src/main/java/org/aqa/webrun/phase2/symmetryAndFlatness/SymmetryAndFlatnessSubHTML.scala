@@ -346,7 +346,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       .map(uidDs => uidDs._2.head)
 
     // list of all AttributeList's referenced by SymmetryFlatness rows
-    // TODO: This statement takes several seconds to run while the user is waiting for the
+    // Note: This statement takes several seconds to run while the user is waiting for the
     //  page to show.  It would be nice if it were faster.
     val alList: immutable.Iterable[AttributeList] = dicomSeries.flatMap(ds => ds.attributeListList)
 

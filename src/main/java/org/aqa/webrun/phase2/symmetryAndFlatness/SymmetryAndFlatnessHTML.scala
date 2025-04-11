@@ -105,7 +105,6 @@ object SymmetryAndFlatnessHTML extends Logging {
             var baselineUrl=baseUrl + '?symFlatPK=' + symFlatPK.toString().trim() + '&baseline=' + checkBox.checked.toString();
             // send the request to use or not use the beam as a baseline.  Note that if the user is
             // not authorized, then the request will be silently rejected.
-            // alert("Sym Flat " + baselineUrl);  // TODO rm
 
             var xhttp = new XMLHttpRequest();
             xhttp.open("GET", baselineUrl, true);

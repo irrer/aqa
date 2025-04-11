@@ -62,18 +62,39 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
     )
 
     def psmProcessing: Seq[Elem] = {
-      Seq(
-        <div class="row">
+      if (result.symmetryAndFlatness.psmImageHash_md5.isEmpty)
+        Seq()
+      else {
+
+        val symFlat = result.symmetryAndFlatness
+
+        /*
+        val psm = PSM.ge
+        val ffAl = psm
+
+        val ffRow = PSMHtmlImage(extendedData, "FF: Flood Field", jjImg, jjAl)
+        val wdRow = PSMHtmlImage(extendedData, "WD: " + symFlat.beamName + " used as Whole Detector", jjImg, jjAl)
+        val ffTimesWDRow = PSMHtmlImage(extendedData, symFlat.beamName + " times Flood Field", jjImg, jjAl)
+        val psmRow = PSMHtmlImage(extendedData, "PSM", jjImg, jjAl)
+        val brRow = PSMHtmlImage(extendedData, "BR: Beam Response", jjImg, jjAl)
+
+         */
+
+        Seq(
+          <div class="row">
           { /* TODO  If PSM is used, then show the pixel transformations.*/ }
         </div>
-      )
+        )
+      }
     }
 
-    // val graphHistory = new SymmetryAndFlatnessBeamHistoryHTML(result.beamName, extendedData.output.outputPK.get)  TODO rm
     val content = {
 
       val dynamicUrl: String = {
-        (new SymmetryAndFlatnessSubHTML).pathOf + "?outputPK=" + extendedData.output.outputPK.get + "&" + SymmetryAndFlatnessSubHTML.beamNameTag + "=" + result.symmetryAndFlatness.beamName
+        (new SymmetryAndFlatnessSubHTML).pathOf +
+          "?outputPK=" + extendedData.output.outputPK.get +
+          "&" + SymmetryAndFlatnessSubHTML.beamNameTag + "=" + result.symmetryAndFlatness.beamName +
+          "&" + SymmetryAndFlatnessSubHTML.hasPsmTag + "=" + result.symmetryAndFlatness.psmImageHash_md5.isDefined
       }
 
       <div class="row">

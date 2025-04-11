@@ -41,19 +41,20 @@ class PSMMainHTML(
 
     val resultHtml = new ResultHtml(extendedData, resultList)
 
-    val ffRow = PSMHtmlImage(extendedData, "Flood Field", ffImg, ffAl)
-    val wdRow = PSMHtmlImage(extendedData, "Whole Detector", wdImg, wdAl)
-    val rawRow = PSMHtmlImage(extendedData, "Raw Image = Flood Field * Whole Detector", rawImg, rawAl)
-    val cbrRow = PSMHtmlImage(extendedData, "Beam Response Beam Centers", cbrImg, cbrAl, resultList = resultList)
-    val brRow = PSMHtmlImage(extendedData, "Beam Response Interpolated and Normalized", brImg, brAl, center = Some(psmGradientAscent.getMaxPoint_iso), resultList = resultList)
-    val psmRow = PSMHtmlImage(extendedData, "PSM = Raw / Beam Response", psmImg, psmAl)
-
     def make(): (Elem, String) = {
+
+      val ffRow = PSMHtmlImage(extendedData, "Flood Field", ffImg, ffAl)
+      val wdRow = PSMHtmlImage(extendedData, "Whole Detector", wdImg, wdAl)
+      val rawRow = PSMHtmlImage(extendedData, "Raw Image = Flood Field * Whole Detector", rawImg, rawAl)
+      val cbrRow = PSMHtmlImage(extendedData, "Beam Response Beam Centers", cbrImg, cbrAl, resultList = resultList)
+      val brRow = PSMHtmlImage(extendedData, "Beam Response Interpolated and Normalized", brImg, brAl, center = Some(psmGradientAscent.getMaxPoint_iso), resultList = resultList)
+      val psmRow = PSMHtmlImage(extendedData, "PSM = Raw / Beam Response", psmImg, psmAl)
+
       val content = {
         <table class="table responsive table-bordered" style="margin-top:25px;">
             <thead>
               <tr>
-                <th title="Click for larger chart, larger chart, and metadata.">
+                <th title="Click for larger image, larger chart, and metadata.">
                   Image
                 </th>
                 <th>
@@ -77,7 +78,7 @@ class PSMMainHTML(
       (content, Seq(ffRow, wdRow, rawRow, cbrRow, brRow, psmRow).map(_.js).mkString("\n"))
     }
 
-    val imageStuff = make()
+    val imageContent = make()
 
     val historyCharts = new PSMCharts(extendedData.outputPK)
 
@@ -96,7 +97,7 @@ class PSMMainHTML(
           <div class="row">
           <div class="col-md-10 col-md-offset-1" >
             <table class="table responsive table-bordered" style="margin-top:25px;">
-              {imageStuff._1}
+              {imageContent._1}
             </table>
           </div>
         </div>
@@ -123,7 +124,7 @@ class PSMMainHTML(
 
     val js =
       s"""<script>
-         |${imageStuff._2}
+         |${imageContent._2}
          |</script>
          |${PSMBeamResponseChartRestlet.makeReference(extendedData.outputPK)}
          |""".stripMargin

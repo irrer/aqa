@@ -112,7 +112,7 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
 
   private def getReferencedFloodField: FloodField = {
     val uploadedFloodFieldHash = FloodField.makeFloodField(extendedData.output.outputPK.get, runReq.floodField).imageHash_md5
-    val ff = FloodField.getByImageHash(uploadedFloodFieldHash)
+    val ff = FloodField.getByImageHash(extendedData.machine.machinePK.get, uploadedFloodFieldHash)
     ff.head
   }
 

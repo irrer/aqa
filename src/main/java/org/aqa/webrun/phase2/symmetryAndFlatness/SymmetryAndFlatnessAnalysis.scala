@@ -330,6 +330,11 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
       val psm = PSM.getUsablePsm(extendedData.machine.machinePK.get, runReq.rtimageMap.values.head)
 
+      if (psm.isEmpty)
+        logger.info("No PSM available.")
+      else
+        logger.info("Using PSM.")
+
       def doBeam(beamName: String): Seq[SymmetryAndFlatnessBeamResult] = {
         val noPsm = Some(
           analyze(
