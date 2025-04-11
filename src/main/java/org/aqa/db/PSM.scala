@@ -79,7 +79,8 @@ case class PSM(
       floodFieldScaled.get
     else {
       // get the flood field as a scaled DICOM image.  Do this is separate steps so that if there is an exception it will point to the problem
-      val ffSeq = FloodField.getByImageHash(floodFieldImageHash_md5)
+      val machinePK = Output.get(outputPK).get.machinePK.get
+      val ffSeq = FloodField.getByImageHash(machinePK, floodFieldImageHash_md5)
       val ff = ffSeq.head
       val ffDicom = ff.dicom
       val image = new DicomImage(ffDicom)
@@ -263,11 +264,10 @@ object PSM extends Logging {
     val newerThan: Timestamp = new Timestamp(dataDate.getTime - Config.PSMMaxFloodFieldAge_ms)
 
     val search = for {
-      output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.dataDate <= dataDate) && (o.dataDate >= newerThan))
+      output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.dataDate < dataDate) && (o.dataDate > newerThan))
       psm <- PSM.query.filter(p => (p.outputPK === output.outputPK) && (p.Rows === Rows) && (p.Columns === Columns))
-      ff <- FloodField.query.filter(f => psm.floodFieldImageHash_md5 === f.imageHash_md5)
     } yield {
-      (output, psm, ff)
+      (output, psm)
     }
 
     def isSamePixelSpacing(psm: PSM): Boolean = {
@@ -276,9 +276,10 @@ object PSM extends Logging {
       isClose(psm.ImagePlanePixelSpacingX, ImagePlanePixelSpacingX_mm) && isClose(psm.ImagePlanePixelSpacingY, ImagePlanePixelSpacingY_mm)
     }
 
-    val opf = Db.run(search.result).toList.filter(r => isSamePixelSpacing(r._2)).sortBy(_._1.dataDate.get.getTime).lastOption
+    val opf1 = Db.run(search.result)
+    val opf2 = opf1.toList.filter(r => isSamePixelSpacing(r._2)).sortBy(_._1.dataDate.get.getTime).lastOption
 
-    opf.map(_._2)
+    opf2.map(_._2)
   }
 
   /**
