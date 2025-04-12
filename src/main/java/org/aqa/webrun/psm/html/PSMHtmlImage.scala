@@ -29,11 +29,18 @@ import scala.collection.immutable.Seq
 import scala.collection.immutable.Seq
 import scala.xml.Elem
 
-case class PSMHtmlImage(extendedData: ExtendedData, name: String, image: DicomImage, al: AttributeList, center: Option[Point2D.Double] = None, resultList: Seq[PSMBeamAnalysisResult] = Seq())
-    extends Logging {
+case class PSMHtmlImage(
+    extendedData: ExtendedData,
+    name: String,
+    image: DicomImage,
+    trans: IsoImagePlaneTranslator,
+    al: Option[AttributeList] = None,
+    center: Option[Point2D.Double] = None,
+    resultList: Seq[PSMBeamAnalysisResult] = Seq()
+) extends Logging {
 
-  private def makeChart(dicomImage: DicomImage, al: AttributeList, yLabel: String): C3Chart = {
-    val trans = new IsoImagePlaneTranslator(al)
+  private def makeChart(dicomImage: DicomImage, yLabel: String): C3Chart = {
+    //val trans = new IsoImagePlaneTranslator(al)
 
     val xValueList = (0 until dicomImage.height).map(y => trans.pix2IsoCoordY(y))
     val area = new Rectangle((dicomImage.width / 2) - 1, 0, 2, dicomImage.height)
@@ -108,7 +115,7 @@ case class PSMHtmlImage(extendedData: ExtendedData, name: String, image: DicomIm
 
   private def annotateBeamCenters(bufImg: BufferedImage): Unit = {
 
-    val trans = new IsoImagePlaneTranslator(resultList.head.rtimage)
+    // val trans = new IsoImagePlaneTranslator(resultList.head.rtimage)
 
     def fmt(d: Double): String = "%8.2f".format(d).trim
 
@@ -188,7 +195,7 @@ case class PSMHtmlImage(extendedData: ExtendedData, name: String, image: DicomIm
   // ------------------------------------------------------------------------------------------------------
 
   private val id = Util.textToId(name)
-  private val trans = new IsoImagePlaneTranslator(al)
+  // private val trans = new IsoImagePlaneTranslator(al)
   private val bufImage = image.toDeepColorBufferedImage(0.1)
   Util.addGraticules(bufImage, trans, Color.GRAY)
   if (resultList.nonEmpty)
@@ -216,7 +223,7 @@ case class PSMHtmlImage(extendedData: ExtendedData, name: String, image: DicomIm
       </div>
   }
 
-  private val chart = makeChart(image, al, name)
+  private val chart = makeChart(image, name)
 
   val elem: Elem = {
     <tr>
@@ -229,6 +236,16 @@ case class PSMHtmlImage(extendedData: ExtendedData, name: String, image: DicomIm
   val js: String = chart.javascript
 
   private def makeImageHtml(): Unit = {
+
+    val alElem: Seq[Elem] =
+      if (al.isDefined)
+        Seq(<div class="row">
+          <div class="col-md-10 col-md-offset-1" >
+            <pre style="margin-top:40px;">{WebUtil.nl + DicomUtil.attributeListToString(al.get)}</pre>
+          </div>
+        </div>)
+      else
+        Seq()
 
     val content = {
       <div>
@@ -243,11 +260,7 @@ case class PSMHtmlImage(extendedData: ExtendedData, name: String, image: DicomIm
               <img style="margin-top:40px;" src={pngFileName}/>
             </div>
           </div>
-          <div class="row">
-            <div class="col-md-10 col-md-offset-1" >
-              <pre style="margin-top:40px;">{WebUtil.nl + DicomUtil.attributeListToString(al)}</pre>
-            </div>
-          </div>
+            {alElem}
           <div class="row">
             <p style="margin-bottom:150px;"> </p>
           </div>

@@ -142,8 +142,10 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     val elem = {
       <td style="vertical-align: middle;" class={errorClass} rowspan="4">
         <a href={detailUrl} title={titleDetails}>
-          {symFlatDataSet.symmetryAndFlatness.beamName}<br/>{Phase2Util.jawDescription(symFlatDataSet.al, symFlatDataSet.rtplan)}<br/>{Phase2Util.angleDescription(symFlatDataSet.al)}
-        </a>{hasPsm}<label title="Check to use this beam as a baseline." for={id}>Baseline</label>{input}
+          {symFlatDataSet.symmetryAndFlatness.beamName}<br>
+          {Phase2Util.jawDescription(symFlatDataSet.al, symFlatDataSet.rtplan)}
+        </br>{Phase2Util.angleDescription(symFlatDataSet.al)}{hasPsm}
+        </a> <br></br> <label title="Check to use this beam as a baseline." for={id}>Baseline</label>{input}
       </td>
     }
     elem
@@ -423,9 +425,12 @@ object SymmetryAndFlatnessSubHTML extends Logging {
    * @return td element.
    */
   private def td(d: Double) = {
-    <td title={d.toString}>
-      {Util.fmtDbl(d)}
-    </td>
+    val elem =
+      <td title={d.toString}>
+        {Util.fmtDbl(d)}
+      </td>
+
+    WebUtil.setPrecisionAttr(elem, d)
   }
 
   /**
@@ -437,9 +442,9 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   private def resultTable(beamData: SymmetryAndFlatness.SymmetryAndFlatnessHistory): Elem = {
 
     <div style="margin:20px;">
-      <center>
-        <h3>Results</h3>
-      </center>
+      {WebUtil.showPrecision}<center>
+      <h3>Results</h3>
+    </center>
       <table class="table table-bordered" title={"Results of this analysis and baseline values" + WebUtil.titleNewline + "for comparison.  All values are in percent."}>
         <thead>
           <tr>
@@ -515,7 +520,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       </div>
     }
 
-    val text = PrettyXML.xmlToText(content)
+    val text = WebUtil.specialCharTagsToLiteralXml(PrettyXML.xmlToText(content))
     WebUtil.setResponse(text, response, Status.SUCCESS_OK)
   }
 

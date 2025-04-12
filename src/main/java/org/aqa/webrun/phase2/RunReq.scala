@@ -22,6 +22,7 @@ import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Config
 import org.aqa.Util
+import org.aqa.db.PSM
 import org.aqa.run.RunReqClass
 
 import java.awt.Point
@@ -52,6 +53,23 @@ case class RunReq(
   val floodBadPixelList: Seq[DicomImage.PixelRating] = if (floodOriginalImage.isDefined) Phase2Util.identifyBadPixels(floodOriginalImage.get, badPixelRadius) else Seq()
 
   private val floodCorrectedImage: Option[DicomImage] = if (floodOriginalImage.isDefined) Some(floodOriginalImage.get.correctBadPixels(floodBadPixelList, badPixelRadius)) else None
+
+  private var psm: Option[PSM] = None
+  private var psmAttempted = false
+
+  /**
+    * Get the PSM if possible.  It must be for this machine and be date-appropriate for this set of RTIMAGES.
+    * @param machinePK For this machine
+    * @return A PSM if it exists.
+    */
+  def getPsm(machinePK: Long): Option[PSM] =
+    psm.synchronized {
+      if (psm.isEmpty && (!psmAttempted)) {
+        psmAttempted = true
+        psm = PSM.getUsablePsm(machinePK, rtimageMap.values.head)
+      }
+      psm
+    }
 
   /*
   val imageSize = {

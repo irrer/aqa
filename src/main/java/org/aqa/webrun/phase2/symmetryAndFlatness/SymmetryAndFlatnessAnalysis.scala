@@ -328,7 +328,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       val beamNameList = Util.makeSymFlatConstBeamNameList(runReq.rtplan).filter(beamName => runReq.derivedMap.contains(beamName))
       logger.info("Sym+Flat using beams:\n    " + beamNameList.mkString("\n    "))
 
-      val psm = PSM.getUsablePsm(extendedData.machine.machinePK.get, runReq.rtimageMap.values.head)
+      val psm = runReq.getPsm(extendedData.machine.machinePK.get)
 
       if (psm.isEmpty)
         logger.info("No PSM available.")

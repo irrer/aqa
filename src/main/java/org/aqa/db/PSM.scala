@@ -72,22 +72,31 @@ case class PSM(
   /** Binary content as DICOM. */
   lazy val dicom: AttributeList = DicomUtil.zippedByteArrayToDicom(dicom_zip).head
 
+  private var floodFieldDicom: Option[AttributeList] = None
+
   private var floodFieldScaled: Option[DicomImage] = None
 
-  def getFloodFieldScaled: DicomImage = {
-    if (floodFieldScaled.isDefined)
-      floodFieldScaled.get
-    else {
+  def getFloodFieldDicom: AttributeList = {
+    if (floodFieldDicom.isEmpty) {
       // get the flood field as a scaled DICOM image.  Do this is separate steps so that if there is an exception it will point to the problem
       val machinePK = Output.get(outputPK).get.machinePK.get
       val ffSeq = FloodField.getByImageHash(machinePK, floodFieldImageHash_md5)
       val ff = ffSeq.head
       val ffDicom = ff.dicom
+      floodFieldDicom = Some(ffDicom)
+    }
+    floodFieldDicom.get
+  }
+
+  def getFloodFieldScaled: DicomImage = {
+    if (floodFieldScaled.isEmpty) {
+      // get the flood field as a scaled DICOM image.  Do this is separate steps so that if there is an exception it will point to the problem
+      val ffDicom = getFloodFieldDicom
       val image = new DicomImage(ffDicom)
       val scaled = image.scalePixels(ffDicom)
       floodFieldScaled = Some(scaled) // save for next time
-      scaled
     }
+    floodFieldScaled.get
   }
 
 }

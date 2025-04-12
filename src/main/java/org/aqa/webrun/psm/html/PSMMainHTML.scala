@@ -2,6 +2,7 @@ package org.aqa.webrun.psm.html
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.Logging
 import org.aqa.webrun.ExtendedData
 import org.aqa.Util
@@ -43,12 +44,22 @@ class PSMMainHTML(
 
     def make(): (Elem, String) = {
 
-      val ffRow = PSMHtmlImage(extendedData, "Flood Field", ffImg, ffAl)
-      val wdRow = PSMHtmlImage(extendedData, "Whole Detector", wdImg, wdAl)
-      val rawRow = PSMHtmlImage(extendedData, "Raw Image = Flood Field * Whole Detector", rawImg, rawAl)
-      val cbrRow = PSMHtmlImage(extendedData, "Beam Response Beam Centers", cbrImg, cbrAl, resultList = resultList)
-      val brRow = PSMHtmlImage(extendedData, "Beam Response Interpolated and Normalized", brImg, brAl, center = Some(psmGradientAscent.getMaxPoint_iso), resultList = resultList)
-      val psmRow = PSMHtmlImage(extendedData, "PSM = Raw / Beam Response", psmImg, psmAl)
+      val trans = new IsoImagePlaneTranslator(wdAl)
+
+      val ffRow = PSMHtmlImage(extendedData, "Flood Field", ffImg, trans, al = Some(ffAl))
+      val wdRow = PSMHtmlImage(extendedData, "Whole Detector", wdImg, trans, al = Some(wdAl))
+      val rawRow = PSMHtmlImage(extendedData, "Raw Image = Flood Field * Whole Detector", rawImg, trans, al = Some(rawAl))
+      val cbrRow = PSMHtmlImage(extendedData, "Beam Response Beam Centers", cbrImg, trans, al = Some(ffAl), resultList = resultList)
+      val brRow = PSMHtmlImage(
+        extendedData,
+        "Beam Response Interpolated and Normalized",
+        brImg,
+        trans,
+        al = Some(brAl),
+        center = Some(psmGradientAscent.getMaxPoint_iso),
+        resultList = resultList
+      )
+      val psmRow = PSMHtmlImage(extendedData, "PSM = Raw / Beam Response", psmImg, trans, al = Some(psmAl))
 
       val content = {
         <table class="table responsive table-bordered" style="margin-top:25px;">
