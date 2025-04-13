@@ -105,6 +105,10 @@ function updateFloatingPrecision() {
   for (i = 0; i < list.length; i++) {
     var num = parseFloat(list[i].getAttribute("precision"));
     var text = num.toPrecision(precision);
+    if ((Math.round(num) == num) && (Math.abs(num) < 1000000)) {
+      var ii = Math.round(num);
+      text = ii;
+    }
     list[i].innerHTML = text;
   }
 }
