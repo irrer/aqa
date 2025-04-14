@@ -118,7 +118,7 @@ object SymmetryAndFlatnessHTML extends Logging {
     val html = Phase2Util.wrapSubProcedure(extendedData, dynamicContent, title = "Symmetry and Flatness", status, Some(runScript), runReq.rtimageMap)
     Util.writeFile(mainHtmlFile, html)
 
-    resultList.foreach(rb => SymmetryAndFlatnessBeamProfileHTML.makeDisplay(subDir, extendedData, rb, runReq))
+    resultList.par.foreach(rb => SymmetryAndFlatnessBeamProfileHTML.makeDisplay(subDir, extendedData, rb, runReq))
 
     summary(mainHtmlFile, resultList.size, status)
   }
