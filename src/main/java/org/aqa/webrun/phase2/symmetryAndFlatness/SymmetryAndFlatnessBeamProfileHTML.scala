@@ -105,15 +105,17 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
           new DicomImage(pix)
         }
 
-        val ffRow = PSMHtmlImage(extendedData, "FF: Flood Field", ffImg, trans, al = Some(psm.get.getFloodFieldDicom))
-        val wdRow = PSMHtmlImage(extendedData, "WD: " + symFlat.beamName + " used as Whole Detector", wdImg, trans, al = Some(wdAl))
-        val ffXWDRow = PSMHtmlImage(extendedData, symFlat.beamName + " times Flood Field", ffXwdImg, trans)
-        val psmRow = PSMHtmlImage(extendedData, "PSM", psmImg, trans, al = Some(psm.get.dicom))
-        val brRow = PSMHtmlImage(extendedData, "BR: Beam Response", brImg, trans)
+        val dir = SymmetryAndFlatnessHTML.makeSubDir(extendedData.output.dir)
+
+        val ffRow = PSMHtmlImage(extendedData, "FF: Flood Field", ffImg, trans, dir = dir, al = Some(psm.get.getFloodFieldDicom))
+        val wdRow = PSMHtmlImage(extendedData, "WD: " + symFlat.beamName + " used as Whole Detector", wdImg, trans, dir = dir, al = Some(wdAl))
+        val ffXWDRow = PSMHtmlImage(extendedData, symFlat.beamName + " times Flood Field", ffXwdImg, trans, dir = dir)
+        val psmRow = PSMHtmlImage(extendedData, "PSM", psmImg, trans, dir = dir, al = Some(psm.get.dicom))
+        val brRow = PSMHtmlImage(extendedData, "BR: Beam Response", brImg, trans, dir = dir)
 
         val elem = {
           <div class="row">
-            <div class="col-md-10 col-md-offset-1">
+            <div class="col-md-10">
               {WebUtil.showPrecision}
               <table class="table responsive table-bordered" style="margin-top:25px;">
                 <thead>

@@ -52,7 +52,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 
   private def titleImage = "Click to view DICOM metadata"
 
-  /** PK of the SymmetryAndFlatness row to have it's baseline changed. */
+  /** PK of the SymmetryAndFlatness row to have its baseline changed. */
   private val symFlatPKTag = "symFlatPK"
 
   /** Indicates that caller is requesting a CSV of the results. */
@@ -64,10 +64,10 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   /** Indicates which set of data to retrieve for display as a web page. */
   private val outputPKTag = "outputPK"
 
-  /** Used to specify the name of a beam in an URL. */
+  /** Used to specify the name of a beam in a URL. */
   val beamNameTag = "BeamName"
 
-  /** Used to specify the name of a beam in an URL. */
+  /** Used to specify the name of a beam in a URL. */
   val hasPsmTag = "hasPsm"
 
   private def titleAxialSymmetry =
@@ -441,8 +441,23 @@ object SymmetryAndFlatnessSubHTML extends Logging {
    */
   private def resultTable(beamData: SymmetryAndFlatness.SymmetryAndFlatnessHistory): Elem = {
 
+    val beamHeaderElem: Elem = {
+      val psmText = if (beamData.symmetryAndFlatness.psmImageHash_md5.isEmpty) "" else " with PSM"
+
+      <div class="row">
+        <div class="col-md-3 col-md-offset-1">
+          <h3>
+            {beamData.symmetryAndFlatness.beamName + psmText}
+          </h3>
+        </div>
+        <div class="col-md-2 col-md-offset-1">
+          {WebUtil.showPrecision}
+        </div>
+      </div>
+    }
+
     <div style="margin:20px;">
-      {WebUtil.showPrecision}<center>
+      {beamHeaderElem}<center>
       <h3>Results</h3>
     </center>
       <table class="table table-bordered" title={"Results of this analysis and baseline values" + WebUtil.titleNewline + "for comparison.  All values are in percent."}>
@@ -498,7 +513,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   }
 
   /**
-   * Format data for the just the given output and beam.  Build an HTML response to show it.
+   * Format data for just the given output and beam.  Build an HTML response to show it.
    *
    * @param valueMap Parameter list.  Already validated to have an output PK and beam name.
    * @param response Put HTML here.

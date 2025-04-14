@@ -4,7 +4,6 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.run.ProcedureStatus
@@ -299,11 +298,6 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
   }
 
   override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[Timestamp] = {
-
-    val j = getRtimageList(alList) // TODO rm
-      .filterNot(FloodUtil.isFloodField) // ignore any flood field that may have been uploaded
-      .map(d => Util.extractDateTimeAndPatientIdFromDicomAl(d)) // get the date+time from each DICOM files
-    Trace.trace(j)
 
     val min: Date = getRtimageList(alList) // all RTIMAGE files
       .filterNot(FloodUtil.isFloodField) // ignore any flood field that may have been uploaded

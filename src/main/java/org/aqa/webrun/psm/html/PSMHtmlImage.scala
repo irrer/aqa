@@ -29,11 +29,23 @@ import scala.collection.immutable.Seq
 import scala.collection.immutable.Seq
 import scala.xml.Elem
 
+/**
+  * Make the image, chart, and html to show one step of PSM processing.
+  * @param extendedData Metadata.
+  * @param name PSM step name.
+  * @param image Scaled image.
+  * @param trans Transform for scaling chart.
+  * @param dir Put files here.
+  * @param al DICOM metadata, if applicable.  If present, show the DICOM metadata.
+  * @param center Max point, if applicable.  If present, show on image.
+  * @param resultList List of results, if applicable.  If present, show the values of the 42 beams on the main image.
+  */
 case class PSMHtmlImage(
     extendedData: ExtendedData,
     name: String,
     image: DicomImage,
     trans: IsoImagePlaneTranslator,
+    dir: File,
     al: Option[AttributeList] = None,
     center: Option[Point2D.Double] = None,
     resultList: Seq[PSMBeamAnalysisResult] = Seq()
@@ -61,7 +73,7 @@ case class PSMHtmlImage(
             val right = diff - left
             val value = yTransverse.min
             val t = (0 until left).map(_ => value) ++ yTransverse ++ (0 until right).map(_ => value)
-            Seq(yAxial, t.toSeq)
+            Seq(yAxial, t)
 
           case _ if yAxial.size < yTransverse.size =>
             val diff = yTransverse.size - yAxial.size
@@ -207,7 +219,7 @@ case class PSMHtmlImage(
   Config.applyWatermark(bufImage)
 
   private val pngFileName = id + ".png"
-  private val pngFile = new File(extendedData.output.dir, pngFileName)
+  private val pngFile = new File(dir, pngFileName)
 
   private val htmlFileName: String = id + ".html"
 
@@ -270,7 +282,7 @@ case class PSMHtmlImage(
     val imageJs = s"<script>$js</script>"
 
     val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = name, c3 = true, runScript = Some(imageJs))
-    val htmlFile = new File(extendedData.output.dir, htmlFileName)
+    val htmlFile = new File(dir, htmlFileName)
     Util.writeFile(htmlFile, text)
     logger.info("Wrote file " + htmlFile.getAbsolutePath)
   }

@@ -28,11 +28,8 @@ class PSMMainHTML(
     ffImg: DicomImage,
     wdAl: AttributeList,
     wdImg: DicomImage,
-    rawAl: AttributeList,
     rawImg: DicomImage,
-    cbrAl: AttributeList,
     cbrImg: DicomImage,
-    brAl: AttributeList,
     brImg: DicomImage,
     psmAl: AttributeList,
     psmImg: DicomImage
@@ -46,20 +43,22 @@ class PSMMainHTML(
 
       val trans = new IsoImagePlaneTranslator(wdAl)
 
-      val ffRow = PSMHtmlImage(extendedData, "Flood Field", ffImg, trans, al = Some(ffAl))
-      val wdRow = PSMHtmlImage(extendedData, "Whole Detector", wdImg, trans, al = Some(wdAl))
-      val rawRow = PSMHtmlImage(extendedData, "Raw Image = Flood Field * Whole Detector", rawImg, trans, al = Some(rawAl))
-      val cbrRow = PSMHtmlImage(extendedData, "Beam Response Beam Centers", cbrImg, trans, al = Some(ffAl), resultList = resultList)
+      val dir = extendedData.output.dir
+
+      val ffRow = PSMHtmlImage(extendedData, "Flood Field", ffImg, trans, dir = dir, al = Some(ffAl))
+      val wdRow = PSMHtmlImage(extendedData, "Whole Detector", wdImg, trans, dir = dir, al = Some(wdAl))
+      val rawRow = PSMHtmlImage(extendedData, "Raw Image = Flood Field * Whole Detector", rawImg, trans, dir = dir)
+      val cbrRow = PSMHtmlImage(extendedData, "Beam Response Beam Centers", cbrImg, trans, dir = dir, resultList = resultList)
       val brRow = PSMHtmlImage(
         extendedData,
         "Beam Response Interpolated and Normalized",
         brImg,
         trans,
-        al = Some(brAl),
+        dir = dir,
         center = Some(psmGradientAscent.getMaxPoint_iso),
         resultList = resultList
       )
-      val psmRow = PSMHtmlImage(extendedData, "PSM = Raw / Beam Response", psmImg, trans, al = Some(psmAl))
+      val psmRow = PSMHtmlImage(extendedData, "PSM = Raw / Beam Response", psmImg, trans, dir = dir, al = Some(psmAl))
 
       val content = {
         <table class="table responsive table-bordered" style="margin-top:25px;">
