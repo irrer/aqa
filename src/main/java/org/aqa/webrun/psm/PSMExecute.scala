@@ -90,7 +90,7 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
   private val brImg = interpolator.normalizedDicomImage
 
   private val psmImg = makePsmImage(rawImg, brImg)
-  private val psmAl = PSMDicom.psmToDicom(brImg, resultList.head.rtimage, "PSM", "Pixel Sensitivity Matrix derived from FloodField, WholeDetector, and BeamResponse")
+  private val psmAl = PSMDicom.psmToDicom(psmImg, resultList.head.rtimage, "PSM", "Pixel Sensitivity Matrix derived from FloodField, WholeDetector, and BeamResponse")
 
   // ----------------------------------------------------------------------------------------
 

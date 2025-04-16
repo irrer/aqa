@@ -8,6 +8,7 @@ import edu.umro.ImageUtil.DicomImage
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.util.UMROGUID
 import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.Trace
 
 /**
   * Provide functions to convert a PSM image to and from DICOM.
@@ -54,6 +55,23 @@ object PSMDicom {
     set(TagByName.ReferencedBeamNumber, -1)
 
     val hiPix = 0xffff
+
+    if (true) { // TODO Exploring the level of precision. rm
+      /*
+      Example numbers:
+        47.721966 - 47.62594 = 0.09602600000000194
+        0.09602600000000194 / 47.62594 = 0.0020162541673718554
+        which is 0.20162%, which is not great, especially because it is for the number we care about.
+
+      The big numbers on the edges get 20x the precision, but we don't care about them.
+        277.16025 - 277.13272 = 0.027530000000012933
+        0.027530000000012933 / 277.16025 = 9.932881789510917e-05
+        which is 0.0099328 %
+       */
+      val valueList = dicomImage.pixelData.flatten.distinct.sorted
+      Trace.trace("bottom 20: " + valueList.take(20))
+      Trace.trace("top 20: " + valueList.takeRight(20))
+    }
 
     val RescaleIntercept = dicomImage.minPixelValue
     val RescaleSlope = (dicomImage.maxPixelValue - dicomImage.minPixelValue) / hiPix

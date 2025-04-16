@@ -29,6 +29,7 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.psm.html.PSMHtmlImage
+import org.aqa.webrun.psm.PSMUtil
 
 import java.awt.Color
 import java.io.File
@@ -81,29 +82,11 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
 
         val wdImg = new DicomImage(wdAl).scalePixels(wdAl)
 
-        val ffXwdImg = {
-          def row(y: Int): IndexedSeq[Float] =
-            (0 until trans.width).map(x => ffImg.get(x, y) * wdImg.get(x, y))
-          val pix = (0 until trans.height).map(row)
-          new DicomImage(pix)
-        }
+        val ffXwdImg = ffImg.fun2((a, b) => a * b, wdImg)
 
         val psmImg = new DicomImage(psm.get.dicom).scalePixels(psm.get.dicom)
 
-        val brImg = {
-
-          def row(y: Int): IndexedSeq[Float] = {
-            def psmVal(x: Int): Float = {
-              psmImg.get(x, y) match {
-                case 0 => 1
-                case v => v
-              }
-            }
-            (0 until trans.width).map(x => wdImg.get(x, y) / psmVal(x))
-          }
-          val pix = (0 until trans.height).map(row)
-          new DicomImage(pix)
-        }
+        val brImg = ffXwdImg.fun2(PSMUtil.funcDiv, psmImg)
 
         val dir = SymmetryAndFlatnessHTML.makeSubDir(extendedData.output.dir)
 

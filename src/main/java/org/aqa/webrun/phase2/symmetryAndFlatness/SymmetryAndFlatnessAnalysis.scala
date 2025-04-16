@@ -17,11 +17,11 @@
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
 import com.pixelmed.dicom.AttributeList
-import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -34,6 +34,7 @@ import org.aqa.webrun.phase2.CollimatorCenteringResource
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.SubProcedureResult
+import org.aqa.webrun.psm.PSMUtil
 
 import java.awt.Color
 import java.awt.Rectangle
@@ -129,6 +130,55 @@ object SymmetryAndFlatnessAnalysis extends Logging {
   def makeBaselineName(beamName: String, dataName: String): String = dataName + " " + beamName
 
   /**
+   * Apply
+   * @param beamName Name of Beam in RTPLAN
+   * @param wd Whole detector - the original beam.
+   * @param psm PSM data
+   * @return An image corrected for PSM.
+   */
+
+  private def psmCorrection(beamName: String, wd: DicomImage, psm: PSM): DicomImage = {
+    val psmDicom = psm.dicom
+    val psmScaledImage = new DicomImage(psmDicom).scalePixels(psmDicom)
+
+    val ffScaledImage = psm.getFloodFieldScaled
+
+    val wdXff = wd.fun2((a,b) => a*b, ffScaledImage)
+
+    def doRow(y: Int): IndexedSeq[Float] = {
+      def doPix(x: Int): Float = {
+        val psmVal: Float = {
+          psmScaledImage.get(x, y) match {
+            case 0 => 1
+            case v => v
+          }
+        }
+        (wd.get(x, y) * ffScaledImage.get(x, y)) / psmVal
+      }
+      (0 until psmScaledImage.width).map(x => doPix(x))
+    }
+
+
+
+    val pixels = (0 until psmScaledImage.height).map(doRow)
+
+    val beamResponse = new DicomImage(pixels)
+
+    if (true) { // TODO rm
+      SymmetryAndFlatnessAnalysis.synchronized {
+        Trace.trace(s"\n===== Beam: $beamName =====")
+        Trace.trace("ff:\n" + PSMUtil.centerPixelsToString(ffScaledImage) + "\n\n")
+        Trace.trace("psm:\n" + PSMUtil.centerPixelsToString(psmScaledImage))
+        Trace.trace("wd:\n" + PSMUtil.centerPixelsToString(wd))
+        Trace.trace("br:\n" + PSMUtil.centerPixelsToString(beamResponse))
+        Trace.trace()
+      }
+    }
+
+    beamResponse
+  }
+
+  /**
     * Analyze for symmetry and flatness.  The results should be sufficient to support both recording to
     * the database and generating a report.
     *
@@ -148,37 +198,13 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     logger.info("Begin analysis of beam " + beamName)
 
     val scaledImage: DicomImage = {
-      val img = new DicomImage(attributeList)
+      val scaled = new DicomImage(attributeList).scalePixels(attributeList)
 
-      val slope = attributeList.get(TagByName.RescaleSlope).getDoubleValues.head
-      val offset = attributeList.get(TagByName.RescaleIntercept).getDoubleValues.head
-
-      def doRow(row: IndexedSeq[Float]): IndexedSeq[Float] = row.map(pix => ((pix * slope) + offset).toFloat)
-
-      val array = img.pixelData.map(doRow)
-
-      val scaled = new DicomImage(array)
-
-      val image = if (psm.isEmpty) {
-        scaled
-      } else {
-        val psmDicom = psm.get.dicom
-        val psmScaledImage = new DicomImage(psmDicom).scalePixels(psmDicom)
-
-        val ffScaledImage = psm.get.getFloodFieldScaled
-
-        def doRow(y: Int): IndexedSeq[Float] = {
-          def doPix(x: Int): Float = {
-            val psmVal: Float = if (psmScaledImage.get(x, y) == 0) 1 else psmScaledImage.get(x, y)
-            (scaled.get(x, y) * ffScaledImage.get(x, y)) / psmVal
-          }
-          (0 until psmScaledImage.width).map(x => doPix(x))
-        }
-
-        val pixels = (0 until psmScaledImage.height).map(doRow)
-
-        new DicomImage(pixels)
-      }
+      val image =
+        if (psm.isEmpty)
+          scaled
+        else
+          psmCorrection(beamName, scaled, psm.get)
 
       image
     }

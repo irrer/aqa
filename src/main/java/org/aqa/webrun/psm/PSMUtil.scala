@@ -127,10 +127,24 @@ object PSMUtil extends Logging {
     * @return Human-readable text.
     */
   def centerPixelsToString(dicomImage: DicomImage): String = {
-    val size = 10
+    val size = 8
     val rectangle = new Rectangle((dicomImage.width - size) / 2, (dicomImage.height - size) / 2, size, size)
     val center = dicomImage.getSubimage(rectangle)
     center.pixelsToText
+  }
+
+  /**
+    * Perform a division of pixels : a / b, accommodating divide by 0 by using 1 instead of 0.
+    *
+    * @param a Numerator
+    * @param b Denoominator
+    * @return a / b .  If b is 0, then return a
+    */
+  def funcDiv(a: Float, b: Float): Float = {
+    b match {
+      case 0 => a
+      case _ => a / b
+    }
   }
 
 }

@@ -25,6 +25,7 @@ import org.aqa.db.Db.driver.api._
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
+import org.aqa.webrun.psm.PSMUtil
 
 import java.sql.Timestamp
 
@@ -55,22 +56,12 @@ case class PSM(
 
   def insertOrUpdate(): Int = Db.run(PSM.query.insertOrUpdate(this))
 
-  override def toString: String = {
-    "    psmPK: " + psmPK + "\n" +
-      "    outputPK: " + outputPK + "\n" +
-      "    imageHash_md5: " + imageHash_md5.take(16) + "...\n" +
-      "    floodFieldImageHash_md5: " + floodFieldImageHash_md5.take(16) + "...\n" +
-      "    xMax_mm: " + Util.fmtDbl(xMax_mm) + "\n" +
-      "    yMax_mm: " + Util.fmtDbl(yMax_mm) + "\n" +
-      "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
-      "    Rows: " + Rows + "\n" +
-      "    Columns: " + Columns + "\n" +
-      "    ImagePlanePixelSpacingX: " + ImagePlanePixelSpacingX + "\n" +
-      "    ImagePlanePixelSpacingY: " + ImagePlanePixelSpacingY + "\n"
-  }
-
   /** Binary content as DICOM. */
   lazy val dicom: AttributeList = DicomUtil.zippedByteArrayToDicom(dicom_zip).head
+  //noinspection ScalaWeakerAccess
+  lazy val imageRaw: DicomImage = new DicomImage(dicom)
+  //noinspection ScalaWeakerAccess
+  lazy val imageScaled: DicomImage = imageRaw.scalePixels(dicom)
 
   private var floodFieldDicom: Option[AttributeList] = None
 
@@ -97,6 +88,26 @@ case class PSM(
       floodFieldScaled = Some(scaled) // save for next time
     }
     floodFieldScaled.get
+  }
+
+  override def toString: String = {
+
+    val centerPixelsRaw = PSMUtil.centerPixelsToString(imageRaw)
+    val centerPixelsScaled = PSMUtil.centerPixelsToString(imageScaled)
+
+    "    psmPK: " + psmPK + "\n" +
+      "    outputPK: " + outputPK + "\n" +
+      "    imageHash_md5: " + imageHash_md5.take(16) + "...\n" +
+      "    floodFieldImageHash_md5: " + floodFieldImageHash_md5.take(16) + "...\n" +
+      "    xMax_mm: " + Util.fmtDbl(xMax_mm) + "\n" +
+      "    yMax_mm: " + Util.fmtDbl(yMax_mm) + "\n" +
+      "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
+      "    Rows: " + Rows + "\n" +
+      "    Columns: " + Columns + "\n" +
+      "    ImagePlanePixelSpacingX: " + ImagePlanePixelSpacingX + "\n" +
+      "    ImagePlanePixelSpacingY: " + ImagePlanePixelSpacingY + "\n" +
+      "    Center Pixels Raw:\n" + centerPixelsRaw + "\n" +
+      "    Center Pixels Scaled:\n" + centerPixelsScaled + "\n"
   }
 
 }
