@@ -17,7 +17,7 @@ import java.awt.Rectangle
 import java.io.File
 import java.util.Date
 
-object PSM {
+object PSMLearn {
 
   val outDir = new File("target\\psm")
 
