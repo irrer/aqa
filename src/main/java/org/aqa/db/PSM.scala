@@ -19,14 +19,14 @@ package org.aqa.db
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
-import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.FileUtil.ToZipOutputStream
+import edu.umro.ScalaUtil.RawByte
 import org.aqa.db.Db.driver.api._
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.webrun.psm.PSMUtil
 
+import java.nio.ByteBuffer
 import java.sql.Timestamp
 
 /**  */
@@ -37,12 +37,11 @@ case class PSM(
     floodFieldImageHash_md5: String, // Image hash of flood field from which this was derived
     xMax_mm: Double, // X coordinate of maximum point determined by bicubic interpolation in mm
     yMax_mm: Double, // Y coordinate of maximum point determined by bicubic interpolation in mm
-    SOPInstanceUID: String, // SOPInstanceUID if it is in the DICOM
     Rows: Int, // Number of rows in the image.  DICOM metadata 0028,0010
     Columns: Int, // Number of columns in the image.  DICOM metadata 0028,0011
     ImagePlanePixelSpacingX: Double, // Physical distance (in mm) between the center of each image pixel in the X axis.  DICOM metadata 3002,0011 first value
     ImagePlanePixelSpacingY: Double, // Physical distance (in mm) between the center of each image pixel in the Y axis.  DICOM metadata 3002,0011 second value
-    dicom_zip: Array[Byte] // Single DICOM image in zip form.
+    pixelArray: Array[Byte] // pixel values as serialized array of Float
 ) extends Logging {
 
   def insert: PSM = {
@@ -56,12 +55,25 @@ case class PSM(
 
   def insertOrUpdate(): Int = Db.run(PSM.query.insertOrUpdate(this))
 
-  /** Binary content as DICOM. */
-  lazy val dicom: AttributeList = DicomUtil.zippedByteArrayToDicom(dicom_zip).head
+  /** Image as array of floats. */
   //noinspection ScalaWeakerAccess
-  lazy val imageRaw: DicomImage = new DicomImage(dicom)
-  //noinspection ScalaWeakerAccess
-  lazy val imageScaled: DicomImage = imageRaw.scalePixels(dicom)
+  lazy val imageScaled: DicomImage = {
+
+    val buf = ByteBuffer.wrap(pixelArray)
+
+    def makeRow(rowIndex: Int): IndexedSeq[Float] = {
+      val start = rowIndex * Columns * 4
+      (0 until Columns).map(x => {
+        buf.getFloat(start + (x * 4))
+      })
+    }
+
+    val pixels: IndexedSeq[IndexedSeq[Float]] = {
+      (0 until Rows).map(rowIndex => makeRow(rowIndex))
+    }
+
+    new DicomImage(pixels)
+  }
 
   private var floodFieldDicom: Option[AttributeList] = None
 
@@ -92,7 +104,6 @@ case class PSM(
 
   override def toString: String = {
 
-    val centerPixelsRaw = PSMUtil.centerPixelsToString(imageRaw)
     val centerPixelsScaled = PSMUtil.centerPixelsToString(imageScaled)
 
     "    psmPK: " + psmPK + "\n" +
@@ -101,12 +112,10 @@ case class PSM(
       "    floodFieldImageHash_md5: " + floodFieldImageHash_md5.take(16) + "...\n" +
       "    xMax_mm: " + Util.fmtDbl(xMax_mm) + "\n" +
       "    yMax_mm: " + Util.fmtDbl(yMax_mm) + "\n" +
-      "    SOPInstanceUID: " + SOPInstanceUID + "\n" +
       "    Rows: " + Rows + "\n" +
       "    Columns: " + Columns + "\n" +
       "    ImagePlanePixelSpacingX: " + ImagePlanePixelSpacingX + "\n" +
       "    ImagePlanePixelSpacingY: " + ImagePlanePixelSpacingY + "\n" +
-      "    Center Pixels Raw:\n" + centerPixelsRaw + "\n" +
       "    Center Pixels Scaled:\n" + centerPixelsScaled + "\n"
   }
 
@@ -127,8 +136,6 @@ object PSM extends Logging {
 
     def yMax_mm = column[Double]("yMax_mm")
 
-    def SOPInstanceUID = column[String]("SOPInstanceUID")
-
     def Rows = column[Int]("Rows")
 
     def Columns = column[Int]("Columns")
@@ -137,7 +144,7 @@ object PSM extends Logging {
 
     def ImagePlanePixelSpacingY = column[Double]("ImagePlanePixelSpacingY")
 
-    def dicom_zip = column[Array[Byte]]("dicom_zip")
+    def pixelArray = column[Array[Byte]]("pixelArray")
 
     def * =
       (
@@ -147,12 +154,11 @@ object PSM extends Logging {
         floodFieldImageHash_md5,
         xMax_mm,
         yMax_mm,
-        SOPInstanceUID,
         Rows,
         Columns,
         ImagePlanePixelSpacingX,
         ImagePlanePixelSpacingY,
-        dicom_zip
+        pixelArray
       ) <> (PSM.apply _ tupled, PSM.unapply)
 
     def outputFK = foreignKey("PSM_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
@@ -196,19 +202,37 @@ object PSM extends Logging {
   /**
     * Make a PSM object from the given parameters.  It is up to the caller to insert it into the database.
     * @param outputPK Attach to this output.
-    * @param al Contains image and metadata.
+    * @param image Contains image.
     * @param xMax_mm X coordinate at max value.
     * @param yMax_mm y coordinate at max value.
+    * @param Rows number rows of pixels
+    * @param Columns number columns of pixels
+    * @param ImagePlanePixelSpacingX Horizontal spacing of pixels.
+    * @param ImagePlanePixelSpacingY Vertical spacing of pixels.
     * @return A shiny new PSM object.
     */
-  def makePSM(outputPK: Long, floodFieldImageHash_md5: String, al: AttributeList, xMax_mm: Double, yMax_mm: Double): PSM = {
-    val dicom_zip = {
-      val zos = new ToZipOutputStream()
-      zos.writeDicom(al, "FloodField.dcm", "AQA")
-      zos.finish()
+  def makePSM(
+      outputPK: Long,
+      floodFieldImageHash_md5: String,
+      image: DicomImage,
+      xMax_mm: Double,
+      yMax_mm: Double,
+      Rows: Int,
+      Columns: Int,
+      ImagePlanePixelSpacingX: Double,
+      ImagePlanePixelSpacingY: Double
+  ): PSM = {
+
+    val pixelArray: Array[Byte] = {
+      val buf = ByteBuffer.allocate(Rows * Columns * 4)
+      image.pixelData.flatten.foreach(buf.putFloat)
+      buf.array()
     }
 
-    val imageHash_md5 = Util.imagePixelMD5Hash(al)
+    val imageHash_md5 = {
+      val h = edu.umro.ScalaUtil.Crypto.hash(pixelArray)
+      RawByte.formatByteArray(h)
+    }
 
     val newPSM = PSM(
       psmPK = None,
@@ -217,12 +241,49 @@ object PSM extends Logging {
       floodFieldImageHash_md5 = floodFieldImageHash_md5,
       xMax_mm = xMax_mm,
       yMax_mm = yMax_mm,
-      SOPInstanceUID = Util.sopOfAl(al),
-      Rows = al.get(TagByName.Rows).getIntegerValues.head,
-      Columns = al.get(TagByName.Columns).getIntegerValues.head,
-      ImagePlanePixelSpacingX = al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues.head,
-      ImagePlanePixelSpacingY = al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues.toSeq(1),
-      dicom_zip = dicom_zip
+      Rows = Rows,
+      Columns = Columns,
+      ImagePlanePixelSpacingX = ImagePlanePixelSpacingX,
+      ImagePlanePixelSpacingY = ImagePlanePixelSpacingY,
+      pixelArray = pixelArray
+    )
+
+    newPSM
+  }
+
+  /**
+    * Make a PSM object from the given parameters.  It is up to the caller to insert it into the database.
+    * @param outputPK Attach to this output.
+    * @param image Contains image.
+    * @param xMax_mm X coordinate at max value.
+    * @param yMax_mm y coordinate at max value.
+    * @param al DICOM containing image properties: Rows, Columns, and ImagePlanePixelSpacing
+    * @return A shiny new PSM object.
+    */
+  def makePSM(
+      outputPK: Long, //
+      floodFieldImageHash_md5: String,
+      image: DicomImage,
+      xMax_mm: Double,
+      yMax_mm: Double,
+      al: AttributeList
+  ): PSM = {
+
+    val Rows = al.get(TagByName.Rows).getIntegerValues.head
+    val Columns = al.get(TagByName.Columns).getIntegerValues.head
+    val ImagePlanePixelSpacingX = al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues.head
+    val ImagePlanePixelSpacingY = al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues.toSeq(1)
+
+    val newPSM = makePSM(
+      outputPK = outputPK,
+      floodFieldImageHash_md5 = floodFieldImageHash_md5,
+      image = image,
+      xMax_mm = xMax_mm,
+      yMax_mm = yMax_mm,
+      Rows = Rows,
+      Columns = Columns,
+      ImagePlanePixelSpacingX = ImagePlanePixelSpacingX,
+      ImagePlanePixelSpacingY = ImagePlanePixelSpacingY
     )
 
     newPSM

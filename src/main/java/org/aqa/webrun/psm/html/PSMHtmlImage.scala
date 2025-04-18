@@ -6,6 +6,7 @@ import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.web.WebUtil
 import org.aqa.Config
 import org.aqa.Util
@@ -13,6 +14,7 @@ import org.aqa.web.C3Chart
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.psm.PSMBeamAnalysisResult
 import org.aqa.Logging
+import org.aqa.webrun.psm.PSMUtil
 
 import java.awt.geom.Point2D
 import java.awt.Color
@@ -208,6 +210,12 @@ case class PSMHtmlImage(
 
   private val id = Util.textToId(name)
   // private val trans = new IsoImagePlaneTranslator(al)
+  if (true) {
+    Trace.trace()
+    Trace.trace(PSMUtil.centerPixelsToString(image))
+
+    Trace.trace()
+  }
   private val bufImage = image.toDeepColorBufferedImage(0.1)
   Util.addGraticules(bufImage, trans, Color.GRAY)
   if (resultList.nonEmpty)

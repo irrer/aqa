@@ -21,7 +21,6 @@ import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -34,7 +33,6 @@ import org.aqa.webrun.phase2.CollimatorCenteringResource
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.SubProcedureResult
-import org.aqa.webrun.psm.PSMUtil
 
 import java.awt.Color
 import java.awt.Rectangle
@@ -138,8 +136,7 @@ object SymmetryAndFlatnessAnalysis extends Logging {
    */
 
   private def psmCorrection(beamName: String, wd: DicomImage, psm: PSM): DicomImage = {
-    val psmDicom = psm.dicom
-    val psmScaledImage = new DicomImage(psmDicom).scalePixels(psmDicom)
+    val psmScaledImage = psm.imageScaled
 
     val ffScaledImage = psm.getFloodFieldScaled
 
@@ -163,17 +160,6 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     val pixels = (0 until psmScaledImage.height).map(doRow)
 
     val beamResponse = new DicomImage(pixels)
-
-    if (true) { // TODO rm
-      SymmetryAndFlatnessAnalysis.synchronized {
-        Trace.trace(s"\n===== Beam: $beamName =====")
-        Trace.trace("ff:\n" + PSMUtil.centerPixelsToString(ffScaledImage) + "\n\n")
-        Trace.trace("psm:\n" + PSMUtil.centerPixelsToString(psmScaledImage))
-        Trace.trace("wd:\n" + PSMUtil.centerPixelsToString(wd))
-        Trace.trace("br:\n" + PSMUtil.centerPixelsToString(beamResponse))
-        Trace.trace()
-      }
-    }
 
     beamResponse
   }

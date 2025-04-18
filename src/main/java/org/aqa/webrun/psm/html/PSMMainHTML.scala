@@ -31,7 +31,6 @@ class PSMMainHTML(
     rawImg: DicomImage,
     cbrImg: DicomImage,
     brImg: DicomImage,
-    psmAl: AttributeList,
     psmImg: DicomImage
 ) extends Logging {
 
@@ -58,7 +57,7 @@ class PSMMainHTML(
         center = Some(psmGradientAscent.getMaxPoint_iso),
         resultList = resultList
       )
-      val psmRow = PSMHtmlImage(extendedData, "PSM = Raw / Beam Response", psmImg, trans, dir = dir, al = Some(psmAl))
+      val psmRow = PSMHtmlImage(extendedData, "PSM = Raw / Beam Response", psmImg, trans, dir = dir)
 
       val content = {
         <table class="table responsive table-bordered" style="margin-top:25px;">

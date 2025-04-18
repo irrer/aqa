@@ -84,7 +84,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
 
         val ffXwdImg = ffImg.fun2((a, b) => a * b, wdImg)
 
-        val psmImg = new DicomImage(psm.get.dicom).scalePixels(psm.get.dicom)
+        val psmImg = psm.get.imageScaled
 
         val brImg = ffXwdImg.fun2(PSMUtil.funcDiv, psmImg)
 
@@ -93,7 +93,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
         val ffRow = PSMHtmlImage(extendedData, "FF: Flood Field", ffImg, trans, dir = dir, al = Some(psm.get.getFloodFieldDicom))
         val wdRow = PSMHtmlImage(extendedData, "WD: " + symFlat.beamName + " used as Whole Detector", wdImg, trans, dir = dir, al = Some(wdAl))
         val ffXWDRow = PSMHtmlImage(extendedData, symFlat.beamName + " times Flood Field", ffXwdImg, trans, dir = dir)
-        val psmRow = PSMHtmlImage(extendedData, "PSM", psmImg, trans, dir = dir, al = Some(psm.get.dicom))
+        val psmRow = PSMHtmlImage(extendedData, "PSM", psmImg, trans, dir = dir)
         val brRow = PSMHtmlImage(extendedData, "BR: Beam Response", brImg, trans, dir = dir)
 
         val elem = {

@@ -90,7 +90,6 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
   private val brImg = interpolator.normalizedDicomImage
 
   private val psmImg = makePsmImage(rawImg, brImg)
-  private val psmAl = PSMDicom.psmToDicom(psmImg, resultList.head.rtimage, "PSM", "Pixel Sensitivity Matrix derived from FloodField, WholeDetector, and BeamResponse")
 
   // ----------------------------------------------------------------------------------------
 
@@ -103,9 +102,10 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
   private val psm = PSM.makePSM(
     outputPK = extendedData.outputPK,
     floodFieldImageHash_md5 = getReferencedFloodField.imageHash_md5,
-    al = psmAl,
+    image = psmImg,
     xMax_mm = gradientAscent.getMaxPoint_iso.getX,
-    yMax_mm = gradientAscent.getMaxPoint_iso.getY
+    yMax_mm = gradientAscent.getMaxPoint_iso.getY,
+    wdAl
   )
 
   psm.insert
@@ -126,7 +126,6 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
     rawImg = rawImg,
     cbrImg = cbrImg,
     brImg = brImg,
-    psmAl = psmAl,
     psmImg = psmImg
   )
 
