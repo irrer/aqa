@@ -88,7 +88,7 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
     badPixelList.foreach(b => highlightWLBadPixel(b))
   }
 
-  def saveFineLocatedImage(aoi: Array[Array[Float]], xPosn: SearchRange, yPosn: SearchRange): BufferedImage = {
+  def saveFineLocatedImage(aoi: IndexedSeq[IndexedSeq[Float]], xPosn: SearchRange, yPosn: SearchRange): BufferedImage = {
     val rSpline = toCubicSpline(unitize(rowSum(aoi)).map(x => (x * .5).toFloat))
     val cSpline = toCubicSpline(unitize(colSum(aoi)).map(x => (x * .5).toFloat))
 

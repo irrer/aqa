@@ -47,7 +47,7 @@ class WLImageResult(
     boxEdgesP: Edges,
     val directory: File,
     val rtimage: AttributeList,
-    val pixels: Array[Array[Float]],
+    val pixels: IndexedSeq[IndexedSeq[Float]],
     coarseX: (Int, Int),
     coarseY: (Int, Int),
     brcX: Double,
