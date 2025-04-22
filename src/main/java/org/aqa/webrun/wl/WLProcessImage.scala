@@ -17,6 +17,7 @@ import org.opensourcephysics.numerics.CubicSpline
 import java.awt.image.BufferedImage
 import java.awt.Color
 import java.awt.Graphics2D
+import java.awt.Rectangle
 import java.io.File
 import java.io.PrintStream
 import java.text.SimpleDateFormat
@@ -275,16 +276,11 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       png
     }
 
-    def makePngFile(name: String): File = {
-      val pngName =
-        if (name.endsWith(WLgenHtml.IMAGE_FILE_SUFFIX)) name
-        else {
-          name + WLgenHtml.IMAGE_FILE_SUFFIX
-        }
-      new File(subDir, pngName)
+    def writeImage(img: BufferedImage, name: String): Unit = {
+      val pngFile = new File(subDir, name)
+      logger.info("writing image file: " + pngFile.getAbsolutePath + "   width: " + img.getWidth + "    height: " + img.getHeight)
+      Util.writePng(img, pngFile)
     }
-
-    def writeImageLater(img: BufferedImage, name: String): Unit = WLProcessImage.writeImage(img, makePngFile(name))
 
     def bound(x: Double, lo: Int, hi: Int) = {
       if (x < lo) lo else if (x > hi) hi else x
@@ -306,36 +302,9 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
      *
      */
     def subSection(pixIn: IndexedSeq[IndexedSeq[Float]], x: Int, xWidth1: Int, y: Int, yHeight1: Int): IndexedSeq[IndexedSeq[Float]] = {
-
-      val xWidth = Math.max(xWidth1, 0)
-      val yHeight = Math.max(yHeight1, 0)
-
-      def range[A](array: IndexedSeq[A], start: Int, span: Int): IndexedSeq[A] = {
-        if ((start < 0) || (span < 0) || ((start + span) > array.length))
-          throw new IllegalArgumentException("ProcessImage.range value out of bounds.  start: " + start + "  span: " + span + "   length: " + array.length)
-        array.slice(start, start + span)
-      }
-
-      val width = pixIn.head.length
-      val height = pixIn.length
-      if (
-        (x < 0) || (xWidth < 0) || ((x + xWidth) > width) ||
-        (y < 0) || (yHeight < 0) || ((y + yHeight) > height)
-      ) {
-        throw new RuntimeException(
-          "ProcessImage.subSection out of range." +
-            "  x: " + x +
-            "  xWidth: " + xWidth +
-            "  y: " + y +
-            "  yHeight: " + yHeight +
-            "  y: " + y +
-            "  width: " + width +
-            "  height: " + height
-        )
-      }
-
-      val pixY = range(pixIn, y, yHeight)
-      pixY.map(row => range(row, x, xWidth))
+      val rect = new Rectangle(x, y, xWidth1, yHeight1)
+      val di = new DicomImage(pixIn).getSubArray(rect)
+      di
     }
 
     /**
@@ -372,7 +341,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         sum.zipWithIndex.foreach(y => graphic.drawLine(y._2 * SCALE, y._1.toInt * SCALE + SCALE / 2, y._2 * SCALE + SCALE, y._1.toInt * SCALE + SCALE / 2))
       }
 
-      writeImageLater(png, "edge_" + name)
+      writeImage(png, "edge_" + name + ".png")
     }
 
     /**
@@ -473,9 +442,10 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     /**
       * Find the edge in each row or column of pixels, and then take the mean.
       * This is experimental.
-      * @param pixIn ?
-      * @param vertical ?
-      * @param name ?
+      *
+      * @param pixIn                   ?
+      * @param vertical                ?
+      * @param name                    ?
       * @param rawExtremeAveragesRange ?
       * @return
       */
@@ -542,33 +512,29 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         * as the ball's center.  This effectively says: "Find the largest sum of 3x3 pixels".
         */
       def coarseBallLocate: (Int, Int) = {
-        val aoiMax = {
-          val subSec = subSection(approxAoi, 0, approxAoi.head.length, 0, approxAoi.length)
-          list2Array(subSec.map(_.toArray).toArray)
+
+        def sumOf(x: Int, y: Int): Float = {
+          // @formatter:off
+            approxAoi(y - 1)(x - 1) +
+            approxAoi(y - 1)(x    ) +
+            approxAoi(y - 1)(x + 1) +
+            approxAoi(y    )(x - 1) +
+            approxAoi(y    )(x    ) +
+            approxAoi(y    )(x + 1) +
+            approxAoi(y + 1)(x - 1) +
+            approxAoi(y + 1)(x    ) +
+            approxAoi(y + 1)(x + 1)
+        // @formatter:on
         }
 
-        for (y <- 1 until (approxAoi.length - 1)) {
-          for (x <- 1 until (approxAoi.head.length - 1)) {
-            aoiMax(y)(x) =
-              approxAoi(y - 1)(x - 1) + approxAoi(y - 1)(x) + approxAoi(y - 1)(x + 1) +
-                approxAoi(y)(x - 1) + approxAoi(y)(x) + approxAoi(y)(x + 1) +
-                approxAoi(y + 1)(x - 1) + approxAoi(y + 1)(x) + approxAoi(y + 1)(x + 1)
-          }
-        }
+        // make a list of coordinate pairs
+        val xyList = for (y <- 1 until (approxAoi.length - 1); x <- 1 until (approxAoi.head.length - 1)) yield (x, y)
 
-        def saveImage(center: (Int, Int)): Unit = {
-          val png = toPng(approxAoi)
-          val annotate = new WLAnnotate(SCALE, BALL_RADIUS)
-          annotate.drawCross(png.getGraphics.asInstanceOf[Graphics2D], center._1, center._2, 1)
-          writeImageLater(png, "ball_coarse")
-        }
+        val max = xyList.maxBy(xy => sumOf(xy._1, xy._2))
 
-        val maxRow = aoiMax.zipWithIndex.foldLeft((aoiMax.head, 0))((c, m) => if (m._1.max > c._1.max) m else c)
-        val maxCol = maxRow._1.zipWithIndex.foldLeft((aoiMax.head.head, 0))((c, m) => if (m._1 > c._1) m else c)
-        val center = (maxCol._2, maxRow._2) // maxPoint(aoiMax)
-        saveImage(center)
-        center
+        max
       }
+
 
       def centerOfMass(spline: CubicSpline, len: Int): SearchRange = {
         val pointList = (0 until (len / X_INCREMENT).round.toInt).map(i => spline.evaluate(i * X_INCREMENT))
@@ -588,9 +554,9 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       }
 
       /**
-        * Determine if the spline has a single maximum by walking the spline and counting the
-        * number of times it crosses the average value.  It should cross exactly twice.
-        */
+       * Determine if the spline has a single maximum by walking the spline and counting the
+       * number of times it crosses the average value.  It should cross exactly twice.
+       */
       def singleMax(spline: CubicSpline, values: IndexedSeq[Float]): Boolean = {
         val avg = (values.max + values.min) / 2
         val increment = 1000
@@ -600,9 +566,9 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         def cross(x: Int, crossCount: Int, overAvg: Boolean): (Int, Boolean) = {
           val value = spline.evaluate(x.toDouble / increment)
           0 match {
-            case _ if overAvg && (value < avg)     => (crossCount + 1, false)
+            case _ if overAvg && (value < avg) => (crossCount + 1, false)
             case _ if (!overAvg) && (value >= avg) => (crossCount + 1, true)
-            case _                                 => (crossCount, overAvg)
+            case _ => (crossCount, overAvg)
           }
         }
 
@@ -634,7 +600,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         val fineX = centerOfMass(cSpline, cSum.length)
         val fineY = centerOfMass(rSpline, rSum.length)
         val image = annotate.saveFineLocatedImage(aoiFine, fineX, fineY)
-        writeImageLater(image, "ball_fine")
+        writeImage(image, "ball_fine" + ".png")
 
         if (singleMax(cSpline, cSum) && singleMax(rSpline, rSum)) {
           diagnosticMessage("Ball fine location relative to area of interest in pixels: " + fineX.center + ", " + fineY.center)
@@ -649,18 +615,18 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       val topEdge = coarseCenter._2 + tol2 - radius
       val ballRoi = subSection(areaOfInterest, leftEdge, radius * 2, topEdge, radius * 2)
 
-      writeImageLater(toPng(normalizeArea(ballRoi)), "ballRoiNormalized")
-      writeImageLater(toPng(ballRoi), "ballRoiRaw")
+      writeImage(toPng(normalizeArea(ballRoi)), "ballRoiNormalized" + ".png")
+      writeImage(toPng(ballRoi), "ballRoiRaw" + ".png")
 
       fineBallLocate(ballRoi) match {
         case Some(loc: (Double, Double)) => Some(loc._1 + leftEdge, loc._2 + topEdge)
-        case None                        => None
+        case None => None
       }
     }
 
     /**
-      * draw line between center of square and center of ball
-      */
+     * draw line between center of square and center of ball
+     */
     /*
     def drawBoxBallOffset(graphics: Graphics, ballCenter: (Double, Double), boxCenter: (Double, Double)): Unit = {
       graphics.setColor(Config.WLOffsetColor)
@@ -673,11 +639,11 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     }
      */
 
-    def list2Array(x: Array[Array[Float]]) = x.map(x => x)
+    // def list2Array(x: Array[Array[Float]]) = x.map(x => x)
 
     /**
-      * Make an image showing the level of background noise immediately around the ball.
-      */
+     * Make an image showing the level of background noise immediately around the ball.
+     */
     def showBallBackgroundNoise(areaOfInterest: IndexedSeq[IndexedSeq[Float]], name: String): Unit = {
       val aoiWidth = areaOfInterest.head.length
       val aoiHeight = areaOfInterest.length
@@ -688,15 +654,16 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       val limit = ((max - min) * 0.08) + min
 
       def doRow(row: IndexedSeq[Float]) = row.map(v => if (v > limit) min else v)
+
       val newAoi = aoi.map(doRow)
 
-      writeImageLater(toPng(newAoi), name)
+      writeImage(toPng(newAoi), name + ".png")
     }
 
     /**
-      * Take the average of the darkest background pixels for
-      * each row and subtract it from each pixel.
-      */
+     * Take the average of the darkest background pixels for
+     * each row and subtract it from each pixel.
+     */
     def normalizeArea(aoi: IndexedSeq[IndexedSeq[Float]]): IndexedSeq[IndexedSeq[Float]] = {
       aoi.map(row => {
         val bias = row.sorted.take(Config.WLNumBackgroundPixels).sum / Config.WLNumBackgroundPixels
@@ -705,11 +672,11 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     }
 
     /**
-      * Coarsely locate the edges of the box by looking for the
-      * low areas in the given profile of the image.  The profile will
-      * be either vertical or horizontal, and is the sum of all pixels
-      * in that orientation.
-      */
+     * Coarsely locate the edges of the box by looking for the
+     * low areas in the given profile of the image.  The profile will
+     * be either vertical or horizontal, and is the sum of all pixels
+     * in that orientation.
+     */
     def coarseBoxLocate(profile: IndexedSeq[Float]): (Int, Int) = {
       val lo = profile.min.toDouble
       val range = profile.max.toDouble - lo
@@ -730,15 +697,15 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     }
 
     /**
-      * Locate the box to sub-pixel accuracy.
-      */
+     * Locate the box to sub-pixel accuracy.
+     */
     def fineBoxLocate(areaOfInterest: IndexedSeq[IndexedSeq[Float]], rawExtremeAveragesRange: Double): Either[WLImageStatus.Value, Edges] = {
 
       if ( // do sanity check to see if the box is reasonably sized.
         areaOfInterest.isEmpty ||
-        areaOfInterest.head.isEmpty ||
-        (0 >= (areaOfInterest(0).length - tol4)) ||
-        (0 >= (areaOfInterest.length - tol4))
+          areaOfInterest.head.isEmpty ||
+          (0 >= (areaOfInterest(0).length - tol4)) ||
+          (0 >= (areaOfInterest.length - tol4))
       )
         Left(WLImageStatus.BoxTooSmall)
       else
@@ -797,7 +764,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
           def edgeStatus(e: Either[WLImageStatus.Value, Double]): WLImageStatus.Value = {
             e match {
               case Right(_) => WLImageStatus.Passed
-              case Left(s)  => s
+              case Left(s) => s
             }
           }
 
@@ -827,10 +794,10 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     }
 
     /**
-      * Construct the pixel data destined to be put in the DICOM image with graphics and annotations.  This is done by
-      * taking a buffered image that is all black except for the graphics and annotations, and then mapping that onto
-      * a scaled up version of the original pixels.
-      */
+     * Construct the pixel data destined to be put in the DICOM image with graphics and annotations.  This is done by
+     * taking a buffered image that is all black except for the graphics and annotations, and then mapping that onto
+     * a scaled up version of the original pixels.
+     */
     def constructPixelData(blackPng: BufferedImage, areaOfInterest: IndexedSeq[IndexedSeq[Float]]): IndexedSeq[IndexedSeq[Float]] = {
       val min = areaOfInterest.flatten.min
       val max = areaOfInterest.flatten.max
@@ -855,10 +822,10 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     }
 
     /**
-      * Do a sanity check to see of the coarsely located box is approximately at the
-      * position and of the size that is expected.  If so, return true.  If not, log
-      * a diagnostic message and return false.
-      */
+     * Do a sanity check to see of the coarsely located box is approximately at the
+     * position and of the size that is expected.  If so, return true.  If not, log
+     * a diagnostic message and return false.
+     */
     /*
     def coarseBoxLocationIsGood(coarseX: (Int, Int), coarseY: (Int, Int)): Boolean = {
       val boxPositionVariance = Config.WLBoxPositionFactor * Config.WLBoxSize
@@ -893,10 +860,10 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
      */
 
     /**
-      * Determine whether the area inside the box is flat.  Do this by determine the ratio of the
-      * range of the box pixels over the range of the ball pixels.  If this number is too large,
-      * then the area is too flat to contain a ball.
-      */
+     * Determine whether the area inside the box is flat.  Do this by determine the ratio of the
+     * range of the box pixels over the range of the ball pixels.  If this number is too large,
+     * then the area is too flat to contain a ball.
+     */
     def ballAreaIsFlat(boxArea: IndexedSeq[IndexedSeq[Float]], ballEdges: Edges): Boolean = {
       val boxWd = boxArea.head.length
       val boxHt = boxArea.length
@@ -944,30 +911,32 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
     def correctUnscaledEdges(edgesUnscaled: Edges): Edges = {
       def scaleX(x: Double): Double = (x * ResolutionX) / ResolutionX
+
       def scaleY(y: Double): Double = (y * ResolutionY) / ResolutionY
+
       val scaled = new Edges(scaleY(edgesUnscaled.top), scaleY(edgesUnscaled.bottom), scaleX(edgesUnscaled.left), scaleX(edgesUnscaled.right))
       scaled
     }
 
     /**
-      * After locating the center of the box and the ball with some confidence, process the results.  The only
-      * error that is expected to occur after this point is that the distance between the centers is too large.
-      */
+     * After locating the center of the box and the ball with some confidence, process the results.  The only
+     * error that is expected to occur after this point is that the distance between the centers is too large.
+     */
     def processLocation(
-        areaOfInterest: IndexedSeq[IndexedSeq[Float]],
-        edgesUnscaled: Edges,
-        ballRelativeCenter: (Double, Double),
-        ballArea: IndexedSeq[IndexedSeq[Float]],
-        coarseX: (Int, Int),
-        coarseY: (Int, Int),
-        brcX: Double,
-        brcY: Double,
-        badPixelList: Seq[WLBadPixel],
-        badPixelListShifted: Seq[WLBadPixel],
-        marginalPixelList: Seq[WLBadPixel],
-        attributeList: AttributeList,
-        runReq: WLRunReq
-    ): WLImageResult = {
+                         areaOfInterest: IndexedSeq[IndexedSeq[Float]],
+                         edgesUnscaled: Edges,
+                         ballRelativeCenter: (Double, Double),
+                         ballArea: IndexedSeq[IndexedSeq[Float]],
+                         coarseX: (Int, Int),
+                         coarseY: (Int, Int),
+                         brcX: Double,
+                         brcY: Double,
+                         badPixelList: Seq[WLBadPixel],
+                         badPixelListShifted: Seq[WLBadPixel],
+                         marginalPixelList: Seq[WLBadPixel],
+                         attributeList: AttributeList,
+                         runReq: WLRunReq
+                       ): WLImageResult = {
 
       val ballCenterX = ballRelativeCenter._1
       val ballCenterY = ballRelativeCenter._2
@@ -1033,8 +1002,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
       val pixelData = constructPixelData(blackPng, areaOfInterest)
 
-      writeImageLater(normalPng, WLgenHtml.NORMAL_SUMMARY_FILE_NAME)
-      writeImageLater(brightPng, WLgenHtml.BRIGHT_SUMMARY_FILE_NAME)
+      writeImage(normalPng, WLgenHtml.NORMAL_SUMMARY_FILE_NAME)
+      writeImage(brightPng, WLgenHtml.BRIGHT_SUMMARY_FILE_NAME)
       logger.info("Done constructing ProcessImage for " + imageName)
 
       val boxPoint = new Point(boxCenterScaledX, boxCenterScaledY)
@@ -1107,7 +1076,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       drawWLBadPixelList(marginalPixelList, Color.YELLOW)
       drawWLBadPixelList(badPixelList, Config.WLFailColor)
 
-      writeImageLater(png, BAD_PIXEL_FILE_NAME)
+      writeImage(png, BAD_PIXEL_FILE_NAME)
     }
 
     def badPixelIsNotOnList(badPixel: WLBadPixel, list: Seq[WLBadPixel]): Boolean = {
@@ -1131,7 +1100,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
     try {
       val rawPixels = fetchRawPixels()
-      writeImageLater(toPngScaled(rawPixels, 1), "original")
+      writeImage(toPngScaled(rawPixels, 1), "original.png")
       writeDicomAsBinaryDicom(rtimage)
       writeDicomAsText(rtimage)
 
@@ -1201,7 +1170,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
               (edgesUnscaled.bottom - edgesUnscaled.top).toInt - tol2
             )
             showBallBackgroundNoise(ballArea, "ball_background")
-            writeImageLater(toPng(ballArea), "ball_before_normalization")
+            writeImage(toPng(ballArea), "ball_before_normalization" + ".png")
 
             showBallBackgroundNoise(normalizeArea(ballArea), "normalized_ball_background")
 
@@ -1273,8 +1242,8 @@ object WLProcessImage extends org.aqa.Logging {
   }
 
   /**
-    * Convert a list to a cubic spline
-    */
+   * Convert a list to a cubic spline
+   */
   def toCubicSpline(data: IndexedSeq[Float]): CubicSpline = new CubicSpline(data.indices.toArray.map(s => s.toDouble), data.map(f => f.toDouble).toArray)
 
   def unitize(data: IndexedSeq[Float]): IndexedSeq[Float] = {
@@ -1294,13 +1263,13 @@ object WLProcessImage extends org.aqa.Logging {
   }
 
   /**
-    * Make a list of the sum of each row.
-    */
+   * Make a list of the sum of each row.
+   */
   def rowSum(pix: IndexedSeq[IndexedSeq[Float]]): IndexedSeq[Float] = pix.map(row => row.sum)
 
   /**
-    * Make a list of the sum of each column.
-    */
+   * Make a list of the sum of each column.
+   */
   def colSum(pix: IndexedSeq[IndexedSeq[Float]]): IndexedSeq[Float] = {
     // def oneColSum(c: Int) = pix.indices.map(y => pix(y)(c)).sum
 
@@ -1333,12 +1302,6 @@ object WLProcessImage extends org.aqa.Logging {
 
     (0 until height).foreach(y => doRow(y))
     png
-  }
-
-  // def indexes(length: Int): IndexedSeq[Double] = (0 until length).toIndexedSeq.map(x => x.toDouble)
-  private def writeImage(img: BufferedImage, file: File): Unit = {
-    logger.info("writing image file: " + file.getAbsolutePath + "   width: " + img.getWidth + "    height: " + img.getHeight)
-    Util.writePng(img, file)
   }
 
 }
