@@ -18,6 +18,7 @@ package org.aqa.run
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Logging
 import org.aqa.db.Output
 import org.aqa.db.Procedure
@@ -95,7 +96,7 @@ trait RunTrait[RunReqClassType] extends Restlet with Logging {
     */
   def getRadiationMachineNameListFromRtimageUtil(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = {
     val rtimageList = alList.filter(al => Util.isRtimage(al))
-    val machineNameList = rtimageList.map(al => al.get(TagByName.RadiationMachineName).getSingleStringValueOrEmptyString()).filter(_.nonEmpty).distinct
+    val machineNameList =rtimageList.flatMap(rti => DicomUtil.findAllSingle(rti, TagByName.RadiationMachineName)).map(_.getSingleStringValueOrEmptyString()).filter(_.nonEmpty).distinct
     machineNameList
   }
 
@@ -111,7 +112,7 @@ trait RunTrait[RunReqClassType] extends Restlet with Logging {
 
   /**
     * Get the machine's DeviceSerialNumber from the input files.  This is used to handle the
-    * case where a new machine needs to have it's serial number established.
+    * case where a new machine needs to have its serial number established.
     */
   def getMachineDeviceSerialNumberList(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String]
 
