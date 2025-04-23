@@ -3,12 +3,14 @@ package org.aqa.webrun.psm.html
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Logging
 import org.aqa.webrun.ExtendedData
 import org.aqa.Util
 import org.aqa.web.WebUtil
 import org.aqa.webrun.psm.PSMBeamAnalysisResult
 import org.aqa.webrun.psm.PSMCharts
+import org.aqa.webrun.psm.PSMDicom
 import org.aqa.webrun.psm.PSMGradientAscent
 
 import java.io.File
@@ -38,11 +40,11 @@ class PSMMainHTML(
 
     val resultHtml = new ResultHtml(extendedData, resultList)
 
+    val dir = extendedData.output.dir
+
     def make(): (Elem, String) = {
 
       val trans = new IsoImagePlaneTranslator(wdAl)
-
-      val dir = extendedData.output.dir
 
       val ffRow = PSMHtmlImage(extendedData, "Flood Field", ffImg, trans, dir = dir, al = Some(ffAl))
       val wdRow = PSMHtmlImage(extendedData, "Whole Detector", wdImg, trans, dir = dir, al = Some(wdAl))
@@ -93,6 +95,11 @@ class PSMMainHTML(
 
     val planHtml = PlanHTML(extendedData, rtplan)
 
+    val psmDicom = PSMDicom.psmToDicom(psmImg, wdAl, RTImageLabel = "PSM as DICOM", RTImageDescription = "Only the pixel data is relevant.")
+    val psmDicomFile = new File(dir, "PSMDicom.dcm")
+    DicomUtil.writeAttributeListToFile(psmDicom, psmDicomFile, "AQA")
+    logger.info("Wrote PSM as DICOM to: " + psmDicomFile.getAbsolutePath)
+
     val content = {
       <div>
         <div class="row">
@@ -101,6 +108,9 @@ class PSMMainHTML(
           </div>
           <div class="col-md-2 col-md-offset-1" >
             <a href={planHtml.fileName}>View RTPLAN</a>
+          </div>
+          <div class="col-md-2 col-md-offset-1" title="Note that only the pixel data is relevant, not energy or other parametes..">
+            <a href={psmDicomFile.getName}>Download PSM as DICOM</a>
           </div>
         </div>
           <div class="row">
