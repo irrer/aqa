@@ -1192,7 +1192,7 @@ object WebUtil extends Logging {
               Machine.listMachinesFromInstitution(user.get.institutionPK)
             }
 
-          val machListAvail = machListAll.filter(m => m.serialNumber.isEmpty)
+          val machListAvail = machListAll.filter(m => m.serialNumber.isEmpty) ++ machListAll.filterNot(m => m.serialNumber.isEmpty)
 
           def machToDescription(m: Machine): String = {
             val instName = AnonymizeUtil.decryptWithNonce(m.institutionPK, Institution.get(m.institutionPK).get.name_real.get)
