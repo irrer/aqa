@@ -54,9 +54,9 @@ class SSSNCImport(extendedData: ExtendedData, isoCheck: WLIsoCheck, collimator: 
     </tr>
   }
 
-  private def makeRow14: Elem = {
+  private def makeRow15: Elem = {
     <tr>
-      {makeRowIndex(14)}
+      {makeRowIndex(15)}
       {blankCells(4) /*                            A1 to D1 */}
     </tr>
   }
@@ -90,7 +90,7 @@ class SSSNCImport(extendedData: ExtendedData, isoCheck: WLIsoCheck, collimator: 
         {makeCsvRow(12, "Collimator Isocentricity (mm)", collimator.get_CA_Rpp_Optimized)}
         {makeCsvRow(13, "Maximum R (mm)", maxR)}
         {makeCsvRow(14, "Maximum R Table 0 (mm)", isoCheck.maxR)}
-        {makeRow14}
+        {makeRow15}
       </table>
     }
 
