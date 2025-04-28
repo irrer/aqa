@@ -13,6 +13,7 @@ import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.PlannedRectangle
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil
 
+import java.awt.Rectangle
 import java.io.File
 import java.sql.Timestamp
 import java.util.Date
@@ -48,8 +49,7 @@ class WLImageResult(
     val directory: File,
     val rtimage: AttributeList,
     val pixels: IndexedSeq[IndexedSeq[Float]],
-    coarseX: (Int, Int),
-    coarseY: (Int, Int),
+    val aoiBounds: Rectangle,
     brcX: Double,
     brcY: Double,
     val badPixelList: Seq[WLBadPixel],
@@ -124,18 +124,18 @@ class WLImageResult(
 
   val gantryAngle: Int = Util.angleRoundedTo90(Util.gantryAngle(rtimage)) //attrFloat(TagByName.GantryAngle)
 
-  private def left_pix = edgesUnscaled.left + coarseX._1
-  private def right_pix = edgesUnscaled.right + coarseX._1
-  private def top_pix = edgesUnscaled.top + coarseY._1
-  private def bottom_pix = edgesUnscaled.bottom + coarseY._1
+  private def left_pix = edgesUnscaled.left + aoiBounds.x
+  private def right_pix = edgesUnscaled.right + aoiBounds.x
+  private def top_pix = edgesUnscaled.top + aoiBounds.y
+  private def bottom_pix = edgesUnscaled.bottom + aoiBounds.y
 
   private def left_mm = trans.pix2IsoCoordX(left_pix)
   private def right_mm = trans.pix2IsoCoordX(right_pix)
   private def top_mm = trans.pix2IsoCoordY(top_pix)
   private def bottom_mm = trans.pix2IsoCoordY(bottom_pix)
 
-  private def ballX_pix = brcX + coarseX._1
-  private def ballY_pix = brcY + coarseY._1
+  private def ballX_pix = brcX + aoiBounds.x
+  private def ballY_pix = brcY + aoiBounds.y
   private def ballCenter_mm = trans.pix2Iso(ballX_pix, ballY_pix)
   private def boxCenterX_pix = (right_pix + left_pix) / 2.0
   private def boxCenterY_pix = (bottom_pix + top_pix) / 2.0
