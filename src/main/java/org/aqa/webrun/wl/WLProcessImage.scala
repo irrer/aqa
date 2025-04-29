@@ -11,6 +11,7 @@ import org.aqa.Util
 import org.aqa.db.MachineWL
 import org.aqa.webrun.ExtendedData
 import org.aqa.PlannedRectangle
+import org.aqa.webrun.psm.PSMUtil
 import org.opensourcephysics.numerics.CubicSpline
 
 import java.awt.image.BufferedImage
@@ -25,12 +26,9 @@ import scala.annotation.tailrec
 
 class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: Int, runReq: WLRunReq) extends org.aqa.Logging {
 
-  val wholeImage = new DicomImage(rtimage)
+  private val wholeImage = new DicomImage(rtimage)
 
-  import org.aqa.webrun.wl.WLProcessImage.colSum
-  import org.aqa.webrun.wl.WLProcessImage.rowSum
   import org.aqa.webrun.wl.WLProcessImage.toPngScaled
-  import org.aqa.webrun.wl.WLProcessImage.unitize
 
   private val wlParameters = MachineWL.getMachineWLOrDefault(extendedData.machine.machinePK.get)
 
@@ -41,13 +39,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
   private val SizeX = trans.width
   private val SizeY = trans.height
 
-  // private val gantryAngle = Util.gantryAngle(rtimage)
-  // private val collimatorAngle = Util.collimatorAngle(rtimage)
-
   private val EMPTY_PIXEL: Int = Config.WLTextColor.getRGB + 1
-  // private  val NORMAL_SUMMARY_FILE_NAME = "normalSummary" + IMAGE_FILE_SUFFIX
-  // private  val BRIGHT_SUMMARY_FILE_NAME = "brightSummary" + IMAGE_FILE_SUFFIX
-  // private  val ORIGINAL_FILE_NAME = "original" + IMAGE_FILE_SUFFIX
   private val BAD_PIXEL_FILE_NAME = "badPixels" + WLgenHtml.IMAGE_FILE_SUFFIX
 
   private val elapsedTime_ms = {
@@ -281,11 +273,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       if (x < lo) lo else if (x > hi) hi else x
     }
 
-    def stdDev(values: IndexedSeq[Float]): Double = {
-      val avg = values.sum / values.length
-      Math.sqrt(values.map(x => (x - avg) * (x - avg)).sum / values.length)
-    }
-
     /*
      * Copy a 2-dimensional sub-array from the given 2-dimensional array.
      *
@@ -301,254 +288,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       val di = new DicomImage(pixIn).getSubArray(rect)
       di
     }
-
-    /**
-      * Save the given edge image, drawing the cubic spline on it to visualize the gradient of the edge.  This is just
-      * a debugging tool.
-      */
-    def saveEdgeImage(pixIn: IndexedSeq[IndexedSeq[Float]], vertical: Boolean, name: String, spline: CubicSpline): Unit = {
-      val length = if (vertical) pixIn(0).length else pixIn.length
-      val png = toPng(pixIn)
-      val width = png.getWidth
-      val height = png.getHeight
-
-      if (vertical) {
-        for (x <- 0 until width) {
-          val xd: Double = (x.toDouble / (width + SCALE)) * length
-          val y = (spline.evaluate(xd) * height).toInt
-          png.setRGB(x, bound(y, 0, height - 1).toInt, Config.WLSplineColor.getRGB)
-        }
-      } else {
-        for (x <- 0 until height) {
-          val xd: Double = (x.toDouble / (height + SCALE)) * length
-          val y = (spline.evaluate(xd) * width).toInt
-          png.setRGB(bound(y, 0, width - 1).toInt, x, Config.WLSplineColor.getRGB)
-        }
-      }
-
-      val graphic = png.getGraphics
-      graphic.setColor(Config.WLSplineColor)
-      if (vertical) {
-        val sum = unitize(rowSum(pixIn)).map(x => x * pixIn.head.length)
-        sum.zipWithIndex.foreach(x => graphic.drawLine(x._1.toInt * SCALE + SCALE / 2, x._2 * SCALE, x._1.toInt * SCALE + SCALE / 2, x._2 * SCALE + SCALE))
-      } else {
-        val sum = unitize(colSum(pixIn)).map(y => y * pixIn.length)
-        sum.zipWithIndex.foreach(y => graphic.drawLine(y._2 * SCALE, y._1.toInt * SCALE + SCALE / 2, y._2 * SCALE + SCALE, y._1.toInt * SCALE + SCALE / 2))
-      }
-
-      writeImage(png, "edge_" + name + ".png")
-    }
-
-    /**
-      * Get the absolute value of the slope of the cubic spline at both ends.
-      */
-    def getTerminalEdgeSlopes(spline: CubicSpline, length: Int): (Double, Double) = {
-      val inc = 0.005
-      val yA1 = spline.evaluate(0.0)
-      val yA2 = spline.evaluate(inc)
-      val slopeA = ((yA2 - yA1) / inc).abs
-
-      val yB1 = spline.evaluate(length.toDouble)
-      val yB2 = spline.evaluate(length.toDouble + inc)
-      val slopeB = ((yB2 - yB1) / inc).abs
-      (slopeA, slopeB)
-    }
-
-    def showEdgeStats(pixIn: IndexedSeq[IndexedSeq[Float]], vertical: Boolean, name: String, terminalEdgeSlopes: (Double, Double)): Unit = {
-      val sumRaw = if (vertical) rowSum(pixIn) else colSum(pixIn)
-
-      val min = sumRaw.min
-      val sum = sumRaw.map(x => x - min)
-
-      val avg = sum.sum / sum.length
-
-      val sumX = (sum.length * (sum.length + 1)) / 2.0
-      val sumY = sum.sum
-
-      val meanX = sumX / sum.length
-      val meanY = sumY / sum.length
-
-      val sumXSq = sum.indices.map(x => x * x).sum
-      val sumXY = sum.zipWithIndex.map(xy => xy._1 * xy._2).sum
-      val slope = (sumXY - ((sumX * sumY) / sum.length)) / (sumXSq - ((sumX * sumX) / sum.length))
-      val yIntercept = meanY - (slope * meanX)
-
-      diagnosticMessage(
-        "Edge stats for " + name.format("%8s") +
-          "    min: " + fmt(sum.min) +
-          "    max: " + fmt(sum.max) +
-          "    avg: " + fmt(avg) +
-          "    stdDev: " + fmt(stdDev(sum)) +
-          "    yIntercept: " + fmt(yIntercept) +
-          "    slope: " + fmt(slope) +
-          "    start slope: " + fmt(terminalEdgeSlopes._1) +
-          "    end   slope: " + fmt(terminalEdgeSlopes._2)
-      )
-    }
-
-    /**
-      * Find an edge of the box as accurately as possible by drawing a cubic spline across
-      * the edge and then finding the midpoint of that spline.  Find the midpoint using a binary
-      * search.
-      */
-    /*
-    def findEdge(pixIn: IndexedSeq[IndexedSeq[Float]], vertical: Boolean, name: String, rawExtremeAveragesRange: Double): Either[WLImageStatus.Value, Double] = {
-      val length = if (vertical) pixIn(0).length else pixIn.length
-      val sum = if (vertical) colSum(pixIn) else rowSum(pixIn)
-      val scaledSum = unitize(sum)
-      if (true) { // TODO rm : Study StdDev of edges.
-
-        val fixedName = "%-6s".format(name)
-
-        if (true) {
-          def doLine(line: IndexedSeq[Float]): Double = {
-            val sorted = line.sorted
-            val numPix = 5
-            val lo = sorted.take(numPix).sum / numPix
-            val hi = sorted.takeRight(numPix).sum / numPix
-            val mean = (lo + hi) / 2
-            val e = LocateEdge.locateEdge(line, mean)
-            e
-          }
-
-          val list = if (vertical) {
-            pixIn.map(doLine)
-          } else {
-            val di = new DicomImage(pixIn).rotate90
-            di.pixelData.map(doLine)
-          }
-
-          val stdDev = ImageUtil.stdDev(list.map(_.toFloat))
-
-          val orientation = if (vertical) "col" else "row"
-          val msg = s"""SinglePixel $orientation Edge: $fixedName   StdDev: $stdDev   SinglePixel List: ${list.map(d => "%8.5f".format(d)).mkString(", ")}"""
-          diagnosticMessage(msg)
-        }
-
-        if (true) {
-
-          def doLineMean(line: IndexedSeq[Float]): Double = {
-            line.sum / line.size
-          }
-
-          val listMean = if (vertical) {
-            pixIn.map(doLineMean)
-          } else {
-            val di = new DicomImage(pixIn).rotate90
-            di.pixelData.map(doLineMean)
-          }
-
-          val stdDevMean = ImageUtil.stdDev(listMean.map(_.toFloat))
-          val msg = s"""Means Edge: $fixedName   StdDevMean: $stdDevMean   Means: ${listMean.map(d => "%8.5f".format(d)).mkString(", ")}"""
-          diagnosticMessage(msg)
-        }
-
-        try {
-          println("hey")
-        }
-
-      }
-      val spline = toCubicSpline(scaledSum)
-
-      saveEdgeImage(pixIn, vertical, name, spline)
-      diagnosticMessage("\n\n")
-      val terminalEdgeSlopes = getTerminalEdgeSlopes(spline, scaledSum.length)
-      showEdgeStats(pixIn, vertical, name, terminalEdgeSlopes)
-
-      val increasing = scaledSum(0) < scaledSum(length - 1)
-
-      @tailrec
-      def center(min: Double, max: Double, depth: Int): Double = {
-        val mid = (max + min) / 2
-        val guess = spline.evaluate(mid)
-        if (depth > 0) {
-          if ((increasing && (guess < 0.5)) || ((!increasing) && (guess > 0.5)))
-            center(mid, max, depth - 1)
-          else
-            center(min, mid, depth - 1)
-        } else mid
-      }
-
-      // Ensure that the brightest and dimmest pixel in the edge are approximately
-      // as dim and bright as the dimmest and brightest in the entire image
-
-      val brightnessRange = calcExtremeAveragesRange(pixIn)
-      val pct = ((rawExtremeAveragesRange - brightnessRange).abs / rawExtremeAveragesRange) * 100.0
-      val brightnessMessage = "edge brightness   Max percent diff range allowed: " + Config.WLMaxAllowedBrightnessRangePercentDifference +
-        "  image brightness range: " + rawExtremeAveragesRange.formatted("%7.2f") +
-        name.format("%8s") + " edge brightness range: " + brightnessRange.formatted("%7.2f") + "    percent diff: " + pct.formatted("%7.3f")
-      diagnosticMessage(brightnessMessage)
-
-      if (pct >= Config.WLMaxAllowedBrightnessRangePercentDifference) {
-        val errorMsg =
-          "Edge " + name + " failed to meet criteria for brightness range of " + Config.WLMaxAllowedBrightnessRangePercentDifference + " percent.  " + brightnessMessage + "    Required percent" + Config.WLMaxAllowedBrightnessRangePercentDifference
-        logger.error(errorMsg)
-        Left(WLImageStatus.BallAreaNoisy)
-      } else Right(center(0, sum.length - 1, PRECISION))
-    }
-     */
-
-    /*
-     * Find the edge in each row or column of pixels, and then take the mean.
-     * This is experimental.
-     *
-     * @param pixIn                   ?
-     * @param vertical                ?
-     * @param name                    ?
-     * @param rawExtremeAveragesRange ?
-     * @return
-     */
-    /*
-    def findEdge2(pixIn: IndexedSeq[IndexedSeq[Float]], vertical: Boolean, name: String, rawExtremeAveragesRange: Double): Either[WLImageStatus.Value, Double] = {
-      if (vertical) {
-        val edgeSeq = pixIn.map(row => LocateEdge.locateEdge(row, row.sum / row.length))
-        Trace.trace(s"""edge $name\n${edgeSeq.mkString("\n")}""")
-        val mean = edgeSeq.sum / edgeSeq.length
-        Right(mean)
-      } else {
-        val colSeq = pixIn.head.indices.map(x => pixIn.indices.map(y => pixIn(y)(x)))
-        val edgeSeq = colSeq.map(c => LocateEdge.locateEdge(c, c.sum / c.size))
-        Trace.trace(s"""edge $name\n${edgeSeq.mkString("\n")}""")
-        val mean = edgeSeq.sum / edgeSeq.length
-        Right(mean)
-      }
-    }
-     */
-
-    /**
-      * Get the x,y coordinates of the point with the largest value
-      */
-    /*
-    def maxPoint(area: IndexedSeq[IndexedSeq[Double]]): (Int, Int) = {
-      val coordinate = area.flatten.zipWithIndex.maxBy(_._1)._2
-      (coordinate % area.length, coordinate / area.length)
-    }
-     */
-
-    /**
-      * Draw the horizontal and vertical lines marking the center of something.  By convention in
-      * this project, it marks the center of the ball.
-      */
-    /*
-    def drawCross(graphics: Graphics, x: Double, y: Double, markerSize: Double): Unit = {
-      graphics.drawLine(coordinate(x - markerSize), coordinate(y), coordinate(x + markerSize), coordinate(y))
-      graphics.drawLine(coordinate(x), coordinate(y - markerSize), coordinate(x), coordinate(y + markerSize))
-    }
-     */
-
-    /*
-    def drawCircles(graphics: Graphics, x: Double, y: Double): Unit = {
-      graphics.setColor(Config.WLBallColor)
-      val NUM_CIRCLE = Config.WLNumberOfCircles
-
-      def graphicDistance(d: Double): Int = (d * SCALE + .5).toInt
-
-      for (circle <- 1 to NUM_CIRCLE) {
-        val radius = (circle.toDouble / NUM_CIRCLE) * BALL_RADIUS
-        graphics.drawOval(coordinate(x - radius), coordinate(y - radius), graphicDistance(radius * 2), graphicDistance(radius * 2))
-      }
-    }
-     */
 
     /**
       * Find the center of the ball within the given area.  Return the
@@ -656,7 +395,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         if (singleMax(cSpline, cSum) && singleMax(rSpline, rSum)) {
           diagnosticMessage("Ball fine location relative to area of interest in pixels: " + fineX.center + ", " + fineY.center)
           Some(fineX.center, fineY.center)
-        } else None
+        } else
+          None
       }
 
       val coarseCenter = coarseBallLocate
@@ -670,27 +410,12 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       writeImage(toPng(ballRoi), "ballRoiRaw" + ".png")
 
       fineBallLocate(ballRoi) match {
-        case Some(loc: (Double, Double)) => Some(loc._1 + leftEdge, loc._2 + topEdge)
-        case None => None
+        case Some(loc: (Double, Double)) =>
+          Some(loc._1 + leftEdge, loc._2 + topEdge)
+        case None =>
+          None
       }
     }
-
-    /**
-     * draw line between center of square and center of ball
-     */
-    /*
-    def drawBoxBallOffset(graphics: Graphics, ballCenter: (Double, Double), boxCenter: (Double, Double)): Unit = {
-      graphics.setColor(Config.WLOffsetColor)
-
-      graphics.drawLine(coordinate(ballCenter._1), coordinate(ballCenter._2), coordinate(boxCenter._1), coordinate(boxCenter._2))
-      graphics.drawLine(coordinate(ballCenter._1) - 1, coordinate(ballCenter._2), coordinate(boxCenter._1) - 1, coordinate(boxCenter._2))
-      graphics.drawLine(coordinate(ballCenter._1) + 1, coordinate(ballCenter._2), coordinate(boxCenter._1) + 1, coordinate(boxCenter._2))
-      graphics.drawLine(coordinate(ballCenter._1), coordinate(ballCenter._2) - 1, coordinate(boxCenter._1), coordinate(boxCenter._2) - 1)
-      graphics.drawLine(coordinate(ballCenter._1), coordinate(ballCenter._2) + 1, coordinate(boxCenter._1), coordinate(boxCenter._2) + 1)
-    }
-     */
-
-    // def list2Array(x: Array[Array[Float]]) = x.map(x => x)
 
     /**
      * Make an image showing the level of background noise immediately around the ball.
@@ -723,31 +448,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     }
 
     /**
-     * Coarsely locate the edges of the box by looking for the
-     * low areas in the given profile of the image.  The profile will
-     * be either vertical or horizontal, and is the sum of all pixels
-     * in that orientation.
-     */
-    def coarseBoxLocate(profile: IndexedSeq[Float]): (Int, Int) = {
-      val lo = profile.min.toDouble
-      val range = profile.max.toDouble - lo
-      val dSum = profile.map(s => (s.toDouble - lo) / range)
-
-      val hiList = profile.indices.filter(d => dSum(d) < 0.5)
-
-      def bound(v: Int): Int =
-        if (v < tol)
-          tol
-        else if (v > (profile.length - (tol + 1)))
-          profile.length - tol
-        else
-          v
-
-      val pos = (bound(hiList.head) - tol, bound(hiList.last) + tol)
-      pos
-    }
-
-    /**
      * Locate the box to sub-pixel accuracy.
      */
     def fineBoxLocate(areaOfInterest: IndexedSeq[IndexedSeq[Float]], rawExtremeAveragesRange: Double): Either[WLImageStatus.Value, Edges] = {
@@ -769,62 +469,13 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
           val leftArea = subSection(areaOfInterest, 0, tol2, tol2, height - tol4)
           val rightArea = subSection(areaOfInterest, width - tol2, tol2, tol2, height - tol4)
 
-          /*
-          val eTop = findEdge(topArea, vertical = false, "top", rawExtremeAveragesRange)
-          val eBottom = findEdge(bottomArea, vertical = false, "bottom", rawExtremeAveragesRange)
-          val eLeft = findEdge(leftArea, vertical = true, "left", rawExtremeAveragesRange)
-          val eRight = findEdge(rightArea, vertical = true, "right", rawExtremeAveragesRange)
-          */
 
           // @formatter:off
-          Trace.trace()
-          val eTop    = WLEdge("top"   , new DicomImage(topArea   ), vertical = false, wholeImage).findEdge()
-          Trace.trace()
-          val eBottom = WLEdge("bottom", new DicomImage(bottomArea), vertical = false, wholeImage).findEdge()
-          Trace.trace()
-          val eLeft   = WLEdge("left"  , new DicomImage(leftArea  ), vertical = true , wholeImage).findEdge()
-          Trace.trace()
-          val eRight  = WLEdge("right" , new DicomImage(rightArea ), vertical = true , wholeImage).findEdge()
+          val eTop    = WLEdge("top"   , new DicomImage(topArea   ), vertical = false, wholeImage, rtimage).findEdge()
+          val eBottom = WLEdge("bottom", new DicomImage(bottomArea), vertical = false, wholeImage, rtimage).findEdge()
+          val eLeft   = WLEdge("left"  , new DicomImage(leftArea  ), vertical = true , wholeImage, rtimage).findEdge()
+          val eRight  = WLEdge("right" , new DicomImage(rightArea ), vertical = true , wholeImage, rtimage).findEdge()
           // @formatter:on
-
-          Trace.trace()
-          /*
-          val edges2: Edges = {
-
-            val start = System.currentTimeMillis()
-            val eTop2 = findEdge2(topArea, vertical = false, "top", rawExtremeAveragesRange)
-            val eBottom2 = findEdge2(bottomArea, vertical = false, "bottom", rawExtremeAveragesRange)
-            val eLeft2 = findEdge2(leftArea, vertical = true, "left", rawExtremeAveragesRange)
-            val eRight2 = findEdge2(rightArea, vertical = true, "right", rawExtremeAveragesRange)
-            val elapsed = System.currentTimeMillis() - start
-
-            val top1 = eTop.right.get
-            val top2 = eTop2.right.get
-
-            val bottom1 = eBottom.right.get
-            val bottom2 = eBottom2.right.get
-
-            val left1 = eLeft.right.get
-            val left2 = eLeft2.right.get
-
-            val right1 = eRight.right.get
-            val right2 = eRight2.right.get
-
-            val yC1 = (top1 + bottom1) / 2
-            val xC1 = (left1 + right1) / 2
-
-            val yC2 = (top2 + bottom2) / 2
-            val xC2 = (left2 + right2) / 2
-
-            Trace.trace(yC1 - yC2)
-            Trace.trace(xC1 - xC2)
-            Trace.trace(elapsed)
-
-            val egs = new Edges(top2, bottom2, left2, right2)
-            egs
-          }
-
-           */
 
           def edgeStatus(e: Either[WLImageStatus.Value, Double]): WLImageStatus.Value = {
             e match {
@@ -885,44 +536,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
       aoi.map(_.toIndexedSeq).toIndexedSeq
     }
-
-    /**
-     * Do a sanity check to see of the coarsely located box is approximately at the
-     * position and of the size that is expected.  If so, return true.  If not, log
-     * a diagnostic message and return false.
-     */
-    /*
-    def coarseBoxLocationIsGood(coarseX: (Int, Int), coarseY: (Int, Int)): Boolean = {
-      val boxPositionVariance = Config.WLBoxPositionFactor * Config.WLBoxSize
-
-      val xCenterBox = ((coarseX._1 + coarseX._2) / 2.0) * ResolutionX
-      val yCenterBox = ((coarseY._1 + coarseY._2) / 2.0) * ResolutionY
-
-      val xCenterImage = (SizeX / 2.0) * ResolutionX
-      val yCenterImage = (SizeY / 2.0) * ResolutionY
-
-      // val boxSmallestAllowed = (1 - (Config.BoxSizePercent * 0.01)) * Config.BoxSize
-      // val boxLargestAllowed = (1 + (Config.BoxSizePercent * 0.01)) * Config.BoxSize
-
-      // val width = (coarseX._2 - coarseX._1) * ResolutionX
-      // val height = (coarseY._2 - coarseY._1) * ResolutionY
-
-      val ok: Boolean = 0 match {
-        case _ if (xCenterImage - xCenterBox) > boxPositionVariance => diagnosticMessage("Box located too far to left"); false
-        case _ if (yCenterImage - yCenterBox) > boxPositionVariance => diagnosticMessage("Box located too far to top"); false
-        case _ if (xCenterBox - xCenterImage) > boxPositionVariance => diagnosticMessage("Box located too far to right"); false
-        case _ if (yCenterBox - yCenterImage) > boxPositionVariance => diagnosticMessage("Box located too far to bottom"); false
-
-        // case _ if width < boxSmallestAllowed  => diagnosticMessage("Box is too narrow"); false
-        // case _ if width > boxLargestAllowed   => diagnosticMessage("Box is too wide"); false
-        // case _ if height < boxSmallestAllowed => diagnosticMessage("Box is too short"); false
-        // case _ if height > boxLargestAllowed  => diagnosticMessage("Box is too tall"); false
-
-        case _ => true
-      }
-      ok
-    }
-     */
 
     /**
      * Determine whether the area inside the box is flat.  Do this by determine the ratio of the
@@ -1079,13 +692,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         edgesUnscaled.right * ResolutionX
       )
 
-      //diagnosticMessage("\n\nScaled box dimensions in mm")
-      //diagnostics.write(edgesScaled.toString.getBytes)
-
-      // diagnosticMessage("\n\n")
-      // diagnosticMessage("ball center mm   X: " + fmt(ballCenterScaledX) + "    Y: " + fmt(ballCenterScaledY))
-      // diagnosticMessage("box  center mm   X: " + fmt(boxCenterScaledX) + "    Y: " + fmt(boxCenterScaledY))
-
       diagnosticMessage("X Offset mm " + fmt(errorScaledX))
       diagnosticMessage("Y Offset mm " + fmt(errorScaledY))
       diagnosticMessage("R mm " + fmt(errorScaledXYCombined))
@@ -1153,10 +759,20 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       // JavaUtil.pixelDataToIndexedSeq(height, width, shorts)
       val flip = {
         val attr = rtimage.get(TagByName.PixelIntensityRelationshipSign)
-        (attr != null) && attr.getIntegerValues.head > 0
+        val f = 0 match {
+          case _ if attr == null => true
+          case _ if attr.getIntegerValues.head < 0 => false
+          case _ => true
+        }
+
+        f
       }
+
+      Trace.trace("rawPixels: " + PSMUtil.centerPixelsToString(new DicomImage(rtimage)))
       val pix = JavaUtil.pixelDataToArray(height, width, shorts.toArray, flip)
-      pix.map(_.toIndexedSeq).toIndexedSeq
+      val pixIndexSeq = pix.map(_.toIndexedSeq).toIndexedSeq
+      Trace.trace("pix (flipped as needed: " + PSMUtil.centerPixelsToString(new DicomImage(pixIndexSeq)))
+      pixIndexSeq
     }
 
     // ----------------------------------------------------------------------------------------
@@ -1204,25 +820,9 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
         val rawExtremeAveragesRange = calcExtremeAveragesRange(pixels)
 
-        //val minRawPixel = minPixel(pixels)
-        //val maxRawPixel = maxPixel(pixels)
-
         if (badPixelList.nonEmpty || marginalPixelList.nonEmpty) saveWLBadPixelImage(pixels, badPixelList, marginalPixelList)
 
-        // val coarseX = coarseBoxLocate(colSum(pixels))
-        // val coarseY = coarseBoxLocate(rowSum(pixels))
-
         val aoiBounds = WLCoarseBox(rtimage).locate()
-
-        /*
-        val j1 = new Rectangle(coarseX._1, coarseY._1, coarseX._2 - coarseX._1, coarseY._2 - coarseY._1)
-        Trace.trace(s"\n %% \n %% tol: $tol" +
-          s"\n %% origX: $coarseX   origY: $coarseY" +
-          s"\n %% newX : ${aoiBounds.x}   ${aoiBounds.x+aoiBounds.width}     origY: ${aoiBounds.y}  ${aoiBounds.y+aoiBounds.height}" +
-          s"\n %% new rect: $aoiBounds" +
-          s"\n %% origRect: $j1"
-        )
-        */
 
         // Shift the bad pixels so that they point to the proper place in the area of interest (AOI)
         val badPixelListShifted = badPixelList.map(b => new WLBadPixel(b.x - aoiBounds.x, b.y - aoiBounds.y, b.rawValue, b.correctedValue, b.adjacentValidValueList))
@@ -1234,7 +834,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         val fineBoxLocateResult = fineBoxLocate(areaOfInterest, rawExtremeAveragesRange)
 
         val result: WLImageResult = fineBoxLocateResult match {
-          case Left(status) => makeFailedWLImageStatus(status)
+          case Left(status) =>
+            makeFailedWLImageStatus(status)
           case Right(edgesUnscaled) =>
             val ballArea = subSection(
               areaOfInterest,
@@ -1274,7 +875,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
                   diagnosticMessage(ir.toString)
                   WLgenHtml.generateHtml(extendedData, subDir, imageResult = ir)
                   ir
-                case None => makeFailedWLImageStatus(WLImageStatus.BallAreaNoisy)
+                case None =>
+                  makeFailedWLImageStatus(WLImageStatus.BallAreaNoisy)
               }
             }
         }
@@ -1325,18 +927,6 @@ object WLProcessImage extends org.aqa.Logging {
     data.map(x => (x - min) / range)
   }
 
-  /*
-   def angleRoundedTo22_5(angle: Double): Double = (((angle + 3600) / 22.5).round.toInt % 16) * 22.5 // convert to nearest multiple of 22.5 degrees
-
-   def angleRounded(angle: Double): Double = {
-     val parts = 16 // Round off to nearest multiple of this angle
-     val fraction = 360.0 / parts
-
-     //((((angle.toInt + 3600 + 45) % 360) / 90) * 90) % 360 // convert to nearest multiple of 90 degrees
-     (((angle + 3600) / fraction).round % parts) * fraction
-   }
-   */
-
   /**
    * Make a list of the sum of each row.
    */
@@ -1346,10 +936,6 @@ object WLProcessImage extends org.aqa.Logging {
    * Make a list of the sum of each column.
    */
   def colSum(pix: IndexedSeq[IndexedSeq[Float]]): IndexedSeq[Float] = {
-    // def oneColSum(c: Int) = pix.indices.map(y => pix(y)(c)).sum
-
-    // pix(0).indices.map(c => oneColSum(c)).toIndexedSeq
-
     val di = new DicomImage(pix.map(_.toIndexedSeq).toIndexedSeq)
     di.columnSums.toIndexedSeq
   }
