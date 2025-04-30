@@ -604,6 +604,16 @@ object Util extends Logging {
   }
 
   /**
+    * Round the angle to the closest 1 degree angle.
+    *
+    * @param angleInDegrees Angle to round off.
+    */
+  //noinspection ScalaWeakerAccess
+  def angleRoundedTo1(angleInDegrees: Double): Int = {
+    (angleInDegrees + 720).round.toInt % 360
+  }
+
+  /**
     * Round the angle to the closest 2 degree angle.
     *
     * @param angleInDegrees Angle to round off.
