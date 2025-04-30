@@ -73,7 +73,7 @@ object WLMainHtml extends Logging {
 
       def getNameHtml(ir: WLImageResult): Elem = {
         <b>
-          {s"G${ir.gantryRounded_deg} C${ir.collimatorRounded_deg.round} ${fmtTime(ir)}"}
+          {s"G${Util.angleRoundedTo1(ir.gantry_deg)} C${Util.angleRoundedTo1(ir.collimator_deg)} T${Util.angleRoundedTo1(ir.tableAngle_deg)} ${fmtTime(ir)}"}
         </b>
       }
 
@@ -89,16 +89,18 @@ object WLMainHtml extends Logging {
       val elem: Elem = {
         <td style='background: #eeeeee'>
           <center>
-            <h3 title='Gantry angle, collimator angle, and time since start'>
+            <h3 title={s"Gantry angle, collimator angle,${WebUtil.titleNewline}Table angle, and time since start"}>
               <b>
                 {getNameHtml(ir)}
               </b>
             </h3>
             <p>
-              {if (ir.beamName.isDefined) {
-              "Beam " + ir.beamName.get
-            } else
-              ""}
+              {
+          if (ir.beamName.isDefined) {
+            "Beam " + ir.beamName.get
+          } else
+            ""
+        }
             </p>
             <p title={hiFmtDbl(ir.offX) + ", " + hiFmtDbl(ir.offY)}>
               Offset in mm X =
@@ -145,8 +147,8 @@ object WLMainHtml extends Logging {
         val title = name match {
           case WLgenHtml.NORMAL_SUMMARY_FILE_NAME => "Summary Image"
           case WLgenHtml.BRIGHT_SUMMARY_FILE_NAME => "Summary Image Brightened"
-          case WLgenHtml.ORIGINAL_FILE_NAME => "Entire Image"
-          case _ => "Image"
+          case WLgenHtml.ORIGINAL_FILE_NAME       => "Entire Image"
+          case _                                  => "Image"
         }
         val id: String = ir.subDirName
         val url = relUrl(ir) + "/" + name
@@ -180,7 +182,8 @@ object WLMainHtml extends Logging {
       val imageHtml = {
         <td>
           <center>
-            {0 match {
+            {
+          0 match {
             case _ if canRead(WLgenHtml.BRIGHT_SUMMARY_FILE_NAME, ir) => img(WLgenHtml.BRIGHT_SUMMARY_FILE_NAME)
 
             case _ if canRead(WLgenHtml.NORMAL_SUMMARY_FILE_NAME, ir) => img(WLgenHtml.NORMAL_SUMMARY_FILE_NAME)
@@ -188,7 +191,8 @@ object WLMainHtml extends Logging {
             case _ if canRead(WLgenHtml.ORIGINAL_FILE_NAME, ir) => img(WLgenHtml.ORIGINAL_FILE_NAME)
 
             case _ => <span>No Image Available</span>
-          }}
+          }
+        }
           </center>
         </td>
       }
@@ -239,7 +243,9 @@ object WLMainHtml extends Logging {
           <td style={style}>Offset</td>
           <td style={style}>Correct by moving</td>
           <td style={style}>Status</td>
-        </tr>{row("Longitudinal", correction.longitudinal, new Instruction("away from gantry", "toward gantry"))}{row("Lateral", correction.lateral, new Instruction("towards left when facing gantry", "towards right when facing gantry"))}{row("Vertical", correction.vertical, new Instruction("towards floor", "towards ceiling"))}
+        </tr>{row("Longitudinal", correction.longitudinal, new Instruction("away from gantry", "toward gantry"))}{
+        row("Lateral", correction.lateral, new Instruction("towards left when facing gantry", "towards right when facing gantry"))
+      }{row("Vertical", correction.vertical, new Instruction("towards floor", "towards ceiling"))}
       </table>
       </center>
     }
@@ -247,8 +253,7 @@ object WLMainHtml extends Logging {
     def csvLink(): Elem = {
       if (!resultList.exists(r => WLImageStatus.hasResult(r.imageStatus))) {
         <span>No Results</span>
-      }
-      else {
+      } else {
         <a title="Results as spreadsheet/CSV" href={csvFileName}>Results</a>
       }
     }
@@ -304,8 +309,7 @@ object WLMainHtml extends Logging {
           val file = new File(extendedData.output.dir, fileName)
           Util.writeFile(file, rtplanText)
           <a href="RTPLAN.txt" style="margin-left: 24px;margin-right: 24px;">RTPLAN as text</a>
-        }
-        else <span style="margin-left: 24px;margin-right: 24px;">RTPLAN Not Available</span>
+        } else <span style="margin-left: 24px;margin-right: 24px;">RTPLAN Not Available</span>
       }
 
       val passFailBanner: Elem = {
