@@ -82,8 +82,8 @@ class WLImageResult(
     elapsed_ms
   }
 
-  private val gantry_deg: Double = Util.gantryAngle(rtimage)
-  private val collimator_deg: Double = Util.collimatorAngle(rtimage)
+  val gantry_deg: Double = Util.gantryAngle(rtimage)
+  val collimator_deg: Double = Util.collimatorAngle(rtimage)
   private def angleRoundedTo22_5(angle: Double): Double = (((angle + 3600) / 22.5).round.toInt % 16) * 22.5 // convert to nearest multiple of 22.5 degrees
 
   val gantryRounded_deg: Int = Util.angleRoundedTo90(gantry_deg)
