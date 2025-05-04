@@ -73,7 +73,7 @@ object WLMainHtml extends Logging {
 
       def getNameHtml(ir: WLImageResult): Elem = {
         <b>
-          {s"G${Util.angleRoundedTo1(ir.gantry_deg)} C${Util.angleRoundedTo1(ir.collimator_deg)} T${Util.angleRoundedTo1(ir.tableAngle_deg)} ${fmtTime(ir)}"}
+          {s"G${Util.angleRoundedTo1(ir.gantryRounded_deg)} C${Util.angleRoundedTo1(ir.collimatorRounded_deg)} T${Util.angleRoundedTo1(ir.tableAngle_deg)} ${fmtTime(ir)}"}
         </b>
       }
 

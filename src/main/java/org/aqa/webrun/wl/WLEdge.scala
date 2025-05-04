@@ -15,10 +15,15 @@ import org.aqa.webrun.wl.WLProcessImage.unitize
 import org.aqa.Logging
 import org.aqa.Util
 
+import java.awt.Rectangle
 import java.text.SimpleDateFormat
 import scala.annotation.tailrec
 
-case class WLEdge(name: String, aoi: DicomImage, vertical: Boolean, wholeImage: DicomImage, rtimage: AttributeList) extends Logging {
+case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtimage: AttributeList, bounds: Rectangle) extends Logging {
+
+  val aoi: DicomImage = wholeImage.getSubimage(bounds)
+
+  // ----------------------------------------------------------------------------------------------------------------------------------
 
   // Number of binary search iterations before determining that the edge has
   // been measured to a sufficient degree.  Each iteration is approximately
@@ -63,9 +68,16 @@ case class WLEdge(name: String, aoi: DicomImage, vertical: Boolean, wholeImage: 
     c
   }
 
+  // ----------------------------------------------------------------------------------------------------------------------------------
+
   /**
     * Ensure that the brightest and dimmest pixel in the edge are approximately as dim and
-    * bright as the dimmest and brightest in the entire image
+    * bright as the dimmest and brightest in the entire image.
+    *
+    * This is a sanity check to make sure that the image has one of the required properties
+    * for Winston-Lutz analysis.  This is one of those things that should never happen, but
+    * does increase confidence in results by guarding against a possible false positive.
+    *
     * @return None on success, error status if there is an error.
     */
   private def verifyBrightness(): Option[WLImageStatus.Value] = {
@@ -73,7 +85,7 @@ case class WLEdge(name: String, aoi: DicomImage, vertical: Boolean, wholeImage: 
     val pct = ((wholeImagePixelValueRange - aoiPixelValueRange).abs / wholeImagePixelValueRange) * 100.0
     val brightnessMessage = "edge brightness   Max percent diff range allowed: " + Config.WLMaxAllowedBrightnessRangePercentDifference +
       "  image brightness range: " + wholeImagePixelValueRange.formatted("%7.2f") +
-      name.format("%8s") + " edge brightness range: " + aoiPixelValueRange.formatted("%7.2f") + "    percent diff: " + pct.formatted("%7.3f")
+      "  " + name.format("%8s") + " edge brightness range: " + aoiPixelValueRange.formatted("%7.2f") + "    percent diff: " + pct.formatted("%7.3f")
     logger.info(brightnessMessage)
 
     if (pct >= Config.WLMaxAllowedBrightnessRangePercentDifference) {
@@ -82,13 +94,66 @@ case class WLEdge(name: String, aoi: DicomImage, vertical: Boolean, wholeImage: 
       logger.error(errorMsg)
       Trace.trace()
       Some(WLImageStatus.BallAreaNoisy)
-    } else
+    } else {
       None
+    }
+    None
   }
+
+  // ----------------------------------------------------------------------------------------------------------------------------------
 
   private def learn(): Unit = {
 
     val pixIn = aoi.pixelData
+
+    /**
+      * Find the 50% edge position in the given pixel array.
+      * @param line Single row or column of pixels.
+      * @return 50% position.
+      */
+    def doLine1(line: IndexedSeq[Float]): Double = {
+      val sorted = line.sorted
+      val numPix = Math.max(line.size / 15, 3) // number of pixels to use at each end of the line to calculate min and max values.
+      val lo = sorted.take(numPix).sum / numPix
+      val hi = sorted.takeRight(numPix).sum / numPix
+      val mean = (lo + hi) / 2
+      val e = LocateEdge.locateEdge(line, mean)
+      e
+    }
+
+    /**
+      * Edge profile formed by locating the edge for each column (for horizontal edges) or row (for vertical edges) of pixels.
+      */
+    val crossProfile: IndexedSeq[Double] =
+      if (vertical) {
+        pixIn.map(doLine1)
+      } else {
+        val di = new DicomImage(pixIn).rotate90
+        di.pixelData.map(doLine1)
+      }
+
+    /**
+      * A measure of how straight the edge is.  If the ball is supported by a stem that has
+      * poor radiation transparency, then this value will be larger.
+      */
+    val crossProfileStandardDeviation: Double = ImageUtil.stdDev(crossProfile.map(_.toFloat))
+
+    val pixInLoc: IndexedSeq[IndexedSeq[Float]] = {
+      val pix = aoi.pixelData
+      val sorted = pix.flatten.sorted
+      val count = 20
+      val lo = sorted.take(count).sum / count
+      val hi = sorted.takeRight(count).sum / count
+
+      val range = hi - lo
+
+      def doRow(row: IndexedSeq[Float]): IndexedSeq[Float] = {
+        row.map(p => (p - lo) / range)
+      }
+
+      val normalized = pix.map(doRow)
+      normalized
+    }
 
     val fixedName = "%-6s".format(name)
 
@@ -101,51 +166,44 @@ case class WLEdge(name: String, aoi: DicomImage, vertical: Boolean, wholeImage: 
       s"G$g C$c t: $t $fixedName"
     }
 
-    if (true) {
-      def doLine(line: IndexedSeq[Float]): Double = {
-        val sorted = line.sorted
-        val numPix = 5
-        val lo = sorted.take(numPix).sum / numPix
-        val hi = sorted.takeRight(numPix).sum / numPix
-        val mean = (lo + hi) / 2
-        val e = LocateEdge.locateEdge(line, mean)
-        e
-      }
-
-      val list = if (vertical) {
-        pixIn.map(doLine)
-      } else {
-        val di = new DicomImage(pixIn).rotate90
-        di.pixelData.map(doLine)
-      }
-
-      val stdDev = ImageUtil.stdDev(list.map(_.toFloat))
-
-      val orientation = if (vertical) "col" else "row"
-      val msg = s"""SinglePixel $orientation Edge: $fullName   StdDev: ${"%9.6f".format(stdDev)}   SinglePixel List: ${list.map(d => "%8.5f".format(d)).mkString(", ")}"""
-      logger.info(msg)
+    def doLine2(line: IndexedSeq[Float]): Double = {
+      val sorted = line.sorted
+      val numPix = 5
+      val lo = sorted.take(numPix).sum / numPix
+      val hi = sorted.takeRight(numPix).sum / numPix
+      val mean = (lo + hi) / 2
+      val e = LocateEdge.locateEdge(line, mean)
+      e
     }
 
-    if (true) {
-
-      def doLineMean(line: IndexedSeq[Float]): Double = {
-        line.sum / line.size
-      }
-
-      val listMean = if (vertical) {
-        pixIn.map(doLineMean)
-      } else {
-        val di = new DicomImage(pixIn).rotate90
-        di.pixelData.map(doLineMean)
-      }
-
-      val stdDevMean = ImageUtil.stdDev(listMean.map(_.toFloat))
-      val msg = s"""Means Edge: $fullName   StdDevMean: ${"%8.4f".format(stdDevMean)}   Means: ${listMean.map(d => "%8.5f".format(d)).mkString(", ")}"""
-      logger.info(msg)
+    val list = if (vertical) {
+      pixInLoc.map(doLine2)
+    } else {
+      val di = new DicomImage(pixInLoc).rotate90
+      di.pixelData.map(doLine2)
     }
 
-    try {
-      println("hey")
+    val stdDev = ImageUtil.stdDev(list.map(_.toFloat))
+
+    val orientation = if (vertical) "col" else "row"
+    val msg = s"""SinglePixel $orientation Edge: $fullName   StdDev: ${"%9.6f".format(stdDev)}   SinglePixel List: ${list.map(d => "%8.5f".format(d)).mkString(", ")}"""
+    logger.info(msg)
+
+    val StdDevThreshold = 0.15
+
+    if (stdDev > StdDevThreshold) {
+      logger.info(s"Edge with stem shadow : $fullName")
+
+      val loSize = list.size / 2
+      val hiSize = list.size - loSize
+      val loList = list.take(loSize)
+      val hiLIst = list.takeRight(hiSize)
+
+      val descendingList = loList.foldLeft(Seq(loList.head))((descending, v) => if (v < descending.last) descending :+ v else descending :+ descending.last)
+
+      val loEdge = LocateEdge.locateEdge(descendingList.map(_.toFloat).toIndexedSeq, descendingList.sum / descendingList.size)
+
+      Trace.trace(s"""$fullName :: descendingList size: ${descendingList.size}  loEdge: $loEdge  : ${descendingList.mkString("  ")}""")
     }
 
   }
@@ -154,17 +212,27 @@ case class WLEdge(name: String, aoi: DicomImage, vertical: Boolean, wholeImage: 
     * Find an edge of the box as accurately as possible by drawing a cubic spline across
     * the edge and then finding the midpoint of that spline.  Find the midpoint using a binary
     * search.
-    * TODO rm : Study StdDev of edges.
     */
-  def findEdge(): Either[WLImageStatus.Value, Double] = {
+  private def findEdge(): Either[WLImageStatus.Value, Double] = {
 
-    learn()
+    /*
+    try {
+      learn()
+    } catch {
+      case t: Throwable =>
+        logger.error(s"Unexpected error (ignored): ${fmtEx(t)}")
+    }
+     */
 
     verifyBrightness() match {
-      case Some(err) => Left(err)
-      case _         => Right(oldFindEdge())
+      case Some(err) =>
+        Left(err)
+      case _ =>
+        Right(oldFindEdge())
     }
 
   }
+
+  val edge: Either[WLImageStatus.Value, Double] = findEdge()
 
 }

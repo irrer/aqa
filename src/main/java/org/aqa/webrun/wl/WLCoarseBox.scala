@@ -3,13 +3,16 @@ package org.aqa.webrun.wl
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
+import org.aqa.Logging
+import org.aqa.Util
 
 import java.awt.Rectangle
 
-case class WLCoarseBox(rtimage: AttributeList) {
+case class WLCoarseBox(image: DicomImage, trans: IsoImagePlaneTranslator) extends Logging {
 
-  private val trans = new IsoImagePlaneTranslator(rtimage)
+  def this(rtimage: AttributeList) = this(new DicomImage(rtimage), new IsoImagePlaneTranslator(rtimage))
 
   private case class StartAndLen(start: Int, len: Int) {}
 
@@ -23,6 +26,18 @@ case class WLCoarseBox(rtimage: AttributeList) {
 
     val halfPenumbra = resolution(Config.WLBoxEdgeTolerance_mm).round.toInt
 
+    if (true) {
+      val min = profile.min
+      val max = profile.max
+      val r = (max - min) / 10
+
+      val norm = profile.map(v => ((v - min) / r).toInt)
+
+      val text = norm.mkString("\n")
+      // Trace.trace(s"\n\n${norm.min} ${norm.max}\n$text\n")
+      Trace.trace()
+    }
+
     val mid = (profile.max + profile.min) / 2
 
     val start = profile.indexWhere(_ >= mid) // get the start of the box
@@ -35,16 +50,22 @@ case class WLCoarseBox(rtimage: AttributeList) {
   }
 
   /**
-   * Define a rectangle around the box that includes an extra border for the penumbra.
-   * @return Bounds for area of interest.
-   */
+    * Define a rectangle around the box that includes an extra border for the penumbra.
+    * @return Bounds for area of interest.
+    */
   def locate(): Rectangle = {
-    val image = new DicomImage(rtimage)
-
     val xStartLen = coarseBoxLocate(image.columnSums, trans.iso2PixDistX)
     val yStartLen = coarseBoxLocate(image.rowSums, trans.iso2PixDistY)
 
     val rect = new Rectangle(xStartLen.start, yStartLen.start, xStartLen.len, yStartLen.len)
+
+    logger.info(
+      "Rectangle defining coarse box location in mm: " +
+        "    x: " + Util.fmtDbl(trans.pix2IsoCoordX(rect.x)) +
+        "    y: " + Util.fmtDbl(trans.pix2IsoCoordY(rect.y)) +
+        "    width: " + Util.fmtDbl(trans.pix2IsoDistX(rect.width)) +
+        "    height: " + Util.fmtDbl(trans.pix2IsoDistY(rect.height))
+    )
 
     rect
   }
