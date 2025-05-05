@@ -1028,7 +1028,10 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
       val di = new DicomImage(rtimage)
 
-      val sorted = di.pixelData.flatten.sorted
+      val count = 20 // maximum number of high and low bad pixels
+
+      // Drop some high and low pixels to make sure that a few bad pixels do not skew the mean.
+      val sorted = di.pixelData.flatten.sorted.drop(count).dropRight(count)
 
       val mean = sorted.sum / sorted.size
 
