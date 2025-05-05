@@ -2,6 +2,7 @@ package org.aqa.webrun.wl
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
+import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ImageUtil.LocateEdge
 import edu.umro.ScalaUtil.DicomUtil
@@ -1230,6 +1231,18 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
         val coarseX = coarseBoxLocate(colSum(pixels))
         val coarseY = coarseBoxLocate(rowSum(pixels))
+
+        val coarseBox = WLCoarseBox(new DicomImage(pixels), trans).locate()
+
+        if (true) {
+          val x2 = coarseBox.x + coarseBox.width
+          val y2 = coarseBox.y + coarseBox.height
+          Trace.trace(
+            s"coarseX: $coarseX      coarseY: $coarseY" +
+              s"    coarseBox: $coarseBox" +
+              s"    x2: $x2  y2: $y2"
+          )
+        }
 
         // Shift the bad pixels so that they point to the proper place in the area of interest (AOI)
         val badPixelListShifted = badPixelList.map(b => new WLBadPixel(b.x - coarseX._1, b.y - coarseY._1, b.rawValue, b.correctedValue, b.adjacentValidValueList))

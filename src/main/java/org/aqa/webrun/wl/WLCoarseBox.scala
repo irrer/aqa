@@ -34,14 +34,14 @@ case class WLCoarseBox(image: DicomImage, trans: IsoImagePlaneTranslator) extend
       val norm = profile.map(v => ((v - min) / r).toInt)
 
       val text = norm.mkString("\n")
-      // Trace.trace(s"\n\n${norm.min} ${norm.max}\n$text\n")
+      Trace.trace(s"\n\n${norm.min} ${norm.max}\n$text\n")
       Trace.trace()
     }
 
     val mid = (profile.max + profile.min) / 2
 
-    val start = profile.indexWhere(_ >= mid) // get the start of the box
-    val finish = profile.lastIndexWhere(_ >= mid) // get the finish of the box
+    val start = profile.indexWhere(_ <= mid) // get the start of the box
+    val finish = profile.lastIndexWhere(_ <= mid) // get the finish of the box
 
     val startWithPenumbra = Math.max(start - halfPenumbra, 0) // start of box with penumbra, within bounds of image
     val finishWithPenumbra = Math.min(finish + halfPenumbra, profile.size - 1) // finish of box with penumbra, within bounds of image
