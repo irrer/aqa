@@ -4,7 +4,6 @@ import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import edu.umro.ImageUtil.LocateEdge
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
@@ -479,81 +478,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     }
 
     /**
-      * Find the edge in each row or column of pixels, and then take the mean.
-      * This is experimental.
-      * @param pixIn
-      * @param vertical
-      * @param name
-      * @param rawExtremeAveragesRange
-      * @return
-      */
-    def findEdge2(pixIn: Array[Array[Float]], vertical: Boolean, name: String, rawExtremeAveragesRange: Double): Either[WLImageStatus.Value, Double] = {
-      if (vertical) {
-        val edgeSeq = pixIn.map(row => LocateEdge.locateEdge(row, row.sum / row.length))
-        Trace.trace(s"""edge $name\n${edgeSeq.mkString("\n")}""")
-        val mean = edgeSeq.sum / edgeSeq.length
-        Right(mean)
-      } else {
-        val colSeq = pixIn.head.indices.map(x => pixIn.indices.map(y => pixIn(y)(x)))
-        val edgeSeq = colSeq.map(c => LocateEdge.locateEdge(c, c.sum / c.size))
-        Trace.trace(s"""edge $name\n${edgeSeq.mkString("\n")}""")
-        val mean = edgeSeq.sum / edgeSeq.length
-        Right(mean)
-      }
-    }
-
-    /**
-      * Use the edge measurement method developed for AQA.
-      *
-      * It would be nice to only have one way of measuring edges.
-      *
-      * This is experimental because any change to the Winston-Lutz software would call the commissioning into question.
-      *
-      * @return
-      */
-    def findEdge3(pixIn: IndexedSeq[IndexedSeq[Float]], vertical: Boolean, name: String, rawExtremeAveragesRange: Double): Either[WLImageStatus.Value, Double] = {
-      val sum = if (vertical) colSum(pixIn) else rowSum(pixIn)
-      val mean = pixIn.flatten.sum / sum.length
-      val edgePosition = LocateEdge.locateEdge(sum, mean)
-      Right(edgePosition)
-    }
-
-    /**
-      * Get the x,y coordinates of the point with the largest value
-      */
-    /*
-    def maxPoint(area: Array[Array[Double]]): (Int, Int) = {
-      val coordinate = area.flatten.zipWithIndex.maxBy(_._1)._2
-      (coordinate % area.length, coordinate / area.length)
-    }
-     */
-
-    /**
-      * Draw the horizontal and vertical lines marking the center of something.  By convention in
-      * this project, it marks the center of the ball.
-      */
-    /*
-    def drawCross(graphics: Graphics, x: Double, y: Double, markerSize: Double): Unit = {
-      graphics.drawLine(coordinate(x - markerSize), coordinate(y), coordinate(x + markerSize), coordinate(y))
-      graphics.drawLine(coordinate(x), coordinate(y - markerSize), coordinate(x), coordinate(y + markerSize))
-    }
-     */
-
-    /*
-    def drawCircles(graphics: Graphics, x: Double, y: Double): Unit = {
-      graphics.setColor(Config.WLBallColor)
-      val NUM_CIRCLE = Config.WLNumberOfCircles
-
-      def graphicDistance(d: Double): Int = (d * SCALE + .5).toInt
-
-      for (circle <- 1 to NUM_CIRCLE) {
-        val radius = (circle.toDouble / NUM_CIRCLE) * BALL_RADIUS
-        graphics.drawOval(coordinate(x - radius), coordinate(y - radius), graphicDistance(radius * 2), graphicDistance(radius * 2))
-      }
-    }
-     */
-
-    /**
       * Find the center of the ball within the given area.  Return the
       * coordinates relative to the area given.
       */
@@ -774,44 +698,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
           val eBottom = findEdge(bottomArea, vertical = false, "bottom", rawExtremeAveragesRange)
           val eLeft = findEdge(leftArea, vertical = true, "left", rawExtremeAveragesRange)
           val eRight = findEdge(rightArea, vertical = true, "right", rawExtremeAveragesRange)
-
-          /*
-          val edges2: Edges = {
-
-            val start = System.currentTimeMillis()
-            val eTop2 = findEdge2(topArea, vertical = false, "top", rawExtremeAveragesRange)
-            val eBottom2 = findEdge2(bottomArea, vertical = false, "bottom", rawExtremeAveragesRange)
-            val eLeft2 = findEdge2(leftArea, vertical = true, "left", rawExtremeAveragesRange)
-            val eRight2 = findEdge2(rightArea, vertical = true, "right", rawExtremeAveragesRange)
-            val elapsed = System.currentTimeMillis() - start
-
-            val top1 = eTop.right.get
-            val top2 = eTop2.right.get
-
-            val bottom1 = eBottom.right.get
-            val bottom2 = eBottom2.right.get
-
-            val left1 = eLeft.right.get
-            val left2 = eLeft2.right.get
-
-            val right1 = eRight.right.get
-            val right2 = eRight2.right.get
-
-            val yC1 = (top1 + bottom1) / 2
-            val xC1 = (left1 + right1) / 2
-
-            val yC2 = (top2 + bottom2) / 2
-            val xC2 = (left2 + right2) / 2
-
-            Trace.trace(yC1 - yC2)
-            Trace.trace(xC1 - xC2)
-            Trace.trace(elapsed)
-
-            val egs = new Edges(top2, bottom2, left2, right2)
-            egs
-          }
-
-           */
 
           def edgeStatus(e: Either[WLImageStatus.Value, Double]): WLImageStatus.Value = {
             e match {
