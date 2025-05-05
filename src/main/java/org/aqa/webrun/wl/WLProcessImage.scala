@@ -89,17 +89,17 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
   private def makeFailedWLImageStatus(imageStatus: WLImageStatus.Value): WLImageResult = {
     new WLImageResult(
       imageStatus = imageStatus,
-      boxP = null,
-      ballP = null,
-      edgesUnscaled = null,
-      boxEdgesP = null,
+      boxP = None,
+      ballP = None,
+      edgesUnscaled = None,
+      boxEdgesP = None,
       directory = subDir,
       rtimage = rtimage,
-      pixels = null,
-      coarseX = (-1, -1),
-      coarseY = (-1, -1),
-      brcX = -1,
-      brcY = -1,
+      pixels = None,
+      coarseX = None,
+      coarseY = None,
+      brcX = None,
+      brcY = None,
       badPixelList = Seq(),
       marginalPixelList = Seq(),
       extendedData = extendedData,
@@ -847,39 +847,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       }
     }
 
-    /**
-      * Indicate that something is wrong with the image.
-      */
-    /*
-    def imageError(status: ImageStatus.Value, msg: String, marginalPixelList: Seq[WLBadPixel]): WLImageResult = {
-      val fullMsg = "Image " + imageName + "  " + msg
-      logger.error(fullMsg)
-      diagnosticMessage(fullMsg)
-      val imageResult =
-        new WLImageResult(
-          status,
-          boxP = null,
-          ballP = null,
-          edgesUnscaled = null,
-          boxEdgesP = null,
-          directory = subDir,
-          rtimage = rtimage,
-          pixels = null,
-          coarseX = (-1, -1),
-          coarseY = (-1, -1),
-          brcX = -1,
-          brcY = -1,
-          badPixelList = null,
-          marginalPixelList,
-          extendedData,
-          runReq
-        )
-      diagnosticMessage(imageResult.toString)
-      WLgenHtml.generateHtml(extendedData, subDir, imageResult)
-      imageResult
-    }
-     */
-
     def correctUnscaledEdges(edgesUnscaled: Edges): Edges = {
       def scaleX(x: Double): Double = (x * ResolutionX) / ResolutionX
       def scaleY(y: Double): Double = (y * ResolutionY) / ResolutionY
@@ -1002,18 +969,18 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
       val imageResult = new WLImageResult(
         imageStatus = passed,
-        boxP = boxPoint,
-        ballP = ballPoint,
-        edgesUnscaled = edgesUnscaled,
-        boxEdgesP = edgesScaled,
+        boxP = Some(boxPoint),
+        ballP = Some(ballPoint),
+        edgesUnscaled = Some(edgesUnscaled),
+        boxEdgesP = Some(edgesScaled),
         directory = subDir,
         // extendedData,
         rtimage = attributeList,
-        pixels = pixelData,
-        coarseX,
-        coarseY,
-        brcX,
-        brcY,
+        pixels = Some(pixelData),
+        Some(coarseX),
+        Some(coarseY),
+        Some(brcX),
+        Some(brcY),
         badPixelList = badPixelList,
         marginalPixelList = marginalPixelList,
         extendedData = extendedData,
@@ -1078,17 +1045,17 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       if (rawDistinctSortedList.size < Config.WLMinimumDistinctPixelValues) {
         new WLImageResult(
           imageStatus = WLImageStatus.BoxNotFound,
-          boxP = null,
-          ballP = null,
-          edgesUnscaled = null,
-          boxEdgesP = null,
+          boxP = None,
+          ballP = None,
+          edgesUnscaled = None,
+          boxEdgesP = None,
           directory = subDir,
           rtimage = rtimage,
-          pixels = null,
-          coarseX = (-1, -1),
-          coarseY = (-1, -1),
-          brcX = -1,
-          brcY = -1,
+          pixels = None,
+          coarseX = None,
+          coarseY = None,
+          brcX = None,
+          brcY = None,
           badPixelList = Seq(),
           marginalPixelList = Seq(),
           extendedData = extendedData,

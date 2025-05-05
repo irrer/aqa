@@ -13,6 +13,7 @@ import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.PlannedRectangle
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil
 
+import java.awt.geom.Point2D
 import java.io.File
 import java.sql.Timestamp
 import java.util.Date
@@ -41,32 +42,32 @@ class Edges(val top: Double, val bottom: Double, val left: Double, val right: Do
 
 class WLImageResult(
     val imageStatus: WLImageStatus.ImageStatus,
-    boxP: Point,
-    ballP: Point,
-    edgesUnscaled: Edges,
-    boxEdgesP: Edges,
+    boxP: Option[Point],
+    ballP: Option[Point],
+    edgesUnscaled: Option[Edges],
+    boxEdgesP: Option[Edges],
     val directory: File,
     val rtimage: AttributeList,
-    val pixels: Array[Array[Float]],
-    coarseX: (Int, Int),
-    coarseY: (Int, Int),
-    brcX: Double,
-    brcY: Double,
+    val pixels: Option[Array[Array[Float]]],
+    coarseX: Option[(Int, Int)],
+    coarseY: Option[(Int, Int)],
+    brcX: Option[Double],
+    brcY: Option[Double],
     val badPixelList: Seq[WLBadPixel],
     val marginalPixelList: Seq[WLBadPixel],
     val extendedData: ExtendedData,
     val runReq: WLRunReq
 ) {
-  val ok: Boolean = !((boxP == null) || (ballP == null))
-  val offX: Double = if (ok) boxP.x - ballP.x else -1
-  val offY: Double = if (ok) boxP.y - ballP.y else -1
+  val ok: Boolean = (boxP.isDefined) && (ballP.isDefined)
+  val offX: Double = if (ok) boxP.get.x - ballP.get.x else -1
+  val offY: Double = if (ok) boxP.get.y - ballP.get.y else -1
   val offXY: Double = if (ok) Math.sqrt((offX * offX) + (offY * offY)) else -1
   val date = new Date
   private val trans = new IsoImagePlaneTranslator(rtimage)
 
-  val box: Point = if (boxP == null) new Point(-1, -1) else boxP
-  val ball: Point = if (ballP == null) new Point(-1, -1) else ballP
-  val boxEdges: Edges = if (boxEdgesP == null) new Edges(-1, -1, -1, -1) else boxEdgesP
+  val box: Point = if (boxP.isEmpty) new Point(-1, -1) else boxP.get
+  val ball: Point = if (ballP.isEmpty) new Point(-1, -1) else ballP.get
+  val boxEdges: Edges = if (boxEdgesP.isEmpty) new Edges(-1, -1, -1, -1) else boxEdgesP.get
 
   val contentTime: Date = {
     val content = Util.dicomGetTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime)
@@ -124,30 +125,32 @@ class WLImageResult(
 
   val gantryAngle: Int = Util.angleRoundedTo90(Util.gantryAngle(rtimage)) //attrFloat(TagByName.GantryAngle)
 
-  private def left_pix = edgesUnscaled.left + coarseX._1
-  private def right_pix = edgesUnscaled.right + coarseX._1
-  private def top_pix = edgesUnscaled.top + coarseY._1
-  private def bottom_pix = edgesUnscaled.bottom + coarseY._1
+  private def left_pix: Double = edgesUnscaled.get.left + coarseX.get._1
+  private def right_pix: Double = edgesUnscaled.get.right + coarseX.get._1
+  private def top_pix: Double = edgesUnscaled.get.top + coarseY.get._1
+  private def bottom_pix: Double = edgesUnscaled.get.bottom + coarseY.get._1
 
-  private def left_mm = trans.pix2IsoCoordX(left_pix)
-  private def right_mm = trans.pix2IsoCoordX(right_pix)
-  private def top_mm = trans.pix2IsoCoordY(top_pix)
-  private def bottom_mm = trans.pix2IsoCoordY(bottom_pix)
+  private def left_mm: Double = trans.pix2IsoCoordX(left_pix)
+  private def right_mm: Double = trans.pix2IsoCoordX(right_pix)
+  private def top_mm: Double = trans.pix2IsoCoordY(top_pix)
+  private def bottom_mm: Double = trans.pix2IsoCoordY(bottom_pix)
 
-  private def ballX_pix = brcX + coarseX._1
-  private def ballY_pix = brcY + coarseY._1
-  private def ballCenter_mm = trans.pix2Iso(ballX_pix, ballY_pix)
-  private def boxCenterX_pix = (right_pix + left_pix) / 2.0
-  private def boxCenterY_pix = (bottom_pix + top_pix) / 2.0
-  private def boxCenter_mm = trans.pix2Iso(boxCenterX_pix, boxCenterY_pix)
-  private def offsetX_mm = boxCenter_mm.getX - ballCenter_mm.getX
-  private def offsetY_mm = boxCenter_mm.getY - ballCenter_mm.getY
-  private def offset_mm = Math.sqrt((offsetX_mm * offsetX_mm) + (offsetY_mm * offsetY_mm))
+  private def ballX_pix: Double = brcX.get + coarseX.get._1
+  private def ballY_pix: Double = brcY.get + coarseY.get._1
+
+  private def ballCenter_mm: Point2D.Double = trans.pix2Iso(ballX_pix, ballY_pix)
+  private def boxCenterX_pix: Double = (right_pix + left_pix) / 2.0
+  private def boxCenterY_pix: Double = (bottom_pix + top_pix) / 2.0
+
+  private def boxCenter_mm: Point2D.Double = trans.pix2Iso(boxCenterX_pix, boxCenterY_pix)
+  private def offsetX_mm: Double = boxCenter_mm.getX - ballCenter_mm.getX
+  private def offsetY_mm: Double = boxCenter_mm.getY - ballCenter_mm.getY
+  private def offset_mm: Double = Math.sqrt((offsetX_mm * offsetX_mm) + (offsetY_mm * offsetY_mm))
 
   override def toString: String = {
 
     def badPixelListToString(list: Seq[WLBadPixel], name: String): String = {
-      if (list == null)
+      if (list.isEmpty)
         "NA"
       else
         "" +
