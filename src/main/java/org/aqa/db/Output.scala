@@ -530,7 +530,7 @@ object Output extends Logging {
       output <- Output.query.filter(o => o.machinePK === machinePK).distinctOn(_.procedurePK)
     } yield output
     val list = Db.run(search.result)
-    logger.info(s"""machineProcedureList   machinePK: $machinePK  procedurePK list: ${list.map(_.procedurePK).sorted.mkString("  ")}""")
+    // logger.info(s"""machineProcedureList   machinePK: $machinePK  procedurePK list: ${list.map(_.procedurePK).sorted.mkString("  ")}""")
     list
   }
 }
