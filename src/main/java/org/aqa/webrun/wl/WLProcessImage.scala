@@ -1019,16 +1019,31 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       !list.exists(b => (b.x == badPixel.x) && (b.y == badPixel.y))
     }
 
+    /**
+     * Get the raw pixels.  Ensure that the majority of the pixels are large.  If they are
+     * not, then invert pixels so that the small become large and the large become small.
+     * @return Pixel array.
+     */
     def fetchRawPixels(): IndexedSeq[IndexedSeq[Float]] = {
-      val height: Int = rtimage.get(TagByName.Rows).getIntegerValues()(0)
-      val width: Int = rtimage.get(TagByName.Columns).getIntegerValues()(0)
-      val shorts: Array[Short] = rtimage.get(TagByName.PixelData).getShortValues
-      // JavaUtil.pixelDataToArray(height, width, shorts)
-      val flip = {
-        val attr = rtimage.get(TagByName.PixelIntensityRelationshipSign)
-        (attr != null) && attr.getIntegerValues.head > 0
+
+      val di = new DicomImage(rtimage)
+
+      val sorted = di.pixelData.flatten.sorted
+
+      val mean = sorted.sum / sorted.size
+
+      val belowMeanPixelCount = sorted.indexWhere(_ > mean)
+
+      val pixelData: IndexedSeq[IndexedSeq[Float]] = {
+        if (belowMeanPixelCount > (sorted.size / 2)) {
+          def invert(pix: Float) = di.maxPixelValue - pix
+          val invertedDicomImage = di.fun1(invert)
+          invertedDicomImage.pixelData
+        } else
+          di.pixelData
       }
-      JavaUtil.pixelDataToArray(height, width, shorts, flip).map(_.toIndexedSeq).toIndexedSeq
+
+      pixelData
     }
 
     // ----------------------------------------------------------------------------------------
