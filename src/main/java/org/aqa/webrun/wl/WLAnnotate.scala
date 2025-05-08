@@ -140,13 +140,14 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
   /**
     * Draw the lines that show where the box has been located.
     */
-  def drawBoxGraphics(graphics: Graphics2D, top: Double, bottom: Double, left: Double, right: Double, color: Color,  inside: Double,outside: Double): Unit = {
+  def drawBoxGraphics(graphics: Graphics2D, top: Double, bottom: Double, left: Double, right: Double, color: Color, inside: Double, outside: Double): Unit = {
     graphics.setColor(color)
     graphics.drawLine(coordinate(left), coordinate(top), coordinate(left), coordinate(bottom)) // vertical line left
     graphics.drawLine(coordinate(right), coordinate(top), coordinate(right), coordinate(bottom)) // vertical line right
     graphics.drawLine(coordinate(left), coordinate(top), coordinate(right), coordinate(top)) // horizontal line top
     graphics.drawLine(coordinate(left), coordinate(bottom), coordinate(right), coordinate(bottom)) // horizontal line bottom
 
+    // draw outer box
     {
       val m = (top - bottom) / (left - right)
       val b = top - (left * m)
@@ -170,6 +171,7 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
       }
     }
 
+    // draw inner box
     {
       val m = (top - bottom) / (right - left)
       val b = top - (right * m)
@@ -193,21 +195,19 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
     }
   }
 
-
-
   /**
-   * Annotate the image with words and numbers.
-   */
+    * Annotate the image with words and numbers.
+    */
   def annotateImage(
-                     png: BufferedImage,
-                     graphics: Graphics2D,
-                     errorScaledX: Double,
-                     errorScaledY: Double,
-                     errorScaledXYCombined: Double,
-                     background: Boolean,
-                     imageName: String,
-                     passLimit_mm: Double
-                   ): WLImageStatus.Value = {
+      png: BufferedImage,
+      graphics: Graphics2D,
+      errorScaledX: Double,
+      errorScaledY: Double,
+      errorScaledXYCombined: Double,
+      background: Boolean,
+      imageName: String,
+      passLimit_mm: Double
+  ): WLImageStatus.Value = {
     def fmt(d: Double) = d.formatted("%6.2f").replaceAll(" ", "")
 
     graphics.setColor(Config.WLTextColor)
@@ -252,9 +252,5 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
 
     passed
   }
-
-
-
-
 
 }

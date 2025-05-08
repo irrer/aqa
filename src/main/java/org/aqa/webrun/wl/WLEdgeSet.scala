@@ -10,4 +10,10 @@ case class WLEdgeSet(top: WLEdge, bottom: WLEdge, left: WLEdge, right: WLEdge) {
     else
       failures.head.edge.left.get
   }
+
+  def unTop: Double = top.pos
+  def unBottom: Double = bottom.pos + (bottom.bounds.y - top.bounds.y)
+  def unLeft: Double = left.pos
+  def unRight: Double = right.pos + (right.bounds.x - left.bounds.x)
+
 }

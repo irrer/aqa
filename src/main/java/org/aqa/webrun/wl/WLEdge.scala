@@ -235,4 +235,12 @@ case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtima
 
   val edge: Either[WLImageStatus.Value, Double] = findEdge()
 
+  def pos: Double = edge.right.get
+
+  def posInt: Int = pos.round.toInt
+
+  def posAbs: Int = (if (vertical) bounds.x else bounds.y) + posInt
+
+  override def toString: String = s"$name: ${if (edge.isRight) pos.toString else edge.left.get.toString}"
+
 }

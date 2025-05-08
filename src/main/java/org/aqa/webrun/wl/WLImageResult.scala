@@ -40,25 +40,26 @@ class Edges(val top: Double, val bottom: Double, val left: Double, val right: Do
   }
 }
 
-class WLImageResult(
-    val imageStatus: WLImageStatus.ImageStatus,
-    boxP: Option[Point],
-    ballP: Option[Point],
-    edgesUnscaled: Option[Edges],
-    boxEdgesP: Option[Edges],
-    val directory: File,
-    val rtimage: AttributeList,
-    val pixels: Option[Array[Array[Float]]],
-    coarseX: Option[(Int, Int)],
-    coarseY: Option[(Int, Int)],
-    brcX: Option[Double],
-    brcY: Option[Double],
-    val badPixelList: Seq[WLBadPixel],
-    val marginalPixelList: Seq[WLBadPixel],
-    val extendedData: ExtendedData,
-    val runReq: WLRunReq
+case class WLImageResult(
+    imageStatus: WLImageStatus.ImageStatus,
+    boxP: Option[Point] = None,
+    ballP: Option[Point] = None,
+    edgesUnscaled: Option[Edges] = None,
+    boxEdgesP: Option[Edges] = None,
+    edgeSet: Option[WLEdgeSet],
+    directory: File,
+    rtimage: AttributeList,
+    pixels: Option[Array[Array[Float]]] = None,
+    coarseX: Option[(Int, Int)] = None,
+    coarseY: Option[(Int, Int)] = None,
+    brcX: Option[Double] = None,
+    brcY: Option[Double] = None,
+    badPixelList: Seq[WLBadPixel],
+    marginalPixelList: Seq[WLBadPixel],
+    extendedData: ExtendedData,
+    runReq: WLRunReq
 ) {
-  val ok: Boolean = (boxP.isDefined) && (ballP.isDefined)
+  val ok: Boolean = boxP.isDefined && (ballP.isDefined)
   val offX: Double = if (ok) boxP.get.x - ballP.get.x else -1
   val offY: Double = if (ok) boxP.get.y - ballP.get.y else -1
   val offXY: Double = if (ok) Math.sqrt((offX * offX) + (offY * offY)) else -1
@@ -85,6 +86,7 @@ class WLImageResult(
 
   private val gantry_deg: Double = Util.gantryAngle(rtimage)
   private val collimator_deg: Double = Util.collimatorAngle(rtimage)
+
   private def angleRoundedTo22_5(angle: Double): Double = (((angle + 3600) / 22.5).round.toInt % 16) * 22.5 // convert to nearest multiple of 22.5 degrees
 
   val gantryRounded_deg: Int = Util.angleRoundedTo90(gantry_deg)
@@ -125,26 +127,36 @@ class WLImageResult(
 
   val gantryAngle: Int = Util.angleRoundedTo90(Util.gantryAngle(rtimage)) //attrFloat(TagByName.GantryAngle)
 
-  private def left_pix: Double = edgesUnscaled.get.left + coarseX.get._1
-  private def right_pix: Double = edgesUnscaled.get.right + coarseX.get._1
-  private def top_pix: Double = edgesUnscaled.get.top + coarseY.get._1
-  private def bottom_pix: Double = edgesUnscaled.get.bottom + coarseY.get._1
-
+  // @formatter:off
+  private def left_pix  : Double = edgeSet.get.  left.pos + edgeSet.get.  left.bounds.x
+  private def right_pix : Double = edgeSet.get. right.pos + edgeSet.get. right.bounds.x
+  private def top_pix   : Double = edgeSet.get.   top.pos + edgeSet.get.   top.bounds.y
+  private def bottom_pix: Double = edgeSet.get.bottom.pos + edgeSet.get.bottom.bounds.y
+  // @formatter:on
   private def left_mm: Double = trans.pix2IsoCoordX(left_pix)
+
   private def right_mm: Double = trans.pix2IsoCoordX(right_pix)
+
   private def top_mm: Double = trans.pix2IsoCoordY(top_pix)
+
   private def bottom_mm: Double = trans.pix2IsoCoordY(bottom_pix)
 
   private def ballX_pix: Double = brcX.get + coarseX.get._1
+
   private def ballY_pix: Double = brcY.get + coarseY.get._1
 
   private def ballCenter_mm: Point2D.Double = trans.pix2Iso(ballX_pix, ballY_pix)
+
   private def boxCenterX_pix: Double = (right_pix + left_pix) / 2.0
+
   private def boxCenterY_pix: Double = (bottom_pix + top_pix) / 2.0
 
   private def boxCenter_mm: Point2D.Double = trans.pix2Iso(boxCenterX_pix, boxCenterY_pix)
+
   private def offsetX_mm: Double = boxCenter_mm.getX - ballCenter_mm.getX
+
   private def offsetY_mm: Double = boxCenter_mm.getY - ballCenter_mm.getY
+
   private def offset_mm: Double = Math.sqrt((offsetX_mm * offsetX_mm) + (offsetY_mm * offsetY_mm))
 
   override def toString: String = {
@@ -155,7 +167,9 @@ class WLImageResult(
       else
         "" +
           "    " + name + " pixels: " + list.size + "\n" +
-          list.foldLeft("")((t, bad) => { t + "    " + bad + "\n" })
+          list.foldLeft("")((t, bad) => {
+            t + "    " + bad + "\n"
+          })
     }
 
     def opt(dFun: () => Double): String = {
@@ -166,6 +180,7 @@ class WLImageResult(
       }
     }
 
+    /*
     "" +
       "    Directory: " + directory.getAbsolutePath + "\n" +
       s"    Status: $imageStatus\n" +
@@ -187,6 +202,8 @@ class WLImageResult(
       s"    offset         iso mm: ${opt(offset_mm _)}\n" +
       badPixelListToString(badPixelList, "bad") +
       badPixelListToString(marginalPixelList, "marginal")
+     */
+    ""
   }
 
   val beamName: Option[String] = {
@@ -197,9 +214,10 @@ class WLImageResult(
   }
 
   /**
-    * Construct a database object from these results.
-    * @return database row content
-    */
+   * Construct a database object from these results.
+   *
+   * @return database row content
+   */
   def toWinstonLutz: WinstonLutz = {
 
     val planned = if (runReq.rtplan.isDefined) Some(PlannedRectangle(rtplan = runReq.rtplan.get, rtimage)) else None
@@ -207,7 +225,7 @@ class WLImageResult(
     val rtplanUID = {
       Phase2Util.referencedPlanUIDOpt(rtimage) match {
         case Some(uid) => uid
-        case _         => ""
+        case _ => ""
       }
     }
 

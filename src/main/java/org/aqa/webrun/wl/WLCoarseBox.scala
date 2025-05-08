@@ -26,18 +26,6 @@ case class WLCoarseBox(image: DicomImage, trans: IsoImagePlaneTranslator) extend
 
     val halfPenumbra = resolution(Config.WLBoxEdgeTolerance_mm).round.toInt
 
-    if (true) {
-      val min = profile.min
-      val max = profile.max
-      val r = (max - min) / 10
-
-      val norm = profile.map(v => ((v - min) / r).toInt)
-
-      val text = norm.mkString("\n")
-      Trace.trace(s"\n\n${norm.min} ${norm.max}\n$text\n")
-      Trace.trace()
-    }
-
     val mid = (profile.max + profile.min) / 2
 
     val start = profile.indexWhere(_ <= mid) // get the start of the box

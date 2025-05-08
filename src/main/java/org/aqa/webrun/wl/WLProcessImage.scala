@@ -5,7 +5,6 @@ import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.MachineWL
@@ -16,6 +15,7 @@ import org.opensourcephysics.numerics.CubicSpline
 import java.awt.image.BufferedImage
 import java.awt.Color
 import java.awt.Graphics2D
+import java.awt.Rectangle
 import java.io.File
 import java.io.PrintStream
 import java.text.SimpleDateFormat
@@ -93,6 +93,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       ballP = None,
       edgesUnscaled = None,
       boxEdgesP = None,
+      edgeSet = None,
       directory = subDir,
       rtimage = rtimage,
       pixels = None,
@@ -303,7 +304,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     }
 
     /*
-     * Copy a 2 dimensional sub-array from the given 2 dimensional array.
+     * Copy a 2-dimensional sub-array from the given 2-dimensional array.
      *
      * @param pixIn: array of data points
      *
@@ -675,7 +676,12 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     /**
       * Locate the box to sub-pixel accuracy.
       */
-    def fineBoxLocate(areaOfInterest: IndexedSeq[IndexedSeq[Float]], rawExtremeAveragesRange: Double): Either[WLImageStatus.Value, Edges] = {
+    def fineBoxLocate(
+        areaOfInterest: IndexedSeq[IndexedSeq[Float]],
+        rawExtremeAveragesRange: Double,
+        pixels: IndexedSeq[IndexedSeq[Float]],
+        aoiBounds: Rectangle
+    ): Either[WLImageStatus.Value, WLEdgeSet] = {
 
       if ( // do sanity check to see if the box is reasonably sized.
         areaOfInterest.isEmpty ||
@@ -688,21 +694,39 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         try {
           val height = areaOfInterest.length
           val width = areaOfInterest(0).length
+          // @formatter:off
+          val topArea    = subSection(areaOfInterest,         tol2, width - tol4,             0,          tol2)
+          val bottomArea = subSection(areaOfInterest,         tol2, width - tol4, height - tol2,          tol2)
+          val leftArea   = subSection(areaOfInterest,            0,         tol2,          tol2, height - tol4)
+          val rightArea  = subSection(areaOfInterest, width - tol2,         tol2,          tol2, height - tol4)
 
-          val topArea = subSection(areaOfInterest, tol2, width - tol4, 0, tol2)
-          val bottomArea = subSection(areaOfInterest, tol2, width - tol4, height - tol2, tol2)
-          val leftArea = subSection(areaOfInterest, 0, tol2, tol2, height - tol4)
-          val rightArea = subSection(areaOfInterest, width - tol2, tol2, tol2, height - tol4)
+          val eTop       = findEdge(   topArea, vertical = false,    "top", rawExtremeAveragesRange)
+          val eBottom    = findEdge(bottomArea, vertical = false, "bottom", rawExtremeAveragesRange)
+          val eLeft      = findEdge(  leftArea, vertical =  true,   "left", rawExtremeAveragesRange)
+          val eRight     = findEdge( rightArea, vertical =  true,  "right", rawExtremeAveragesRange)
+          // @formatter:on
+          val x = aoiBounds.x
+          val y = aoiBounds.y
 
-          val eTop = findEdge(topArea, vertical = false, "top", rawExtremeAveragesRange)
-          val eBottom = findEdge(bottomArea, vertical = false, "bottom", rawExtremeAveragesRange)
-          val eLeft = findEdge(leftArea, vertical = true, "left", rawExtremeAveragesRange)
-          val eRight = findEdge(rightArea, vertical = true, "right", rawExtremeAveragesRange)
+          // @formatter:off
+          val topAOI    = new Rectangle(x + tol2        , y + 0            , width - tol4, tol2         )
+          val bottomAOI = new Rectangle(x + tol2        , y + height - tol2, width - tol4, tol2         )
+          val leftAOI   = new Rectangle(x + 0           , y + tol2         , tol2        , height - tol4)
+          val rightAOI  = new Rectangle(x + width - tol2, y + tol2         , tol2        , height - tol4)
+
+          val di = new DicomImage(pixels)
+          val wlTop    = WLEdge("top"   , vertical = false, di, rtimage,    topAOI)
+          val wlBottom = WLEdge("bottom", vertical = false, di, rtimage, bottomAOI)
+          val wlLeft   = WLEdge("left"  , vertical = true , di, rtimage,   leftAOI)
+          val wlRight  = WLEdge("right" , vertical = true , di, rtimage,  rightAOI)
+          // @formatter:on
+
+          val edgeSet = WLEdgeSet(wlTop, wlBottom, wlLeft, wlRight)
 
           def edgeStatus(e: Either[WLImageStatus.Value, Double]): WLImageStatus.Value = {
             e match {
               case Right(_) => WLImageStatus.Passed
-              case Left(s)  => s
+              case Left(s) => s
             }
           }
 
@@ -720,7 +744,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
             val edges = new Edges(edgeTop, edgeBottom, edgeLeft, edgeRight)
             //diagnosticMessage(s"\n\nUnscaled box dimensions in pixels\n$edges")
             //diagnostics.write(edges.toString.getBytes)
-            Right(edges)
+            Right(edgeSet)
             // Right(edges2) // TODO new algorithm?
           } else
             Left(status)
@@ -732,10 +756,10 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     }
 
     /**
-      * Construct the pixel data destined to be put in the DICOM image with graphics and annotations.  This is done by
-      * taking a buffered image that is all black except for the graphics and annotations, and then mapping that onto
-      * a scaled up version of the original pixels.
-      */
+     * Construct the pixel data destined to be put in the DICOM image with graphics and annotations.  This is done by
+     * taking a buffered image that is all black except for the graphics and annotations, and then mapping that onto
+     * a scaled up version of the original pixels.
+     */
     def constructPixelData(blackPng: BufferedImage, areaOfInterest: IndexedSeq[IndexedSeq[Float]]): Array[Array[Float]] = {
       val min = areaOfInterest.flatten.min
       val max = areaOfInterest.flatten.max
@@ -760,10 +784,10 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     }
 
     /**
-      * Do a sanity check to see of the coarsely located box is approximately at the
-      * position and of the size that is expected.  If so, return true.  If not, log
-      * a diagnostic message and return false.
-      */
+     * Do a sanity check to see of the coarsely located box is approximately at the
+     * position and of the size that is expected.  If so, return true.  If not, log
+     * a diagnostic message and return false.
+     */
     /*
     def coarseBoxLocationIsGood(coarseX: (Int, Int), coarseY: (Int, Int)): Boolean = {
       val boxPositionVariance = Config.WLBoxPositionFactor * Config.WLBoxSize
@@ -798,23 +822,23 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
      */
 
     /**
-      * Determine whether the area inside the box is flat.  Do this by determine the ratio of the
-      * range of the box pixels over the range of the ball pixels.  If this number is too large,
-      * then the area is too flat to contain a ball.
-      */
-    def ballAreaIsFlat(boxArea: IndexedSeq[IndexedSeq[Float]], ballEdges: Edges): Boolean = {
+     * Determine whether the area inside the box is flat.  Do this by determine the ratio of the
+     * range of the box pixels over the range of the ball pixels.  If this number is too large,
+     * then the area is too flat to contain a ball.
+     */
+    def ballAreaIsFlat(boxArea: IndexedSeq[IndexedSeq[Float]], edgeSet: WLEdgeSet): Boolean = {
       val boxWd = boxArea.head.length
       val boxHt = boxArea.length
 
       // Get the pixel that are not part of the ball
       val backgroundPixels = {
-        // delineate a border that is half way between the outer edge of the ball and edge of
+        // delineate a border that is half-way between the outer edge of the ball and edge of
         // the box.  Use the pixels in this border to get a good sample of background pixels that
         // do not include the ball.
-        val xMin = (ballEdges.left / 2).toInt
-        val xMax = (ballEdges.right + ((boxWd - ballEdges.right) / 2)).toInt
-        val yMin = (ballEdges.top / 2).toInt
-        val yMax = (ballEdges.bottom + ((boxHt - ballEdges.bottom) / 2)).toInt
+        val xMin = (edgeSet.left.pos / 2).toInt
+        val xMax = (edgeSet.right.pos + ((boxWd - edgeSet.right.pos) / 2)).toInt
+        val yMin = (edgeSet.top.pos / 2).toInt
+        val yMax = (edgeSet.bottom.pos + ((boxHt - edgeSet.bottom.pos) / 2)).toInt
         for (
           x <- 0 until boxWd;
           y <- 0 until boxHt
@@ -845,34 +869,38 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         diagnosticMessage(msg)
         false
       }
+
+      false // TODO disables test
     }
 
-    def correctUnscaledEdges(edgesUnscaled: Edges): Edges = {
+    def correctUnscaledEdges(edgesUnscaled: WLEdgeSet): Edges = {
       def scaleX(x: Double): Double = (x * ResolutionX) / ResolutionX
+
       def scaleY(y: Double): Double = (y * ResolutionY) / ResolutionY
-      val scaled = new Edges(scaleY(edgesUnscaled.top), scaleY(edgesUnscaled.bottom), scaleX(edgesUnscaled.left), scaleX(edgesUnscaled.right))
+
+      val scaled = new Edges(scaleY(edgesUnscaled.top.pos), scaleY(edgesUnscaled.bottom.pos), scaleX(edgesUnscaled.left.pos), scaleX(edgesUnscaled.right.pos))
       scaled
     }
 
     /**
-      * After locating the center of the box and the ball with some confidence, process the results.  The only
-      * error that is expected to occur after this point is that the distance between the centers is too large.
-      */
+     * After locating the center of the box and the ball with some confidence, process the results.  The only
+     * error that is expected to occur after this point is that the distance between the centers is too large.
+     */
     def processLocation(
-        areaOfInterest: IndexedSeq[IndexedSeq[Float]],
-        edgesUnscaled: Edges,
-        ballRelativeCenter: (Double, Double),
-        ballArea: IndexedSeq[IndexedSeq[Float]],
-        coarseX: (Int, Int),
-        coarseY: (Int, Int),
-        brcX: Double,
-        brcY: Double,
-        badPixelList: Seq[WLBadPixel],
-        badPixelListShifted: Seq[WLBadPixel],
-        marginalPixelList: Seq[WLBadPixel],
-        attributeList: AttributeList,
-        runReq: WLRunReq
-    ): WLImageResult = {
+                         areaOfInterest: IndexedSeq[IndexedSeq[Float]],
+                         edgeSet: WLEdgeSet,
+                         ballRelativeCenter: (Double, Double),
+                         ballArea: IndexedSeq[IndexedSeq[Float]],
+                         coarseX: (Int, Int),
+                         coarseY: (Int, Int),
+                         brcX: Double,
+                         brcY: Double,
+                         badPixelList: Seq[WLBadPixel],
+                         badPixelListShifted: Seq[WLBadPixel],
+                         marginalPixelList: Seq[WLBadPixel],
+                         attributeList: AttributeList,
+                         runReq: WLRunReq
+                       ): WLImageResult = {
 
       val ballCenterX = ballRelativeCenter._1
       val ballCenterY = ballRelativeCenter._2
@@ -901,24 +929,26 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
       val bin = 6
       val bout = 6
-      annotate.drawBoxGraphics(normalGraphics, edgesUnscaled.top, edgesUnscaled.bottom, edgesUnscaled.left, edgesUnscaled.right, Config.WLBoxColor, inside = bin, outside = bout)
-      annotate.drawBoxGraphics(brightGraphics, edgesUnscaled.top, edgesUnscaled.bottom, edgesUnscaled.left, edgesUnscaled.right, Config.WLBoxColor, inside = bin, outside = bout)
-      annotate.drawBoxGraphics(blackGraphics, edgesUnscaled.top, edgesUnscaled.bottom, edgesUnscaled.left, edgesUnscaled.right, Config.WLBoxColor, inside = bin, outside = bout)
+
+      def annotateBox(gc: Graphics2D): Unit = {
+        annotate.drawBoxGraphics(gc, edgeSet.unTop, edgeSet.unBottom, edgeSet.unLeft, edgeSet.unRight, Config.WLBoxColor, inside = bin, outside = bout)
+      }
+
+      annotateBox(normalGraphics)
+      annotateBox(brightGraphics)
+      annotateBox(blackGraphics)
 
       val boxShrink = 5
-      val boxUnscaledCorrected = correctUnscaledEdges(edgesUnscaled)
-      val buc = boxUnscaledCorrected
-      // val inner = 24
-      annotate.drawBoxGraphics(normalGraphics, buc.top + boxShrink, buc.bottom - boxShrink, buc.left + boxShrink, buc.right - boxShrink, Config.WLBoxColorCorrected, inside = -1, outside = 0)
-      annotate.drawBoxGraphics(brightGraphics, buc.top + boxShrink, buc.bottom - boxShrink, buc.left + boxShrink, buc.right - boxShrink, Config.WLBoxColorCorrected, inside = -1, outside = 0)
-      annotate.drawBoxGraphics(blackGraphics, buc.top + boxShrink, buc.bottom - boxShrink, buc.left + boxShrink, buc.right - boxShrink, Config.WLBoxColorCorrected, inside = -1, outside = 0)
+      annotate.drawBoxGraphics(normalGraphics, edgeSet.unTop + boxShrink, edgeSet.unBottom - boxShrink, edgeSet.unLeft + boxShrink, edgeSet.unRight - boxShrink, Config.WLBoxColorCorrected, inside = -1, outside = 0)
+      annotate.drawBoxGraphics(brightGraphics, edgeSet.unTop + boxShrink, edgeSet.unBottom - boxShrink, edgeSet.unLeft + boxShrink, edgeSet.unRight - boxShrink, Config.WLBoxColorCorrected, inside = -1, outside = 0)
+      annotate.drawBoxGraphics(blackGraphics, edgeSet.unTop + boxShrink, edgeSet.unBottom - boxShrink, edgeSet.unLeft + boxShrink, edgeSet.unRight - boxShrink, Config.WLBoxColorCorrected, inside = -1, outside = 0)
 
-      annotate.drawBoxBallOffset(normalGraphics, (ballCenterX, ballCenterY), ((buc.left + buc.right) / 2, (buc.top + buc.bottom) / 2))
-      annotate.drawBoxBallOffset(brightGraphics, (ballCenterX, ballCenterY), ((buc.left + buc.right) / 2, (buc.top + buc.bottom) / 2))
-      annotate.drawBoxBallOffset(blackGraphics, (ballCenterX, ballCenterY), ((buc.left + buc.right) / 2, (buc.top + buc.bottom) / 2))
+      annotate.drawBoxBallOffset(normalGraphics, (ballCenterX, ballCenterY), ((edgeSet.unLeft + edgeSet.unRight) / 2, (edgeSet.unTop + edgeSet.unBottom) / 2))
+      annotate.drawBoxBallOffset(brightGraphics, (ballCenterX, ballCenterY), ((edgeSet.unLeft + edgeSet.unRight) / 2, (edgeSet.unTop + edgeSet.unBottom) / 2))
+      annotate.drawBoxBallOffset(blackGraphics, (ballCenterX, ballCenterY), ((edgeSet.unLeft + edgeSet.unRight) / 2, (edgeSet.unTop + edgeSet.unBottom) / 2))
 
-      val boxUnscaledCorrectedCenterX = (boxUnscaledCorrected.left + boxUnscaledCorrected.right) / 2
-      val boxUnscaledCorrectedCenterY = (boxUnscaledCorrected.top + boxUnscaledCorrected.bottom) / 2
+      val boxUnscaledCorrectedCenterX = (edgeSet.unLeft + edgeSet.unRight) / 2
+      val boxUnscaledCorrectedCenterY = (edgeSet.unTop + edgeSet.unBottom) / 2
 
       val boxCenterScaledX = boxUnscaledCorrectedCenterX * ResolutionX
       val boxCenterScaledY = boxUnscaledCorrectedCenterY * ResolutionY
@@ -945,10 +975,10 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       val boxPoint = new Point(boxCenterScaledX, boxCenterScaledY)
       val ballPoint = new Point(ballCenterScaledX, ballCenterScaledY)
       val edgesScaled = new Edges(
-        edgesUnscaled.top * ResolutionY,
-        edgesUnscaled.bottom * ResolutionX,
-        edgesUnscaled.left * ResolutionX,
-        edgesUnscaled.right * ResolutionX
+        edgeSet.top.pos * ResolutionY,
+        edgeSet.bottom.pos * ResolutionY,
+        edgeSet.left.pos * ResolutionX,
+        edgeSet.right.pos * ResolutionX
       )
 
       //diagnosticMessage("\n\nScaled box dimensions in mm")
@@ -971,8 +1001,9 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         imageStatus = passed,
         boxP = Some(boxPoint),
         ballP = Some(ballPoint),
-        edgesUnscaled = Some(edgesUnscaled),
+        edgesUnscaled = None,
         boxEdgesP = Some(edgesScaled),
+        edgeSet = Some(edgeSet),
         directory = subDir,
         // extendedData,
         rtimage = attributeList,
@@ -1022,9 +1053,10 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     /**
      * Get the raw pixels.  Ensure that the majority of the pixels are large.  If they are
      * not, then invert pixels so that the small become large and the large become small.
+     *
      * @return Pixel array.
      */
-    def fetchRawPixels(): IndexedSeq[IndexedSeq[Float]] = {
+    def fetchPixels(): IndexedSeq[IndexedSeq[Float]] = {
 
       val di = new DicomImage(rtimage)
 
@@ -1037,9 +1069,12 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
       val belowMeanPixelCount = sorted.indexWhere(_ > mean)
 
+      val minPlusMax = di.minPixelValue + di.maxPixelValue
+
       val pixelData: IndexedSeq[IndexedSeq[Float]] = {
         if (belowMeanPixelCount > (sorted.size / 2)) {
-          def invert(pix: Float) = di.maxPixelValue - pix
+          def invert(pix: Float): Float = minPlusMax - pix
+
           val invertedDicomImage = di.fun1(invert)
           invertedDicomImage.pixelData
         } else
@@ -1052,46 +1087,29 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     // ----------------------------------------------------------------------------------------
 
     try {
-      val rawPixels = fetchRawPixels()
-      writeImageLater(toPngScaled(rawPixels, 1), "original")
+      val uncorrectedPixels = fetchPixels()
+      writeImageLater(toPngScaled(uncorrectedPixels, 1), "original")
       writeDicomAsBinaryDicom(rtimage)
       writeDicomAsText(rtimage)
 
       // Seq of raw distinct pixel values sorted by value
-      val rawDistinctSortedList = rawPixels.flatten.toList.distinct.sorted
+      val rawDistinctSortedList = uncorrectedPixels.flatten.toList.distinct.sorted
 
       if (rawDistinctSortedList.size < Config.WLMinimumDistinctPixelValues) {
-        new WLImageResult(
-          imageStatus = WLImageStatus.BoxNotFound,
-          boxP = None,
-          ballP = None,
-          edgesUnscaled = None,
-          boxEdgesP = None,
-          directory = subDir,
-          rtimage = rtimage,
-          pixels = None,
-          coarseX = None,
-          coarseY = None,
-          brcX = None,
-          brcY = None,
-          badPixelList = Seq(),
-          marginalPixelList = Seq(),
-          extendedData = extendedData,
-          runReq
-        )
+        makeFailedWLImageStatus(WLImageStatus.BoxNotFound)
       } else {
 
         /* Raw pixels with bad pixels set to average pixel value */
-        val badPixelListUncorrected = findWLBadPixels(rawPixels, Config.WLBadPixelGapLimit, rawDistinctSortedList)
+        val badPixelListUncorrected = findWLBadPixels(uncorrectedPixels, Config.WLBadPixelGapLimit, rawDistinctSortedList)
         logger.info("Number of bad pixels: " + badPixelListUncorrected.size)
 
-        val marginalPixelListUncorrected = findWLBadPixels(rawPixels, Config.WLMarginalPixelGapLimit, rawDistinctSortedList)
+        val marginalPixelListUncorrected = findWLBadPixels(uncorrectedPixels, Config.WLMarginalPixelGapLimit, rawDistinctSortedList)
         logger.info("Number of marginal pixels: " + marginalPixelListUncorrected.size)
 
-        val badPixelList = uncorrectedWLBadPixelsToWLBadPixels(rawPixels, badPixelListUncorrected)
-        val marginalPixelList = uncorrectedWLBadPixelsToWLBadPixels(rawPixels, marginalPixelListUncorrected).filter(m => badPixelIsNotOnList(m, badPixelList))
+        val badPixelList = uncorrectedWLBadPixelsToWLBadPixels(uncorrectedPixels, badPixelListUncorrected)
+        val marginalPixelList = uncorrectedWLBadPixelsToWLBadPixels(uncorrectedPixels, marginalPixelListUncorrected).filter(m => badPixelIsNotOnList(m, badPixelList))
 
-        val pixels = correctWLBadPixels(rawPixels, badPixelList)
+        val pixels = correctWLBadPixels(uncorrectedPixels, badPixelList)
 
         val rawExtremeAveragesRange = calcExtremeAveragesRange(pixels)
 
@@ -1105,16 +1123,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
         val coarseBox = WLCoarseBox(new DicomImage(pixels), trans).locate()
 
-        if (true) {
-          val x2 = coarseBox.x + coarseBox.width
-          val y2 = coarseBox.y + coarseBox.height
-          Trace.trace(
-            s"coarseX: $coarseX      coarseY: $coarseY" +
-              s"    coarseBox: $coarseBox" +
-              s"    x2: $x2  y2: $y2"
-          )
-        }
-
         // Shift the bad pixels so that they point to the proper place in the area of interest (AOI)
         val badPixelListShifted = badPixelList.map(b => new WLBadPixel(b.x - coarseX._1, b.y - coarseY._1, b.rawValue, b.correctedValue, b.adjacentValidValueList))
 
@@ -1122,24 +1130,32 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
         val areaOfInterest = subSection(pixels, coarseX._1, coarseX._2 - coarseX._1, coarseY._1, coarseY._2 - coarseY._1)
 
-        val fineBoxLocateResult = fineBoxLocate(areaOfInterest, rawExtremeAveragesRange)
+        val fineBoxLocateResult = fineBoxLocate(areaOfInterest, rawExtremeAveragesRange, pixels, coarseBox)
 
         val result: WLImageResult = fineBoxLocateResult match {
           case Left(status) => makeFailedWLImageStatus(status)
-          case Right(edgesUnscaled) =>
+          case Right(edgeSet) =>
+            val width = areaOfInterest.head.size
+            val height = areaOfInterest.size
+
+            val oldTop = edgeSet.top.pos
+            val oldBottom = edgeSet.bottom.pos + height - tol2
+            val oldLeft = edgeSet.left.pos
+            val oldRight = edgeSet.right.pos + width - tol2
+
             val ballArea = subSection(
               areaOfInterest,
-              edgesUnscaled.left.toInt + tol,
-              (edgesUnscaled.right - edgesUnscaled.left).toInt - tol2,
-              edgesUnscaled.top.toInt + tol,
-              (edgesUnscaled.bottom - edgesUnscaled.top).toInt - tol2
+              oldLeft.toInt + tol,
+              (oldRight - oldLeft).toInt - tol2,
+              oldTop.toInt + tol,
+              (oldBottom - oldTop).toInt - tol2
             )
             showBallBackgroundNoise(ballArea, "ball_background")
             writeImageLater(toPng(ballArea), "ball_before_normalization")
 
             showBallBackgroundNoise(normalizeArea(ballArea), "normalized_ball_background")
 
-            if (ballAreaIsFlat(areaOfInterest, edgesUnscaled)) {
+            if (ballAreaIsFlat(areaOfInterest, edgeSet)) {
               makeFailedWLImageStatus(WLImageStatus.BallMissing)
             } else {
               findBallCenter(areaOfInterest, ballArea) match {
@@ -1149,7 +1165,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
                   val ir = processLocation(
                     areaOfInterest = areaOfInterest,
-                    edgesUnscaled = edgesUnscaled,
+                    edgeSet = edgeSet,
                     ballRelativeCenter = ballRelativeCenter,
                     ballArea = ballArea,
                     coarseX = coarseX,
@@ -1209,8 +1225,8 @@ object WLProcessImage extends org.aqa.Logging {
   //  class SearchRange(val lo: Double, val center: Double, val hi: Double) {}
 
   /**
-    * Convert a list to a cubic spline
-    */
+   * Convert a list to a cubic spline
+   */
   def toCubicSpline(data: IndexedSeq[Float]): CubicSpline = {
     val cs = new CubicSpline(data.indices.map(_.toDouble).toArray, data.map(_.toDouble).toArray)
     cs
@@ -1233,13 +1249,13 @@ object WLProcessImage extends org.aqa.Logging {
   }
 
   /**
-    * Make a list of the sum of each row.
-    */
+   * Make a list of the sum of each row.
+   */
   def rowSum(pix: IndexedSeq[IndexedSeq[Float]]): IndexedSeq[Float] = pix.map(row => row.sum)
 
   /**
-    * Make a list of the sum of each column.
-    */
+   * Make a list of the sum of each column.
+   */
   def colSum(pix: IndexedSeq[IndexedSeq[Float]]): IndexedSeq[Float] = {
     def oneColSum(c: Int) = pix.indices.map(y => pix(y)(c)).sum
 
