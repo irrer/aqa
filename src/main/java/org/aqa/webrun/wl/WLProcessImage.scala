@@ -521,14 +521,27 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     def showBallBackgroundNoise(areaOfInterest: IndexedSeq[IndexedSeq[Float]], name: String): Unit = {
       val aoiWidth = areaOfInterest.head.length
       val aoiHeight = areaOfInterest.length
-      val aoi = subSection(areaOfInterest, 0, aoiWidth, 0, aoiHeight)
+      val aoi = subSection(areaOfInterest, 0, aoiWidth, 0, aoiHeight).map(_.toArray).toArray
 
-      val min = aoi.flatten.min
-      val max = aoi.flatten.max
+      val all = aoi.flatten
+      val min = all.min
+      val max = all.max
       val limit = ((max - min) * 0.08) + min
-      val aoiArray = list2Array(aoi).map(_.toArray).toArray
-      for (y <- 0 until aoiHeight) for (x <- 0 until aoiWidth) aoiArray(y)(x) = if (aoi(y)(x) > limit) min else aoi(y)(x)
-      Util.writePng(toPng(aoi), new File(subDir, name + ".png"))
+
+      def doRow(y: Int): IndexedSeq[Float] = {
+        def doPix(pix: Float): Float = {
+          if (pix > limit)
+            min
+          else
+            pix
+        }
+
+        areaOfInterest(y).map(doPix)
+      }
+
+      val background = (0 until aoiHeight).map(doRow)
+
+      Util.writePng(toPng(background), new File(subDir, name + ".png"))
     }
 
     /**
