@@ -30,6 +30,10 @@ case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtima
   // equivalent to one bit of precision.
   private val PRECISION = 30 // TODO max benefit is at 60.  Replace with LocateEdge when refactoring is complete
 
+  val pixIn:IndexedSeq[IndexedSeq[Float]] = aoi.pixelData
+
+  val sum: IndexedSeq[Float] = if (vertical) colSum(pixIn) else rowSum(pixIn)
+
   private def pixelValueRange(img: DicomImage): Double = {
     val ordered = img.pixelData.flatten.sorted
     val count = Config.WLAveragePixelsForBrightness
@@ -43,8 +47,6 @@ case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtima
 
   private def oldFindEdge(): Double = {
 
-    val pixIn = aoi.pixelData
-    val sum = if (vertical) colSum(pixIn) else rowSum(pixIn)
     val scaledSum = unitize(sum)
     val spline = toCubicSpline(scaledSum)
 

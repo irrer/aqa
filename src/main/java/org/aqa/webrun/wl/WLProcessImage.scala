@@ -35,7 +35,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
   import org.aqa.webrun.wl.WLProcessImage.colSum
   import org.aqa.webrun.wl.WLProcessImage.rowSum
-  import org.aqa.webrun.wl.WLProcessImage.toCubicSpline
   import org.aqa.webrun.wl.WLProcessImage.toPngScaled
 
   private val wlParameters = MachineWL.getMachineWLOrDefault(extendedData.machine.machinePK.get)
@@ -87,7 +86,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
   }
 
   private def makeFailedWLImageStatus(imageStatus: WLImageStatus.Value): WLImageResult = {
-    new WLImageResult(
+    WLImageResult(
       imageStatus = imageStatus,
       boxP = None,
       ballP = None,
@@ -112,17 +111,12 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
   def process: WLImageResult = {
     logger.info("Start constructing ProcessImage for " + Util.sopOfAl(rtimage))
 
-    // Number of binary search iterations before determining that the edge has
-    // been measured to a sufficient degree.  Each iteration is approximately
-    // equivalent to one bit of precision.
-    val PRECISION = 30
-
     /** Convert a value in mm to pixels. */
     def toPixels(mm: Double): Int = ((mm / ResolutionX) + 0.5).toInt
 
     // tolerance in pixels for how far the search for the fine edge of
     // box should look, given the coarse position of the edge.  Also used
-    // determine where an edge of the box finishes, so as to define the
+    // determine where an edge of the box finishes, to define the
     // area to look for the ball.
     val tol: Int = toPixels(Config.WLBoxEdgeTolerance_mm)
     val tol2 = tol * 2
@@ -226,7 +220,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     }
 
     def uncorrectedWLBadPixelsToWLBadPixels(rawPixelData: IndexedSeq[IndexedSeq[Float]], badPixelList: Seq[UncorrectedWLBadPixel]): Seq[WLBadPixel] = {
-      // A pixel is good if its coordinates are valid and it is not on the bad pixel list
+      // A pixel is good if its coordinates are valid, and it is not on the bad pixel list
       val height = rawPixelData.length
       val width = rawPixelData(0).length
 
@@ -283,21 +277,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       png
     }
 
-    def makePngFile(name: String): File = {
-      val pngName =
-        if (name.endsWith(WLgenHtml.IMAGE_FILE_SUFFIX)) name
-        else {
-          name + WLgenHtml.IMAGE_FILE_SUFFIX
-        }
-      new File(subDir, pngName)
-    }
-
-    def writeImageLater(img: BufferedImage, name: String): Unit = WLProcessImage.writeImage(img, makePngFile(name))
-
-    def bound(x: Double, lo: Int, hi: Int) = {
-      if (x < lo) lo else if (x > hi) hi else x
-    }
-
     def stdDev(values: IndexedSeq[Float]): Double = {
       val avg = values.sum / values.length
       Math.sqrt(values.map(x => (x - avg) * (x - avg)).sum / values.length)
@@ -344,43 +323,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
       val pixY = range(pixIn, y, yHeight)
       pixY.map(row => range(row, x, xWidth))
-    }
-
-    /**
-      * Save the given edge image, drawing the cubic spline on it to visualize the gradient of the edge.  This is just
-      * a debugging tool.
-      */
-    def saveEdgeImage(pixIn: IndexedSeq[IndexedSeq[Float]], vertical: Boolean, name: String, spline: CubicSpline): Unit = {
-      val length = if (vertical) pixIn(0).length else pixIn.length
-      val png = toPng(pixIn)
-      val width = png.getWidth
-      val height = png.getHeight
-
-      if (vertical) {
-        for (x <- 0 until width) {
-          val xd: Double = (x.toDouble / (width + SCALE)) * length
-          val y = (spline.evaluate(xd) * height).toInt
-          png.setRGB(x, bound(y, 0, height - 1).toInt, Config.WLSplineColor.getRGB)
-        }
-      } else {
-        for (x <- 0 until height) {
-          val xd: Double = (x.toDouble / (height + SCALE)) * length
-          val y = (spline.evaluate(xd) * width).toInt
-          png.setRGB(bound(y, 0, width - 1).toInt, x, Config.WLSplineColor.getRGB)
-        }
-      }
-
-      val graphic = png.getGraphics
-      graphic.setColor(Config.WLSplineColor)
-      if (vertical) {
-        val sum = WLProcessImage.unitize(rowSum(pixIn)).map(x => x * pixIn.head.length)
-        sum.zipWithIndex.foreach(x => graphic.drawLine(x._1.toInt * SCALE + SCALE / 2, x._2 * SCALE, x._1.toInt * SCALE + SCALE / 2, x._2 * SCALE + SCALE))
-      } else {
-        val sum = WLProcessImage.unitize(colSum(pixIn)).map(y => y * pixIn.length)
-        sum.zipWithIndex.foreach(y => graphic.drawLine(y._2 * SCALE, y._1.toInt * SCALE + SCALE / 2, y._2 * SCALE + SCALE, y._1.toInt * SCALE + SCALE / 2))
-      }
-
-      writeImageLater(png, "edge_" + name)
     }
 
     /**
@@ -431,54 +373,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     }
 
     /**
-      * Find an edge of the box as accurately as possible by drawing a cubic spline across
-      * the edge and then finding the midpoint of that spline.  Find the midpoint using a binary
-      * search.
-      */
-    def findEdge(pixIn: IndexedSeq[IndexedSeq[Float]], vertical: Boolean, name: String, rawExtremeAveragesRange: Double): Either[WLImageStatus.Value, Double] = {
-      val length = if (vertical) pixIn(0).length else pixIn.length
-      val sum = if (vertical) colSum(pixIn) else rowSum(pixIn)
-      val scaledSum = WLProcessImage.unitize(sum)
-      val spline = toCubicSpline(scaledSum)
-
-      saveEdgeImage(pixIn, vertical, name, spline)
-      diagnosticMessage("\n\n")
-      val terminalEdgeSlopes = getTerminalEdgeSlopes(spline, scaledSum.length)
-      showEdgeStats(pixIn, vertical, name, terminalEdgeSlopes)
-
-      val increasing = scaledSum(0) < scaledSum(length - 1)
-
-      @tailrec
-      def center(min: Double, max: Double, depth: Int): Double = {
-        val mid = (max + min) / 2
-        val guess = spline.evaluate(mid)
-        if (depth > 0) {
-          if ((increasing && (guess < 0.5)) || ((!increasing) && (guess > 0.5)))
-            center(mid, max, depth - 1)
-          else
-            center(min, mid, depth - 1)
-        } else mid
-      }
-
-      // Ensure that the brightest and dimmest pixel in the edge are approximately
-      // as dim and bright as the dimmest and brightest in the entire image
-
-      val brightnessRange = calcExtremeAveragesRange(pixIn)
-      val pct = ((rawExtremeAveragesRange - brightnessRange).abs / rawExtremeAveragesRange) * 100.0
-      val brightnessMessage = "edge brightness   Max percent diff range allowed: " + Config.WLMaxAllowedBrightnessRangePercentDifference +
-        "  image brightness range: " + rawExtremeAveragesRange.formatted("%7.2f") +
-        name.format("%8s") + " edge brightness range: " + brightnessRange.formatted("%7.2f") + "    percent diff: " + pct.formatted("%7.3f")
-      diagnosticMessage(brightnessMessage)
-
-      if (pct >= Config.WLMaxAllowedBrightnessRangePercentDifference) {
-        val errorMsg =
-          "Edge " + name + " failed to meet criteria for brightness range of " + Config.WLMaxAllowedBrightnessRangePercentDifference + " percent.  " + brightnessMessage + "    Required percent" + Config.WLMaxAllowedBrightnessRangePercentDifference
-        logger.error(errorMsg)
-        Left(WLImageStatus.BallAreaNoisy)
-      } else Right(center(0, sum.length - 1, PRECISION))
-    }
-
-    /**
       * Find the center of the ball within the given area.  Return the
       * coordinates relative to the area given.
       */
@@ -506,7 +400,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
           val png = toPng(approxAoi)
           val annotate = new WLAnnotate(SCALE, BALL_RADIUS)
           annotate.drawCross(png.getGraphics.asInstanceOf[Graphics2D], center._1, center._2, 1)
-          writeImageLater(png, "ball_coarse")
+          Util.writePng(png, new File(subDir, "ball_coarse.png"))
         }
 
         val maxRow = aoiMax.zipWithIndex.foldLeft((aoiMax.head, 0))((c, m) => if (m._1.max > c._1.max) m else c)
@@ -580,7 +474,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         val fineX = centerOfMass(cSpline, cSum.length)
         val fineY = centerOfMass(rSpline, rSum.length)
         val image = annotate.saveFineLocatedImage(aoiFine.map(_.toIndexedSeq).toIndexedSeq, fineX, fineY)
-        writeImageLater(image, "ball_fine")
+        Util.writePng(image, new File(subDir, "ball_fine.png"))
 
         if (singleMax(cSpline, cSum) && singleMax(rSpline, rSum)) {
           diagnosticMessage("Ball fine location relative to area of interest in pixels: " + fineX.center + ", " + fineY.center)
@@ -595,8 +489,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       val topEdge = coarseCenter._2 + tol2 - radius
       val ballRoi = subSection(areaOfInterest, leftEdge, radius * 2, topEdge, radius * 2)
 
-      writeImageLater(toPng(normalizeArea(ballRoi)), "ballRoiNormalized")
-      writeImageLater(toPng(ballRoi), "ballRoiRaw")
+      Util.writePng(toPng(normalizeArea(ballRoi)), new File(subDir, "ballRoiNormalized.png"))
+      Util.writePng(toPng(ballRoi), new File(subDir, "ballRoiRaw.png"))
 
       fineBallLocate(ballRoi) match {
         case Some(loc: (Double, Double)) => Some(loc._1 + leftEdge, loc._2 + topEdge)
@@ -634,7 +528,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       val limit = ((max - min) * 0.08) + min
       val aoiArray = list2Array(aoi).map(_.toArray).toArray
       for (y <- 0 until aoiHeight) for (x <- 0 until aoiWidth) aoiArray(y)(x) = if (aoi(y)(x) > limit) min else aoi(y)(x)
-      writeImageLater(toPng(aoi), name)
+      Util.writePng(toPng(aoi), new File(subDir, name + ".png"))
     }
 
     /**
@@ -694,17 +588,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         try {
           val height = areaOfInterest.length
           val width = areaOfInterest(0).length
-          // @formatter:off
-          val topArea    = subSection(areaOfInterest,         tol2, width - tol4,             0,          tol2)
-          val bottomArea = subSection(areaOfInterest,         tol2, width - tol4, height - tol2,          tol2)
-          val leftArea   = subSection(areaOfInterest,            0,         tol2,          tol2, height - tol4)
-          val rightArea  = subSection(areaOfInterest, width - tol2,         tol2,          tol2, height - tol4)
 
-          val eTop       = findEdge(   topArea, vertical = false,    "top", rawExtremeAveragesRange)
-          val eBottom    = findEdge(bottomArea, vertical = false, "bottom", rawExtremeAveragesRange)
-          val eLeft      = findEdge(  leftArea, vertical =  true,   "left", rawExtremeAveragesRange)
-          val eRight     = findEdge( rightArea, vertical =  true,  "right", rawExtremeAveragesRange)
-          // @formatter:on
           val x = aoiBounds.x
           val y = aoiBounds.y
 
@@ -723,30 +607,19 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
           val edgeSet = WLEdgeSet(wlTop, wlBottom, wlLeft, wlRight)
 
-          def edgeStatus(e: Either[WLImageStatus.Value, Double]): WLImageStatus.Value = {
-            e match {
-              case Right(_) => WLImageStatus.Passed
-              case Left(s) => s
-            }
-          }
+          WLEdgeImage.makeEdgeImage(wlTop, subDir, SCALE)
+          WLEdgeImage.makeEdgeImage(wlBottom, subDir, SCALE)
+          WLEdgeImage.makeEdgeImage(wlLeft, subDir, SCALE)
+          WLEdgeImage.makeEdgeImage(wlRight, subDir, SCALE)
 
           val status: WLImageStatus.Value = {
-            val list = Seq(eTop, eBottom, eLeft, eRight).map(edgeStatus).distinct.filterNot(_ == WLImageStatus.Passed)
-            if (list.isEmpty) WLImageStatus.Passed else list.head
+            val list = Seq(wlTop, wlBottom, wlLeft, wlRight).filter(_.edge.isLeft)
+            if (list.isEmpty) WLImageStatus.Passed else list.head.edge.left.get
           }
 
-          if (status == WLImageStatus.Passed) {
-            val edgeTop: Double = eTop.right.get
-            val edgeBottom = eBottom.right.get + (height - tol2)
-            val edgeLeft = eLeft.right.get
-            val edgeRight = eRight.right.get + (width - tol2)
-
-            val edges = new Edges(edgeTop, edgeBottom, edgeLeft, edgeRight)
-            //diagnosticMessage(s"\n\nUnscaled box dimensions in pixels\n$edges")
-            //diagnostics.write(edges.toString.getBytes)
+          if (status == WLImageStatus.Passed)
             Right(edgeSet)
-            // Right(edges2) // TODO new algorithm?
-          } else
+          else
             Left(status)
         } catch {
           case t: Throwable =>
@@ -873,14 +746,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       false // TODO disables test
     }
 
-    def correctUnscaledEdges(edgesUnscaled: WLEdgeSet): Edges = {
-      def scaleX(x: Double): Double = (x * ResolutionX) / ResolutionX
-
-      def scaleY(y: Double): Double = (y * ResolutionY) / ResolutionY
-
-      val scaled = new Edges(scaleY(edgesUnscaled.top.pos), scaleY(edgesUnscaled.bottom.pos), scaleX(edgesUnscaled.left.pos), scaleX(edgesUnscaled.right.pos))
-      scaled
-    }
 
     /**
      * After locating the center of the box and the ball with some confidence, process the results.  The only
@@ -968,8 +833,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
       val pixelData = constructPixelData(blackPng, areaOfInterest)
 
-      writeImageLater(normalPng, WLgenHtml.NORMAL_SUMMARY_FILE_NAME)
-      writeImageLater(brightPng, WLgenHtml.BRIGHT_SUMMARY_FILE_NAME)
+      Util.writePng(normalPng, new File(subDir, WLgenHtml.NORMAL_SUMMARY_FILE_NAME))
+      Util.writePng(brightPng, new File(subDir, WLgenHtml.BRIGHT_SUMMARY_FILE_NAME))
       logger.info("Done constructing ProcessImage for " + imageName)
 
       val boxPoint = new Point(boxCenterScaledX, boxCenterScaledY)
@@ -997,7 +862,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         diagnosticMessage("expected edges: " + expected)
       }
 
-      val imageResult = new WLImageResult(
+      val imageResult = WLImageResult(
         imageStatus = passed,
         boxP = Some(boxPoint),
         ballP = Some(ballPoint),
@@ -1043,7 +908,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       drawWLBadPixelList(marginalPixelList, Color.YELLOW)
       drawWLBadPixelList(badPixelList, Config.WLFailColor)
 
-      writeImageLater(png, BAD_PIXEL_FILE_NAME)
+      Util.writePng(png, new File(subDir, BAD_PIXEL_FILE_NAME))
     }
 
     def badPixelIsNotOnList(badPixel: WLBadPixel, list: Seq[WLBadPixel]): Boolean = {
@@ -1088,7 +953,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
     try {
       val uncorrectedPixels = fetchPixels()
-      writeImageLater(toPngScaled(uncorrectedPixels, 1), "original")
+      Util.writePng(toPngScaled(uncorrectedPixels, 1), new File(subDir, "original.png"))
       writeDicomAsBinaryDicom(rtimage)
       writeDicomAsText(rtimage)
 
@@ -1151,7 +1016,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
               (oldBottom - oldTop).toInt - tol2
             )
             showBallBackgroundNoise(ballArea, "ball_background")
-            writeImageLater(toPng(ballArea), "ball_before_normalization")
+            Util.writePng(toPng(ballArea), new File(subDir, "ball_before_normalization.png"))
 
             showBallBackgroundNoise(normalizeArea(ballArea), "normalized_ball_background")
 
@@ -1287,10 +1152,5 @@ object WLProcessImage extends org.aqa.Logging {
     png
   }
 
-  // def indexes(length: Int): Array[Double] = (0 until length).toArray.map(x => x.toDouble)
-  private def writeImage(img: BufferedImage, file: File): Unit = {
-    logger.info("writing image file: " + file.getAbsolutePath + "   width: " + img.getWidth + "    height: " + img.getHeight)
-    Util.writePng(img, file)
-  }
 
 }
