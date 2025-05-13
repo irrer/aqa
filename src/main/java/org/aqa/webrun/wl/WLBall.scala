@@ -88,7 +88,7 @@ case class WLBall(aoiBounds: Rectangle, wholeImage: DicomImage, rtimage: Attribu
    * Determine if the spline has a single maximum by walking the spline and counting the
    * number of times it crosses the average value.  It should cross exactly twice.
    */
-  def singleMax(spline: CubicSpline, values: IndexedSeq[Float]): Boolean = {
+private   def singleMax(spline: CubicSpline, values: IndexedSeq[Float]): Boolean = {
     val avg = (values.max + values.min) / 2
     val increment = 1000
 
@@ -121,7 +121,7 @@ case class WLBall(aoiBounds: Rectangle, wholeImage: DicomImage, rtimage: Attribu
    * @param y: Approximate vertical center of ball
    */
 
-  def fineBallLocate(aoiFine: IndexedSeq[IndexedSeq[Float]]): Option[Point2D.Double] = {
+private   def fineBallLocate(aoiFine: IndexedSeq[IndexedSeq[Float]]): Option[Point2D.Double] = {
 
     val annotate = new WLAnnotate(SCALE, ballRadius_pix.round.toInt)
 
@@ -144,7 +144,7 @@ case class WLBall(aoiBounds: Rectangle, wholeImage: DicomImage, rtimage: Attribu
   private val coarseCenter = coarseBallLocate()
 
   ballRadius_pix
-  val aoiFine = {
+private   val aoiFine = {
     val x = (ballRadiusX_pix + coarseCenter.x).round.toInt
     val y = (ballRadiusY_pix + coarseCenter.y).round.toInt
     val width = (ballRadiusX_pix * 2).round.toInt
@@ -164,7 +164,7 @@ case class WLBall(aoiBounds: Rectangle, wholeImage: DicomImage, rtimage: Attribu
   /**
    * Make an image showing the level of background noise immediately around the ball.
    */
-  def showBallBackgroundNoise(name: String): BufferedImage = {
+private   def showBallBackgroundNoise(name: String): BufferedImage = {
     // val aoiWidth = areaOfInterest.head.length
     // val aoiHeight = areaOfInterest.length
     // val aoi = subSection(areaOfInterest, 0, aoiWidth, 0, aoiHeight)

@@ -5,6 +5,7 @@ import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.MachineWL
@@ -79,29 +80,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     val dir = new File(extendedData.output.dir, name)
     dir.mkdirs()
     dir
-  }
-
-  private def makeFailedWLImageStatus(imageStatus: WLImageStatus.Value): WLImageResult = {
-    WLImageResult(
-      imageStatus = imageStatus,
-      boxP = None,
-      ballP = None,
-      edgesUnscaled = None,
-      boxEdgesP = None,
-      edgeSet = None,
-      directory = subDir,
-      rtimage = rtimage,
-      pixels = None,
-      coarseX = None,
-      coarseY = None,
-      brcX = None,
-      brcY = None,
-      badPixelList = Seq(),
-      marginalPixelList = Seq(),
-      extendedData = extendedData,
-      runReq
-    )
-
   }
 
   def process: WLImageResult = {
@@ -624,19 +602,45 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
      * range of the box pixels over the range of the ball pixels.  If this number is too large,
      * then the area is too flat to contain a ball.
      */
-    def ballAreaIsFlat(boxArea: IndexedSeq[IndexedSeq[Float]], edgeSet: WLEdgeSet): Boolean = {
+    def ballAreaIsFlat(boxArea: IndexedSeq[IndexedSeq[Float]], ballArea: IndexedSeq[IndexedSeq[Float]], ballBounds: Rectangle): Boolean = {
       val boxWd = boxArea.head.length
       val boxHt = boxArea.length
+
+      val boxPix = boxArea.flatten
+      val boxMin = boxPix.min
+      val boxMax = boxPix.max
+      val boxRange = boxMax - boxMin
+
+      val ballPix = ballArea.flatten
+      val ballMin = ballPix.min
+      val ballMax = ballPix.max
+      val ballRange = ballMax - ballMin
+
+      val rat = boxRange / ballRange
+
+      Trace.trace(s"rat: $rat")
+      Trace.trace()
+
+
+      if (true) {
+        val box = new DicomImage(boxArea).toBufferedImage(Color.green)
+        val ball = (new DicomImage(ballArea).toBufferedImage(Color.yellow))
+
+        Util.writePng(box, new File(subDir, "theBox.png"))
+        Util.writePng(ball, new File(subDir, "theBall.png"))
+        Trace.trace("wrote theBox theBall " + subDir)
+        Trace.trace()
+      }
 
       // Get the pixel that are not part of the ball
       val backgroundPixels = {
         // delineate a border that is half-way between the outer edge of the ball and edge of
         // the box.  Use the pixels in this border to get a good sample of background pixels that
         // do not include the ball.
-        val xMin = (edgeSet.left.pos / 2).toInt
-        val xMax = (edgeSet.right.pos + ((boxWd - edgeSet.right.pos) / 2)).toInt
-        val yMin = (edgeSet.top.pos / 2).toInt
-        val yMax = (edgeSet.bottom.pos + ((boxHt - edgeSet.bottom.pos) / 2)).toInt
+        val xMin = ballBounds.x
+        val xMax = ballBounds.x + ballBounds.width
+        val yMin = ballBounds.y
+        val yMax = ballBounds.y + ballBounds.height
         for (
           x <- 0 until boxWd;
           y <- 0 until boxHt
@@ -650,7 +654,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
       val boxValues = boxArea.flatten
 
-      val boxRange = boxValues.max - boxValues.min
 
       val ratio = boxRange / backgroundRange
 
@@ -863,9 +866,9 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
           def invert(pix: Float): Float = minPlusMax - pix
 
           val invertedDicomImage = di.fun1(invert)
-          invertedDicomImage.pixelData
+          invertedDicomImage.pixelData.map(_.toIndexedSeq).toIndexedSeq
         } else
-          di.pixelData
+          di.pixelData.map(_.toIndexedSeq).toIndexedSeq
       }
 
       pixelData
@@ -883,7 +886,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       val rawDistinctSortedList = uncorrectedPixels.flatten.toList.distinct.sorted
 
       if (rawDistinctSortedList.size < Config.WLMinimumDistinctPixelValues) {
-        makeFailedWLImageStatus(WLImageStatus.BoxNotFound)
+        WLImageResult(WLImageStatus.BoxNotFound, directory = subDir, rtimage = rtimage, badPixelList = Seq(), marginalPixelList = Seq(), extendedData = extendedData, runReq = runReq)
       } else {
 
         // ------------------------------------------------------------------------------------------------------------------------
@@ -919,7 +922,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         val fineBoxLocateResult = fineBoxLocate(areaOfInterest, rawExtremeAveragesRange, pixels, coarseBox)
 
         val result: WLImageResult = fineBoxLocateResult match {
-          case Left(status) => makeFailedWLImageStatus(status)
+          case Left(status) =>
+            WLImageResult( imageStatus =  status, directory = subDir, rtimage = rtimage, badPixelList = Seq(), marginalPixelList = Seq(), extendedData = extendedData, runReq = runReq)
           case Right(edgeSet) =>
             val width = areaOfInterest.head.size
             val height = areaOfInterest.size
@@ -941,8 +945,13 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
             showBallBackgroundNoise(normalizeArea(ballArea), "normalized_ball_background")
 
-            if (ballAreaIsFlat(areaOfInterest, edgeSet)) {
-              makeFailedWLImageStatus(WLImageStatus.BallMissing)
+            val ballBounds = new Rectangle(
+              oldLeft.toInt + tol,
+              oldTop.toInt + tol,
+              (oldRight - oldLeft).toInt - tol2,
+              (oldBottom - oldTop).toInt - tol2)
+            if (ballAreaIsFlat(areaOfInterest, ballArea, ballBounds)) {
+              WLImageResult(WLImageStatus.BallMissing, directory = subDir, rtimage = rtimage, badPixelList = Seq(), marginalPixelList = Seq(), extendedData = extendedData, runReq = runReq)
             } else {
               findBallCenter(areaOfInterest, ballArea) match {
                 case Some(ballRelativeCenter: (Double, Double)) =>
@@ -968,7 +977,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
                   diagnosticMessage(ir.toString)
                   WLgenHtml.generateHtml(extendedData, subDir, imageResult = ir)
                   ir
-                case None => makeFailedWLImageStatus(WLImageStatus.BallAreaNoisy)
+                case None =>
+                  WLImageResult(WLImageStatus.BallAreaNoisy, directory = subDir, rtimage = rtimage, badPixelList = Seq(), marginalPixelList = Seq(), extendedData = extendedData, runReq = runReq)
               }
             }
         }
@@ -982,8 +992,10 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         logger.error(msg)
         diagnosticMessage(msg)
 
-        val imageResult =
-          makeFailedWLImageStatus(WLImageStatus.UnexpectedError)
+        val imageResult = {
+          // TODO add bad and marginal pixels to the result if they are available
+          WLImageResult(WLImageStatus.UnexpectedError, directory = subDir, rtimage = rtimage, badPixelList = Seq(), marginalPixelList = Seq(), extendedData = extendedData, runReq = runReq)
+        }
 
         diagnosticMessage(imageResult.toString)
 
@@ -1045,7 +1057,7 @@ object WLProcessImage extends org.aqa.Logging {
   def colSum(pix: IndexedSeq[IndexedSeq[Float]]): IndexedSeq[Float] = {
     def oneColSum(c: Int) = pix.indices.map(y => pix(y)(c)).sum
 
-    pix(0).indices.map(c => oneColSum(c)).toArray
+    pix(0).indices.map(c => oneColSum(c))
   }
 
   def toPngScaled(pix: IndexedSeq[IndexedSeq[Float]], imageScale: Int): BufferedImage = {

@@ -46,7 +46,7 @@ case class WLImageResult(
     ballP: Option[Point] = None,
     edgesUnscaled: Option[Edges] = None,
     boxEdgesP: Option[Edges] = None,
-    edgeSet: Option[WLEdgeSet],
+    edgeSet: Option[WLEdgeSet] = None,
     directory: File,
     rtimage: AttributeList,
     pixels: Option[Array[Array[Float]]] = None,
