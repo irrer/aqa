@@ -18,6 +18,9 @@ import org.aqa.web.WebUtil.emptyValueMap
 import org.aqa.web.WebUtil.getValueMap
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.wl.isoCheck.WLRunIsoCheck
+import org.aqa.AnonymizeUtil
+import org.aqa.web.WebServer
+import org.aqa.Config
 import org.restlet.Request
 import org.restlet.Response
 
@@ -36,6 +39,38 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
   }
 
   private def getRtimageList(alList: Seq[AttributeList]) = alList.filter(al => Util.isRtimage(al)).sortBy(dateTime)
+
+  /**
+    * Send an EventNet event indicating that a WL has been done.
+    * @param extendedData metadata for URL and machine ID
+    * @param runReq has patient ID
+    * @param status pass/fail
+    * @param NumberOfImages number of RTIMAGE files
+    */
+  private def sendEvent(extendedData: ExtendedData, runReq: WLRunReq, status: ProcedureStatus.Value, NumberOfImages: Int): Unit = {
+    val realPatientId: String =
+      try {
+        AnonymizeUtil.deAnonymizeAttribute(extendedData.institution.institutionPK.get, runReq.epidList.head.get(TagByName.PatientID)).get.getSingleStringValueOrEmptyString
+      } catch {
+        case _: Throwable => "NA"
+      }
+
+    try {
+      val event = new EventWLQASRSDone( //
+        PatientId = realPatientId,
+        CareEventStart = extendedData.output.dataDate.get,
+        Status = status,
+        NumberOfImages = NumberOfImages,
+        ReportURL = Config.RootUrl + WebServer.urlOfResultsFile(extendedData.output.dir) + "/" + Output.displayFilePrefix + ".html",
+        TreatmentMachine = extendedData.machine.getRealId
+      )
+
+      event.send()
+
+    } catch {
+      case t: Throwable => logger.error(s"Unexpected error sending event: ${fmtEx(t)}")
+    }
+  }
 
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
     // Process in parallel for speed.  After that, sort by data time.
@@ -69,10 +104,15 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
     val allPassed = results.map(r => r.imageStatus.toString).distinct.forall(text => text.equals(WLImageStatus.Passed.toString))
 
     WLUpdateRestlet.updateWL()
-    if (allPassed)
-      ProcedureStatus.pass
-    else
-      ProcedureStatus.fail
+    val status =
+      if (allPassed)
+        ProcedureStatus.pass
+      else
+        ProcedureStatus.fail
+
+    sendEvent(extendedData, runReq, status, results.size)
+
+    status
   }
 
   override def validate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Either[StyleMapT, RunReqClass] = {

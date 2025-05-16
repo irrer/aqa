@@ -55,6 +55,7 @@ object AQA extends Logging {
 
         if (Config.MonitorThreadCountInterval_ms > 0) ThreadMonitor.monitorThreads(Config.MonitorThreadCountInterval_ms)
 
+        AQAEventNetClient.init()
         new PeriodicRestart(Config.RestartTime)
         FileCleanup.cleanupThread(30 * 1000)
         DicomSeries.fixRedundantInBackground(delFlag = true, delay_ms = 30 * 1000)

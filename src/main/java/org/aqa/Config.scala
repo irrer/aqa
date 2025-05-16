@@ -17,8 +17,8 @@
 package org.aqa
 
 import com.pixelmed.dicom.AttributeTag
-import edu.umro.ImageUtil.Watermark
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ImageUtil.Watermark
 import edu.umro.util.OpSys
 import edu.umro.ScalaUtil.Util.daysToMs
 import org.aqa.db.MaintenanceCategory
@@ -362,6 +362,9 @@ object Config extends Logging {
       case _: Throwable => Seq[String]()
     }
   }
+
+  val AMQPBrokerHost: Option[String] = getMainTextOption("AMQPBrokerHost")
+  val AMQPBrokerPort: Option[String] = getMainTextOption("AMQPBrokerPort")
 
   /**
     * List of IP addresses allowed to access this server.
@@ -1002,6 +1005,8 @@ object Config extends Logging {
   val WLTextPointSize: Int = logMainText("WLTextPointSize", "30").toInt
   val WLNumberOfCircles: Int = logMainText("WLNumberOfCircles", "2").toInt
   val WLSummarySize: Int = logMainText("WLSummarySize", "350").toInt
+  val WLAmqpExchange: String = logMainText("WLAmqpExchange", "gbtopic")
+  val WLAmqpRoutingKey: String = logMainText("WLSummarySize", "Aria.Event.EventWLQASRSDone")
 
   val WLTreatmentMachineList: List[WLTreatmentMachine] = {
     val list = (document \ "WLTreatmentMachineList" \ "WLTreatmentMachine").toList.map(e => new WLTreatmentMachine(e))

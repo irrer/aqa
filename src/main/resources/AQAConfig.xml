@@ -27,6 +27,13 @@ Note that when building a package for release, the Maven build process uses the 
         In general, there is no PHI in this system, so some users may choose this out simplicity and convenience. -->
     <!-- <HTTPPort>80</HTTPPort> -->
 
+    <!-- If specified, connect with EventNet via AMQP via this host.  If not specified, then do not connect to EventNet. -->
+    <!-- <AMQPBrokerHost>uhroappwebspr1.umhs.med.umich.edu</AMQPBrokerHost> -->
+    <AMQPBrokerHost>localhost</AMQPBrokerHost>
+
+    <!-- If specified, connect with EventNet via AMQP via this port.  If not specified, then do not connect to EventNet. -->
+    <AMQPBrokerPort>5672</AMQPBrokerPort>
+
 
     <!-- List of IP addresses that the HTTP or HTTPS service will honor. Using '*' for 
     any triplet indicates a wild card.

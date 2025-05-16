@@ -93,6 +93,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     // determine where an edge of the box finishes, to define the
     // area to look for the ball.
     val tol: Int = toPixels(Config.WLBoxEdgeTolerance_mm)
+    val tol34 = (tol * 0.75).round.toInt
     val tol2 = tol * 2
     val tol4 = tol * 4
 
@@ -383,8 +384,10 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
       Util.writePng(toPng(ballRoi), new File(subDir, "ballRoiRaw.png"))
 
       fineBallLocate(ballRoi) match {
-        case Some(loc: (Double, Double)) => Some(loc._1 + leftEdge, loc._2 + topEdge)
-        case None                        => None
+        case Some(loc: (Double, Double)) =>
+          Some(loc._1 + leftEdge, loc._2 + topEdge)
+        case None =>
+          None
       }
     }
 
@@ -919,11 +922,13 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
         val areaOfInterest = subSection(pixels, coarseX._1, coarseX._2 - coarseX._1, coarseY._1, coarseY._2 - coarseY._1)
 
+        val areaOfInterestBounds = new Rectangle(coarseX._1, coarseY._1, coarseX._2 - coarseX._1, coarseY._2 - coarseY._1)
+
         val fineBoxLocateResult = fineBoxLocate(areaOfInterest, rawExtremeAveragesRange, pixels, coarseBox)
 
         val result: WLImageResult = fineBoxLocateResult match {
           case Left(status) =>
-            WLImageResult( imageStatus =  status, directory = subDir, rtimage = rtimage, badPixelList = Seq(), marginalPixelList = Seq(), extendedData = extendedData, runReq = runReq)
+            WLImageResult(imageStatus = status, directory = subDir, rtimage = rtimage, badPixelList = Seq(), marginalPixelList = Seq(), extendedData = extendedData, runReq = runReq)
           case Right(edgeSet) =>
             val width = areaOfInterest.head.size
             val height = areaOfInterest.size
@@ -933,28 +938,45 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
             val oldLeft = edgeSet.left.pos
             val oldRight = edgeSet.right.pos + width - tol2
 
-            val ballArea = subSection(
+            val ballAOI = subSection(
               areaOfInterest,
               oldLeft.toInt + tol,
               (oldRight - oldLeft).toInt - tol2,
               oldTop.toInt + tol,
               (oldBottom - oldTop).toInt - tol2
             )
-            showBallBackgroundNoise(ballArea, "ball_background")
-            Util.writePng(toPng(ballArea), new File(subDir, "ball_before_normalization.png"))
 
-            showBallBackgroundNoise(normalizeArea(ballArea), "normalized_ball_background")
+            showBallBackgroundNoise(ballAOI, "ball_background")
+            Util.writePng(toPng(ballAOI), new File(subDir, "ball_before_normalization.png"))
+
+            showBallBackgroundNoise(normalizeArea(ballAOI), "normalized_ball_background")
 
             val ballBounds = new Rectangle(
               oldLeft.toInt + tol,
               oldTop.toInt + tol,
               (oldRight - oldLeft).toInt - tol2,
               (oldBottom - oldTop).toInt - tol2)
-            if (ballAreaIsFlat(areaOfInterest, ballArea, ballBounds)) {
+
+            if (ballAreaIsFlat(areaOfInterest, ballAOI, ballBounds)) {
               WLImageResult(WLImageStatus.BallMissing, directory = subDir, rtimage = rtimage, badPixelList = Seq(), marginalPixelList = Seq(), extendedData = extendedData, runReq = runReq)
             } else {
-              findBallCenter(areaOfInterest, ballArea) match {
+              findBallCenter(areaOfInterest, ballAOI) match {
                 case Some(ballRelativeCenter: (Double, Double)) =>
+
+                  if (false) { // TODO enables / disables experimental code
+
+                    val ballGlobalBounds = new Rectangle(
+                      ballBounds.x + areaOfInterestBounds.x - tol34,
+                      ballBounds.y + areaOfInterestBounds.y - tol34,
+                      ballBounds.width + tol,
+                      ballBounds.height + tol
+                    )
+                    val wlBall = WLBall(ballGlobalBounds: Rectangle, new DicomImage(pixels): DicomImage, rtimage: AttributeList, machineWL = wlParameters, subDir)
+                    val p = wlBall.center_pix
+                    Trace.trace(s"new: $p    old: $ballRelativeCenter")
+                  }
+
+
                   val brcX = ballRelativeCenter._1
                   val brcY = ballRelativeCenter._2
 
@@ -962,7 +984,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
                     areaOfInterest = areaOfInterest,
                     edgeSet = edgeSet,
                     ballRelativeCenter = ballRelativeCenter,
-                    ballArea = ballArea,
+                    ballArea = ballAOI,
                     coarseX = coarseX,
                     coarseY = coarseY,
                     brcX = brcX,
@@ -1037,14 +1059,6 @@ object WLProcessImage extends org.aqa.Logging {
   }
 
   def angleRoundedTo22_5(angle: Double): Double = (((angle + 3600) / 22.5).round.toInt % 16) * 22.5 // convert to nearest multiple of 22.5 degrees
-
-  def angleRounded(angle: Double): Double = {
-    val parts = 16 // Round off to nearest multiple of this angle
-    val fraction = 360.0 / parts
-
-    //((((angle.toInt + 3600 + 45) % 360) / 90) * 90) % 360 // convert to nearest multiple of 90 degrees
-    (((angle + 3600) / fraction).round % parts) * fraction
-  }
 
   /**
    * Make a list of the sum of each row.
