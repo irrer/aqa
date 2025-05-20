@@ -30,7 +30,7 @@ case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtima
   // equivalent to one bit of precision.
   private val PRECISION = 30 // TODO max benefit is at 60.  Replace with LocateEdge when refactoring is complete
 
-  val pixIn:IndexedSeq[IndexedSeq[Float]] = aoi.pixelData
+  val pixIn: IndexedSeq[IndexedSeq[Float]] = aoi.pixelData
 
   val sum: IndexedSeq[Float] = if (vertical) colSum(pixIn) else rowSum(pixIn)
 
@@ -237,12 +237,16 @@ case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtima
 
   val edge: Either[WLImageStatus.Value, Double] = findEdge()
 
-  def pos: Double = edge.right.get
+  def pos_pix: Double = edge.right.get
 
-  def posInt: Int = pos.round.toInt
+  def posInt_pix: Int = pos_pix.round.toInt
 
-  def posAbs: Int = (if (vertical) bounds.x else bounds.y) + posInt
+  private val baseOffset_pix = if (vertical) bounds.x else bounds.y
 
-  override def toString: String = s"$name: ${if (edge.isRight) pos.toString else edge.left.get.toString}"
+  def posIntAbs_pix: Int = baseOffset_pix + posInt_pix
+
+  def posAbs_pix = baseOffset_pix + pos_pix
+
+  override def toString: String = s"$name: ${if (edge.isRight) pos_pix.toString else edge.left.get.toString}"
 
 }

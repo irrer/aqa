@@ -53,4 +53,15 @@ object WLImageUtil {
     png
   }
 
+  /**
+   * Take the average of the darkest background pixels for
+   * each row and subtract it from each pixel.
+   */
+  def normalizeArea(aoi: IndexedSeq[IndexedSeq[Float]]): IndexedSeq[IndexedSeq[Float]] = {
+    aoi.map(row => {
+      val bias = row.sorted.take(Config.WLNumBackgroundPixels).sum / Config.WLNumBackgroundPixels
+      row.map(col => if (col > bias) col - bias else 0)
+    })
+  }
+
 }

@@ -14,6 +14,7 @@ import org.aqa.PlannedRectangle
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil
 
 import java.awt.geom.Point2D
+import java.awt.Rectangle
 import java.io.File
 import java.sql.Timestamp
 import java.util.Date
@@ -50,8 +51,7 @@ case class WLImageResult(
     directory: File,
     rtimage: AttributeList,
     pixels: Option[Array[Array[Float]]] = None,
-    coarseX: Option[(Int, Int)] = None,
-    coarseY: Option[(Int, Int)] = None,
+    coarseAoiBounds: Option[Rectangle] = None,
     brcX: Option[Double] = None,
     brcY: Option[Double] = None,
     badPixelList: Seq[WLBadPixel],
@@ -128,10 +128,10 @@ case class WLImageResult(
   val gantryAngle: Int = Util.angleRoundedTo90(Util.gantryAngle(rtimage)) //attrFloat(TagByName.GantryAngle)
 
   // @formatter:off
-  private def left_pix  : Double = edgeSet.get.  left.pos + edgeSet.get.  left.bounds.x
-  private def right_pix : Double = edgeSet.get. right.pos + edgeSet.get. right.bounds.x
-  private def top_pix   : Double = edgeSet.get.   top.pos + edgeSet.get.   top.bounds.y
-  private def bottom_pix: Double = edgeSet.get.bottom.pos + edgeSet.get.bottom.bounds.y
+  private def left_pix  : Double = edgeSet.get.  left.pos_pix + edgeSet.get.  left.bounds.x
+  private def right_pix : Double = edgeSet.get. right.pos_pix + edgeSet.get. right.bounds.x
+  private def top_pix   : Double = edgeSet.get.   top.pos_pix + edgeSet.get.   top.bounds.y
+  private def bottom_pix: Double = edgeSet.get.bottom.pos_pix + edgeSet.get.bottom.bounds.y
   // @formatter:on
   private def left_mm: Double = trans.pix2IsoCoordX(left_pix)
 
@@ -141,9 +141,9 @@ case class WLImageResult(
 
   private def bottom_mm: Double = trans.pix2IsoCoordY(bottom_pix)
 
-  private def ballX_pix: Double = brcX.get + coarseX.get._1
+  private def ballX_pix: Double = brcX.get + coarseAoiBounds.get.x
 
-  private def ballY_pix: Double = brcY.get + coarseY.get._1
+  private def ballY_pix: Double = brcY.get + coarseAoiBounds.get.y
 
   private def ballCenter_mm: Point2D.Double = trans.pix2Iso(ballX_pix, ballY_pix)
 

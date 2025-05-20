@@ -1,6 +1,8 @@
 package org.aqa.webrun.wl
 
-case class WLEdgeSet(top: WLEdge, bottom: WLEdge, left: WLEdge, right: WLEdge) {
+import org.aqa.Logging
+
+case class WLEdgeSet(top: WLEdge, bottom: WLEdge, left: WLEdge, right: WLEdge)extends Logging {
   private val list = Seq(top, bottom, left, right)
 
   val status: WLImageStatus.Value = {
@@ -11,9 +13,9 @@ case class WLEdgeSet(top: WLEdge, bottom: WLEdge, left: WLEdge, right: WLEdge) {
       failures.head.edge.left.get
   }
 
-  def unTop: Double = top.pos
-  def unBottom: Double = bottom.pos + (bottom.bounds.y - top.bounds.y)
-  def unLeft: Double = left.pos
-  def unRight: Double = right.pos + (right.bounds.x - left.bounds.x)
+  def unTop: Double = top.pos_pix
+  def unBottom: Double = bottom.pos_pix + (bottom.bounds.y - top.bounds.y)
+  def unLeft: Double = left.pos_pix
+  def unRight: Double = right.pos_pix + (right.bounds.x - left.bounds.x)
 
 }
