@@ -69,6 +69,26 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
   private val imageName: String = gantryRounded_txt + " " + collimatorRounded_txt + " " + elapsedTime_txt
 
+  private def checkHasContrast(image: DicomImage): Option[WLImageResult] = {
+    // Seq of raw distinct pixel values sorted by value
+    val rawDistinctSortedList = image.pixelData.flatten.toList.distinct.sorted
+
+    if (rawDistinctSortedList.size < Config.WLMinimumDistinctPixelValues) {
+      Some(
+        WLImageResult(
+          WLImageStatus.BoxNotFound, //
+          directory = subDir,
+          rtimage = rtimage,
+          badPixelList = Seq(),
+          marginalPixelList = Seq(),
+          extendedData = extendedData,
+          runReq = runReq
+        )
+      )
+    } else
+      None
+  }
+
   private val subDir: File = {
     val min = elapsedTime_ms / (60 * 1000)
     val sec = (elapsedTime_ms / 1000) % 60
@@ -80,524 +100,476 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     dir
   }
 
+  private def saveWLBadPixelImage(pixels: IndexedSeq[IndexedSeq[Float]], badPixelList: Seq[WLBadPixel], marginalPixelList: Seq[WLBadPixel]): Unit = {
+    val png = toPngScaled(pixels, 1)
+    val graphics = png.getGraphics
+
+    def drawWLBadPixelList(list: Seq[WLBadPixel], color: Color): Unit = {
+      graphics.setColor(color)
+
+      // Put a single dot on the pixel
+      list.foreach(b => png.setRGB(b.x, b.y, color.getRGB))
+
+      val radius = Config.WLBadPixelCorrectionRadius // was 10
+      // draw a circle around each dot
+      list.foreach(b => graphics.drawOval(b.x - radius, b.y - radius, radius * 2, radius * 2))
+    }
+
+    drawWLBadPixelList(marginalPixelList, Color.YELLOW)
+    drawWLBadPixelList(badPixelList, Config.WLFailColor)
+
+    Util.writePng(png, new File(subDir, BAD_PIXEL_FILE_NAME))
+  }
+
+  private def writeDicomAsText(): Unit = {
+    try {
+      val text = DicomUtil.attributeListToString(rtimage)
+      Util.writeFile(new File(subDir, Util.sopOfAl(rtimage) + ".txt"), text)
+    } catch {
+      case e: Exception =>
+        logger.error("Unable to write DICOM file as text: " + e)
+    }
+  }
+
+  private def writeDicomAsBinaryDicom(): Unit = {
+    try {
+      val file = new File(subDir, Util.sopOfAl(rtimage) + ".dcm")
+      Util.writeAttributeListToFile(rtimage, file)
+    } catch {
+      case e: Exception =>
+        logger.error("Unable to write DICOM file as binary DICOM: " + e)
+    }
+  }
+
+  /** Scaling for drawing images. */
+  private val SCALE: Int = ((Config.WLScale / 0.526) * ((ResolutionX + ResolutionY) / 2.0)).round.toInt
+
+  private def toPng(pix: IndexedSeq[IndexedSeq[Float]]): BufferedImage = toPngScaled(pix, SCALE)
+
+  /**
+    * Make an image showing the level of background noise immediately around the ball.
+    */
+  private def showBallBackgroundNoise(areaOfInterest: IndexedSeq[IndexedSeq[Float]], name: String): Unit = {
+    val aoiWidth = areaOfInterest.head.length
+    val aoiHeight = areaOfInterest.length
+    val aoi = {
+      val di = new DicomImage(areaOfInterest)
+      val subDi = di.getSubimage(new Rectangle(0, 0, aoiWidth, aoiHeight))
+      subDi.pixelData
+    }
+
+    val all = aoi.flatten
+    val min = all.min
+    val max = all.max
+    val limit = ((max - min) * 0.08) + min
+
+    def doRow(y: Int): IndexedSeq[Float] = {
+      def doPix(pix: Float): Float = {
+        if (pix > limit)
+          min
+        else
+          pix
+      }
+
+      areaOfInterest(y).map(doPix)
+    }
+
+    val background = (0 until aoiHeight).map(doRow)
+
+    Util.writePng(toPng(background), new File(subDir, name + ".png"))
+  }
+
+  /**
+    * Locate the box to sub-pixel accuracy.
+    */
+  private def fineBoxLocate(
+      coarseAoi: DicomImage,
+      pixels: IndexedSeq[IndexedSeq[Float]],
+      aoiBounds: Rectangle,
+      tol2: Int,
+      tol4: Int
+  ): Either[WLImageStatus.Value, WLEdgeSet] = {
+
+    // do sanity check to see if the box is reasonably sized.
+    if ((coarseAoi.width < tol4) || (coarseAoi.height < tol4))
+      Left(WLImageStatus.BoxTooSmall)
+    else
+      try {
+        val height = coarseAoi.height
+        val width = coarseAoi.width
+
+        val x = aoiBounds.x
+        val y = aoiBounds.y
+
+        // @formatter:off
+        val topAOI    = new Rectangle(x + tol2        , y + 0            , width - tol4, tol2         )
+        val bottomAOI = new Rectangle(x + tol2        , y + height - tol2, width - tol4, tol2         )
+        val leftAOI   = new Rectangle(x + 0           , y + tol2         , tol2        , height - tol4)
+        val rightAOI  = new Rectangle(x + width - tol2, y + tol2         , tol2        , height - tol4)
+
+        val di = new DicomImage(pixels)
+        val wlTop    = WLEdge("top"   , vertical = false, di, rtimage,    topAOI)
+        val wlBottom = WLEdge("bottom", vertical = false, di, rtimage, bottomAOI)
+        val wlLeft   = WLEdge("left"  , vertical = true , di, rtimage,   leftAOI)
+        val wlRight  = WLEdge("right" , vertical = true , di, rtimage,  rightAOI)
+        // @formatter:on
+
+        val edgeSet = WLEdgeSet(wlTop, wlBottom, wlLeft, wlRight)
+
+        WLEdgeImage.makeEdgeImage(wlTop, subDir, SCALE)
+        WLEdgeImage.makeEdgeImage(wlBottom, subDir, SCALE)
+        WLEdgeImage.makeEdgeImage(wlLeft, subDir, SCALE)
+        WLEdgeImage.makeEdgeImage(wlRight, subDir, SCALE)
+
+        val status: WLImageStatus.Value = {
+          val list = Seq(wlTop, wlBottom, wlLeft, wlRight).filter(_.edge.isLeft)
+          if (list.isEmpty) WLImageStatus.Passed else list.head.edge.left.get
+        }
+
+        if (status == WLImageStatus.Passed)
+          Right(edgeSet)
+        else
+          Left(status)
+      } catch {
+        case t: Throwable =>
+          logger.info(s"Unexpected: ${fmtEx(t)}")
+          Left(WLImageStatus.UnexpectedError)
+      }
+  }
+
+  /** Convert a value in mm to pixels.
+   *
+   * @param mm Value in mm.
+   * @return value in pixels.
+   * */
+  private def toPixels(mm: Double): Int = ((mm / ResolutionX) + 0.5).toInt
+
+
+  // tolerance in pixels for how far the search for the fine edge of
+  // box should look, given the coarse position of the edge.  Also used
+  // determine where an edge of the box finishes, to define the
+  // area to look for the ball.
+  private val tol: Int = toPixels(Config.WLBoxEdgeTolerance_mm)
+  private val tol2 = tol * 2
+  private val tol4 = tol * 4
+  private val tol34 = tol // (tol * 0.75).round.toInt
+  private val tol15 = tol2 // (tol * 1.5).round.toInt
+
+  // The step size (in pixels) for crawling down the curve to find the
+  // point where the ball height exceeds a threshold
+  private val X_INCREMENT: Double = 0.001
+
+  /** Expected radius of ball in (units of) number of pixels. */
+  private val BALL_RADIUS = toPixels(wlParameters.ballDiameter_mm / 2.0)
+
+  private val annotate = new WLAnnotate(SCALE, BALL_RADIUS)
+
+  private def fmt(d: Double): String = d.formatted("%10.5f")
+
+  private val diagnostics = new PrintStream(new File(subDir, WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME))
+
+  private def diagnosticMessage(text: String): Unit = {
+    diagnostics.println(text)
+    val msg =
+      "G" + Util.angleRoundedTo90(Util.gantryAngle(rtimage)).formatted("%03d") +
+        "C" + Util.angleRoundedTo90(Util.collimatorAngle(rtimage)).formatted("%03d") + " " + {
+        val fmt = new SimpleDateFormat("MM:ss")
+        val ms = Util.dicomGetTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get.getTime
+        val elapsed_ms = ms - extendedData.output.dataDate.get.getTime
+        fmt.format(new Date(elapsed_ms))
+      } +
+        imageName + " Diagnostics: " + text
+    logger.info(msg)
+  }
+
+  /**
+   * Generate an image of the given size with all black pixels
+   */
+  private def toBlackPng(pix: IndexedSeq[IndexedSeq[Float]]): BufferedImage = {
+    val png = toPngScaled(pix, SCALE)
+    for (y <- 0 until png.getHeight) for (x <- 0 until png.getWidth) png.setRGB(x, y, EMPTY_PIXEL)
+    png
+  }
+
+
+  /**
+   * Take the average of the darkest background pixels for
+   * each row and subtract it from each pixel.
+   */
+  private def normalizeArea(aoi: IndexedSeq[IndexedSeq[Float]]): IndexedSeq[IndexedSeq[Float]] = {
+    aoi.map(row => {
+      val bias = row.sorted.take(Config.WLNumBackgroundPixels).sum / Config.WLNumBackgroundPixels
+      row.map(col => if (col > bias) col - bias else 0)
+    })
+  }
+
+  /**
+   * Construct the pixel data destined to be put in the DICOM image with graphics and annotations.  This is done by
+   * taking a buffered image that is all black except for the graphics and annotations, and then mapping that onto
+   * a scaled up version of the original pixels.
+   */
+  private def constructPixelData(blackPng: BufferedImage, areaOfInterest: IndexedSeq[IndexedSeq[Float]]): Array[Array[Float]] = {
+    val min = areaOfInterest.flatten.min
+    val max = areaOfInterest.flatten.max
+    val avg = (min + max) / 2
+    val width = blackPng.getWidth
+    val height = blackPng.getHeight
+    val aoi = Array.ofDim[Float](height, width)
+
+    for (y <- 0 until height) for (x <- 0 until width) {
+      val pixelOrig = areaOfInterest(y / SCALE)(x / SCALE)
+      val pixelGraphic =
+        if (blackPng.getRGB(x, y) == EMPTY_PIXEL)
+          pixelOrig
+        else if (pixelOrig < avg)
+          max
+        else
+          min
+      aoi(y)(x) = pixelGraphic
+    }
+
+    aoi
+  }
+
+  /**
+   * Determine whether the area inside the box is flat.  Do this by determine the ratio of the
+   * range of the box pixels over the range of the ball pixels.  If this number is too large,
+   * then the area is too flat to contain a ball.
+   */
+  private def ballAreaIsFlat(boxArea: IndexedSeq[IndexedSeq[Float]], ballArea: IndexedSeq[IndexedSeq[Float]], ballBounds: Rectangle): Boolean = {
+    val boxWd = boxArea.head.length
+    val boxHt = boxArea.length
+
+    val boxPix = boxArea.flatten
+    val boxMin = boxPix.min
+    val boxMax = boxPix.max
+    val boxRange = boxMax - boxMin
+
+    val ballPix = ballArea.flatten
+    val ballMin = ballPix.min
+    val ballMax = ballPix.max
+    val ballRange = ballMax - ballMin
+
+    val rat = boxRange / ballRange
+
+    Trace.trace(s"rat: $rat")
+    Trace.trace()
+
+    if (true) {
+      val box = new DicomImage(boxArea).toBufferedImage(Color.green)
+      val ball = new DicomImage(ballArea).toBufferedImage(Color.yellow)
+
+      Util.writePng(box, new File(subDir, "theBox.png"))
+      Util.writePng(ball, new File(subDir, "theBall.png"))
+      Trace.trace("wrote theBox theBall " + subDir)
+      Trace.trace()
+    }
+
+    // Get the pixel that are not part of the ball
+    val backgroundPixels = {
+      // delineate a border that is half-way between the outer edge of the ball and edge of
+      // the box.  Use the pixels in this border to get a good sample of background pixels that
+      // do not include the ball.
+      val xMin = ballBounds.x
+      val xMax = ballBounds.x + ballBounds.width
+      val yMin = ballBounds.y
+      val yMax = ballBounds.y + ballBounds.height
+      for (
+        x <- 0 until boxWd;
+        y <- 0 until boxHt
+        if (x < xMin) || (x > xMax) || (y < yMin) || (y > yMax)
+      ) yield {
+        boxArea(y)(x)
+      }
+    }
+
+    val backgroundRange = backgroundPixels.max - backgroundPixels.min
+
+    val ratio = boxRange / backgroundRange
+
+    val stats = " BallAreaFlatnessRatioLowerLimit: " + Config.WLBallAreaFlatnessRatioLowerLimit + "    measured ratio: " + ratio +
+      "   total pixel range including ball and background: " + boxRange + "    background pixel range: " + backgroundRange
+    if (ratio < Config.WLBallAreaFlatnessRatioLowerLimit) {
+      val msg = "Flatness check: Failed to find ball in box because area inside box was flat. " + stats
+      logger.error(msg)
+      diagnosticMessage("Severe error: " + msg)
+      true
+    } else {
+      val msg = "Flatness check: The area inside the box contains a ball. " + stats
+      logger.error(msg)
+      diagnosticMessage(msg)
+      false
+    }
+
+    false // TODO disables test
+  }
+
+
+  /**
+   * After locating the center of the box and the ball with some confidence, process the results.  The only
+   * error that is expected to occur after this point is that the distance between the centers is too large.
+   */
+  private def processLocation(
+                               coarseAoi: IndexedSeq[IndexedSeq[Float]],
+                               edgeSet: WLEdgeSet,
+                               ballRelativeCenter: (Double, Double),
+                               ballArea: IndexedSeq[IndexedSeq[Float]],
+                               coarseAoiBounds: Rectangle,
+                               brcX: Double,
+                               brcY: Double,
+                               badPixelList: Seq[WLBadPixel],
+                               marginalPixelList: Seq[WLBadPixel],
+                               attributeList: AttributeList,
+                               runReq: WLRunReq
+                             ): WLImageResult = {
+
+    val ballCenterX = ballRelativeCenter._1
+    val ballCenterY = ballRelativeCenter._2
+
+    // Limit all pixel brightnesses to the maximum ball pixel brightness.  This makes the ball stand out more in the final image.
+    val maxBallPixel = ballArea.flatten.max
+    val thresholdLimitedAreaOfInterest = coarseAoi.map(r => r.map(c => if (c > maxBallPixel) maxBallPixel else c))
+
+    //drawGraphics()
+    val normalPng = toPng(coarseAoi)
+    val brightPng = toPng(thresholdLimitedAreaOfInterest)
+    val blackPng = toBlackPng(coarseAoi)
+
+    // draw edge of box
+    val normalGraphics = normalPng.getGraphics.asInstanceOf[Graphics2D]
+    val brightGraphics = brightPng.getGraphics.asInstanceOf[Graphics2D]
+    val blackGraphics = blackPng.getGraphics.asInstanceOf[Graphics2D]
+
+    annotate.drawBallGraphics(normalGraphics, ballCenterX, ballCenterY)
+    annotate.drawBallGraphics(brightGraphics, ballCenterX, ballCenterY)
+    annotate.drawBallGraphics(blackGraphics, ballCenterX, ballCenterY)
+
+    annotate.highlightWLBadPixelList(badPixelList, normalGraphics)
+    annotate.highlightWLBadPixelList(badPixelList, brightGraphics)
+    annotate.highlightWLBadPixelList(badPixelList, blackGraphics)
+
+    val bin = 6
+    val bout = 6
+
+    def annotateBox(gc: Graphics2D): Unit = {
+      annotate.drawBoxGraphics(gc, edgeSet.unTop, edgeSet.unBottom, edgeSet.unLeft, edgeSet.unRight, Config.WLBoxColor, inside = bin, outside = bout)
+    }
+
+    annotateBox(normalGraphics)
+    annotateBox(brightGraphics)
+    annotateBox(blackGraphics)
+
+    val boxShrink = 5
+    annotate.drawBoxGraphics(normalGraphics, edgeSet.unTop + boxShrink, edgeSet.unBottom - boxShrink, edgeSet.unLeft + boxShrink, edgeSet.unRight - boxShrink, Config.WLBoxColorCorrected, inside = -1, outside = 0)
+    annotate.drawBoxGraphics(brightGraphics, edgeSet.unTop + boxShrink, edgeSet.unBottom - boxShrink, edgeSet.unLeft + boxShrink, edgeSet.unRight - boxShrink, Config.WLBoxColorCorrected, inside = -1, outside = 0)
+    annotate.drawBoxGraphics(blackGraphics, edgeSet.unTop + boxShrink, edgeSet.unBottom - boxShrink, edgeSet.unLeft + boxShrink, edgeSet.unRight - boxShrink, Config.WLBoxColorCorrected, inside = -1, outside = 0)
+
+    annotate.drawBoxBallOffset(normalGraphics, (ballCenterX, ballCenterY), ((edgeSet.unLeft + edgeSet.unRight) / 2, (edgeSet.unTop + edgeSet.unBottom) / 2))
+    annotate.drawBoxBallOffset(brightGraphics, (ballCenterX, ballCenterY), ((edgeSet.unLeft + edgeSet.unRight) / 2, (edgeSet.unTop + edgeSet.unBottom) / 2))
+    annotate.drawBoxBallOffset(blackGraphics, (ballCenterX, ballCenterY), ((edgeSet.unLeft + edgeSet.unRight) / 2, (edgeSet.unTop + edgeSet.unBottom) / 2))
+
+    val boxUnscaledCorrectedCenterX = (edgeSet.unLeft + edgeSet.unRight) / 2
+    val boxUnscaledCorrectedCenterY = (edgeSet.unTop + edgeSet.unBottom) / 2
+
+    val boxCenterScaledX = boxUnscaledCorrectedCenterX * ResolutionX
+    val boxCenterScaledY = boxUnscaledCorrectedCenterY * ResolutionY
+    val ballCenterScaledX = ballCenterX * ResolutionX
+    val ballCenterScaledY = ballCenterY * ResolutionY
+
+    val errorScaledX = boxCenterScaledX - ballCenterScaledX
+    val errorScaledY = boxCenterScaledY - ballCenterScaledY
+    val errorScaledXYCombined = Math.sqrt((errorScaledX * errorScaledX) + (errorScaledY * errorScaledY))
+
+    val passed: WLImageStatus.ImageStatus = {
+      val p = annotate.annotateImage(normalPng, normalGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true, imageName, passLimit_mm = wlParameters.passLimit_mm)
+      p
+    }
+    annotate.annotateImage(brightPng, brightGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true, imageName, passLimit_mm = wlParameters.passLimit_mm)
+    annotate.annotateImage(blackPng, blackGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = false, imageName, passLimit_mm = wlParameters.passLimit_mm)
+
+    val pixelData = constructPixelData(blackPng, coarseAoi)
+
+    Util.writePng(normalPng, new File(subDir, WLgenHtml.NORMAL_SUMMARY_FILE_NAME))
+    Util.writePng(brightPng, new File(subDir, WLgenHtml.BRIGHT_SUMMARY_FILE_NAME))
+    logger.info("Done constructing ProcessImage for " + imageName)
+
+    val boxPoint = new Point(boxCenterScaledX, boxCenterScaledY)
+    val ballPoint = new Point(ballCenterScaledX, ballCenterScaledY)
+    val edgesScaled = new Edges(
+      edgeSet.top.pos_pix * ResolutionY,
+      edgeSet.bottom.pos_pix * ResolutionY,
+      edgeSet.left.pos_pix * ResolutionX,
+      edgeSet.right.pos_pix * ResolutionX
+    )
+
+    diagnosticMessage("X Offset mm " + fmt(errorScaledX))
+    diagnosticMessage("Y Offset mm " + fmt(errorScaledY))
+    diagnosticMessage("R mm " + fmt(errorScaledXYCombined))
+
+    if (runReq.rtplan.isDefined) {
+      val expected = PlannedRectangle(runReq.rtplan.get, rtimage)
+      diagnosticMessage("expected edges: " + expected)
+    }
+
+    val imageResult = WLImageResult(
+      imageStatus = passed,
+      boxP = Some(boxPoint),
+      ballP = Some(ballPoint),
+      edgesUnscaled = None,
+      boxEdgesP = Some(edgesScaled),
+      edgeSet = Some(edgeSet),
+      directory = subDir,
+      rtimage = attributeList,
+      pixels = Some(pixelData),
+      coarseAoiBounds = Some(coarseAoiBounds),
+      Some(brcX),
+      Some(brcY),
+      badPixelList = badPixelList,
+      marginalPixelList = marginalPixelList,
+      extendedData = extendedData,
+      runReq
+    )
+
+    diagnosticMessage("Image processing Results:\n" + imageResult.toString)
+
+    WLgenHtml.generateHtml(extendedData, subDir, imageResult)
+
+    imageResult
+  }
+
+
   def process: WLImageResult = {
     logger.info("Start constructing ProcessImage for " + Util.sopOfAl(rtimage))
-
-    /** Convert a value in mm to pixels. */
-    def toPixels(mm: Double): Int = ((mm / ResolutionX) + 0.5).toInt
-
-    // tolerance in pixels for how far the search for the fine edge of
-    // box should look, given the coarse position of the edge.  Also used
-    // determine where an edge of the box finishes, to define the
-    // area to look for the ball.
-    val tol: Int = toPixels(Config.WLBoxEdgeTolerance_mm)
-    val tol34 = (tol * 0.75).round.toInt
-    val tol15 = (tol * 1.5).round.toInt
-    val tol2 = tol * 2
-    val tol4 = tol * 4
-
-    /** Scaling for drawing images. */
-    val SCALE: Int = ((Config.WLScale / 0.526) * ((ResolutionX + ResolutionY) / 2.0)).round.toInt
-
-    // The step size (in pixels) for crawling down the curve to find the
-    // point where the ball height exceeds a threshold
-    val X_INCREMENT: Double = 0.001
-
-    /** Expected radius of ball in (units of) number of pixels. */
-    val BALL_RADIUS = toPixels(wlParameters.ballDiameter_mm / 2.0)
-
-    val annotate = new WLAnnotate(SCALE, BALL_RADIUS)
-
-    def fmt(d: Double): String = d.formatted("%10.5f")
-
-    def toPng(pix: IndexedSeq[IndexedSeq[Float]]): BufferedImage = toPngScaled(pix, SCALE)
-
-    val diagnostics = new PrintStream(new File(subDir, WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME))
-
-    def diagnosticMessage(text: String): Unit = {
-      diagnostics.println(text)
-      val msg =
-        "G" + Util.angleRoundedTo90(Util.gantryAngle(rtimage)).formatted("%03d") +
-          "C" + Util.angleRoundedTo90(Util.collimatorAngle(rtimage)).formatted("%03d") + " " + {
-          val fmt = new SimpleDateFormat("MM:ss")
-          val ms = Util.dicomGetTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime).get.getTime
-          val elapsed_ms = ms - extendedData.output.dataDate.get.getTime
-          fmt.format(new Date(elapsed_ms))
-        } +
-          imageName + " Diagnostics: " + text
-      logger.info(msg)
-    }
-
     //noinspection RegExpRepeatedSpace,RegExpSimplifiable
     diagnosticMessage("\nOutput :\n    " + extendedData.output.toString.replaceAll("   *", "\n    "))
-
-    def writeDicomAsText(attributeList: AttributeList): Unit = {
-      try {
-        val text = DicomUtil.attributeListToString(attributeList)
-        Util.writeFile(new File(subDir, Util.sopOfAl(rtimage) + ".txt"), text)
-      } catch {
-        case e: Exception =>
-          diagnosticMessage("Unable to write DICOM file as text: " + e)
-      }
-    }
-
-    def writeDicomAsBinaryDicom(attributeList: AttributeList): Unit = {
-      try {
-        val file = new File(subDir, Util.sopOfAl(rtimage) + ".dcm")
-        Util.writeAttributeListToFile(attributeList, file)
-      } catch {
-        case e: Exception =>
-          diagnosticMessage("Unable to write DICOM file as binary DICOM: " + e)
-      }
-    }
-
-    /**
-      * Generate an image of the given size with all black pixels
-      */
-    def toBlackPng(pix: IndexedSeq[IndexedSeq[Float]]): BufferedImage = {
-      val png = toPngScaled(pix, SCALE)
-      for (y <- 0 until png.getHeight) for (x <- 0 until png.getWidth) png.setRGB(x, y, EMPTY_PIXEL)
-      png
-    }
-
-    /**
-      * Make an image showing the level of background noise immediately around the ball.
-      */
-    def showBallBackgroundNoise(areaOfInterest: IndexedSeq[IndexedSeq[Float]], name: String): Unit = {
-      val aoiWidth = areaOfInterest.head.length
-      val aoiHeight = areaOfInterest.length
-      val aoi = {
-        val di = new DicomImage(areaOfInterest)
-        val subDi = di.getSubimage(new Rectangle(0, 0, aoiWidth, aoiHeight))
-        subDi.pixelData
-      }
-
-      val all = aoi.flatten
-      val min = all.min
-      val max = all.max
-      val limit = ((max - min) * 0.08) + min
-
-      def doRow(y: Int): IndexedSeq[Float] = {
-        def doPix(pix: Float): Float = {
-          if (pix > limit)
-            min
-          else
-            pix
-        }
-
-        areaOfInterest(y).map(doPix)
-      }
-
-      val background = (0 until aoiHeight).map(doRow)
-
-      Util.writePng(toPng(background), new File(subDir, name + ".png"))
-    }
-
-    /**
-      * Take the average of the darkest background pixels for
-      * each row and subtract it from each pixel.
-      */
-    def normalizeArea(aoi: IndexedSeq[IndexedSeq[Float]]): IndexedSeq[IndexedSeq[Float]] = {
-      aoi.map(row => {
-        val bias = row.sorted.take(Config.WLNumBackgroundPixels).sum / Config.WLNumBackgroundPixels
-        row.map(col => if (col > bias) col - bias else 0)
-      })
-    }
-
-    /**
-      * Locate the box to sub-pixel accuracy.
-      */
-    def fineBoxLocate(
-        coarseAoi: DicomImage,
-        pixels: IndexedSeq[IndexedSeq[Float]],
-        aoiBounds: Rectangle
-    ): Either[WLImageStatus.Value, WLEdgeSet] = {
-
-      // do sanity check to see if the box is reasonably sized.
-      if ((coarseAoi.width < tol4) || (coarseAoi.height < tol4))
-        Left(WLImageStatus.BoxTooSmall)
-      else
-        try {
-          val height = coarseAoi.height
-          val width = coarseAoi.width
-
-          val x = aoiBounds.x
-          val y = aoiBounds.y
-
-          // @formatter:off
-          val topAOI    = new Rectangle(x + tol2        , y + 0            , width - tol4, tol2         )
-          val bottomAOI = new Rectangle(x + tol2        , y + height - tol2, width - tol4, tol2         )
-          val leftAOI   = new Rectangle(x + 0           , y + tol2         , tol2        , height - tol4)
-          val rightAOI  = new Rectangle(x + width - tol2, y + tol2         , tol2        , height - tol4)
-
-          val di = new DicomImage(pixels)
-          val wlTop    = WLEdge("top"   , vertical = false, di, rtimage,    topAOI)
-          val wlBottom = WLEdge("bottom", vertical = false, di, rtimage, bottomAOI)
-          val wlLeft   = WLEdge("left"  , vertical = true , di, rtimage,   leftAOI)
-          val wlRight  = WLEdge("right" , vertical = true , di, rtimage,  rightAOI)
-          // @formatter:on
-
-          val edgeSet = WLEdgeSet(wlTop, wlBottom, wlLeft, wlRight)
-
-          WLEdgeImage.makeEdgeImage(wlTop, subDir, SCALE)
-          WLEdgeImage.makeEdgeImage(wlBottom, subDir, SCALE)
-          WLEdgeImage.makeEdgeImage(wlLeft, subDir, SCALE)
-          WLEdgeImage.makeEdgeImage(wlRight, subDir, SCALE)
-
-          val status: WLImageStatus.Value = {
-            val list = Seq(wlTop, wlBottom, wlLeft, wlRight).filter(_.edge.isLeft)
-            if (list.isEmpty) WLImageStatus.Passed else list.head.edge.left.get
-          }
-
-          if (status == WLImageStatus.Passed)
-            Right(edgeSet)
-          else
-            Left(status)
-        } catch {
-          case t: Throwable =>
-            logger.info(s"Unexpected: ${fmtEx(t)}")
-            Left(WLImageStatus.UnexpectedError)
-        }
-    }
-
-    /**
-     * Construct the pixel data destined to be put in the DICOM image with graphics and annotations.  This is done by
-     * taking a buffered image that is all black except for the graphics and annotations, and then mapping that onto
-     * a scaled up version of the original pixels.
-     */
-    def constructPixelData(blackPng: BufferedImage, areaOfInterest: IndexedSeq[IndexedSeq[Float]]): Array[Array[Float]] = {
-      val min = areaOfInterest.flatten.min
-      val max = areaOfInterest.flatten.max
-      val avg = (min + max) / 2
-      val width = blackPng.getWidth
-      val height = blackPng.getHeight
-      val aoi = Array.ofDim[Float](height, width)
-
-      for (y <- 0 until height) for (x <- 0 until width) {
-        val pixelOrig = areaOfInterest(y / SCALE)(x / SCALE)
-        val pixelGraphic =
-          if (blackPng.getRGB(x, y) == EMPTY_PIXEL)
-            pixelOrig
-          else if (pixelOrig < avg)
-            max
-          else
-            min
-        aoi(y)(x) = pixelGraphic
-      }
-
-      aoi
-    }
-
-    /**
-     * Determine whether the area inside the box is flat.  Do this by determine the ratio of the
-     * range of the box pixels over the range of the ball pixels.  If this number is too large,
-     * then the area is too flat to contain a ball.
-     */
-    def ballAreaIsFlat(boxArea: IndexedSeq[IndexedSeq[Float]], ballArea: IndexedSeq[IndexedSeq[Float]], ballBounds: Rectangle): Boolean = {
-      val boxWd = boxArea.head.length
-      val boxHt = boxArea.length
-
-      val boxPix = boxArea.flatten
-      val boxMin = boxPix.min
-      val boxMax = boxPix.max
-      val boxRange = boxMax - boxMin
-
-      val ballPix = ballArea.flatten
-      val ballMin = ballPix.min
-      val ballMax = ballPix.max
-      val ballRange = ballMax - ballMin
-
-      val rat = boxRange / ballRange
-
-      Trace.trace(s"rat: $rat")
-      Trace.trace()
-
-      if (true) {
-        val box = new DicomImage(boxArea).toBufferedImage(Color.green)
-        val ball = new DicomImage(ballArea).toBufferedImage(Color.yellow)
-
-        Util.writePng(box, new File(subDir, "theBox.png"))
-        Util.writePng(ball, new File(subDir, "theBall.png"))
-        Trace.trace("wrote theBox theBall " + subDir)
-        Trace.trace()
-      }
-
-      // Get the pixel that are not part of the ball
-      val backgroundPixels = {
-        // delineate a border that is half-way between the outer edge of the ball and edge of
-        // the box.  Use the pixels in this border to get a good sample of background pixels that
-        // do not include the ball.
-        val xMin = ballBounds.x
-        val xMax = ballBounds.x + ballBounds.width
-        val yMin = ballBounds.y
-        val yMax = ballBounds.y + ballBounds.height
-        for (
-          x <- 0 until boxWd;
-          y <- 0 until boxHt
-          if (x < xMin) || (x > xMax) || (y < yMin) || (y > yMax)
-        ) yield {
-          boxArea(y)(x)
-        }
-      }
-
-      val backgroundRange = backgroundPixels.max - backgroundPixels.min
-
-      val ratio = boxRange / backgroundRange
-
-      val stats = " BallAreaFlatnessRatioLowerLimit: " + Config.WLBallAreaFlatnessRatioLowerLimit + "    measured ratio: " + ratio +
-        "   total pixel range including ball and background: " + boxRange + "    background pixel range: " + backgroundRange
-      if (ratio < Config.WLBallAreaFlatnessRatioLowerLimit) {
-        val msg = "Flatness check: Failed to find ball in box because area inside box was flat. " + stats
-        logger.error(msg)
-        diagnosticMessage("Severe error: " + msg)
-        true
-      } else {
-        val msg = "Flatness check: The area inside the box contains a ball. " + stats
-        logger.error(msg)
-        diagnosticMessage(msg)
-        false
-      }
-
-      false // TODO disables test
-    }
-
-
-    /**
-     * After locating the center of the box and the ball with some confidence, process the results.  The only
-     * error that is expected to occur after this point is that the distance between the centers is too large.
-     */
-    def processLocation(
-                         coarseAoi: IndexedSeq[IndexedSeq[Float]],
-                         edgeSet: WLEdgeSet,
-                         ballRelativeCenter: (Double, Double),
-                         ballArea: IndexedSeq[IndexedSeq[Float]],
-                         coarseAoiBounds: Rectangle,
-                         brcX: Double,
-                         brcY: Double,
-                         badPixelList: Seq[WLBadPixel],
-                         badPixelListShifted: Seq[WLBadPixel],
-                         marginalPixelList: Seq[WLBadPixel],
-                         attributeList: AttributeList,
-                         runReq: WLRunReq
-                       ): WLImageResult = {
-
-      val ballCenterX = ballRelativeCenter._1
-      val ballCenterY = ballRelativeCenter._2
-
-      // Limit all pixel brightnesses to the maximum ball pixel brightness.  This makes the ball stand out more in the final image.
-      val maxBallPixel = ballArea.flatten.max
-      val thresholdLimitedAreaOfInterest = coarseAoi.map(r => r.map(c => if (c > maxBallPixel) maxBallPixel else c))
-
-      //drawGraphics()
-      val normalPng = toPng(coarseAoi)
-      val brightPng = toPng(thresholdLimitedAreaOfInterest)
-      val blackPng = toBlackPng(coarseAoi)
-
-      // draw edge of box
-      val normalGraphics = normalPng.getGraphics.asInstanceOf[Graphics2D]
-      val brightGraphics = brightPng.getGraphics.asInstanceOf[Graphics2D]
-      val blackGraphics = blackPng.getGraphics.asInstanceOf[Graphics2D]
-
-      annotate.drawBallGraphics(normalGraphics, ballCenterX, ballCenterY)
-      annotate.drawBallGraphics(brightGraphics, ballCenterX, ballCenterY)
-      annotate.drawBallGraphics(blackGraphics, ballCenterX, ballCenterY)
-
-      annotate.highlightWLBadPixelList(badPixelListShifted, normalGraphics)
-      annotate.highlightWLBadPixelList(badPixelListShifted, brightGraphics)
-      annotate.highlightWLBadPixelList(badPixelListShifted, blackGraphics)
-
-      val bin = 6
-      val bout = 6
-
-      def annotateBox(gc: Graphics2D): Unit = {
-        annotate.drawBoxGraphics(gc, edgeSet.unTop, edgeSet.unBottom, edgeSet.unLeft, edgeSet.unRight, Config.WLBoxColor, inside = bin, outside = bout)
-      }
-
-      annotateBox(normalGraphics)
-      annotateBox(brightGraphics)
-      annotateBox(blackGraphics)
-
-      val boxShrink = 5
-      annotate.drawBoxGraphics(normalGraphics, edgeSet.unTop + boxShrink, edgeSet.unBottom - boxShrink, edgeSet.unLeft + boxShrink, edgeSet.unRight - boxShrink, Config.WLBoxColorCorrected, inside = -1, outside = 0)
-      annotate.drawBoxGraphics(brightGraphics, edgeSet.unTop + boxShrink, edgeSet.unBottom - boxShrink, edgeSet.unLeft + boxShrink, edgeSet.unRight - boxShrink, Config.WLBoxColorCorrected, inside = -1, outside = 0)
-      annotate.drawBoxGraphics(blackGraphics, edgeSet.unTop + boxShrink, edgeSet.unBottom - boxShrink, edgeSet.unLeft + boxShrink, edgeSet.unRight - boxShrink, Config.WLBoxColorCorrected, inside = -1, outside = 0)
-
-      annotate.drawBoxBallOffset(normalGraphics, (ballCenterX, ballCenterY), ((edgeSet.unLeft + edgeSet.unRight) / 2, (edgeSet.unTop + edgeSet.unBottom) / 2))
-      annotate.drawBoxBallOffset(brightGraphics, (ballCenterX, ballCenterY), ((edgeSet.unLeft + edgeSet.unRight) / 2, (edgeSet.unTop + edgeSet.unBottom) / 2))
-      annotate.drawBoxBallOffset(blackGraphics, (ballCenterX, ballCenterY), ((edgeSet.unLeft + edgeSet.unRight) / 2, (edgeSet.unTop + edgeSet.unBottom) / 2))
-
-      val boxUnscaledCorrectedCenterX = (edgeSet.unLeft + edgeSet.unRight) / 2
-      val boxUnscaledCorrectedCenterY = (edgeSet.unTop + edgeSet.unBottom) / 2
-
-      val boxCenterScaledX = boxUnscaledCorrectedCenterX * ResolutionX
-      val boxCenterScaledY = boxUnscaledCorrectedCenterY * ResolutionY
-      val ballCenterScaledX = ballCenterX * ResolutionX
-      val ballCenterScaledY = ballCenterY * ResolutionY
-
-      val errorScaledX = boxCenterScaledX - ballCenterScaledX
-      val errorScaledY = boxCenterScaledY - ballCenterScaledY
-      val errorScaledXYCombined = Math.sqrt((errorScaledX * errorScaledX) + (errorScaledY * errorScaledY))
-
-      val passed: WLImageStatus.ImageStatus = {
-        val p = annotate.annotateImage(normalPng, normalGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true, imageName, passLimit_mm = wlParameters.passLimit_mm)
-        p
-      }
-      annotate.annotateImage(brightPng, brightGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true, imageName, passLimit_mm = wlParameters.passLimit_mm)
-      annotate.annotateImage(blackPng, blackGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = false, imageName, passLimit_mm = wlParameters.passLimit_mm)
-
-      val pixelData = constructPixelData(blackPng, coarseAoi)
-
-      Util.writePng(normalPng, new File(subDir, WLgenHtml.NORMAL_SUMMARY_FILE_NAME))
-      Util.writePng(brightPng, new File(subDir, WLgenHtml.BRIGHT_SUMMARY_FILE_NAME))
-      logger.info("Done constructing ProcessImage for " + imageName)
-
-      val boxPoint = new Point(boxCenterScaledX, boxCenterScaledY)
-      val ballPoint = new Point(ballCenterScaledX, ballCenterScaledY)
-      val edgesScaled = new Edges(
-        edgeSet.top.pos_pix * ResolutionY,
-        edgeSet.bottom.pos_pix * ResolutionY,
-        edgeSet.left.pos_pix * ResolutionX,
-        edgeSet.right.pos_pix * ResolutionX
-      )
-
-      //diagnosticMessage("\n\nScaled box dimensions in mm")
-      //diagnostics.write(edgesScaled.toString.getBytes)
-
-      // diagnosticMessage("\n\n")
-      // diagnosticMessage("ball center mm   X: " + fmt(ballCenterScaledX) + "    Y: " + fmt(ballCenterScaledY))
-      // diagnosticMessage("box  center mm   X: " + fmt(boxCenterScaledX) + "    Y: " + fmt(boxCenterScaledY))
-
-      diagnosticMessage("X Offset mm " + fmt(errorScaledX))
-      diagnosticMessage("Y Offset mm " + fmt(errorScaledY))
-      diagnosticMessage("R mm " + fmt(errorScaledXYCombined))
-
-      if (runReq.rtplan.isDefined) {
-        val expected = PlannedRectangle(runReq.rtplan.get, rtimage)
-        diagnosticMessage("expected edges: " + expected)
-      }
-
-      val imageResult = WLImageResult(
-        imageStatus = passed,
-        boxP = Some(boxPoint),
-        ballP = Some(ballPoint),
-        edgesUnscaled = None,
-        boxEdgesP = Some(edgesScaled),
-        edgeSet = Some(edgeSet),
-        directory = subDir,
-        // extendedData,
-        rtimage = attributeList,
-        pixels = Some(pixelData),
-        coarseAoiBounds = Some(coarseAoiBounds),
-        Some(brcX),
-        Some(brcY),
-        badPixelList = badPixelList,
-        marginalPixelList = marginalPixelList,
-        extendedData = extendedData,
-        runReq
-      )
-
-      diagnosticMessage("Image processing Results:\n" + imageResult.toString)
-
-      WLgenHtml.generateHtml(extendedData, subDir, imageResult)
-
-      imageResult
-    }
-
-    def saveWLBadPixelImage(pixels: IndexedSeq[IndexedSeq[Float]], badPixelList: Seq[WLBadPixel], marginalPixelList: Seq[WLBadPixel]): Unit = {
-      val png = toPngScaled(pixels, 1)
-      val graphics = png.getGraphics
-
-      def drawWLBadPixelList(list: Seq[WLBadPixel], color: Color): Unit = {
-        graphics.setColor(color)
-
-        // Put a single dot on the pixel
-        list.foreach(b => png.setRGB(b.x, b.y, color.getRGB))
-
-        val radius = Config.WLBadPixelCorrectionRadius // was 10
-        // draw a circle around each dot
-        list.foreach(b => graphics.drawOval(b.x - radius, b.y - radius, radius * 2, radius * 2))
-      }
-
-      drawWLBadPixelList(marginalPixelList, Color.YELLOW)
-      drawWLBadPixelList(badPixelList, Config.WLFailColor)
-
-      Util.writePng(png, new File(subDir, BAD_PIXEL_FILE_NAME))
-    }
-
-
-    /**
-     * Get the raw pixels.  Ensure that the majority of the pixels are large.  If they are
-     * not, then invert pixels so that the small become large and the large become small.
-     *
-     * @return Pixel array.
-     */
-    def fetchPixels(): IndexedSeq[IndexedSeq[Float]] = {
-
-      val di = new DicomImage(rtimage)
-
-      val count = 20 // maximum number of high and low bad pixels
-
-      // Drop some high and low pixels to make sure that a few bad pixels do not skew the mean.
-      val sorted = di.pixelData.flatten.sorted.drop(count).dropRight(count)
-
-      val mean = sorted.sum / sorted.size
-
-      val belowMeanPixelCount = sorted.indexWhere(_ > mean)
-
-      val minPlusMax = di.minPixelValue + di.maxPixelValue
-
-      val pixelData: IndexedSeq[IndexedSeq[Float]] = {
-        if (belowMeanPixelCount > (sorted.size / 2)) {
-          def invert(pix: Float): Float = minPlusMax - pix
-
-          val invertedDicomImage = di.fun1(invert)
-          invertedDicomImage.pixelData.map(_.toIndexedSeq).toIndexedSeq
-        } else
-          di.pixelData.map(_.toIndexedSeq).toIndexedSeq
-      }
-
-      pixelData
-    }
 
     // ----------------------------------------------------------------------------------------
 
     try {
-      val uncorrectedPixels = fetchPixels()
-      Util.writePng(toPngScaled(uncorrectedPixels, 1), new File(subDir, "original.png"))
-      writeDicomAsBinaryDicom(rtimage)
-      writeDicomAsText(rtimage)
+      // val uncorrectedPixels = fetchPixels()
+      val preprocessImage = WLPreprocessImage(rtimage, imageName)
+      val pixels = preprocessImage.preprocessedImage.pixelData
+      // val uncorrectedPixels = fetchPixels()
+      Util.writePng(toPngScaled(preprocessImage.preprocessedImage.pixelData, 1), new File(subDir, "original.png"))
+      writeDicomAsBinaryDicom()
+      writeDicomAsText()
 
-      // Seq of raw distinct pixel values sorted by value
-      val rawDistinctSortedList = uncorrectedPixels.flatten.toList.distinct.sorted
+      val imageHasContrast = checkHasContrast(preprocessImage.preprocessedImage)
 
-      if (rawDistinctSortedList.size < Config.WLMinimumDistinctPixelValues) {
-        WLImageResult(WLImageStatus.BoxNotFound, directory = subDir, rtimage = rtimage, badPixelList = Seq(), marginalPixelList = Seq(), extendedData = extendedData, runReq = runReq)
+      if (imageHasContrast.isDefined) {
+        imageHasContrast.get
       } else {
 
-        // ------------------------------------------------------------------------------------------------------------------------
+        val badPixels = preprocessImage.badPixels
 
-        val wlBadPixels = WLBadPixels(new DicomImage(uncorrectedPixels))
-
-        logger.info(s"$imageName Number of bad pixels: " + wlBadPixels.badPixelsCorrected.size + " : " + wlBadPixels.badPixelsCorrected)
-        logger.info(s"$imageName Number of marginal pixels: " + wlBadPixels.marginalPixelsCorrected.size + " : " + wlBadPixels.marginalPixelsCorrected)
-
-        val pixels = wlBadPixels.correctedImage
-
-        val pixelImage = new DicomImage(pixels)
-
-        // ------------------------------------------------------------------------------------------------------------------------
-
-        if (wlBadPixels.badPixelsCorrected.nonEmpty || wlBadPixels.marginalPixelsCorrected.nonEmpty) saveWLBadPixelImage(pixels, wlBadPixels.badPixelsCorrected, wlBadPixels.marginalPixelsCorrected)
+        if (badPixels.badPixelsCorrected.nonEmpty || badPixels.marginalPixelsCorrected.nonEmpty)
+          saveWLBadPixelImage(pixels, badPixels.badPixelsCorrected, badPixels.marginalPixelsCorrected)
 
         val coarseAoiBounds = WLCoarseBox(new DicomImage(pixels), trans).locate()
 
-        // Shift the bad pixels so that they point to the proper place in the area of interest (AOI)
-        val badPixelListShifted = wlBadPixels.badPixelsCorrected.map(b => new WLBadPixel(b.x - coarseAoiBounds.x, b.y - coarseAoiBounds.y, b.rawValue, b.correctedValue, b.adjacentValidValueList))
+        val coarseAoi: DicomImage = preprocessImage.preprocessedImage.getSubimage(coarseAoiBounds)
 
-        val coarseAoi: DicomImage = pixelImage.getSubimage(coarseAoiBounds)
-
-
-        val fineBoxLocateResult = fineBoxLocate(coarseAoi, pixels, coarseAoiBounds)
+        val fineBoxLocateResult = fineBoxLocate(coarseAoi, pixels, coarseAoiBounds, tol2, tol4)
 
         val result: WLImageResult = fineBoxLocateResult match {
           case Left(status) =>
@@ -642,7 +614,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
                     Trace.trace(s"new: $p    old: $ballRelativeCenter")
                   }
 
-
                   val brcX = ballRelativeCenter._1
                   val brcY = ballRelativeCenter._2
 
@@ -654,9 +625,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
                     coarseAoiBounds = coarseAoiBounds,
                     brcX = brcX,
                     brcY = brcY,
-                    badPixelList = wlBadPixels.badPixelsCorrected,
-                    badPixelListShifted = badPixelListShifted,
-                    marginalPixelList = wlBadPixels.marginalPixelsCorrected,
+                    badPixelList = badPixels.badPixelsCorrected,
+                    marginalPixelList = badPixels.marginalPixelsCorrected,
                     attributeList = rtimage,
                     runReq = runReq
                   )

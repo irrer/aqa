@@ -6,7 +6,7 @@ import org.aqa.Logging
 
 import scala.annotation.tailrec
 
-case class WLBadPixels(uncorrectedImage: DicomImage) extends Logging {
+case class WLBadPixels(uncorrectedImage: DicomImage, imageName: String) extends Logging {
 
   private val uncorrectedPixels = uncorrectedImage.pixelData
 
@@ -132,4 +132,8 @@ case class WLBadPixels(uncorrectedImage: DicomImage) extends Logging {
   val marginalPixelsCorrected: Seq[WLBadPixel] = uncorrectedWLBadPixelsToWLBadPixels(marginalPixelListUncorrected)
 
   val correctedImage: IndexedSeq[IndexedSeq[Float]] = correctWLBadPixels(badPixelsCorrected)
+
+  logger.info(s"$imageName Number of bad pixels: " + badPixelsCorrected.size + " : " + badPixelsCorrected)
+  logger.info(s"$imageName Number of marginal pixels: " + marginalPixelsCorrected.size + " : " + marginalPixelsCorrected)
+
 }
