@@ -33,7 +33,7 @@ case class WLBallValidation(ballAoi: DicomImage, ball: DicomImage, ballBounds: R
     val file = new File(subDir, "ballAoiMinusBall.png")
     Util.writePng(ballImg, file)
 
-    if (false) {
+    if (true) {
       val bi = ball.toBufferedImage(Color.magenta) // TODO throws exception
       val fileBi = new File(subDir, "ballOnly.png")
       Util.writePng(bi, fileBi)
