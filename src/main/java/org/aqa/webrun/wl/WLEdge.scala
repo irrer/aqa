@@ -19,7 +19,7 @@ import java.awt.Rectangle
 import java.text.SimpleDateFormat
 import scala.annotation.tailrec
 
-case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtimage: AttributeList, bounds: Rectangle) extends Logging {
+case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtimage: AttributeList, bounds: Rectangle, wlMsg: WLMessage) extends Logging {
 
   val aoi: DicomImage = wholeImage.getSubimage(bounds)
 
@@ -28,9 +28,9 @@ case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtima
   // Number of binary search iterations before determining that the edge has
   // been measured to a sufficient degree.  Each iteration is approximately
   // equivalent to one bit of precision.
-  private val PRECISION = 30 // TODO max benefit is at 60.  Replace with LocateEdge when refactoring is complete
+  private val PRECISION = 60 // max benefit is at 60 repetitions.
 
-  val pixIn: IndexedSeq[IndexedSeq[Float]] = aoi.pixelData
+  private val pixIn: IndexedSeq[IndexedSeq[Float]] = aoi.pixelData
 
   val sum: IndexedSeq[Float] = if (vertical) colSum(pixIn) else rowSum(pixIn)
 
@@ -45,7 +45,7 @@ case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtima
   private val aoiPixelValueRange: Double = pixelValueRange(aoi)
   private val wholeImagePixelValueRange: Double = pixelValueRange(wholeImage)
 
-  private def oldFindEdge(): Double = {
+  private def simpleFindEdge(): Double = {
 
     val scaledSum = unitize(sum)
     val spline = toCubicSpline(scaledSum)
@@ -88,13 +88,12 @@ case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtima
     val brightnessMessage = "edge brightness   Max percent diff range allowed: " + Config.WLMaxAllowedBrightnessRangePercentDifference +
       "  image brightness range: " + wholeImagePixelValueRange.formatted("%7.2f") +
       "  " + name.format("%8s") + " edge brightness range: " + aoiPixelValueRange.formatted("%7.2f") + "    percent diff: " + pct.formatted("%7.3f")
-    logger.info(brightnessMessage)
+    wlMsg.info(brightnessMessage)
 
     if (pct >= Config.WLMaxAllowedBrightnessRangePercentDifference) {
       val errorMsg =
         "Edge " + name + " failed to meet criteria for brightness range of " + Config.WLMaxAllowedBrightnessRangePercentDifference + " percent.  " + brightnessMessage + "    Required percent" + Config.WLMaxAllowedBrightnessRangePercentDifference
-      logger.error(errorMsg)
-      Trace.trace()
+      wlMsg.error(errorMsg)
       Some(WLImageStatus.BallAreaNoisy)
     } else {
       None
@@ -189,12 +188,12 @@ case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtima
 
     val orientation = if (vertical) "col" else "row"
     val msg = s"""SinglePixel $orientation Edge: $fullName   StdDev: ${"%9.6f".format(stdDev)}   SinglePixel List: ${list.map(d => "%8.5f".format(d)).mkString(", ")}"""
-    logger.info(msg)
+    wlMsg.info(msg)
 
     val StdDevThreshold = 0.15
 
     if (stdDev > StdDevThreshold) {
-      logger.info(s"Edge with stem shadow : $fullName")
+      wlMsg.info(s"Edge with stem shadow : $fullName")
 
       val loSize = list.size / 2
       val hiSize = list.size - loSize
@@ -222,7 +221,7 @@ case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtima
       learn()
     } catch {
       case t: Throwable =>
-        logger.error(s"Unexpected error (ignored): ${fmtEx(t)}")
+        wlMsg.error(s"Unexpected error (ignored): ${fmtEx(t)}")
     }
      */
 
@@ -230,7 +229,7 @@ case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtima
       case Some(err) =>
         Left(err)
       case _ =>
-        Right(oldFindEdge())
+        Right(simpleFindEdge())
     }
 
   }
@@ -245,7 +244,7 @@ case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtima
 
   def posIntAbs_pix: Int = baseOffset_pix + posInt_pix
 
-  def posAbs_pix = baseOffset_pix + pos_pix
+  def posAbs_pix: Double = baseOffset_pix + pos_pix
 
   override def toString: String = s"$name: ${if (edge.isRight) pos_pix.toString else edge.left.get.toString}"
 

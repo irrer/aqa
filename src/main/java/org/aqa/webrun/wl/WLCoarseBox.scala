@@ -1,18 +1,16 @@
 package org.aqa.webrun.wl
 
-import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 
 import java.awt.Rectangle
 
-case class WLCoarseBox(image: DicomImage, trans: IsoImagePlaneTranslator) extends Logging {
+case class WLCoarseBox(image: DicomImage, trans: IsoImagePlaneTranslator, wlMsg: WLMessage) extends Logging {
 
-  def this(rtimage: AttributeList) = this(new DicomImage(rtimage), new IsoImagePlaneTranslator(rtimage))
+  // def this(rtimage: AttributeList) = this(new DicomImage(rtimage), new IsoImagePlaneTranslator(rtimage), wlMsg)
 
   private case class StartAndLen(start: Int, len: Int) {}
 
@@ -47,7 +45,7 @@ case class WLCoarseBox(image: DicomImage, trans: IsoImagePlaneTranslator) extend
 
     val rect = new Rectangle(xStartLen.start, yStartLen.start, xStartLen.len, yStartLen.len)
 
-    logger.info(
+    wlMsg.info(
       "Rectangle defining coarse box location in mm: " +
         "    x: " + Util.fmtDbl(trans.pix2IsoCoordX(rect.x)) +
         "    y: " + Util.fmtDbl(trans.pix2IsoCoordY(rect.y)) +

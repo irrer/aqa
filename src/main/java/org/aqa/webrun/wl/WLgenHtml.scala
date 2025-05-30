@@ -52,7 +52,7 @@ object WLgenHtml {
     escapedText.replaceAll(NL, "<br/>\n")
   }
 
-  def generateHtml(extendedData: ExtendedData, subDir: File, imageResult: WLImageResult): Unit = {
+  def generateHtml(extendedData: ExtendedData, subDir: File, imageResult: WLImageResult, wlMsg: WLMessage): Unit = {
     val vs = "<p/><br/>" // vertical space
 
     val HTML_PREFIX = {
@@ -208,7 +208,7 @@ object WLgenHtml {
       "<body>\n" +
       "<a href='/" + MAIN_HTML_FILE_NAME + "'>Home</a><p/>\n" +
       "<center>\n" +
-      "<h2>Diagnostics<p/>\n" +
+      "<h2>Diagnostics for " + wlMsg.imageName + " <p/>\n" +
       "<h2><p>" + statusText + "</p></h2>\n" +
       "<a title='Go back to report' href='../" + Output.displayFilePrefix + ".html'>Report</a>" +
       " &nbsp; &nbsp; &nbsp; &nbsp; " +

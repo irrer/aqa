@@ -5,13 +5,11 @@ import com.pixelmed.dicom.AttributeTag
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Util
 import org.aqa.db.WinstonLutz
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.PlannedRectangle
-import org.aqa.webrun.wl.isoCheck.WLXlsxUtil
 
 import java.awt.geom.Point2D
 import java.awt.Rectangle
@@ -227,28 +225,6 @@ case class WLImageResult(
         case Some(uid) => uid
         case _ => ""
       }
-    }
-
-    if (true) { // TODO rm
-      val boxCenterX_mm: Double = boxCenter_mm.getX
-
-      val boxCenterY_mm: Double = boxCenter_mm.getY
-
-      val ballCenterX = ballCenter_mm.getX
-
-      val ballCenterY = ballCenter_mm.getY
-
-      val errorX = boxCenterX_mm - ballCenterX
-
-      val errorY = boxCenterY_mm - ballCenterY
-
-      val imageUid = Util.sopOfAl(rtimage)
-
-      val tar = WLXlsxUtil.angleRounded(tableAngle_deg)
-
-      //if (WLXlsxUtil.angleRounded(tableAngle_deg) == 30)
-      Trace.trace(s"table: $tar    x: $errorX    y: $errorY    imageUID: $imageUid")
-
     }
 
     val wl = WinstonLutz(

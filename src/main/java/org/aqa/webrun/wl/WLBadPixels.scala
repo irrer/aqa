@@ -6,7 +6,7 @@ import org.aqa.Logging
 
 import scala.annotation.tailrec
 
-case class WLBadPixels(uncorrectedImage: DicomImage, imageName: String) extends Logging {
+case class WLBadPixels(uncorrectedImage: DicomImage, imageName: String, wlMsg: WLMessage) extends Logging {
 
   private val uncorrectedPixels = uncorrectedImage.pixelData
 
@@ -47,7 +47,7 @@ case class WLBadPixels(uncorrectedImage: DicomImage, imageName: String) extends 
 
       (1 until rawDistinctSortedList.size).map(i => gapOf(i)).max
     }
-    logger.info("Range of valid pixel values (inclusive): " + limits._1 + " - " + limits._2 + "    Largest value gap in good pixels: " + largestGoodGap)
+    wlMsg.info("Range of valid pixel values (inclusive): " + limits._1 + " - " + limits._2 + "    Largest value gap in good pixels: " + largestGoodGap)
 
     val badList =
       uncorrectedImage.pixelData.flatten.zipWithIndex.filter(pi => !isValid(pi._1)).map(pix => UncorrectedWLBadPixel(pix._2 % uncorrectedImage.width, pix._2 / uncorrectedImage.width, pix._1))
@@ -133,7 +133,7 @@ case class WLBadPixels(uncorrectedImage: DicomImage, imageName: String) extends 
 
   val correctedImage: IndexedSeq[IndexedSeq[Float]] = correctWLBadPixels(badPixelsCorrected)
 
-  logger.info(s"$imageName Number of bad pixels: " + badPixelsCorrected.size + " : " + badPixelsCorrected)
-  logger.info(s"$imageName Number of marginal pixels: " + marginalPixelsCorrected.size + " : " + marginalPixelsCorrected)
+  wlMsg.info(s"$imageName Number of bad pixels: " + badPixelsCorrected.size + " : " + badPixelsCorrected)
+  wlMsg.info(s"$imageName Number of marginal pixels: " + marginalPixelsCorrected.size + " : " + marginalPixelsCorrected)
 
 }
