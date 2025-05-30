@@ -5,13 +5,13 @@ import edu.umro.ScalaUtil.FileUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.Util
 import org.aqa.db.Output
+import org.aqa.web.WebUtil
 
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import scala.xml.Elem
-import scala.xml.PrettyPrinter
 
 object WLgenHtml {
 
@@ -39,160 +39,158 @@ object WLgenHtml {
     fmtDate(date) + "\n" + " &nbsp; &nbsp; " + timeAgo(date)
   }
 
-  private def prettyPrint(elem: Elem): String = new PrettyPrinter(1024, 2).format(elem)
-
-  private def code2Html(src: String): String = {
-    val NL = "@@NL@@"
-    //noinspection RegExpSimplifiable
-    val textNewLine = src.replaceAll("""[\012\015][\012\015]*""", NL)
-    val elem: Elem = <code>
-      {textNewLine}
-    </code>
-    val escapedText = prettyPrint(elem)
-    escapedText.replaceAll(NL, "<br/>\n")
-  }
-
   def generateHtml(extendedData: ExtendedData, subDir: File, imageResult: WLImageResult, wlMsg: WLMessage): Unit = {
-    val vs = "<p/><br/>" // vertical space
 
-    val HTML_PREFIX = {
-      """
-            <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
-            <!--[if lt IE 9]>
-                <script src="/static/bootstrap/html5shiv/3.7.0/html5shiv.js"></script>
-                <script src="/static/bootstrap/libs/respond/1.4.2/respond.min.js"></script>
-            <![endif]-->
-            <link rel="icon" href="/static/images/favicon.ico?" type="image/x-icon"/>
-            <link rel="stylesheet" href="/static/AQA.css"/>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-            <script src="/static/zoom/jquery.zoom.js"></script>
-            <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.5.4/jquery.timeago.min.js'></script>
-            <script src="/static/tooltip/tooltip.js"></script>
-            <script>
-                $(document).ready(function(){ $('#ex1').zoom(); });
-                jQuery(document).ready(function() {jQuery('abbr.timeago').timeago();})
-            </script>
-            <link rel='stylesheet' href='/static/WLQA.css'/>
-        """
-    }
-
-    //val relativeUrl = subDir.getAbsolutePath.substring(Config.DataDirectory.length + 1).replace('\\', '/')
-
-    def img(name: String): String = {
+    def img2(name: String, cssStyle: Option[String] = None): Elem = {
       val shortName = if (name.endsWith(IMAGE_FILE_SUFFIX)) name.substring(0, name.length - IMAGE_FILE_SUFFIX.length) else name
       val longName = shortName + IMAGE_FILE_SUFFIX
       if (new File(subDir, longName).exists) {
-        "<a href='" + longName + "'><img title='" + shortName + "' src='" + longName + "'></a>\n"
+        if (cssStyle.isDefined)
+          <a href={longName} style={cssStyle.get}>
+            <img title={shortName} src={longName}/>
+          </a>
+        else
+          <a href={longName}>
+            <img title={shortName} src={longName}/>
+          </a>
       } else {
-        "Image for " + longName + " does not exist"
+        <span>Image for {longName} does not exist</span>
       }
     }
 
-    val diagnosticsText: String = {
-      val diagFile = new File(subDir, WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME)
-      if (diagFile.exists) {
-        val text = FileUtil.readTextFile(diagFile).right.get
-        val textHtml = code2Html(text)
-        "<pre style='background: #eeeeee; font-size: small'>\n" + textHtml + "</pre><p/>\n"
-      } else "Diagnostics file " + WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME + " does not exist"
+    val diagnosticsText2: Elem = {
+      val diagnosticFile = new File(subDir, WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME)
+      if (diagnosticFile.exists) {
+        val text = FileUtil.readTextFile(diagnosticFile).right.get
+        <pre style='background: #eeeeee; font-size: small'>
+          {text}
+        </pre>
+      } else
+        <span>Diagnostics file {WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME}  does not exist</span>
     }
 
-    val badPixelImage: String = {
+    val badPixelImage2: Elem = {
       val badPixelImgFile = new File(extendedData.output.dir, BAD_PIXEL_FILE_NAME)
       if (!badPixelImgFile.exists)
-        ""
+        <span> </span>
       else {
-        vs + vs + "Entire image with bad pixels highlighted and circled<br/>in red and marginal ones in yellow<br/>\n" + img("badPixels") + "<p/>\n"
+        <div>
+          Entire image with bad pixels highlighted and circled
+          <br>in red and marginal ones in yellow</br>
+          {img2("badPixels")}
+          <p></p>
+        </div>
       }
     }
 
     val imageTitle = "Entire image" + (if ((imageResult.badPixelList == null) || imageResult.badPixelList.isEmpty) "" else " with bad pixels corrected")
-    val originalImage: String = vs + vs + imageTitle + "<br/>\n" + img("original") + "<p/>\n"
 
-    val summaryWithEdges: String = {
-      vs + vs + "Summary with Edges<p/>\n" +
-        "<table>\n" +
-        "<tr>\n" +
-        "<td>\n" +
-        "</td>\n" +
-        "<td align='center'>\n" +
-        img("edge_top") +
-        "</td>\n" +
-        "<td>\n" +
-        "</td>\n" +
-        "</tr>\n" +
-        "<tr>\n" +
-        "<td align='center'>\n" +
-        img("edge_left") +
-        "</td>\n" +
-        "<td align='center'>\n" +
-        img("normalSummary") +
-        "</td>\n" +
-        "<td align='center'>\n" +
-        img("edge_right") +
-        "</td>\n" +
-        "</tr>\n" +
-        "<tr>\n" +
-        "<td>\n" +
-        "</td>\n" +
-        "<td align='center'>\n" +
-        img("edge_bottom") +
-        "</td>\n" +
-        "<td>\n" +
-        "</td>\n" +
-        "</tr>\n" +
-        "</table>\n" +
-        "<p/>\n"
+    val originalImage2: Elem = {
+      <div>
+        <p/>
+        {imageTitle}
+        <br/>
+        {img2("original")}
+        <p/>
+      </div>
     }
 
-    val background: String = {
-      vs + vs + "Background Surrounding Ball<p/>\n" +
-        "<table cellpadding='10'>\n" +
-        "<tr>\n" +
-        "<td align='center'>\n" +
-        "Before Normalization<p/>\n" +
-        img("ball_background") +
-        "</td>\n" +
-        "<td align='center'>\n" +
-        "After Normalization<p/>\n" +
-        img("normalized_ball_background") +
-        "</td>\n" +
-        "</tr>\n" +
-        "</table>\n" +
-        "<p/>\n"
+    val summaryWithEdges2: Elem = {
+      <div>
+          Summary with Edges<p/>
+          <table>
+            <tr>
+              <td>
+              </td>
+              <td align='center'>
+                {img2("edge_top")}
+              </td>
+              <td>
+              </td>
+            </tr>
+            <tr>
+              <td align='center'>
+                {img2("edge_left")}
+              </td>
+              <td align='center'>
+                {img2("normalSummary")}
+              </td>
+              <td align='center'>
+                {img2("edge_right")}
+              </td>
+            </tr>
+            <tr>
+              <td>
+              </td>
+              <td align='center'>
+                {img2("edge_bottom")}
+              </td>
+              <td>
+              </td>
+            </tr>
+          </table>
+          <p/>
+        </div>
+
     }
 
-    val ballStages: String = {
-      vs + vs + "Location of Ball<p/>\n" +
-        "<table cellpadding='10'>\n" +
-        "<tr>\n" +
-        "<td align='center'>\n" +
-        "Before Normalization<p/>\n" +
-        img("ball_before_normalization") +
-        "</td>\n" +
-        "<td align='center'>\n" +
-        "After Normalization Coarse Location<p/>\n" +
-        img("ball_coarse") +
-        "</td>\n" +
-        "<td align='center'>\n" +
-        "Fine Location<p/>\n" +
-        img("ball_fine") +
-        "</td>\n" +
-        "</tr>\n" +
-        "</table>\n" +
-        "<p/>\n"
+    val background2: Elem = {
+      val cssStyle = Some("margin:20px;")
+      <div>
+          Background Surrounding Ball
+          <p/>
+          <table cellpadding="10">
+            <tr>
+              <td align="center">
+                Before Normalization<p/>
+                {img2("ball_background", cssStyle)}
+              </td>
+              <td align="center">
+                After Normalization<p/>
+                {img2("normalized_ball_background", cssStyle)}
+              </td>
+            </tr>
+          </table>
+          <p/>
+        </div>
     }
 
-    val brightSummary: String = {
-      "<p>Summary brightened to better show ball<p>\n" +
-        img("brightSummary")
+    val ballStages2: Elem = {
+      val csStyle = Some("margin:20px;")
+      <div>
+        Location of Ball<p/>
+        <table cellpadding="10">
+          <tr>
+            <td align="center">
+              Before Normalization<p/>
+              {img2("ball_before_normalization", csStyle)}
+            </td>
+            <td align="center">
+              After Normalization Coarse Location<p/>
+              {img2("ball_coarse", csStyle)}
+            </td>
+            <td align="center">
+              Fine Location<p/>
+              {img2("ball_fine", csStyle)}
+            </td>
+          </tr>
+        </table>
+        <p/>
+      </div>
     }
 
-    val statusText = {
+    val brightSummary2: Elem = {
+      <div>
+        <p>Summary brightened to better show ball</p>
+        {img2("brightSummary")}
+      </div>
+    }
+
+    val statusText: Elem = {
       if (imageResult.imageStatus == WLImageStatus.Passed)
-        "<passed> &nbsp; PASSED &nbsp; </passed>"
+        <passed style="color:#000000; background:#1dc32b;"> PASSED </passed>
       else
-        s"<failed> &nbsp; ${imageResult.imageStatus} &nbsp; </failed>"
+        <failed style="color:#000000; background:#e00034;"> {imageResult.imageStatus} </failed>
     }
 
     val imageDate = {
@@ -200,40 +198,60 @@ object WLgenHtml {
       date.get
     }
 
-    val html: String = "<!DOCTYPE html>\n" +
-      "<html>\n" +
-      "<head>\n" +
-      HTML_PREFIX + "\n" +
-      "</head>\n" +
-      "<body>\n" +
-      "<a href='/" + MAIN_HTML_FILE_NAME + "'>Home</a><p/>\n" +
-      "<center>\n" +
-      "<h2>Diagnostics for " + wlMsg.imageName + " <p/>\n" +
-      "<h2><p>" + statusText + "</p></h2>\n" +
-      "<a title='Go back to report' href='../" + Output.displayFilePrefix + ".html'>Report</a>" +
-      " &nbsp; &nbsp; &nbsp; &nbsp; " +
-      "<a title='Download original DICOM image' href='" + Util.sopOfAl(imageResult.rtimage) + DICOM_SUFFIX + "'>DICOM</a>" +
-      " &nbsp; &nbsp; &nbsp; &nbsp; " +
-      "<a title='View original DICOM formatted as text' href='" + Util.sopOfAl(imageResult.rtimage) + ".txt'>DICOM as text</a>" +
-      "<p/>\n" +
-      "Treatment " + timeAndTimeAgo(imageDate) +
-      " &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\n" +
-      "Analysis " + timeAndTimeAgo(new Date) + "<p/>\n" +
-      "</center>\n" +
-      diagnosticsText +
-      "<center>\n" +
-      badPixelImage +
-      originalImage +
-      summaryWithEdges +
-      brightSummary +
-      background +
-      ballStages +
-      "</center>\n" +
-      "</body>\n" +
-      "</html>"
+    val html2: String = {
+
+      val mainReportRef = s"../${Output.displayFilePrefix}"
+      val dicomRef = Util.sopOfAl(imageResult.rtimage) + DICOM_SUFFIX
+      val dicomTextRef = Util.sopOfAl(imageResult.rtimage) + ".txt"
+
+      val links = {
+        <div>
+            <a title="Go back to report" href={mainReportRef + ".html"}>Report</a>
+            <a style="margin-left:40px;" title="Download original DICOM image" href={dicomRef}>DICOM</a>
+            <a style="margin-left:40px;" title="View original DICOM formatted as text" href={dicomTextRef}>DICOM as text</a>
+          </div>
+      }
+
+      val images = {
+        <center>
+          {badPixelImage2}
+          {originalImage2}
+          {summaryWithEdges2}
+          {brightSummary2}
+          {background2}
+          {ballStages2}
+        </center>
+      }
+
+      val diagnosticsPage = {
+        <div>
+          <a href={MAIN_HTML_FILE_NAME}>Home</a>
+          <p> </p>
+          <center>
+            <h2>
+              Details for Beam {wlMsg.imageName}
+              <p> </p>
+              <p> {statusText} </p>
+            </h2>
+            {links}
+          </center>
+          {diagnosticsText2}
+          {images}
+          <br> </br>
+          <p style="margin-bottom:200px;"> </p>
+        </div>
+      }
+
+      val text = WebUtil.wrapBody(content = ExtendedData.wrapExtendedData(extendedData, diagnosticsPage), pageTitle = wlMsg.imageName, c3 = true, runScript = None)
+
+      text
+
+      // html
+
+    }
 
     val fos = new FileOutputStream(new File(subDir, DIAGNOSTICS_HTML_FILE_NAME))
-    fos.write(html.getBytes)
+    fos.write(html2.getBytes)
     fos.close()
   }
 
