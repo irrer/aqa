@@ -324,20 +324,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
             val ballAoi = coarseAoi.getSubimage(ballBounds).pixelData
 
-            val ballBoundsAbs = new Rectangle(
-              coarseAoiBounds.x + ballBounds.x, //
-              coarseAoiBounds.y + ballBounds.y, //
-              ballBounds.width,
-              ballBounds.height
-            )
-
-            if (true) {
-              val bAbs = preprocessImage.preprocessedImage.getSubimage(ballBoundsAbs)
-              val buf = bAbs.toBufferedImage(Color.orange)
-              val file = new File(subDir, "bAbs.png")
-              Util.writePng(buf, file)
-            }
-
             showBallBackgroundNoise(ballAoi, "ball_background")
             Util.writePng(toPng(ballAoi), new File(subDir, "ball_before_normalization.png"))
 
@@ -353,7 +339,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
                   val brcX = ballRelativeCenter._1
                   val brcY = ballRelativeCenter._2
-
 
                   val wlMakeImages = WLMakeImages( //
                     rtimage,

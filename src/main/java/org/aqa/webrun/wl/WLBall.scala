@@ -34,11 +34,6 @@ case class WLBall(
 
   private def toPng(pix: IndexedSeq[IndexedSeq[Float]]): BufferedImage = toPngScaled(pix, SCALE)
 
-  if (true) {
-    val png = toPng(coarseAoi.pixelData)
-    Util.writePng(png, new File(subDir, "coarseAoi.png"))
-  }
-
   /**
     * Coarsely locate the center of the ball by creating a copy of the area expected to contain
     * the center of the ball, and then transforming it so that each pixel contains the sum of
