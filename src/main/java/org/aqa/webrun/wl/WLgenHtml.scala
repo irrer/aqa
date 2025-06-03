@@ -1,6 +1,5 @@
 package org.aqa.webrun.wl
 
-import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.FileUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.Util
@@ -58,7 +57,47 @@ object WLgenHtml {
       }
     }
 
-    val diagnosticsText2: Elem = {
+    val edgeSetHtml: Elem = {
+
+      def edgeHtml(edge: WLEdge): Elem = {
+        val nl = WebUtil.titleNewline
+        val title = //
+          s"The profile of the edge is calculated by finding the 50%$nl" +
+            s"gradient point for each column or row of pixels.$nl$nl" +
+            s"It shows how 'even' the edge is, and can be indicative$nl" +
+            s"of the transparency of the stem supporting the ball phantom.$nl$nl" +
+            s"The coefficient of variation of the profile is a numerical$nl" +
+            s"representation of the evenness of the edge."
+        <tr title={title}>
+          <td>
+            <h4>{edge.name}</h4>
+            Profile Coef Of Var: {Util.fmtDbl(edge.edgeProfileProfileCoefficientOfVariation)}
+            <br>
+              Image with Gradient
+            </br>
+            <br>
+              <img src={"edge_" + edge.name + ".png"} height="200" />
+            </br>
+          </td>
+          <td>
+            <h4>Edge Profile</h4>
+            {edge.edgeProfileChart.html}
+          </td>
+        </tr>
+      }
+
+      <div>
+        <table class="table table-bordered" style="text-align: center;">
+          {edgeHtml(imageResult.edgeSet.get.top)}
+          {edgeHtml(imageResult.edgeSet.get.bottom)}
+          {edgeHtml(imageResult.edgeSet.get.left)}
+          {edgeHtml(imageResult.edgeSet.get.right)}
+        </table>
+      </div>
+
+    }
+
+    val diagnosticsText: Elem = {
       val diagnosticFile = new File(subDir, WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME)
       if (diagnosticFile.exists) {
         val text = FileUtil.readTextFile(diagnosticFile).right.get
@@ -69,7 +108,7 @@ object WLgenHtml {
         <span>Diagnostics file {WLProcessImage.DIAGNOSTICS_TEXT_FILE_NAME}  does not exist</span>
     }
 
-    val badPixelImage2: Elem = {
+    val badPixelImage: Elem = {
       val badPixelImgFile = new File(extendedData.output.dir, BAD_PIXEL_FILE_NAME)
       if (!badPixelImgFile.exists)
         <span> </span>
@@ -85,19 +124,19 @@ object WLgenHtml {
 
     val imageTitle = "Entire image" + (if ((imageResult.badPixelList == null) || imageResult.badPixelList.isEmpty) "" else " with bad pixels corrected")
 
-    val originalImage2: Elem = {
+    val originalImage: Elem = {
       <div>
         <p/>
-        {imageTitle}
+        <h4 style="margin-top:50px;">{imageTitle}</h4>
         <br/>
         {img2("original")}
         <p/>
       </div>
     }
 
-    val summaryWithEdges2: Elem = {
+    val summaryWithEdges: Elem = {
       <div>
-          Summary with Edges<p/>
+         <h4 style="margin-top:50px;">Summary with Edges</h4>
           <table>
             <tr>
               <td>
@@ -134,10 +173,10 @@ object WLgenHtml {
 
     }
 
-    val background2: Elem = {
-      val cssStyle = Some("margin:20px;")
+    val background: Elem = {
+      val cssStyle = Some("margin:50px;")
       <div>
-          Background Surrounding Ball
+          <h4 style="margin-top:50px;">Background Surrounding Ball</h4>
           <p/>
           <table cellpadding="10">
             <tr>
@@ -155,11 +194,11 @@ object WLgenHtml {
         </div>
     }
 
-    val ballStages2: Elem = {
-      val csStyle = Some("margin:20px;")
+    val ballStages: Elem = {
+      val csStyle = Some("margin:50px;")
       <div>
-        Location of Ball<p/>
-        <table cellpadding="10">
+        <h4 style="margin-top:50px;">Location of Ball</h4>
+          <table cellpadding="10">
           <tr>
             <td align="center">
               Before Normalization<p/>
@@ -179,9 +218,9 @@ object WLgenHtml {
       </div>
     }
 
-    val brightSummary2: Elem = {
+    val brightSummary: Elem = {
       <div>
-        <p>Summary brightened to better show ball</p>
+        <h4 style="margin-top:50px;">Summary brightened to better show ball</h4>
         {img2("brightSummary")}
       </div>
     }
@@ -193,12 +232,7 @@ object WLgenHtml {
         <failed style="color:#000000; background:#e00034;"> {imageResult.imageStatus} </failed>
     }
 
-    val imageDate = {
-      val date = Util.dicomGetTimeAndDate(imageResult.rtimage, TagByName.ContentDate, TagByName.ContentTime)
-      date.get
-    }
-
-    val html2: String = {
+    val html: String = {
 
       val mainReportRef = s"../${Output.displayFilePrefix}"
       val dicomRef = Util.sopOfAl(imageResult.rtimage) + DICOM_SUFFIX
@@ -214,12 +248,12 @@ object WLgenHtml {
 
       val images = {
         <center>
-          {badPixelImage2}
-          {originalImage2}
-          {summaryWithEdges2}
-          {brightSummary2}
-          {background2}
-          {ballStages2}
+          {badPixelImage}
+          {originalImage}
+          {summaryWithEdges}
+          {brightSummary}
+          {background}
+          {ballStages}
         </center>
       }
 
@@ -235,23 +269,33 @@ object WLgenHtml {
             </h2>
             {links}
           </center>
-          {diagnosticsText2}
+          {edgeSetHtml}
+          {diagnosticsText}
           {images}
           <br> </br>
           <p style="margin-bottom:200px;"> </p>
         </div>
       }
 
-      val text = WebUtil.wrapBody(content = ExtendedData.wrapExtendedData(extendedData, diagnosticsPage), pageTitle = wlMsg.imageName, c3 = true, runScript = None)
+      val runScript = {
+        val edgeSet = imageResult.edgeSet.get
+        val js = Seq( //
+          edgeSet.top.edgeProfileChart.javascript,
+          edgeSet.bottom.edgeProfileChart.javascript,
+          edgeSet.left.edgeProfileChart.javascript,
+          edgeSet.right.edgeProfileChart.javascript
+        ).mkString("\n")
+
+        s"<script>\n$js\n</script>"
+      }
+
+      val text = WebUtil.wrapBody(content = ExtendedData.wrapExtendedData(extendedData, diagnosticsPage), pageTitle = wlMsg.imageName, c3 = true, runScript = Some(runScript))
 
       text
-
-      // html
-
     }
 
     val fos = new FileOutputStream(new File(subDir, DIAGNOSTICS_HTML_FILE_NAME))
-    fos.write(html2.getBytes)
+    fos.write(html.getBytes)
     fos.close()
   }
 

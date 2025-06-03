@@ -17,8 +17,8 @@
 package org.aqa
 
 import com.pixelmed.dicom.AttributeTag
-import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ImageUtil.Watermark
+import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.util.OpSys
 import edu.umro.ScalaUtil.Util.daysToMs
 import org.aqa.db.MaintenanceCategory
@@ -1007,6 +1007,7 @@ object Config extends Logging {
   val WLSummarySize: Int = logMainText("WLSummarySize", "350").toInt
   val WLAmqpExchange: String = logMainText("WLAmqpExchange", "gbtopic")
   val WLAmqpRoutingKey: String = logMainText("WLSummarySize", "Aria.Event.EventWLQASRSDone")
+  val WLEdgeCoefficientOfVariationMax: Double = logMainText("WLEdgeCoefficientOfVariationMax", "0.007").toDouble
 
   val WLTreatmentMachineList: List[WLTreatmentMachine] = {
     val list = (document \ "WLTreatmentMachineList" \ "WLTreatmentMachine").toList.map(e => new WLTreatmentMachine(e))

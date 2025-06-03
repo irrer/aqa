@@ -12,7 +12,7 @@ import java.io.File
 case class WLMessage(extendedData: ExtendedData, rtimage: AttributeList) extends Logging {
 
   val elapsedTime_ms: Long = {
-    val ms = Util.dicomGetTimeAndDate(rtimage, TagByName.AcquisitionDate, TagByName.AcquisitionTime).get.getTime
+    val ms = Util.extractDateTimeAndPatientIdFromDicomAl(rtimage)._1.head.getTime
     val elapsed_ms = ms - extendedData.output.dataDate.get.getTime
     elapsed_ms
   }

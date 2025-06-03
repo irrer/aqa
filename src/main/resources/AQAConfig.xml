@@ -1250,6 +1250,11 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- HTML value used to size the width of summary images on the main report. -->
     <WLSummarySize>350</WLSummarySize>
 
+    <!-- If an edge profile has a coefficient of variation more than this, then compensate for the
+    stem that supports the ball phantom.  The default value was derived by observing a phantom with
+    poor stem transparency. Default: 0.007  -->
+    <WLEdgeCoefficientOfVariationMax>0.007</WLEdgeCoefficientOfVariationMax>
+
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
     <!-- Name of XLSX files in the static dir to be used as a template for making the WL monthly
@@ -1264,7 +1269,7 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
-    <!-- Regular expression to test whether the name of the beam indicates it is a Whole Detector beam.  Case insensitive.
+    <!-- Regular expression to test whether the name of the beam indicates it is a Whole Detector beam.  Case-insensitive.
     Defaults to:  .*whole.*  -->
     <PSMWholeDetectorBeamNamePattern>.*whole.*</PSMWholeDetectorBeamNamePattern>
 

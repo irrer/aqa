@@ -1,7 +1,6 @@
 package org.aqa.webrun.wl
 
 import com.pixelmed.dicom.AttributeList
-import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
@@ -47,8 +46,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
   // private  val ORIGINAL_FILE_NAME = "original" + IMAGE_FILE_SUFFIX
   private val BAD_PIXEL_FILE_NAME = "badPixels" + WLgenHtml.IMAGE_FILE_SUFFIX
 
-  private val elapsedTime_ms = {
-    val ms = Util.dicomGetTimeAndDate(rtimage, TagByName.AcquisitionDate, TagByName.AcquisitionTime).get.getTime
+  val elapsedTime_ms: Long = {
+    val ms = Util.extractDateTimeAndPatientIdFromDicomAl(rtimage)._1.head.getTime
     val elapsed_ms = ms - extendedData.output.dataDate.get.getTime
     elapsed_ms
   }
@@ -207,10 +206,10 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         val rightAOI  = new Rectangle(x + width - tol2, y + tol2         , tol2        , height - tol4)
 
         val di = new DicomImage(pixels)
-        val wlTop    = WLEdge("top"   , vertical = false, di, rtimage,    topAOI, wlMsg)
-        val wlBottom = WLEdge("bottom", vertical = false, di, rtimage, bottomAOI, wlMsg)
-        val wlLeft   = WLEdge("left"  , vertical = true , di, rtimage,   leftAOI, wlMsg)
-        val wlRight  = WLEdge("right" , vertical = true , di, rtimage,  rightAOI, wlMsg)
+        val wlTop    = WLEdge("top"   , vertical = false, di, rtimage,    topAOI, wlMsg, trans)
+        val wlBottom = WLEdge("bottom", vertical = false, di, rtimage, bottomAOI, wlMsg, trans)
+        val wlLeft   = WLEdge("left"  , vertical = true , di, rtimage,   leftAOI, wlMsg, trans)
+        val wlRight  = WLEdge("right" , vertical = true , di, rtimage,  rightAOI, wlMsg, trans)
         // @formatter:on
 
         val edgeSet = WLEdgeSet(wlTop, wlBottom, wlLeft, wlRight)
@@ -221,8 +220,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         WLEdgeImage.makeEdgeImage(wlRight, subDir, SCALE)
 
         val status: WLImageStatus.Value = {
-          val list = Seq(wlTop, wlBottom, wlLeft, wlRight).filter(_.edge.isLeft)
-          if (list.isEmpty) WLImageStatus.Passed else list.head.edge.left.get
+          WLImageStatus.Passed
         }
 
         if (status == WLImageStatus.Passed)
