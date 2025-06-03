@@ -88,6 +88,16 @@ object C3Chart {
     override def toString: String = "min: " + min + "    max: " + max
   }
 
+  /**
+    * Used to define a region in a line that is to appear as dashed.
+    * @param name Name of Y value.
+    * @param start Minimum index.
+    * @param end Maximum index.
+    */
+  case class Region(name: String, start: Int, end: Int) {
+    def toJs = s"""'$name': [{'start':$start, 'end':$end, 'style':'dashed'}]"""
+  }
+
 }
 
 /**
@@ -122,7 +132,8 @@ class C3Chart(
     yDataLabel: String,
     yValues: Seq[Seq[Double]],
     yFormat: String = ".4g",
-    yColorList: Seq[Color] = Seq()
+    yColorList: Seq[Color] = Seq(),
+    regionList: Seq[C3Chart.Region] = Seq()
 ) extends Logging {
 
   if (yAxisLabels.size != yValues.size) throw new RuntimeException("Must be same number of Y labels as Y data sets.  yAxisLabels.size: " + yAxisLabels.size + "    yValues.size: " + yValues.size)
@@ -153,6 +164,18 @@ class C3Chart(
     "[ '" + label + "', " + valueList.mkString(", ") + "]"
   }
 
+  private val regionListAsJs: String = {
+    if (regionList.isEmpty)
+      ""
+    else
+      s""",
+       |regions: {
+       |  ${regionList.map(_.toJs).mkString(",\n")}
+       |}
+       |
+       |""".stripMargin
+  }
+
   val html: Elem = {
     <div id={chartIdTag}>
       {chartIdTag}
@@ -167,7 +190,7 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
         columns: [
           ${column(xAxisLabel, xValueList)},
           ${yAxisLabels.indices.map(i => column(yAxisLabels(i), yValues(i))).mkString(",\n         ")}
-        ]
+        ]$regionListAsJs
     },
     point: { // enlarge point on hover
         r: 0,
