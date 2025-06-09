@@ -43,16 +43,16 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
         if (br == 0)
           0
         else
-          wdImg.get(x, y) / br
+          rawImg.get(x, y) / br
       }
 
-      (0 until wdImg.width).map(doPixel)
+      (0 until rawImg.width).map(doPixel)
     }
 
-    val rawImgPixels = (0 until wdImg.height).map(doRow)
+    val psmImgPixels = (0 until rawImg.height).map(doRow)
 
-    val rawImg = new DicomImage(rawImgPixels)
-    rawImg
+    val psmImg = new DicomImage(psmImgPixels)
+    psmImg
 
   }
 
