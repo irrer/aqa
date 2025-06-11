@@ -20,6 +20,7 @@ import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.wl.isoCheck.WLRunIsoCheck
 import org.aqa.AnonymizeUtil
 import org.aqa.web.WebServer
+import org.aqa.AQAEventNetClient
 import org.aqa.Config
 import org.restlet.Request
 import org.restlet.Response
@@ -65,8 +66,8 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
         TreatmentMachine = extendedData.machine.getRealId
       )
 
-      event.send()
-
+      AQAEventNetClient.sendEventWLQASRSDone(event)
+      logger.info(s"Sent EventNet event\n$event")
     } catch {
       case t: Throwable => logger.error(s"Unexpected error sending event: ${fmtEx(t)}")
     }

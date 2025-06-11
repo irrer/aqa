@@ -12,7 +12,7 @@ class EventWLQASRSDone(PatientId: String, CareEventStart: Date, Status: Procedur
     extends OriginatingEvent(AQAEventNetClient.agentIdentification)
     with Logging {
 
-  override val xml: Elem = {
+  final override val xml: Elem = {
     <EventWLQASRSDone xmlns='urn:EventWLQASRSDone'>
       <PatientId>{PatientId}</PatientId>
       <CourseId>NA</CourseId>
@@ -24,19 +24,5 @@ class EventWLQASRSDone(PatientId: String, CareEventStart: Date, Status: Procedur
       <TreatmentMachine>{TreatmentMachine}</TreatmentMachine>
       {header.xml}
     </EventWLQASRSDone>
-  }
-
-  def send(): Unit = {
-    try {
-
-      val msg = this.toText
-
-      AQAEventNetClient.send(amqpExchange = "", amqpRoutingKey = "", msg)
-      logger.info(s"Sent EventNet message: $msg")
-    } catch {
-      case t: Throwable =>
-        logger.error(s"Failed to send EventNet event: ${fmtEx(t)}")
-    }
-
   }
 }
