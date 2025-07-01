@@ -99,8 +99,7 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
       WebUtil.userIdRealTag -> extendedData.user.getRealId.get
     )
 
-    if (true)
-      RunProcedure.runIfDataValid(valueMap = valueMap, response = response, runTrait = floodRunTrait, sync = false)
+    RunProcedure.runIfDataValid(valueMap = valueMap, response = response, runTrait = floodRunTrait, sync = false)
   }
 
   override def run(extendedData: ExtendedData, runReq: PSMRunReq, response: Response): ProcedureStatus.Value = {
@@ -230,6 +229,7 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
     def allBeams: Option[String] = {
       val rtplan = getRtplan(rtplanList, planUIDReferenceList.head).get
       allBeamsPresent(rtplan, rtimageList)
+      None // TODO rm
     }
 
     def getWholeDetector: Option[AttributeList] = {

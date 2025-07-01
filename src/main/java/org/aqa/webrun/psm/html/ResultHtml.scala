@@ -5,12 +5,12 @@ import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
-import org.aqa.webrun.psm.PSMUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.psm.PSMBeamAnalysisResult
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.web.WebUtil
+import org.aqa.webrun.psm.PSMGrid
 
 import java.awt.Color
 import java.io.File
@@ -84,7 +84,7 @@ class ResultHtml(extendedData: ExtendedData, resultList: Seq[PSMBeamAnalysisResu
     </td>
   }
 
-  private def rowToElem(extendedData: ExtendedData, resultRow: Seq[PSMBeamAnalysisResult]): Elem = {
+  private def rowToElem(extendedData: ExtendedData, resultRow: Seq[Option[PSMBeamAnalysisResult]]): Elem = {
     <tr>
       {resultRow.map(result => resultToHtml(extendedData, result))}
     </tr>
@@ -96,33 +96,38 @@ class ResultHtml(extendedData: ExtendedData, resultList: Seq[PSMBeamAnalysisResu
     * @param result For this result.
     * @return An HTML snippet that shows a thumbnail and links to the page.
     */
-  private def resultToHtml(extendedData: ExtendedData, result: PSMBeamAnalysisResult): Elem = {
+  private def resultToHtml(extendedData: ExtendedData, result: Option[PSMBeamAnalysisResult]): Elem = {
+    if (result.isEmpty)
+      <td> </td>
+    else {
+      val beamDirName = "beams"
 
-    val beamDirName = "beams"
+      val beamDir = new File(extendedData.output.dir, beamDirName)
+      beamDir.mkdirs
 
-    val beamDir = new File(extendedData.output.dir, beamDirName)
-    beamDir.mkdirs
+      val fileNamePrefix = "Beam_" + FileUtil.replaceInvalidFileNameCharacters(result.get.psmBeam.beamName, '_')
 
-    val fileNamePrefix = "Beam_" + FileUtil.replaceInvalidFileNameCharacters(result.psmBeam.beamName, '_')
+      val pngFile = new File(beamDir, fileNamePrefix + ".png")
+      val htmlFile = new File(beamDir, fileNamePrefix + ".html")
+      val htmlLink = beamDirName + "/" + htmlFile.getName
 
-    val pngFile = new File(beamDir, fileNamePrefix + ".png")
-    val htmlFile = new File(beamDir, fileNamePrefix + ".html")
-    val htmlLink = beamDirName + "/" + htmlFile.getName
+      annotateImage(result.get)
+      Config.applyWatermark(result.get.bufferedImage)
+      Util.writePng(result.get.bufferedImage, pngFile)
 
-    annotateImage(result)
-    Config.applyWatermark(result.bufferedImage)
-    Util.writePng(result.bufferedImage, pngFile)
+      makeRtimageWebPage(extendedData, result.get, pngFile, htmlFile)
 
-    makeRtimageWebPage(extendedData, result, pngFile, htmlFile)
+      val tableContent = makeTableContent(extendedData, result.get, pngFile, beamDir, htmlLink)
 
-    val tableContent = makeTableContent(extendedData, result, pngFile, beamDir, htmlLink)
-
-    tableContent
+      tableContent
+    }
   }
 
   def make(): Elem = {
+    val grid = PSMGrid(resultList)
+
     <table class="table responsive table-bordered" style="margin-top:25px;" title="Click for larger image and metadata.">
-      {PSMUtil.layoutSpatiallyPSMResult(resultList.toList).map(row => rowToElem(extendedData, row))}
+      {grid.grid.map(row => rowToElem(extendedData, row))}
     </table>
 
   }

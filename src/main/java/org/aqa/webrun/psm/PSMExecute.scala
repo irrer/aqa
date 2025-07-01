@@ -26,8 +26,9 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
 
   /**
     * Perform the math of <code>raw / br</code>
+    *
     * @param rawImg Raw image.
-    * @param brImg BR (Beam Response) image.
+    * @param brImg  BR (Beam Response) image.
     * @return PSM image.
     */
   private def makePsmImage(rawImg: DicomImage, brImg: DicomImage): DicomImage = {
@@ -35,6 +36,7 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
 
       /**
         * Process one pixel in a row.  If the BR value is 0 then return 0.
+        *
         * @param x X coordinate of pixel.
         * @return
         */
@@ -62,16 +64,23 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
 
   private val rtplan: AttributeList = runReq.rtplan
 
-  private val resultList = {
+  private val resultList: List[PSMBeamAnalysisResult] = {
     def process(rtimage: AttributeList) = PSMBeamAnalysis(rtplan, extendedData, trans, rtimage: AttributeList).measure()
 
     val list = runReq.rtimageList.par.map(process)
     list.toList.sortBy(r => timeOf(r.rtimage))
   }
 
-  private val interpolator = new PSMInterpolator(resultList)
+  private val grid = PSMGrid(resultList)
 
-  private val gradientAscent = new PSMGradientAscent(interpolator)
+  private val interpolator: Option[PSMInterpolator] = {
+    if (grid.canBeInterpolated)
+      Some(new PSMInterpolator(resultList))
+    else
+      None
+  }
+
+  private val gradientAscent: Option[PSMGradientAscent] = interpolator.map(new PSMGradientAscent(_))
 
   // ----------------------------------------------------------------------------------------
 
@@ -87,9 +96,9 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
 
   private val cbrImg = new PSMCompositeImageHTML(extendedData).makeCompositeImage(resultList)
 
-  private val brImg = interpolator.normalizedDicomImage
+  private val brImg = interpolator.map(i => i.normalizedDicomImage)
 
-  private val psmImg = makePsmImage(rawImg, brImg)
+  private val psmImg = brImg.map(makePsmImage(rawImg, _))
 
   // ----------------------------------------------------------------------------------------
 
@@ -99,17 +108,28 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
     ff.head
   }
 
-  private val psm = PSM.makePSM(
-    outputPK = extendedData.outputPK,
-    floodFieldImageHash_md5 = getReferencedFloodField.imageHash_md5,
-    image = psmImg,
-    xMax_mm = gradientAscent.getMaxPoint_iso.getX,
-    yMax_mm = gradientAscent.getMaxPoint_iso.getY,
-    wdAl
-  )
+  private val psm: Option[PSM] = {
+    if (psmImg.isDefined && gradientAscent.isDefined)
+      Some(
+        PSM.makePSM(
+          outputPK = extendedData.outputPK,
+          floodFieldImageHash_md5 = getReferencedFloodField.imageHash_md5,
+          image = psmImg.get,
+          xMax_mm = gradientAscent.get.getMaxPoint_iso.getX,
+          yMax_mm = gradientAscent.get.getMaxPoint_iso.getY,
+          wdAl
+        )
+      )
+    else
+      None
+  }
 
-  psm.insert
-  logger.info(s"Inserted PSM into database.")
+  if (psm.isDefined) {
+    psm.get.insert
+    logger.info(s"Inserted PSM into database.")
+  } else {
+    logger.info(s"No PSM created.")
+  }
 
   private val insertedList = resultList.map(result => result.psmBeam.insert)
   logger.info(s"Inserted ${insertedList.length} PSMBeam rows into database.")

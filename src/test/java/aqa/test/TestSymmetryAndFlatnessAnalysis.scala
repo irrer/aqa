@@ -22,7 +22,7 @@ import com.pixelmed.dicom.TagFromName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
-import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysis
+import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessRun
 import org.scalactic.TolerantNumerics
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers

@@ -7,32 +7,27 @@ import org.apache.commons.math3.analysis.interpolation.PiecewiseBicubicSplineInt
 import org.aqa.webrun.psm.PSMUtil.centerPixelsToString
 import org.aqa.Logging
 
+import java.awt.geom.Point2D
+
 /**
- * Interpolate using bi-cubic spline to determine pixels between beam center.
- * @param psmList List of 
- */
+  * Interpolate using bi-cubic spline to determine pixels between beam center.
+  * @param psmList List of
+  */
 class PSMInterpolator(psmList: Seq[PSMBeamAnalysisResult]) extends Logging {
   val trans: IsoImagePlaneTranslator = new IsoImagePlaneTranslator(psmList.head.rtimage)
 
-  private val sorted = PSMUtil.layoutSpatiallyPSMResult(psmList)
+  private val grid = PSMGrid(psmList)
 
-  private def mean(array: Seq[Double]): Double = array.sum / array.size
-
-  private def meanX(xIndex: Int): Double = {
-    mean(sorted.map(row => row(xIndex).psmBeam.xCenter_mm))
-  }
-
-  private def meanY(yIndex: Int): Double = {
-    mean(sorted(yIndex).map(psmBeam => psmBeam.psmBeam.yCenter_mm))
-  }
-
-  private val xCoordinateList = sorted.head.indices.map(meanX).map(trans.iso2PixCoordX).toArray
-  private val yCoordinateList = sorted.indices.map(meanY).map(trans.iso2PixCoordY).toArray
+  private val xCoordinateList = grid.grid.head.flatten.map(_.psmBeam.xCenter_mm).toArray
+  private val yCoordinateList = grid.grid.flatMap(_.head).map(_.psmBeam.yCenter_mm).toArray
 
   private val interpolator = new PiecewiseBicubicSplineInterpolator()
-  private val valueList = {
-    def toCol(colIndex: Int): Array[Double] = sorted.map(row => row(colIndex).psmBeam.mean_cu).toArray
-    sorted.head.indices.map(toCol).toArray
+
+  private val valueList: Array[Array[Double]] = {
+    def doRow(row: Seq[Option[PSMBeamAnalysisResult]]): Array[Double] = {
+      row.map(r => r.get.psmBeam.mean_cu).toArray
+    }
+    (0 until grid.height).map(y => doRow(grid.grid(y))).toArray
   }
 
   /**
@@ -40,7 +35,23 @@ class PSMInterpolator(psmList: Seq[PSMBeamAnalysisResult]) extends Logging {
     *
     * Use: <code>val psm = function.value(x,y)</code>
     */
-  val function: PiecewiseBicubicSplineInterpolatingFunction = interpolator.interpolate(xCoordinateList, yCoordinateList, valueList)
+  private val function: PiecewiseBicubicSplineInterpolatingFunction = {
+    interpolator.interpolate(yCoordinateList, xCoordinateList, valueList)
+  }
+
+  /**
+    * Perform interpolation.
+    *
+    * I think it is a bug in the org.apache.commons.math3.analysis.interpolation.PiecewiseBicubicSplineInterpolator code, but
+    * it works if the X and Y coordinates are reversed.
+    *
+    * @param x_iso X coordinate.
+    * @param y_iso y coordinate.
+    * @return value at that point.
+    */
+  private def interpolate(x_iso: Double, y_iso: Double): Double = function.value(y_iso, x_iso)
+
+  def interpolate(point: Point2D.Double): Double = interpolate(point.getX, point.getY)
 
   /**
     * Make a normalized DICOM image.
@@ -50,10 +61,17 @@ class PSMInterpolator(psmList: Seq[PSMBeamAnalysisResult]) extends Logging {
     val min = psmList.map(_.psmBeam.mean_cu).min.toFloat
 
     def makeRow(y: Int): IndexedSeq[Float] = {
+      val y_iso = trans.pix2IsoCoordY(y)
       (0 until trans.width).map(x => {
-        if ((y > yCoordinateList.head) && (y < yCoordinateList.last) && (x > xCoordinateList.head) && (x < xCoordinateList.last)) {
-          function.value(x, y).toFloat
-        } else
+        val x_iso = trans.pix2IsoCoordX(x)
+        if ( //
+          (y_iso >= yCoordinateList.head) &&
+          (y_iso <= yCoordinateList.last) &&
+          (x_iso >= xCoordinateList.head) &&
+          (x_iso <= xCoordinateList.last)
+        )
+          interpolate(x_iso, y_iso).toFloat
+        else
           min
       })
     }

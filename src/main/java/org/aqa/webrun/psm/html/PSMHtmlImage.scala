@@ -6,7 +6,6 @@ import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.web.WebUtil
 import org.aqa.Config
 import org.aqa.Util
@@ -14,7 +13,6 @@ import org.aqa.web.C3Chart
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.psm.PSMBeamAnalysisResult
 import org.aqa.Logging
-import org.aqa.webrun.psm.PSMUtil
 
 import java.awt.geom.Point2D
 import java.awt.Color
@@ -50,7 +48,8 @@ case class PSMHtmlImage(
     dir: File,
     al: Option[AttributeList] = None,
     center: Option[Point2D.Double] = None,
-    resultList: Seq[PSMBeamAnalysisResult] = Seq()
+    resultList: Seq[PSMBeamAnalysisResult] = Seq(),
+    color: Option[Color] = None
 ) extends Logging {
 
   private def makeChart(dicomImage: DicomImage, yLabel: String): C3Chart = {
@@ -162,29 +161,6 @@ case class PSMHtmlImage(
     drawHeading()
 
     resultList.foreach(drawCircle)
-
-    /*
-    // Draw filled black circles where sym/flat/const measurements are done.
-    if (true) {
-
-      def doCircle(point: SymmetryAndFlatnessPoint): Unit = {
-        val gc = ImageUtil.getGraphics(bufImg)
-        val width = trans.iso2PixDistX(Config.SymmetryAndFlatnessDiameter_mm).toInt * 2
-        val height = trans.iso2PixDistY(Config.SymmetryAndFlatnessDiameter_mm).toInt * 2
-        gc.setColor(Color.black)
-        val center_pix = trans.iso2Pix(point.x_mm, point.y_mm)
-        gc.fillOval((center_pix.getX - width / 2).toInt, (center_pix.getY - height / 2).toInt, width, height)
-        gc.setColor(Color.white)
-        ImageText.drawTextCenteredAt(gc, center_pix.getX, center_pix.getY, point.name)
-      }
-
-      doCircle(Config.SymmetryPointTop)
-      doCircle(Config.SymmetryPointBottom)
-      doCircle(Config.SymmetryPointLeft)
-      doCircle(Config.SymmetryPointRight)
-    }
-     */
-
   }
 
   private def annotateMaxCoordinates(maxPoint_iso: Point2D.Double, bufImg: BufferedImage, trans: IsoImagePlaneTranslator): Unit = {
@@ -209,14 +185,14 @@ case class PSMHtmlImage(
   // ------------------------------------------------------------------------------------------------------
 
   private val id = Util.textToId(name)
-  // private val trans = new IsoImagePlaneTranslator(al)
-  if (true) {
-    Trace.trace()
-    Trace.trace(PSMUtil.centerPixelsToString(image))
 
-    Trace.trace()
+  private val bufImage = {
+    // if color is specified, the use it
+    if (color.isDefined)
+      image.toBufferedImage(color.get)
+    else
+      image.toDeepColorBufferedImage(0.1)
   }
-  private val bufImage = image.toDeepColorBufferedImage(0.1)
   Util.addGraticules(bufImage, trans, Color.GRAY)
   if (resultList.nonEmpty)
     annotateBeamCenters(bufImage)

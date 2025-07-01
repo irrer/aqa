@@ -42,7 +42,7 @@ import org.aqa.webrun.phase2.collimatorCentering.CollimatorCenteringAnalysis
 import org.aqa.webrun.phase2.collimatorPosition.CollimatorPositionAnalysis
 import org.aqa.webrun.phase2.leafPosition.LeafPositionAnalysis
 import org.aqa.webrun.phase2.metadataCheck.MetadataCheckAnalysis
-import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysis
+import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessRun
 import org.aqa.webrun.phase2.vmat.VMATAnalysis
 import org.aqa.webrun.phase2.wedge.WedgeAnalysis
 import org.restlet.Request
@@ -419,7 +419,7 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
                       val s = Seq(
                         () => CollimatorPositionAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
                         () => WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
-                        () => SymmetryAndFlatnessAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
+                        () => SymmetryAndFlatnessRun.runProcedure(extendedData, runReq, collimatorCenteringResource),
                         () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
                         () => VMATAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource)
                       )

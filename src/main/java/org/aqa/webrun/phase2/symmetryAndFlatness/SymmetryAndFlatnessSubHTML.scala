@@ -124,13 +124,13 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   ): Elem = {
     val errorClass = if (symFlatDataSet.symmetryAndFlatness.allPass(symFlatDataSet.baseline)) "normal" else "danger"
     val detailUrl = WebServer.urlOfResultsFile(
-      SymmetryAndFlatnessHTML.beamHtmlFile(subDir, symFlatDataSet.symmetryAndFlatness.beamName, symFlatDataSet.symmetryAndFlatness.psmImageHash_md5.isDefined)
+      SymmetryAndFlatnessHTML.beamHtmlFile(subDir, symFlatDataSet.symmetryAndFlatness.beamName, symFlatDataSet.symmetryAndFlatness.psmDataDate.isDefined)
     )
     val pk = symFlatDataSet.symmetryAndFlatness.symmetryAndFlatnessPK.get
     val id = "baseline" + pk
     val baseline = symFlatDataSet.symmetryAndFlatness.isBaseline.toString
 
-    val hasPsm = if (symFlatDataSet.symmetryAndFlatness.psmImageHash_md5.isDefined) <b>PSM</b> else <span></span>
+    val hasPsm = if (symFlatDataSet.symmetryAndFlatness.psmDataDate.isDefined) <b>PSM</b> else <span></span>
 
     val input =
       if (symFlatDataSet.symmetryAndFlatness.isBaseline) {
@@ -162,7 +162,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       SymmetryAndFlatnessHTML.annotatedImageFile(
         SymmetryAndFlatnessHTML.makeSubDir(symFlatData.output.dir),
         symFlatData.symmetryAndFlatness.beamName,
-        symFlatData.symmetryAndFlatness.psmImageHash_md5.isDefined
+        symFlatData.symmetryAndFlatness.psmDataDate.isDefined
       )
     )
     val imgSmall = {
@@ -390,7 +390,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     def makeDataSet(sf: SymmetryAndFlatness): Option[SymmetryAndFlatnessDataSet] = {
       try {
         logger.info("Making data set for: " + sf)
-        val baseline = SymmetryAndFlatness.getBaseline(output.machinePK.get, sf.beamName, sf.psmImageHash_md5.isDefined, dataDate, output.procedurePK).get.baseline
+        val baseline = SymmetryAndFlatness.getBaseline(output.machinePK.get, sf.beamName, sf.psmDataDate.isDefined, dataDate, output.procedurePK).get.baseline
 
         val al: Option[AttributeList] = {
           val aa = alList.find(a => Util.sopOfAl(a).equals(sf.SOPInstanceUID))
@@ -410,8 +410,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       }
     }
 
-    val symFlatDataList =
-      symFlatList.flatMap(sf => makeDataSet(sf)).sortBy(_.time)
+    val symFlatDataList = symFlatList.flatMap(sf => makeDataSet(sf)).sortBy(_.time)
 
     val elem = makeContent(output, symFlatDataList)
     val text = PrettyXML.xmlToText(elem)
@@ -442,7 +441,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   private def resultTable(beamData: SymmetryAndFlatness.SymmetryAndFlatnessHistory): Elem = {
 
     val beamHeaderElem: Elem = {
-      val psmText = if (beamData.symmetryAndFlatness.psmImageHash_md5.isEmpty) "" else " with PSM"
+      val psmText = if (beamData.symmetryAndFlatness.psmDataDate.isEmpty) "" else " with PSM"
 
       <div class="row">
         <div class="col-md-3 col-md-offset-1">

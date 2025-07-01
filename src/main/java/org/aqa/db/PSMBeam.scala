@@ -16,9 +16,13 @@
 
 package org.aqa.db
 
+import com.pixelmed.dicom.AttributeList
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.db.Db.driver.api._
 import org.aqa.Logging
 import org.aqa.Util
+
+import javax.vecmath.Point2d
 
 case class PSMBeam(
     psmBeamPK: Option[Long], // primary key
@@ -49,6 +53,8 @@ case class PSMBeam(
   }
 
   def insertOrUpdate(): Int = Db.run(PSMBeam.query.insertOrUpdate(this))
+
+  val center: Point2d = new Point2d(xCenter_mm, yCenter_mm)
 
   override def toString: String = {
     "    psmBeamPK: " + psmBeamPK + "\n" +
@@ -164,15 +170,30 @@ object PSMBeam extends Logging {
     list.map(_.insertOrUpdate())
   }
 
-  case class PSMBeamHistory(output: Output, psmBeamList: Seq[PSMBeam]) {}
+  case class PSMBeamHistory(output: Output, psmBeamList: Seq[PSMBeam]) {
+    def matchesResolution(rtimage: AttributeList): Boolean = {
+      val trans = new IsoImagePlaneTranslator(rtimage)
+
+      val p = psmBeamList.head
+
+      // @formatter:off
+      val ok =
+        (trans.width      == p.Columns                ) &&
+        (trans.height     == p.Rows                   ) &&
+        (trans.pixelSizeX == p.ImagePlanePixelSpacingX) &&
+        (trans.pixelSizeY == p.ImagePlanePixelSpacingY)
+      // @formatter:on
+      ok
+    }
+  }
 
   /**
-    * Get the history of PSMBeam results.
-    *
-    * @param machinePK : For this machine
-    * @return Complete history sorted by date.
-    *
-    */
+   * Get the history of PSMBeam results.
+   *
+   * @param machinePK : For this machine
+   * @return Complete history sorted by date.
+   *
+   */
   def historyByMachine(machinePK: Long): Seq[PSMBeamHistory] = {
 
     val search = for {

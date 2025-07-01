@@ -9,7 +9,6 @@ import org.aqa.Logging
 import java.awt.geom.Point2D
 import java.awt.Rectangle
 import javax.vecmath.Point2i
-import scala.annotation.tailrec
 
 object PSMUtil extends Logging {
 
@@ -53,54 +52,6 @@ object PSMUtil extends Logging {
     pixelCoordinatesWithinRadius(new IsoImagePlaneTranslator(rtimage), new DicomImage(rtimage), center_pix)
   }
 
-  /**
-    * Put the beams into a 2-dimensional array that is the same as their spacial layout.
-    * @return Spatially sorted beams.
-    */
-  private def layoutSpatially(psmList: Seq[PSMBeamAnalysisResult]): Seq[Seq[PSMBeamAnalysisResult]] = {
-
-    case class Row(beamList: Seq[PSMBeamAnalysisResult]) {
-      def xSorted: Seq[PSMBeamAnalysisResult] = {
-        beamList.sortBy(beam => beam.psmBeam.xCenter_mm)
-      }
-    }
-
-    @tailrec
-    def build(beamList: Seq[PSMBeamAnalysisResult], rowList: Seq[Row] = Seq()): Seq[Row] = {
-
-      /** Centers (either X or Y) must be this close in mm to be considered to be in the same row or column. */
-      val tolerance_mm = 5.0
-
-      /**
-        * Determine if beams are in the same column.
-        * @param a one beam
-        * @param b the other beam
-        * @return True if they are close together in the Y axis.
-        */
-      def yProximal(a: PSMBeamAnalysisResult, b: PSMBeamAnalysisResult): Boolean = (a.psmBeam.yCenter_mm - b.psmBeam.yCenter_mm).abs < tolerance_mm
-
-      if (beamList.isEmpty)
-        rowList.sortBy(r => r.xSorted.head.psmBeam.yCenter_mm)
-      else {
-        val inOut = beamList.groupBy(b => yProximal(b, beamList.head))
-        val row = Row(inOut(true).sortBy(beam => beam.psmBeam.yCenter_mm))
-        val out: Seq[PSMBeamAnalysisResult] = if (inOut.contains(false)) inOut(false) else Seq()
-        build(out, rowList :+ row)
-      }
-
-    }
-
-    val rowList = build(psmList)
-
-    val sorted = rowList.sortBy(_.xSorted.head.psmBeam.yCenter_mm)
-
-    val list = sorted.map(row => row.xSorted)
-    list
-  }
-
-  def layoutSpatiallyPSMResult(resultList: Seq[PSMBeamAnalysisResult]): Seq[Seq[PSMBeamAnalysisResult]] = {
-    layoutSpatially(resultList)
-  }
 
   /**
     * Normalize an image to it's central pixels.

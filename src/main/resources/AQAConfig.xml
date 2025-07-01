@@ -1275,7 +1275,7 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Radius of circle in mm that defines how large of an area to sample from the center of each
     PSM beam. Floating point value greater than 0, default is 5.0 -->
-    <PSMRadius_mm>5.0</PSMRadius_mm>
+    <PSMRadius_mm>2.5</PSMRadius_mm>
 
     <!-- When using a flood field to construct a PSM, the flood field must be more recent than this many days
      to be valid.  Specified as a floating point number in days.  Default: 732.0 (about 2 years) -->

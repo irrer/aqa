@@ -25,7 +25,7 @@ import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.Procedure
-import org.aqa.db.PSM
+import org.aqa.db.PSMBeam
 import org.aqa.db.SymmetryAndFlatness
 import org.aqa.run.ProcedureStatus
 import org.aqa.webrun.ExtendedData
@@ -33,9 +33,9 @@ import org.aqa.webrun.phase2.CollimatorCenteringResource
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.SubProcedureResult
+import org.aqa.webrun.psm.PSMGrid
 
 import java.awt.Color
-import java.awt.Rectangle
 import java.awt.geom.Point2D
 import java.awt.image.BufferedImage
 import java.sql.Timestamp
@@ -44,7 +44,7 @@ import scala.xml.Elem
 /**
   * Analyze DICOM files for symmetry and flatness.
   */
-object SymmetryAndFlatnessAnalysis extends Logging {
+object SymmetryAndFlatnessRun extends Logging {
 
   private def boolToStatus(pass: Boolean) = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
@@ -127,167 +127,6 @@ object SymmetryAndFlatnessAnalysis extends Logging {
 
   def makeBaselineName(beamName: String, dataName: String): String = dataName + " " + beamName
 
-  /**
-   * Apply
-   * @param beamName Name of Beam in RTPLAN
-   * @param wd Whole detector - the original beam.
-   * @param psm PSM data
-   * @return An image corrected for PSM.
-   */
-
-  private def psmCorrection(beamName: String, wd: DicomImage, psm: PSM): DicomImage = {
-    val psmScaledImage = psm.imageScaled
-
-    val ffScaledImage = psm.getFloodFieldScaled
-
-    val wdXff = wd.fun2((a,b) => a*b, ffScaledImage)
-
-    def doRow(y: Int): IndexedSeq[Float] = {
-      def doPix(x: Int): Float = {
-        val psmVal: Float = {
-          psmScaledImage.get(x, y) match {
-            case 0 => 1
-            case v => v
-          }
-        }
-        (wd.get(x, y) * ffScaledImage.get(x, y)) / psmVal
-      }
-      (0 until psmScaledImage.width).map(x => doPix(x))
-    }
-
-
-
-    val pixels = (0 until psmScaledImage.height).map(doRow)
-
-    val beamResponse = new DicomImage(pixels)
-
-    beamResponse
-  }
-
-  /**
-    * Analyze for symmetry and flatness.  The results should be sufficient to support both recording to
-    * the database and generating a report.
-    *
-    */
-  private def analyze(
-      outputPK: Long,
-      procedurePK: Long,
-      beamName: String,
-      machinePK: Long,
-      dataDate: Timestamp,
-      attributeList: AttributeList,
-      correctedImage: DicomImage,
-      collimatorCenter: Point2D.Double,
-      symmetryAndFlatnessBaselineRedoBeamList: Seq[String],
-      psm: Option[PSM]
-  ): SymmetryAndFlatnessBeamResult = {
-    logger.info("Begin analysis of beam " + beamName)
-
-    val scaledImage: DicomImage = {
-      val scaled = new DicomImage(attributeList).scalePixels(attributeList)
-
-      val image =
-        if (psm.isEmpty)
-          scaled
-        else
-          psmCorrection(beamName, scaled, psm.get)
-
-      image
-    }
-
-    // val attributeList: AttributeList = getAttributeList(beamName, runReq)
-    // val dicomImage = new DicomImage(attributeList)
-    val translator = new IsoImagePlaneTranslator(attributeList)
-    val widthOfBand_pix: Int = translator.iso2PixDistX(Config.SymmetryAndFlatnessDiameter_mm).round.toInt
-    val heightOfBand_pix: Int = translator.iso2PixDistY(Config.SymmetryAndFlatnessDiameter_mm).round.toInt
-
-    /**
-      * Get the average pixel value for one spot in HU or CU or whatever units the image is using.
-      *
-      * @param point: Center of circle in image.
-      *
-      * @return Mean value of pixels in circle in CU.
-      */
-    def evalPoint(point: SymmetryAndFlatnessPoint): Double = {
-      val center = new Point2D.Double(point.x_mm + collimatorCenter.getX, point.y_mm + collimatorCenter.getY)
-      val pixList = Phase2Util.makeCenterDosePointList(attributeList, center)
-      val avg = pixList.map(p => scaledImage.get(p.x, p.y)).sum / pixList.size
-      avg
-    }
-
-    /**
-      * Get the standard deviation of the pixel values in CU for one spot in HU or CU or whatever units the image is using.
-      *
-      * @param point: Center of circle in image.
-      *
-      * @return Standard deviation of pixels in circle in CU.
-      */
-    def evalPointStdDev(point: SymmetryAndFlatnessPoint): Double = {
-      val center = new Point2D.Double(point.x_mm + collimatorCenter.getX, point.y_mm + collimatorCenter.getY)
-      val pixList = Phase2Util.makeCenterDosePointList(attributeList, center)
-      val cuList = pixList.map(p => scaledImage.get(p.x, p.y))
-      val stdDev_cu = ImageUtil.stdDev(cuList)
-      stdDev_cu
-    }
-
-    logger.info("Making transverse profile of beam " + beamName)
-    val transverseProfile = {
-      val y = ((translator.height - heightOfBand_pix) / 2.0).round.toInt
-      val rectangle = new Rectangle(0, y, translator.width, heightOfBand_pix)
-      val subImage = scaledImage.getSubimage(rectangle)
-      val cuList = subImage.columnSums.map(_ / heightOfBand_pix.toDouble)
-      cuList
-    }
-
-    logger.info("Making axial profile of beam " + beamName)
-    val axialProfile = {
-      val x = ((translator.width - widthOfBand_pix) / 2.0).round.toInt
-      val rectangle = new Rectangle(x, 0, widthOfBand_pix, translator.height)
-      val subImage = scaledImage.getSubimage(rectangle)
-      val cuList = subImage.rowSums.map(_ / widthOfBand_pix.toDouble)
-      cuList
-    }
-
-    val transverse_pct = (0 until translator.width).map(x => translator.pix2Iso(x, 0).getX)
-    val axial_pct = (0 until translator.height).map(y => translator.pix2Iso(0, y).getY)
-
-    logger.info("Assembling result for beam " + beamName)
-
-    val symmetryAndFlatness = new SymmetryAndFlatness(
-      symmetryAndFlatnessPK = None,
-      outputPK = outputPK,
-      SOPInstanceUID = Util.sopOfAl(attributeList),
-      beamName = beamName,
-      isBaseline = symmetryAndFlatnessBaselineRedoBeamList.contains(beamName),
-      top_cu = evalPoint(Config.SymmetryPointTop),
-      bottom_cu = evalPoint(Config.SymmetryPointBottom),
-      left_cu = evalPoint(Config.SymmetryPointLeft),
-      right_cu = evalPoint(Config.SymmetryPointRight),
-      center_cu = evalPoint(Config.SymmetryPointCenter),
-      topStdDev_cu = evalPointStdDev(Config.SymmetryPointTop),
-      bottomStdDev_cu = evalPointStdDev(Config.SymmetryPointBottom),
-      leftStdDev_cu = evalPointStdDev(Config.SymmetryPointLeft),
-      rightStdDev_cu = evalPointStdDev(Config.SymmetryPointRight),
-      centerStdDev_cu = evalPointStdDev(Config.SymmetryPointCenter),
-      psmImageHash_md5 = if (psm.isDefined) Some(psm.get.imageHash_md5) else None
-    )
-
-    logger.info("Getting baseline values for beam " + beamName)
-
-    // Get the baseline for the given beam of the given type (dataName).  If it does not exist, then use this one to establish it.
-    val baseline = SymmetryAndFlatness.getBaseline(machinePK, beamName, psm.isDefined, dataDate, procedurePK) match {
-      case Some(bl) => bl.baseline
-      case _        => symmetryAndFlatness
-    }
-
-    logger.info("Making annotated image of beam " + beamName)
-    val annotatedImage = makeAnnotatedImage(correctedImage, attributeList, symmetryAndFlatness)
-    val result = SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult(symmetryAndFlatness, annotatedImage, transverseProfile, transverse_pct, axialProfile, axial_pct, baseline)
-
-    logger.info("Finished analysis of beam " + beamName)
-
-    result
-  }
 
   /**
     * Entry point for testing only.
@@ -301,18 +140,24 @@ object SymmetryAndFlatnessAnalysis extends Logging {
     * @return
     */
   def testAnalyze(beamName: String, machinePK: Long, dataDate: Timestamp, attributeList: AttributeList, correctedImage: DicomImage, collimatorCenter: Point2D.Double): SymmetryAndFlatnessBeamResult = {
-    analyze(
+
+    val symmetryAndFlatnessAnalyze = SymmetryAndFlatnessAnalyze( //
       outputPK = -1,
       procedurePK = Procedure.ProcOfPhase2.get.procedurePK.get,
-      beamName,
-      machinePK,
-      dataDate,
+      machinePK = machinePK,
+      dataDate = dataDate,
       attributeList,
-      correctedImage,
+      beamName,
       collimatorCenter,
-      Seq(),
-      None
+      floodField = None,
+      symmetryAndFlatnessBaselineRedoBeamList = Seq()
     )
+
+    symmetryAndFlatnessAnalyze.analyze( //
+      correctedImage = correctedImage,
+      psmGrid = None
+    )
+
   }
 
   /**
@@ -340,47 +185,57 @@ object SymmetryAndFlatnessAnalysis extends Logging {
       val beamNameList = Util.makeSymFlatConstBeamNameList(runReq.rtplan).filter(beamName => runReq.derivedMap.contains(beamName))
       logger.info("Sym+Flat using beams:\n    " + beamNameList.mkString("\n    "))
 
-      val psm = runReq.getPsm(extendedData.machine.machinePK.get)
+      val beamSet = {
+        val list = PSMBeam.historyByMachine(extendedData.machine.machinePK.get)
 
-      if (psm.isEmpty)
-        logger.info("No PSM available.")
+        def qualifies(p: PSMBeam.PSMBeamHistory): Boolean = {
+          p.matchesResolution(runReq.rtimageMap.values.head) &&
+          (p.output.dataDate.get.getTime < extendedData.output.dataDate.get.getTime)
+        }
+
+        list.filter(qualifies).lastOption
+      }
+
+      val psmGrid = beamSet.map(bs => PSMGrid.makePSMGrid(bs.psmBeamList))
+
+      if (psmGrid.isEmpty)
+        logger.info("No PSM (Pixel Sensitivity Matrix) available.")
       else
-        logger.info("Using PSM.")
+        logger.info("Using (Pixel Sensitivity Matrix) PSM from: " + beamSet.get.output.dataDate.get)
 
       def doBeam(beamName: String): Seq[SymmetryAndFlatnessBeamResult] = {
-        val noPsm = Some(
-          analyze(
-            extendedData.output.outputPK.get,
-            extendedData.output.procedurePK,
-            beamName = beamName,
-            extendedData.machine.machinePK.get,
-            extendedData.output.dataDate.get,
-            attributeList = getAttributeList(beamName, runReq),
-            correctedImage = runReq.derivedMap(beamName).pixelCorrectedImage,
-            collimatorCenteringResource.centerOfBeam(beamName),
-            runReq.symmetryAndFlatnessBaselineRedoBeamList,
-            None
-          )
+
+        val attributeList = getAttributeList(beamName, runReq)
+        val symmetryAndFlatnessAnalyze = SymmetryAndFlatnessAnalyze( //
+          extendedData.output.outputPK.get,
+          extendedData.output.procedurePK,
+          extendedData.machine.machinePK.get,
+          extendedData.output.dataDate.get,
+          attributeList,
+          beamName,
+          collimatorCenteringResource.centerOfBeam(beamName),
+          floodField = runReq.flood,
+          runReq.symmetryAndFlatnessBaselineRedoBeamList
         )
 
+        def doAnalyze(psmGrid: Option[PSMGrid]): SymmetryAndFlatnessBeamResult = {
+
+          val image: DicomImage = {
+            if (psmGrid.isDefined)
+              runReq.derivedMap(beamName).originalImage
+            else
+              runReq.derivedMap(beamName).pixelCorrectedImage
+          }
+          symmetryAndFlatnessAnalyze.analyze(image, psmGrid = psmGrid)
+        }
+
+        val noPsm = Some(doAnalyze(psmGrid = None))
+
         val withPsm =
-          if (psm.isEmpty)
+          if (psmGrid.isEmpty)
             None
           else
-            Some(
-              analyze(
-                extendedData.output.outputPK.get,
-                extendedData.output.procedurePK,
-                beamName = beamName,
-                extendedData.machine.machinePK.get,
-                extendedData.output.dataDate.get,
-                attributeList = getAttributeList(beamName, runReq),
-                correctedImage = runReq.derivedMap(beamName).pixelCorrectedImage,
-                collimatorCenteringResource.centerOfBeam(beamName),
-                runReq.symmetryAndFlatnessBaselineRedoBeamList,
-                psm
-              )
-            )
+            Some(doAnalyze(psmGrid = psmGrid))
 
         Seq(noPsm, withPsm).flatten
       }

@@ -26,7 +26,7 @@ import org.aqa.Util
 import org.aqa.db.CollimatorCentering
 import org.aqa.db.DbSetup
 import org.aqa.webrun.phase2.Phase2Util
-import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysis
+import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessRun
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 
@@ -113,7 +113,7 @@ object TestSymmetryAndFlatnessAnalysis_analyze {
       DicomUtil.getTimeAndDate(al, TagFromName.ContentDate, TagFromName.ContentTime)).flatten.head
     println("Data Date: " + dataDate)
 
-    val result = SymmetryAndFlatnessAnalysis.testAnalyze(beamName, machinePK = 22, new Timestamp(dataDate.getTime), al, new DicomImage(al), collimatorCentering.center)
+    val result = SymmetryAndFlatnessRun.testAnalyze(beamName, machinePK = 22, new Timestamp(dataDate.getTime), al, new DicomImage(al), collimatorCentering.center)
     Trace.trace("Result: " + result.symmetryAndFlatness)
     //println(result.maintenanceRecordBaseline)
     Trace.trace("Baseline: " + result.baseline)

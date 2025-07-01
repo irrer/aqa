@@ -1032,7 +1032,7 @@ object Config extends Logging {
   // =================================================================================
 
   val PSMWholeDetectorBeamNamePattern: String = logMainText("PSMWholeDetectorBeamNamePattern", ".*whole.*")
-  val PSMRadius_mm: Double = logMainText("PSMRadius_mm", "5.0").toDouble
+  val PSMRadius_mm: Double = logMainText("PSMRadius_mm", "2.5").toDouble
 
   private val PSMMaxFloodFieldAge_day: Double = logMainText("PSMMaxFloodFieldAge_day", "732.0").toDouble
   val PSMMaxFloodFieldAge_ms: Long = (PSMMaxFloodFieldAge_day * 24 * 60 * 60 * 1000).round

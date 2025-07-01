@@ -183,7 +183,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, hasPs
   }
 
   val javascript: String = {
-    import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessAnalysis._
+    import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessRun._
 
     val sfAndBaseline = SymmetryAndFlatness.getBaseline(machinePK, beamName, hasPsm, output.dataDate.get, output.procedurePK).get
 

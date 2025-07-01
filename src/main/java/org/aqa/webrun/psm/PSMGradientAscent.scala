@@ -23,13 +23,17 @@ class PSMGradientAscent(val psmInterpolator: PSMInterpolator) extends Logging {
   /** Stop iterating if the cube length becomes this small, indicating that the result is sufficiently precise. */
   private val precision: Double = 1.0e-10
 
-  private case class Pt(pt: Point2D.Double) {
+  /**
+    * Store a point and the interpolation at that point.
+    * @param pt_iso Point in image in iso coordinates.
+    */
+  private case class Pt(pt_iso: Point2D.Double) {
     def this(x: Double, y: Double) = this(new Point2D.Double(x, y))
 
-    val value: Double = psmInterpolator.function.value(pt.getX, pt.getY)
+    val value: Double = psmInterpolator.interpolate(pt_iso)
   }
 
-  private val centerPt = Pt(psmInterpolator.trans.iso2Pix(0, 0))
+  private val centerPt = Pt(new Point2D.Double(0.0, 0.0))
 
   /** Starting point : center of image. */
   private var maxPoint: Pt = centerPt
@@ -38,7 +42,7 @@ class PSMGradientAscent(val psmInterpolator: PSMInterpolator) extends Logging {
     * Get the highest point in the PSM image.
     * @return The highest point in the PSM image.
     */
-  def getMaxPoint_iso: Point2D.Double = psmInterpolator.trans.pix2Iso(maxPoint.pt)
+  def getMaxPoint_iso: Point2D.Double = maxPoint.pt_iso
 
   private def updateMaxPoint(point: Pt): Unit =
     maxPoint.synchronized {
@@ -56,9 +60,9 @@ class PSMGradientAscent(val psmInterpolator: PSMInterpolator) extends Logging {
     private var max: Pt = center
 
     incrementList.foreach(xInc => { //
-      val x = center.pt.getX + xInc
+      val x = center.pt_iso.getX + xInc
       incrementList.foreach(yInc => { //
-        val y = center.pt.getY + yInc
+        val y = center.pt_iso.getY + yInc
         val pt = new Pt(x, y)
         if (pt.value > max.value) max = pt
       })
@@ -81,7 +85,7 @@ class PSMGradientAscent(val psmInterpolator: PSMInterpolator) extends Logging {
     } else {
       val iterationsPerformed = "iterations performed: " + (maxNumberOfIterations - iteration)
       val precision = "Result is precise to within " + "%20.17f".format(cube.len) + " mm"
-      val valuesText = "Calculated values: " + psmInterpolator.trans.pix2Iso(maxPoint.pt)
+      val valuesText = "Calculated values: " + psmInterpolator.trans.pix2Iso(maxPoint.pt_iso)
       logger.info(s"$iterationsPerformed    $precision    $valuesText")
     }
   }

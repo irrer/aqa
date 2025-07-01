@@ -43,7 +43,9 @@ case class SymmetryAndFlatness(
     leftStdDev_cu: Double, // standard deviation of left point pixels in CU
     rightStdDev_cu: Double, // standard deviation of right point pixels in CU
     centerStdDev_cu: Double, // standard deviation of center point pixels in CU
-    psmImageHash_md5: Option[String] // if defined, references the PSM by its image hash that was used to analyse this beam
+    psmDataDate: Option[Timestamp], // if defined, references the PSM by its dataDate
+    span_mm: Option[Double], // distance in mm between opposing measurement areas (both left-right and top-bottom).
+    RTImageSID: Option[Double] // distance in mm from source to image (DICOM metadata 3002,0026)
 ) {
 
   def insert: SymmetryAndFlatness = {
@@ -137,7 +139,7 @@ case class SymmetryAndFlatness(
       "    leftStdDev_cu: " + leftStdDev_cu + "\n" +
       "    rightStdDev_cu: " + rightStdDev_cu + "\n" +
       "    centerStdDev_cu: " + centerStdDev_cu + "\n" +
-      "    hasPsm: " + psmImageHash_md5.isDefined + "\n"
+      "    hasPsm: " + psmDataDate.isDefined + "\n"
   }
 
 }
@@ -176,7 +178,11 @@ object SymmetryAndFlatness extends Logging {
 
     def centerStdDev_cu = column[Double]("centerStdDev_cu")
 
-    def psmImageHash_md5 = column[Option[String]]("psmImageHash_md5")
+    def psmDataDate = column[Option[Timestamp]]("psmDataDate")
+
+    def span_mm = column[Option[Double]]("span_mm")
+
+    def RTImageSID = column[Option[Double]]("RTImageSID")
 
     //noinspection LanguageFeature
     def * =
@@ -196,7 +202,9 @@ object SymmetryAndFlatness extends Logging {
         leftStdDev_cu,
         rightStdDev_cu,
         centerStdDev_cu,
-        psmImageHash_md5
+        psmDataDate,
+        span_mm,
+        RTImageSID
       ) <> (SymmetryAndFlatness.apply _ tupled, SymmetryAndFlatness.unapply)
 
     def outputFK = foreignKey("SymmetryAndFlatness_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
@@ -287,8 +295,8 @@ object SymmetryAndFlatness extends Logging {
       symmetryAndFlatness <- SymmetryAndFlatness.query.filter(c =>
         (c.outputPK === output.outputPK) &&
           (c.beamName === beamName) &&
-          ((c.psmImageHash_md5.isDefined && hasPsm) ||
-            (c.psmImageHash_md5.isEmpty && notHasPsm))
+          ((c.psmDataDate.isDefined && hasPsm) ||
+            (c.psmDataDate.isEmpty && notHasPsm))
       )
     } yield {
       (output, symmetryAndFlatness)
@@ -298,7 +306,10 @@ object SymmetryAndFlatness extends Logging {
     // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
     // throw an exception.
     val sr = search.result
-    val tsList = Db.run(sr).map(os => OutputSymFlat(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime + "  " + os.sf.beamName + "  " + os.sf.psmImageHash_md5.isDefined.toString)
+    val tsList = {
+      val list = Db.run(sr)
+      list.map(os => OutputSymFlat(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime + "  " + os.sf.beamName + "  " + os.sf.psmDataDate.isDefined.toString)
+    }
 
     associateBaseline(tsList)
   }

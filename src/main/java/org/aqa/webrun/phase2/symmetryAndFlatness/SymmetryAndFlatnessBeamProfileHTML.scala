@@ -43,7 +43,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
   private def makeContent(
       subDir: File,
       extendedData: ExtendedData,
-      result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult,
+      result: SymmetryAndFlatnessRun.SymmetryAndFlatnessBeamResult,
       runReq: RunReq
   ): (Elem, String) = {
 
@@ -69,7 +69,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
 
     def psmProcessing: (Seq[Elem], String) = {
       val psm = runReq.getPsm(extendedData.machine.machinePK.get)
-      if (result.symmetryAndFlatness.psmImageHash_md5.isEmpty || psm.isEmpty)
+      if (result.symmetryAndFlatness.psmDataDate.isEmpty || psm.isEmpty)
         (Seq(), "")
       else {
 
@@ -94,7 +94,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
         val wdRow = PSMHtmlImage(extendedData, "WD: " + symFlat.beamName + " used as Whole Detector", wdImg, trans, dir = dir, al = Some(wdAl))
         val ffXWDRow = PSMHtmlImage(extendedData, symFlat.beamName + " times Flood Field", ffXwdImg, trans, dir = dir)
         val psmRow = PSMHtmlImage(extendedData, "PSM", psmImg, trans, dir = dir)
-        val brRow = PSMHtmlImage(extendedData, "BR: Beam Response", brImg, trans, dir = dir)
+        val brRow = PSMHtmlImage(extendedData, "BR: Beam Response", brImg, trans, dir = dir, color = Some(Color.white))
 
         val elem = {
           <div class="row">
@@ -140,7 +140,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
         (new SymmetryAndFlatnessSubHTML).pathOf +
           "?outputPK=" + extendedData.output.outputPK.get +
           "&" + SymmetryAndFlatnessSubHTML.beamNameTag + "=" + result.symmetryAndFlatness.beamName +
-          "&" + SymmetryAndFlatnessSubHTML.hasPsmTag + "=" + result.symmetryAndFlatness.psmImageHash_md5.isDefined
+          "&" + SymmetryAndFlatnessSubHTML.hasPsmTag + "=" + result.symmetryAndFlatness.psmDataDate.isDefined
       }
 
       <div class="row">
@@ -153,7 +153,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
           <div class="col-md-5 col-md-offset-1">
             {
         <center id="beamImage"><img class="img-responsive" src={
-          WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.symmetryAndFlatness.beamName, result.symmetryAndFlatness.psmImageHash_md5.isDefined))
+          WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.symmetryAndFlatness.beamName, result.symmetryAndFlatness.psmDataDate.isDefined))
         }/> </center>
       }
           </div>
@@ -173,19 +173,19 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
             </div>
             <div class="row">
               <h2>Transverse Symmetry History</h2>
-              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.transverseSymmetryName))}
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.transverseSymmetryName))}
             </div>
             <div class="row">
               <h2>Axial Symmetry History</h2>
-              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.axialSymmetryName))}
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.axialSymmetryName))}
             </div>
             <div class="row">
               <h2>Flatness History</h2>
-              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.flatnessName))}
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.flatnessName))}
             </div>
             <div class="row">
               <h2>Profile Constancy History</h2>
-              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessAnalysis.profileConstancyName))}
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.profileConstancyName))}
             </div>
             <div class="row">
               <h2>EPID CU History</h2>
@@ -210,17 +210,17 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
     $(document).ready(function(){ $('#beamImage').zoom(); });
 """
 
-    val historyScriptRef = SymmetryAndFlatnessHistoryRestlet.makeReference(result.symmetryAndFlatness.beamName, extendedData.output.outputPK.get, result.symmetryAndFlatness.psmImageHash_md5.isDefined)
+    val historyScriptRef = SymmetryAndFlatnessHistoryRestlet.makeReference(result.symmetryAndFlatness.beamName, extendedData.output.outputPK.get, result.symmetryAndFlatness.psmDataDate.isDefined)
 
     val javascript = "<script>\n" + graphTransverse.javascript + graphAxial.javascript + zoomScript + psmJs + "\n</script>\n" + historyScriptRef
     (content, javascript)
   }
 
-  def makeDisplay(subDir: File, extendedData: ExtendedData, result: SymmetryAndFlatnessAnalysis.SymmetryAndFlatnessBeamResult, runReq: RunReq): Unit = {
+  def makeDisplay(subDir: File, extendedData: ExtendedData, result: SymmetryAndFlatnessRun.SymmetryAndFlatnessBeamResult, runReq: RunReq): Unit = {
     val status = if (result.symmetryAndFlatness.allPass(result.baseline)) ProcedureStatus.pass else ProcedureStatus.fail
     val elemJavascript = makeContent(subDir, extendedData, result, runReq)
     val html = Phase2Util.wrapSubProcedure(extendedData, elemJavascript._1, title = "Symmetry and Flatness " + result.symmetryAndFlatness.beamName, status, Some(elemJavascript._2), runReq.rtimageMap)
-    Util.writeBinaryFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, result.symmetryAndFlatness.beamName, result.symmetryAndFlatness.psmImageHash_md5.isDefined), html.getBytes)
+    Util.writeBinaryFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, result.symmetryAndFlatness.beamName, result.symmetryAndFlatness.psmDataDate.isDefined), html.getBytes)
   }
 
 }
