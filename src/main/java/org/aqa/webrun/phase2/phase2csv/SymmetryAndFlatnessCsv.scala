@@ -20,6 +20,8 @@ import org.aqa.Util
 import org.aqa.db.Output
 import org.aqa.db.SymmetryAndFlatness
 
+import java.sql.Timestamp
+
 class SymmetryAndFlatnessCsv(metadataCache: MetadataCache) extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFlatnessHistory](metadataCache: MetadataCache) {
 
   // abbreviation for the long name
@@ -47,6 +49,13 @@ class SymmetryAndFlatnessCsv(metadataCache: MetadataCache) extends Phase2Csv[Sym
       case _                                                                                              => ""
     }
 
+  }
+
+  private def optDate(ts: Option[Timestamp]): String = {
+    if (ts.isDefined) {
+      Util.formatDate(Util.standardDateFormat, ts.get).replace('T', ' ')
+    } else
+      "NA"
   }
 
   override protected def makeColList: Seq[CsvCol[SF]] = {
@@ -87,8 +96,19 @@ class SymmetryAndFlatnessCsv(metadataCache: MetadataCache) extends Phase2Csv[Sym
       CsvCol("Bottom COV", "Coefficient of Variation (stdDev/mean) of pixel values in the bottom circle of the image.", (sf: SF) => sf.symmetryAndFlatness.bottomCOV),
       CsvCol("Left COV", "Coefficient of Variation (stdDev/mean) of pixel values in the left hand circle of the image.", (sf: SF) => sf.symmetryAndFlatness.leftCOV),
       CsvCol("Right COV", "Coefficient of Variation (stdDev/mean) of pixel values in the right hand circle of the image.", (sf: SF) => sf.symmetryAndFlatness.rightCOV),
-      CsvCol("Center COV", "Coefficient of Variation (stdDev/mean) of pixel values in center circle of the image.", (sf: SF) => sf.symmetryAndFlatness.centerCOV)
-      // Col("Baseline Center CU", (sf: SF) => getAl(sf).get(TagByName.SoftwareVersions).getSingleStringValueOrEmptyString)
+      CsvCol("Center COV", "Coefficient of Variation (stdDev/mean) of pixel values in center circle of the image.", (sf: SF) => sf.symmetryAndFlatness.centerCOV),
+      CsvCol("PSM Date", "If present, indicates the date of the Pixel Sensitivity map applied to this result.", (sf: SF) => optDate(sf.symmetryAndFlatness.psmDataDate)),
+      CsvCol(
+        "span",
+        "Distance in mm between opposing sample points.",
+        (sf: SF) => if (sf.symmetryAndFlatness.span_mm.isDefined) sf.symmetryAndFlatness.span_mm.get else "NA"
+      ),
+      CsvCol("diameter", "Diameter in mm of point sampled.", (sf: SF) => if (sf.symmetryAndFlatness.diameter_mm.isDefined) sf.symmetryAndFlatness.diameter_mm.get else "NA"),
+      CsvCol(
+        "RTImageSID",
+        "Source to image distance in mm (SID).",
+        (sf: SF) => if (sf.symmetryAndFlatness.RTImageSID_mm.isDefined) sf.symmetryAndFlatness.RTImageSID_mm.get else "NA"
+      )
     )
   }
 
