@@ -67,8 +67,13 @@ case class SymmetryAndFlatnessAnalyze( //
     * @param point : Center of circle in image.
     * @return Mean value of pixels in circle in CU.
     */
-  private def evalPoint(point: SymmetryAndFlatnessPoint, image: DicomImage): Double = {
-    val center = new Point2D.Double(point.x_mm + collimatorCenter.getX, point.y_mm + collimatorCenter.getY)
+  private def evalPoint(point: SymmetryAndFlatnessPoint, image: DicomImage, useCollimatorCentering: Boolean): Double = {
+    val center =
+      if (useCollimatorCentering)
+        new Point2D.Double(point.x_mm + collimatorCenter.getX, point.y_mm + collimatorCenter.getY)
+      else
+        new Point2D.Double(point.x_mm, point.y_mm)
+
     val pixList = Phase2Util.makeCenterDosePointList(attributeList, center)
     val avg = pixList.map(p => image.get(p.x, p.y)).sum / pixList.size
     avg
@@ -199,13 +204,13 @@ case class SymmetryAndFlatnessAnalyze( //
       def calcCu(psmBeam: Option[PSMBeam], symFlatPoint: SymmetryAndFlatnessPoint): Double = {
         if (doPsm) {
           val psmPoint = SymmetryAndFlatnessPoint("dummyName", psmBeam.get.xCenter_mm, psmBeam.get.yCenter_mm)
-          val monthlyWd = evalPoint(psmPoint, scaledImage)
+          val monthlyWd = evalPoint(psmPoint, scaledImage, useCollimatorCentering = false)
           val phaseAnyFloodField = psmBeam.get.floodField_cu.get
           val psm = psmBeam.get.psm
           val value = (monthlyWd / phaseAnyFloodField) / psm
           value
         } else
-          evalPoint(symFlatPoint, scaledImage)
+          evalPoint(symFlatPoint, scaledImage, useCollimatorCentering = true)
 
       }
 
