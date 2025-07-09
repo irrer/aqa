@@ -19,6 +19,7 @@ package org.aqa
 import edu.umro.ScalaUtil.PeriodicRestart
 import org.aqa.db.DbSetup
 import org.aqa.db.DicomSeries
+import org.aqa.db.SymmetryAndFlatness
 import org.aqa.run.RunProcedure
 import org.aqa.web.WebServer
 import org.aqa.webrun.phase2.phase2csv.MetadataCache
@@ -56,6 +57,10 @@ object AQA extends Logging {
         if (Config.MonitorThreadCountInterval_ms > 0) ThreadMonitor.monitorThreads(Config.MonitorThreadCountInterval_ms)
 
         AQAEventNetClient.init()
+        if (true) { // TODO rm
+          Thread.sleep(1000)
+          SymmetryAndFlatness.fixLegacySymFlat()
+        }
         new PeriodicRestart(Config.RestartTime)
         FileCleanup.cleanupThread(30 * 1000)
         DicomSeries.fixRedundantInBackground(delFlag = true, delay_ms = 30 * 1000)

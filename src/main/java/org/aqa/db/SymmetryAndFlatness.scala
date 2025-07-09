@@ -16,9 +16,13 @@
 
 package org.aqa.db
 
+import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
+import org.aqa.Util
 
 import java.sql.Timestamp
 
@@ -140,7 +144,10 @@ case class SymmetryAndFlatness(
       "    leftStdDev_cu: " + leftStdDev_cu + "\n" +
       "    rightStdDev_cu: " + rightStdDev_cu + "\n" +
       "    centerStdDev_cu: " + centerStdDev_cu + "\n" +
-      "    hasPsm: " + psmDataDate.isDefined + "\n"
+      "    hasPsm: " + psmDataDate.isDefined + "\n" +
+      "    span_mm: " + span_mm + "\n" +
+      "    diameter_mm: " + diameter_mm + "\n" +
+      "    RTImageSID_mm: " + RTImageSID_mm + "\n"
   }
 
 }
@@ -383,7 +390,7 @@ object SymmetryAndFlatness extends Logging {
     * @param procedurePK Procedure.  As the code is now, it will be either Phase2 or Phase3.
     * @return Complete history with baselines.
     */
-  def history(machinePK: Long, procedurePK: Long): Seq[SymmetryAndFlatnessHistory] = {
+  def historyForMachine(machinePK: Long, procedurePK: Long): Seq[SymmetryAndFlatnessHistory] = {
 
     val search = for {
       output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
@@ -456,6 +463,84 @@ object SymmetryAndFlatness extends Logging {
     val search = for { symFlat <- SymmetryAndFlatness.query.filter(sf => (sf.outputPK === outputPK) && sf.isBaseline) } yield symFlat
     val list = Db.run(search.result)
     list
+  }
+
+  // -------------------------------------------------------------------------------------------------------------------------------------
+
+  def fixLegacySymFlat(): Unit = { // TODO rm
+
+    var count = 0
+    var needsCount = 0
+
+    /**
+      * Get a list of all phase2 and phase3 outputs.
+      * @return
+      */
+    def fetchOutputList(): Seq[Long] = {
+      val phase2PK = Procedure.ProcOfPhase2.get.procedurePK.get
+      val phase3PK = Procedure.ProcOfPhase3.get.procedurePK.get
+
+      val action = for { output <- Output.query if (output.procedurePK === phase2PK) || (output.procedurePK === phase3PK) } yield output.outputPK
+      val list = Db.run(action.result)
+      list
+    }
+
+    def fixSymFlat(sf: SymmetryAndFlatness, alList: Seq[AttributeList]): Unit = {
+
+      val al = alList.find(a => Util.sopOfAl(a).equals(sf.SOPInstanceUID))
+
+      if (al.isDefined) {
+        val RTImageSID_mm = al.get.get(TagByName.RTImageSID).getDoubleValues.head
+
+        val newSf = sf.copy( //
+          span_mm = Some(defaultSpan_mm),
+          diameter_mm = Some(defaultDiameter_mm),
+          RTImageSID_mm = Some(RTImageSID_mm)
+        )
+
+        Trace.trace(s"Replacing $sf with $newSf ")
+
+        newSf.insertOrUpdate()
+
+        count = count + 1
+        Trace.trace(s"Replaced $sf with $newSf \ncount: $count")
+      } else
+        Trace.trace(s"Could not find attributeList for sf $sf")
+
+    }
+
+    val outputPKList = fetchOutputList()
+
+    def hasNeeds(sf: SymmetryAndFlatness): Boolean = {
+      sf.span_mm.isEmpty || sf.diameter_mm.isEmpty || sf.RTImageSID_mm.isEmpty
+    }
+
+    def doOutput(outputPK: Long): Unit = {
+      try {
+        val output = Output.get(outputPK).get
+        val symFlatList = SymmetryAndFlatness.getByOutput(outputPK)
+
+        val needToBeFixedList = symFlatList.filter(hasNeeds)
+
+        if (needToBeFixedList.nonEmpty) {
+          needsCount = needsCount + needToBeFixedList.size
+          val seriesList = DicomSeries.getByInputPK(output.inputPK)
+          if (seriesList.nonEmpty) {
+            val alList = seriesList.flatMap(_.attributeListList)
+            needToBeFixedList.map(sf => fixSymFlat(sf, alList))
+          } else
+            Trace.trace(s"Could not fix for output $outputPK")
+
+        }
+
+      } catch {
+        case t: Throwable => Trace.trace(s"Failed for outputPK $outputPK : ${fmtEx(t)}")
+      }
+    }
+
+    Trace.trace("Fixing sym flat")
+    outputPKList.foreach(doOutput)
+    Trace.trace(s"Done fixing sym flat. Number needing fixing: $needsCount    Total number fixed: $count")
   }
 
 }
