@@ -322,7 +322,7 @@ object Phase2Util extends Logging {
   /**
     * Create a list of points whose sum can be used to measure the center dose of an image.
     */
-  def makeCenterDosePointList(attributeList: AttributeList, collimatorCenterOfRotation: Point2D.Double): Seq[Point] = {
+  def makeCenterDosePointList(attributeList: AttributeList, collimatorCenterOfRotation: Point2D.Double, radius_mm: Double = Config.CenterDoseRadius_mm): Seq[Point] = {
     val translator = new IsoImagePlaneTranslator(attributeList)
 
     // inspect this many pixels outside the calculated radius to account for round off errors
@@ -330,8 +330,6 @@ object Phase2Util extends Logging {
 
     val mmX = collimatorCenterOfRotation.getX
     val mmY = collimatorCenterOfRotation.getY
-
-    val radius_mm = Config.CenterDoseRadius_mm
 
     val loX = (translator.iso2PixCoordX(mmX - radius_mm) - pad).round.toInt
     val hiX = (translator.iso2PixCoordX(mmX + radius_mm) + pad).round.toInt

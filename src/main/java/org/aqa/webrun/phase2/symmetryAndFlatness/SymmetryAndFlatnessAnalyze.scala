@@ -74,7 +74,7 @@ case class SymmetryAndFlatnessAnalyze( //
       else
         new Point2D.Double(point.x_mm, point.y_mm)
 
-    val pixList = Phase2Util.makeCenterDosePointList(attributeList, center)
+    val pixList = Phase2Util.makeCenterDosePointList(attributeList, center, radius_mm = Config.SymmetryAndFlatnessDiameter_mm / 2)
     val avg = pixList.map(p => image.get(p.x, p.y)).sum / pixList.size
     avg
   }
@@ -87,7 +87,7 @@ case class SymmetryAndFlatnessAnalyze( //
     */
   private def evalPointStdDev(point: SymmetryAndFlatnessPoint): Double = {
     val center = new Point2D.Double(point.x_mm + collimatorCenter.getX, point.y_mm + collimatorCenter.getY)
-    val pixList = Phase2Util.makeCenterDosePointList(attributeList, center)
+    val pixList = Phase2Util.makeCenterDosePointList(attributeList, center, radius_mm = Config.SymmetryAndFlatnessDiameter_mm / 2)
     val cuList = pixList.map(p => scaledImage.get(p.x, p.y))
     val stdDev_cu = ImageUtil.stdDev(cuList)
     stdDev_cu
