@@ -11,7 +11,9 @@ import org.aqa.db.PSM
 import org.aqa.webrun.psm.html.PSMCompositeImageHTML
 import org.aqa.webrun.psm.html.PSMMainHTML
 
-class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging {
+import java.awt.geom.Point2D
+
+class PSMExecute(extendedData: ExtendedData, psmRunReq: PSMRunReq) extends Logging {
 
   private def makeRawImage(wdImg: DicomImage, ffImg: DicomImage): DicomImage = {
     def doRow(y: Int): IndexedSeq[Float] =
@@ -58,16 +60,36 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
 
   }
 
-  private val trans = new IsoImagePlaneTranslator(runReq.rtimageList.head)
+  private val trans = new IsoImagePlaneTranslator(psmRunReq.rtimageList.head)
 
   private def timeOf(al: AttributeList) = Util.extractDateTimeAndPatientIdFromDicomAl(al)._1.head.getTime
 
-  private val rtplan: AttributeList = runReq.rtplan
+  private val rtplan: AttributeList = psmRunReq.rtplan
 
   private val resultList: List[PSMBeamAnalysisResult] = {
-    def process(rtimage: AttributeList) = PSMBeamAnalysis(rtplan, extendedData, trans, rtimage: AttributeList).measure()
+    def process(rtimage: AttributeList) = PSMBeamAnalysis(rtplan, extendedData, trans, rtimage: AttributeList, psmRunReq).measure()
 
-    val list = runReq.rtimageList.par.map(process)
+    val list = {
+      val l = psmRunReq.rtimageList.par.map(process)
+      val pointZero = new Point2D.Double(0.0, 0.0)
+      def distToCenter(r: PSMBeamAnalysisResult): Double = {
+        val p = new Point2D.Double(r.psmBeam.xCenter_mm, r.psmBeam.yCenter_mm)
+        p.distance(pointZero)
+      }
+      val centerBeam = l.minBy(distToCenter)
+
+      /**
+        * Fix the beamResponseNormalized.
+        * @param result For this response.
+        * @return A new result with the normalized beam response fixed.
+        */
+      def fix(result: PSMBeamAnalysisResult): PSMBeamAnalysisResult = {
+        val newPsmBeam = result.psmBeam.copy(beamResponseNormalized = Some(result.psmBeam.mean_cu / centerBeam.psmBeam.mean_cu))
+        val newResult = result.copy(psmBeam = newPsmBeam)
+        newResult
+      }
+      l.map(fix)
+    }
     list.toList.sortBy(r => timeOf(r.rtimage))
   }
 
@@ -86,10 +108,10 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
 
   // main processing.  Create a scaled DicomImage and Attribute list for each value.
 
-  private val ffAl = runReq.floodField
+  private val ffAl = psmRunReq.floodField
   private val ffImg = new DicomImage(ffAl).scalePixels(ffAl)
 
-  private val wdAl = runReq.wholeDetector
+  private val wdAl = psmRunReq.wholeDetector
   private val wdImg = new DicomImage(wdAl).scalePixels(wdAl)
 
   private val rawImg = makeRawImage(wdImg, ffImg)
@@ -103,7 +125,7 @@ class PSMExecute(extendedData: ExtendedData, runReq: PSMRunReq) extends Logging 
   // ----------------------------------------------------------------------------------------
 
   private def getReferencedFloodField: FloodField = {
-    val uploadedFloodFieldHash = FloodField.makeFloodField(extendedData.output.outputPK.get, runReq.floodField).imageHash_md5
+    val uploadedFloodFieldHash = FloodField.makeFloodField(extendedData.output.outputPK.get, psmRunReq.floodField).imageHash_md5
     val ff = FloodField.getByImageHash(extendedData.machine.machinePK.get, uploadedFloodFieldHash)
     ff.head
   }

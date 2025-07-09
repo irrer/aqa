@@ -61,8 +61,6 @@ case class SymmetryAndFlatnessAnalyze( //
 
   private val scaledImage: DicomImage = new DicomImage(attributeList).scalePixels(attributeList)
 
-  private val scaledFloodField: Option[DicomImage] = if (floodField.isDefined) Some(new DicomImage(floodField.get).scalePixels(floodField.get)) else None
-
   /**
     * Get the average pixel value for one spot in HU or CU or whatever units the image is using.
     *
@@ -179,7 +177,9 @@ case class SymmetryAndFlatnessAnalyze( //
           // no PSM, so use the configured values.
           val xList = Config.SymmetryAndFlatnessPointList.map(_.x_mm)
           val yList = Config.SymmetryAndFlatnessPointList.map(_.y_mm)
-          Math.min(xList.max - xList.min, yList.max - yList.min)
+          val x = (xList.max - xList.min).abs
+          val y = (yList.max - yList.min).abs
+          Math.min(x, y)
         } else
           psmGrid.get.span
 
@@ -199,29 +199,37 @@ case class SymmetryAndFlatnessAnalyze( //
       def calcCu(psmBeam: Option[PSMBeam], symFlatPoint: SymmetryAndFlatnessPoint): Double = {
         if (doPsm) {
           val psmPoint = SymmetryAndFlatnessPoint("dummyName", psmBeam.get.xCenter_mm, psmBeam.get.yCenter_mm)
-          val p = evalPoint(psmPoint, scaledImage)
-          val wd: Double = evalPoint(symFlatPoint, scaledFloodField.get)
-          val br = psmBeam.get.mean_cu / psmGrid.get.centerBeam.mean_cu
-          val value = p / (wd / br)
+          val monthlyWd = evalPoint(psmPoint, scaledImage)
+          val phaseAnyFloodField = psmBeam.get.floodField_cu.get
+          val psm = psmBeam.get.psm
+          val value = (monthlyWd / phaseAnyFloodField) / psm
           value
         } else
-          evalPoint(Config.SymmetryPointTop, scaledImage)
+          evalPoint(symFlatPoint, scaledImage)
 
       }
 
       // @formatter:off
 
-      val top_cu    = calcCu(psmGrid.map(_.topBeam   ), Config.SymmetryPointBottom)
+      val top_cu    = calcCu(psmGrid.map(_.topBeam   ), Config.SymmetryPointTop)
       val bottom_cu = calcCu(psmGrid.map(_.bottomBeam), Config.SymmetryPointBottom)
-      val left_cu   = calcCu(psmGrid.map(_.leftBeam  ), Config.SymmetryPointBottom)
-      val right_cu  = calcCu(psmGrid.map(_.rightBeam ), Config.SymmetryPointBottom)
-      val center_cu = calcCu(psmGrid.map(_.centerBeam), Config.SymmetryPointBottom)
+      val left_cu   = calcCu(psmGrid.map(_.leftBeam  ), Config.SymmetryPointLeft)
+      val right_cu  = calcCu(psmGrid.map(_.rightBeam ), Config.SymmetryPointRight)
+      val center_cu = calcCu(psmGrid.map(_.centerBeam), Config.SymmetryPointCenter)
 
       val topPoint    = if (doPsm) beamToPoint("top"   , psmGrid.get.topBeam   ) else Config.SymmetryPointTop
       val bottomPoint = if (doPsm) beamToPoint("bottom", psmGrid.get.bottomBeam) else Config.SymmetryPointBottom
       val leftPoint   = if (doPsm) beamToPoint("left"  , psmGrid.get.leftBeam  ) else Config.SymmetryPointLeft
       val rightPoint  = if (doPsm) beamToPoint("right" , psmGrid.get.rightBeam ) else Config.SymmetryPointRight
       val centerPoint = if (doPsm) beamToPoint("center", psmGrid.get.centerBeam) else Config.SymmetryPointCenter
+      // @formatter:on
+
+      val diameter_mm: Double = {
+        if (psmGrid.isDefined)
+          Config.PSMRadius_mm * 2
+        else
+          Config.SymmetryAndFlatnessDiameter_mm
+      }
 
       new SymmetryAndFlatness( //
         symmetryAndFlatnessPK = None,
@@ -230,21 +238,22 @@ case class SymmetryAndFlatnessAnalyze( //
         beamName = beamName,
         isBaseline = symmetryAndFlatnessBaselineRedoBeamList.contains(beamName),
 
-        top_cu    = top_cu,
-        bottom_cu = bottom_cu ,
-        left_cu   = left_cu,
-        right_cu  = right_cu  ,
-        center_cu = center_cu ,
+        top_cu = top_cu,
+        bottom_cu = bottom_cu,
+        left_cu = left_cu,
+        right_cu = right_cu,
+        center_cu = center_cu,
 
-        topStdDev_cu    = evalPointStdDev(topPoint),
+        topStdDev_cu = evalPointStdDev(topPoint),
         bottomStdDev_cu = evalPointStdDev(bottomPoint),
-        leftStdDev_cu   = evalPointStdDev(leftPoint),
-        rightStdDev_cu  = evalPointStdDev(rightPoint),
+        leftStdDev_cu = evalPointStdDev(leftPoint),
+        rightStdDev_cu = evalPointStdDev(rightPoint),
         centerStdDev_cu = evalPointStdDev(centerPoint),
 
         psmDataDate = psmDataDate, // psmImageHash_md5,
         span_mm = Some(span_mm),
-        RTImageSID = Some(attributeList.get(TagByName.RTImageSID).getDoubleValues.head)
+        diameter_mm = Some(diameter_mm),
+        RTImageSID_mm = Some(attributeList.get(TagByName.RTImageSID).getDoubleValues.head)
       )
       // @formatter:on
     }
@@ -252,7 +261,14 @@ case class SymmetryAndFlatnessAnalyze( //
     logger.info("Getting baseline values for beam " + beamName)
 
     // Get the baseline for the given beam of the given type (dataName).  If it does not exist, then use this one to establish it.
-    val baseline = SymmetryAndFlatness.getBaseline(machinePK, beamName, psmGrid.isDefined, dataDate, procedurePK) match {
+    val baseline = SymmetryAndFlatness.getBaseline(machinePK, //
+      span_mm = symmetryAndFlatness.span_mm,
+      diameter_mm = symmetryAndFlatness.diameter_mm,
+      RTImageSID_mm = symmetryAndFlatness.RTImageSID_mm,
+      beamName = beamName,
+      hasPsm = psmGrid.isDefined,
+      dataDate = dataDate,
+      procedurePK = procedurePK) match {
       case Some(bl) => bl.baseline
       case _ => symmetryAndFlatness
     }

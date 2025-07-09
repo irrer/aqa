@@ -40,7 +40,10 @@ case class PSMBeam(
     top_mm: Option[Double], // top of field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
     bottom_mm: Option[Double], // bottom of field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
     left_mm: Option[Double], // left field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
-    right_mm: Option[Double] // right field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
+    right_mm: Option[Double], // right field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.m
+    floodField_cu: Option[Double], // value of flood field pixels that correspond to this point
+    wholeDetector_cu: Option[Double], // value of whole detector pixels that correspond to this point
+    beamResponseNormalized: Option[Double], // normalized value mean_cu:  mean_cu / (mean_cu of center beam)
 ) {
 
   def insert: PSMBeam = {
@@ -72,8 +75,15 @@ case class PSMBeam(
       "    top_mm: " + Util.fmtDbl(top_mm) + "\n" +
       "    bottom_mm: " + Util.fmtDbl(bottom_mm) + "\n" +
       "    left_mm: " + Util.fmtDbl(left_mm) + "\n" +
-      "    right_mm: " + Util.fmtDbl(right_mm)
+      "    right_mm: " + Util.fmtDbl(right_mm) + "\n" +
+      "    floodField_cu: " + Util.fmtDbl(floodField_cu) + "\n" +
+      "    wholeDetector_cu: " + Util.fmtDbl(wholeDetector_cu) + "\n" +
+      "    beamResponseNormalized: " + Util.fmtDbl(beamResponseNormalized)
   }
+
+  private def raw: Double = wholeDetector_cu.get / floodField_cu.get
+
+  def psm : Double = raw / beamResponseNormalized.get
 
 }
 
@@ -112,6 +122,12 @@ object PSMBeam extends Logging {
 
     def right_mm = column[Option[Double]]("right_mm")
 
+    def floodField_cu = column[Option[Double]]("floodField_cu")
+
+    def wholeDetector_cu = column[Option[Double]]("wholeDetector_cu")
+
+    def beamResponseNormalized = column[Option[Double]]("beamResponseNormalized")
+
     def * =
       (
         psmBeamPK.?,
@@ -129,7 +145,10 @@ object PSMBeam extends Logging {
         top_mm,
         bottom_mm,
         left_mm,
-        right_mm
+        right_mm,
+        floodField_cu,
+        wholeDetector_cu,
+        beamResponseNormalized
       ) <> (PSMBeam.apply _ tupled, PSMBeam.unapply)
 
     def outputFK = foreignKey("PSMBeam_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)

@@ -879,6 +879,7 @@ object Config extends Logging {
   val WedgeHistoryRange: Int = logMainText("WedgeHistoryRange", "1000000").toInt
 
   val SymmetryAndFlatnessDiameter_mm: Double = logMainText("SymmetryAndFlatnessDiameter_mm", "5.0").toDouble
+  val SymmetryAndFlatnessRTImageSIDProximity_mm: Double = logMainText("SymmetryAndFlatnessRTImageSIDProximity_mm", "10.0").toDouble
 
   val SymmetryPercentLimit: Double = logMainText("SymmetryPercentLimit", "2.0").toDouble
   val FlatnessPercentLimit: Double = logMainText("FlatnessPercentLimit", "2.0").toDouble

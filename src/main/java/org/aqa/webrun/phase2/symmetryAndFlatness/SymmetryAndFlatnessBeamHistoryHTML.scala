@@ -38,7 +38,26 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, hasPs
   val output: Output = Output.get(outputPK).get
   val machinePK: Long = output.machinePK.get
 
-  private val history = SymmetryAndFlatness.history(machinePK, beamName, hasPsm, output.procedurePK)
+  private val symFlat = {
+    val list = SymmetryAndFlatness.getByOutput(outputPK)
+    list
+      .filter(sf =>
+        sf.beamName.equalsIgnoreCase(beamName) &&
+          ((sf.psmDataDate.isDefined && hasPsm) || (sf.psmDataDate.isEmpty && (!hasPsm)))
+      )
+      .head
+  }
+
+  private val history = SymmetryAndFlatness.history( //
+    machinePK = machinePK,
+    beamName = beamName,
+    span_mm = symFlat.span_mm,
+    diameter_mm = symFlat.diameter_mm,
+    hasPsm,
+    RTImageSID_mm = symFlat.RTImageSID_mm,
+    output.procedurePK
+  )
+
   private val dateList = history.map(h => h.output.dataDate.get)
 
   // index of the entry being charted.
@@ -185,7 +204,18 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, hasPs
   val javascript: String = {
     import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessRun._
 
-    val sfAndBaseline = SymmetryAndFlatness.getBaseline(machinePK, beamName, hasPsm, output.dataDate.get, output.procedurePK).get
+    val sfAndBaseline = SymmetryAndFlatness
+      .getBaseline( //
+        machinePK,
+        symFlat.span_mm,
+        symFlat.diameter_mm,
+        symFlat.RTImageSID_mm,
+        beamName,
+        hasPsm,
+        output.dataDate.get,
+        output.procedurePK
+      )
+      .get
 
     val chartAxial = {
       val valueList = history.map(h => h.symmetryAndFlatness.axialSymmetry)

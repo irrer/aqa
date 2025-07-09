@@ -11,6 +11,7 @@ import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.webrun.ExtendedData
+import org.aqa.webrun.phase2.Phase2Util
 
 import java.awt.Point
 import java.awt.geom.Point2D
@@ -26,7 +27,7 @@ import javax.vecmath.Point2i
   * @param trans        For translating between pixel and isoplane coordinates.
   * @param rtimage      Beam image.
   */
-case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, trans: IsoImagePlaneTranslator, rtimage: AttributeList) extends Logging {
+case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, trans: IsoImagePlaneTranslator, rtimage: AttributeList, psmRunReq: PSMRunReq) extends Logging {
 
   /**
     * Attempt to measure the position of each of the four edges.  This is not really necessary, but the data is
@@ -127,15 +128,38 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
 
     def pixToCU(coordinate: Point2i): Double = (dicomImage.get(coordinate.getX, coordinate.getY) * RescaleSlope) + RescaleIntercept
 
-    val pixelList = PSMUtil.pixelCoordinatesWithinRadius(rtimage, center_pix).map(coordinate => (coordinate, pixToCU(coordinate))).toMap
+    val coordinateList = PSMUtil.pixelCoordinatesWithinRadius(rtimage, center_pix)
 
-    val mean_cu = pixelList.values.sum / pixelList.size
+    /**
+     * Use the <code>coordinateList</code> to select pixels from the given attribute list, and then scale the
+     * values according to the attribute list.
+     * @param al For this DICOM.
+     * @return Mean value of pixels scaled to be in cu.
+     */
+    def meanCuOf(al: AttributeList): Option[Double] = {
 
-    val stdDev_cu = ImageUtil.stdDev(pixelList.values.map(_.toFloat).toSeq)
+      val di = new DicomImage(al)
+      val unscaledMean = coordinateList.map(c => di.get(c.getX, c.getY)).sum.toDouble / coordinateList.size
+
+      val floodFieldMean_cu = Phase2Util.pixToDose(Seq(unscaledMean), al).head
+      Some(floodFieldMean_cu)
+    }
+
+    val pixelList = coordinateList.map(coordinate => (coordinate, pixToCU(coordinate))).toMap
+
+    val pixelValueList = coordinateList.map(c => (dicomImage.get(c.getX, c.getY) * RescaleSlope) + RescaleIntercept)
+
+    val mean_cu = meanCuOf(rtimage).get
+
+    val stdDev_cu = ImageUtil.stdDev(pixelValueList.map(_.toFloat))
 
     val edges = measureEdges(center_iso, rtplanBeam, dicomImage, beamName)
 
     val ms = if (edges.isDefined) Some(edges.get.measurementSet) else None
+
+    val floodField_cu: Option[Double] = meanCuOf(psmRunReq.floodField)
+
+    val wholeDetector_cu = meanCuOf(psmRunReq.wholeDetector)
 
     val psmBeam = org.aqa.db.PSMBeam(
       psmBeamPK = None,
@@ -153,7 +177,11 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
       top_mm = ms.map(_.top),
       bottom_mm = ms.map(_.bottom),
       left_mm = ms.map(_.left),
-      right_mm = ms.map(_.right)
+      right_mm = ms.map(_.right),
+      floodField_cu = floodField_cu,
+      wholeDetector_cu = wholeDetector_cu,
+      beamResponseNormalized = None // to be replaced when all beams are calculated.
+
     )
 
     val bufferedImage: BufferedImage = {

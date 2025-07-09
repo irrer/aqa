@@ -390,7 +390,18 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     def makeDataSet(sf: SymmetryAndFlatness): Option[SymmetryAndFlatnessDataSet] = {
       try {
         logger.info("Making data set for: " + sf)
-        val baseline = SymmetryAndFlatness.getBaseline(output.machinePK.get, sf.beamName, sf.psmDataDate.isDefined, dataDate, output.procedurePK).get.baseline
+        val baseline = {
+          val bl = SymmetryAndFlatness.getBaseline( //
+            output.machinePK.get,
+            span_mm = sf.span_mm,
+            diameter_mm = sf.diameter_mm,
+            RTImageSID_mm = sf.RTImageSID_mm,
+            beamName = sf.beamName,
+            hasPsm = sf.psmDataDate.isDefined,
+            dataDate = dataDate,
+            procedurePK = output.procedurePK)
+          bl.get.baseline
+        }
 
         val al: Option[AttributeList] = {
           val aa = alList.find(a => Util.sopOfAl(a).equals(sf.SOPInstanceUID))
@@ -523,7 +534,27 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     val machinePK = Output.get(outputPK).get.machinePK.get
     val beamName = valueMap(beamNameTag).replaceAll("%20", " ")
     val hasPsm = valueMap.contains(hasPsmTag) && valueMap(hasPsmTag).toBoolean
-    val history = SymmetryAndFlatness.history(machinePK, beamName, hasPsm, output.procedurePK)
+
+    val symFlat = {
+      val list = SymmetryAndFlatness.getByOutput(outputPK)
+      list
+        .filter(sf =>
+          sf.beamName.equalsIgnoreCase(beamName) &&
+            ((sf.psmDataDate.isDefined && hasPsm) || (sf.psmDataDate.isEmpty && (!hasPsm)))
+        )
+        .head
+    }
+
+
+    val history = SymmetryAndFlatness.history( //
+      machinePK = machinePK,
+      span_mm = symFlat.span_mm,
+      diameter_mm = symFlat.diameter_mm,
+      beamName = beamName,
+      hasPsm = hasPsm,
+      RTImageSID_mm = symFlat.RTImageSID_mm,
+      procedurePK = output.procedurePK
+    )
     val beamData = history.find(h => h.output.outputPK.get == outputPK).get
 
     val content = {

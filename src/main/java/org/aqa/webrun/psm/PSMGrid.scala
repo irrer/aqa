@@ -52,7 +52,7 @@ case class PSMGrid(resultList: Seq[PSMBeamAnalysisResult]) {
   // ----------------------------------------------------------------------------------------------------------------------------------------
 
   /** The beam that */
-  val centerPsmBeam: PSMBeam = {
+  private val centerPsmBeam: PSMBeam = {
 
     val zero = new Point2d(0, 0)
 
@@ -89,8 +89,8 @@ case class PSMGrid(resultList: Seq[PSMBeamAnalysisResult]) {
   val leftBeam:   PSMBeam = get(centerGridPoint.x - diff, centerGridPoint.y       ).get.psmBeam
   val rightBeam:  PSMBeam = get(centerGridPoint.x + diff, centerGridPoint.y       ).get.psmBeam
 
-  val vertSpan: Double = bottomBeam.yCenter_mm - topBeam. yCenter_mm
-  val horzSpan: Double = rightBeam .xCenter_mm - leftBeam.xCenter_mm
+  private val vertSpan: Double = (bottomBeam.yCenter_mm - topBeam. yCenter_mm).abs
+  private val horzSpan: Double = (rightBeam .xCenter_mm - leftBeam.xCenter_mm).abs
   // @formatter:on
 
   val span: Double = Math.min(vertSpan, horzSpan)

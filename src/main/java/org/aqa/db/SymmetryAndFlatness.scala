@@ -45,7 +45,8 @@ case class SymmetryAndFlatness(
     centerStdDev_cu: Double, // standard deviation of center point pixels in CU
     psmDataDate: Option[Timestamp], // if defined, references the PSM by its dataDate
     span_mm: Option[Double], // distance in mm between opposing measurement areas (both left-right and top-bottom).
-    RTImageSID: Option[Double] // distance in mm from source to image (DICOM metadata 3002,0026)
+    diameter_mm: Option[Double], // diameter in mm of the area sampled.
+    RTImageSID_mm: Option[Double] // distance in mm from source to image (DICOM metadata 3002,0026)
 ) {
 
   def insert: SymmetryAndFlatness = {
@@ -182,7 +183,9 @@ object SymmetryAndFlatness extends Logging {
 
     def span_mm = column[Option[Double]]("span_mm")
 
-    def RTImageSID = column[Option[Double]]("RTImageSID")
+    def diameter_mm = column[Option[Double]]("diameter_mm")
+
+    def RTImageSID_mm = column[Option[Double]]("RTImageSID_mm")
 
     //noinspection LanguageFeature
     def * =
@@ -204,13 +207,20 @@ object SymmetryAndFlatness extends Logging {
         centerStdDev_cu,
         psmDataDate,
         span_mm,
-        RTImageSID
+        diameter_mm,
+        RTImageSID_mm
       ) <> (SymmetryAndFlatness.apply _ tupled, SymmetryAndFlatness.unapply)
 
     def outputFK = foreignKey("SymmetryAndFlatness_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
   val query = TableQuery[SymmetryAndFlatnessTable]
+
+  private val defaultSpan_mm = Config.SymmetryPointRight.x_mm - Config.SymmetryPointLeft.x_mm
+
+  private val defaultDiameter_mm = Config.SymmetryAndFlatnessDiameter_mm
+
+  private val defaultRTImageSID_mm = 1500.0
 
   def get(symmetryAndFlatnessPK: Long): Option[SymmetryAndFlatness] = {
     val action = for {
@@ -285,21 +295,72 @@ object SymmetryAndFlatness extends Logging {
     *
     * @param machinePK : For this machine
     * @param beamName  : For this beam
+    * @param span_mm Distance between opposing sample points.
+    * @param diameter_mm Diameter of each sample point.
+    * @param RTImageSID_mm  : Matching this RTImageSID_mm (source to image distance)
+    * @param procedurePK  : For this procedure (will be either Phase2 or Phase3)
     * @return Complete history with baselines sorted by date.
     *
     */
-  def history(machinePK: Long, beamName: String, hasPsm: Boolean, procedurePK: Long): Seq[SymmetryAndFlatnessHistory] = {
+  def history( //
+      machinePK: Long,
+      beamName: String,
+      span_mm: Option[Double],
+      diameter_mm: Option[Double],
+      hasPsm: Boolean,
+      RTImageSID_mm: Option[Double],
+      procedurePK: Long
+  ): Seq[SymmetryAndFlatnessHistory] = {
     val notHasPsm = !hasPsm
     val search = for {
       output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       symmetryAndFlatness <- SymmetryAndFlatness.query.filter(c =>
         (c.outputPK === output.outputPK) &&
-          (c.beamName === beamName) &&
-          ((c.psmDataDate.isDefined && hasPsm) ||
-            (c.psmDataDate.isEmpty && notHasPsm))
+          (c.beamName === beamName)
       )
     } yield {
       (output, symmetryAndFlatness)
+    }
+
+    def sfOk(sf: SymmetryAndFlatness): Boolean = {
+
+      val psmSame: Boolean = {
+        (sf.psmDataDate.isDefined && hasPsm) ||
+        (sf.psmDataDate.isEmpty && notHasPsm)
+      }
+
+      val spanOk: Boolean = {
+        (sf.span_mm.isDefined, span_mm.isDefined) match {
+          case (true, true)   => sf.span_mm.get == span_mm.get
+          case (true, false)  => sf.span_mm.get == defaultSpan_mm
+          case (false, true)  => span_mm.get == defaultSpan_mm
+          case (false, false) => true
+        }
+      }
+      val diameterOk: Boolean = {
+        (sf.diameter_mm.isDefined, diameter_mm.isDefined) match {
+          case (true, true)   => sf.diameter_mm.get == diameter_mm.get
+          case (true, false)  => sf.diameter_mm.get == defaultDiameter_mm
+          case (false, true)  => diameter_mm.get == defaultDiameter_mm
+          case (false, false) => true
+        }
+      }
+
+      def RTImageSIDApproximatelyEqual(a: Double, b: Double) = {
+        val eq = (a - b).abs < Config.SymmetryAndFlatnessRTImageSIDProximity_mm
+        eq
+      }
+
+      val RTImageSIDOk: Boolean = {
+        (sf.RTImageSID_mm.isDefined, RTImageSID_mm.isDefined) match {
+          case (true, true)   => RTImageSIDApproximatelyEqual(sf.RTImageSID_mm.get, RTImageSID_mm.get)
+          case (true, false)  => RTImageSIDApproximatelyEqual(sf.RTImageSID_mm.get, defaultRTImageSID_mm)
+          case (false, true)  => RTImageSIDApproximatelyEqual(RTImageSID_mm.get, defaultRTImageSID_mm)
+          case (false, false) => true
+        }
+      }
+
+      psmSame && spanOk && diameterOk && RTImageSIDOk
     }
 
     // Fetch entire history from the database.  Also sort by dataDate.  This sorting also has the
@@ -308,7 +369,8 @@ object SymmetryAndFlatness extends Logging {
     val sr = search.result
     val tsList = {
       val list = Db.run(sr)
-      list.map(os => OutputSymFlat(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime + "  " + os.sf.beamName + "  " + os.sf.psmDataDate.isDefined.toString)
+      val filteredList = list.filter(os => sfOk(os._2))
+      filteredList.map(os => OutputSymFlat(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime + "  " + os.sf.beamName + "  " + os.sf.psmDataDate.isDefined.toString)
     }
 
     associateBaseline(tsList)
@@ -317,9 +379,9 @@ object SymmetryAndFlatness extends Logging {
   /**
     * Get the SymmetryAndFlatness history for all beams on the given machine.
     *
-    * @param machinePK : For this machine
+    * @param machinePK For this machine
+    * @param procedurePK Procedure.  As the code is now, it will be either Phase2 or Phase3.
     * @return Complete history with baselines.
-    *
     */
   def history(machinePK: Long, procedurePK: Long): Seq[SymmetryAndFlatnessHistory] = {
 
@@ -348,13 +410,33 @@ object SymmetryAndFlatness extends Logging {
     * @param machinePK Match this machine
     * @param beamName  Match this beam
     * @param hasPsm  Matching this
+    * @param span_mm Distance between opposing sample points.
+    * @param diameter_mm Diameter of each sample point.
+    * @param RTImageSID_mm Source to image distance in mm.
     * @param dataDate  Most recent that is at or before this time
     * @param procedurePK For this procedure
     * @return The baseline value to use, or None if not found.
     */
-  def getBaseline(machinePK: Long, beamName: String, hasPsm: Boolean, dataDate: Timestamp, procedurePK: Long): Option[SymmetryAndFlatnessHistory] = {
+  def getBaseline( //
+      machinePK: Long,
+      span_mm: Option[Double],
+      diameter_mm: Option[Double],
+      RTImageSID_mm: Option[Double],
+      beamName: String,
+      hasPsm: Boolean,
+      dataDate: Timestamp,
+      procedurePK: Long
+  ): Option[SymmetryAndFlatnessHistory] = {
     //noinspection ReverseFind
-    val reverseHistory = history(machinePK, beamName, hasPsm, procedurePK).reverse
+    val reverseHistory = history( //
+      machinePK,
+      beamName,
+      span_mm,
+      diameter_mm,
+      hasPsm,
+      RTImageSID_mm,
+      procedurePK
+    ).reverse
     val baseline = reverseHistory.find(h => h.output.dataDate.get.getTime <= dataDate.getTime)
     if (baseline.isDefined)
       baseline

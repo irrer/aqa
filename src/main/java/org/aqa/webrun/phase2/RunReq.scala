@@ -22,7 +22,8 @@ import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Config
 import org.aqa.Util
-import org.aqa.db.PSM
+import org.aqa.db.PSMBeam
+import org.aqa.db.PSMBeam.PSMBeamHistory
 import org.aqa.run.RunReqClass
 
 import java.awt.Point
@@ -54,21 +55,21 @@ case class RunReq(
 
   private val floodCorrectedImage: Option[DicomImage] = if (floodOriginalImage.isDefined) Some(floodOriginalImage.get.correctBadPixels(floodBadPixelList, badPixelRadius)) else None
 
-  private var psm: Option[PSM] = None
-  private var psmAttempted = false
+  private var psmBeamSet: Option[PSMBeamHistory] = None
+  private var psmBeamSetAttempted = false
 
   /**
     * Get the PSM if possible.  It must be for this machine and be date-appropriate for this set of RTIMAGES.
     * @param machinePK For this machine
     * @return A PSM if it exists.
     */
-  def getPsm(machinePK: Long): Option[PSM] =
-    psm.synchronized {
-      if (psm.isEmpty && (!psmAttempted)) {
-        psmAttempted = true
-        psm = PSM.getUsablePsm(machinePK, rtimageMap.values.head)
+  def getPsm(machinePK: Long): Option[PSMBeamHistory] =
+    psmBeamSet.synchronized {
+      if (psmBeamSet.isEmpty && (!psmBeamSetAttempted)) {
+        psmBeamSetAttempted = true
+        psmBeamSet = PSMBeam.historyByMachine(machinePK).headOption
       }
-      psm
+      psmBeamSet
     }
 
   /*
