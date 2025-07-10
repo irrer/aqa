@@ -22,6 +22,7 @@ import org.aqa.db.Db.driver.api._
 import org.aqa.Logging
 import org.aqa.Util
 
+import java.sql.Timestamp
 import javax.vecmath.Point2d
 
 case class PSMBeam(
@@ -43,7 +44,7 @@ case class PSMBeam(
     right_mm: Option[Double], // right field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.m
     floodField_cu: Option[Double], // value of flood field pixels that correspond to this point
     wholeDetector_cu: Option[Double], // value of whole detector pixels that correspond to this point
-    beamResponseNormalized: Option[Double], // normalized value mean_cu:  mean_cu / (mean_cu of center beam)
+    beamResponseNormalized: Option[Double] // normalized value mean_cu:  mean_cu / (mean_cu of center beam)
 ) {
 
   def insert: PSMBeam = {
@@ -81,9 +82,9 @@ case class PSMBeam(
       "    beamResponseNormalized: " + Util.fmtDbl(beamResponseNormalized)
   }
 
-  private def raw: Double = wholeDetector_cu.get / floodField_cu.get
+  def raw: Double = wholeDetector_cu.get / floodField_cu.get
 
-  def psm : Double = raw / beamResponseNormalized.get
+  def psm: Double = raw / beamResponseNormalized.get
 
 }
 
@@ -161,6 +162,22 @@ object PSMBeam extends Logging {
       inst <- PSMBeam.query if inst.psmBeamPK === psmBeamPK
     } yield inst
     Db.run(action.result).headOption
+  }
+
+  /**
+    * Get PSM beams by machine and data date time.
+    *
+    * @param machinePK Machine.
+    * @param dataDate  Data data from PSM output.
+    * @return List of beams for that machine and data date.
+    */
+  def getByMachineAndTime(machinePK: Long, dataDate: Timestamp): Seq[PSMBeam] = {
+    val action = for {
+      output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.dataDate === dataDate))
+      inst <- PSMBeam.query.filter(p => p.outputPK === output.outputPK)
+    } yield inst
+    val list = Db.run(action.result)
+    list
   }
 
   /**

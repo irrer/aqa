@@ -33,6 +33,8 @@ import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.web.WebUtil.getValueMap
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.DicomFile
+import org.aqa.db.PSMBeam
+import org.aqa.webrun.psm.PSMGrid
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -69,6 +71,8 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 
   /** Used to specify the name of a beam in a URL. */
   val hasPsmTag = "hasPsm"
+
+  val psmStyle = "color:white;background:lightblue; border-left:10px solid lightblue; border-right:10px solid lightblue;"
 
   private def titleAxialSymmetry =
     "Axial symmetry from top to bottom: (top-bottom)/bottom.  Max percent limit is " + Config.SymmetryPercentLimit
@@ -130,7 +134,14 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     val id = "baseline" + pk
     val baseline = symFlatDataSet.symmetryAndFlatness.isBaseline.toString
 
-    val hasPsm = if (symFlatDataSet.symmetryAndFlatness.psmDataDate.isDefined) <b>PSM</b> else <span></span>
+    val isPsm = symFlatDataSet.symmetryAndFlatness.psmDataDate.isDefined
+
+    val psmElem = {
+      if (isPsm)
+        <span>PSM</span>
+      else
+        <span></span>
+    }
 
     val input =
       if (symFlatDataSet.symmetryAndFlatness.isBaseline) {
@@ -140,11 +151,15 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       }
 
     val elem = {
-      <td style="vertical-align: middle;" class={errorClass} rowspan="4">
+      <td style={
+        "vertical-align: middle;" + {
+          if (isPsm) psmStyle else ""
+        }
+      } class={errorClass} rowspan="4">
         <a href={detailUrl} title={titleDetails}>
           {symFlatDataSet.symmetryAndFlatness.beamName}<br>
           {Phase2Util.jawDescription(symFlatDataSet.al, symFlatDataSet.rtplan)}
-        </br>{Phase2Util.angleDescription(symFlatDataSet.al)}{hasPsm}
+        </br>{Phase2Util.angleDescription(symFlatDataSet.al)}{psmElem}
         </a> <br></br> <label title="Check to use this beam as a baseline." for={id}>Baseline</label>{input}
       </td>
     }
@@ -451,13 +466,25 @@ object SymmetryAndFlatnessSubHTML extends Logging {
    */
   private def resultTable(beamData: SymmetryAndFlatness.SymmetryAndFlatnessHistory): Elem = {
 
+    val isPsm = beamData.symmetryAndFlatness.psmDataDate.isDefined
+
     val beamHeaderElem: Elem = {
-      val psmText = if (beamData.symmetryAndFlatness.psmDataDate.isEmpty) "" else " with PSM"
+      val psmElem = {
+        if (beamData.symmetryAndFlatness.psmDataDate.isEmpty)
+          <span>
+            <p></p>
+          </span>
+        else {
+          <p>
+            <span>with PSM</span>
+          </p>
+        }
+      }
 
       <div class="row">
         <div class="col-md-3 col-md-offset-1">
-          <h3>
-            {beamData.symmetryAndFlatness.beamName + psmText}
+          <h3 style={if (isPsm) psmStyle else ""}>
+            {beamData.symmetryAndFlatness.beamName}{psmElem}
           </h3>
         </div>
         <div class="col-md-2 col-md-offset-1">
@@ -522,6 +549,70 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     </div>
   }
 
+
+  /**
+   * Make HTML to show the raw beam data.
+   *
+   * @param beamData Data to show.
+   * @return HTML to display.
+   */
+  // @formatter:off
+  private def psmCalcTable(psmGrid: PSMGrid, beamData: SymmetryAndFlatness.SymmetryAndFlatnessHistory): Elem = {
+
+    def psmToTr(name: String, beamToValue: PSMBeam => Double ) : Elem = {
+
+      <tr>
+        <td>{name}</td>
+        {td(beamToValue(psmGrid.topBeam   ))}
+        {td(beamToValue(psmGrid.bottomBeam))}
+        {td(beamToValue(psmGrid.leftBeam  ))}
+        {td(beamToValue(psmGrid.rightBeam ))}
+        {td(beamToValue(psmGrid.centerBeam))}
+      </tr>
+    }
+
+    <div style="margin:20px;">
+      <center>
+        <h3>PSM Processing</h3>
+      </center>
+      <table class="table table-bordered" title="Input values from this data set and from baseline.">
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Top CU</th>
+            <th>Bottom CU</th>
+            <th>Left CU</th>
+            <th>Right CU</th>
+            <th>Center CU</th>
+          </tr>
+        </thead>
+
+        {psmToTr("PSM Flood Field"   , (pb: PSMBeam) => pb.floodField_cu.get)}
+
+        {psmToTr("PSM Whole Detector", (pb: PSMBeam) => pb.wholeDetector_cu.get)}
+
+        {psmToTr("PSM Raw Image"     , (pb: PSMBeam) => pb.raw)}
+
+        {psmToTr("PSM Beam Response" , (pb: PSMBeam) => pb.mean_cu)}
+
+        {psmToTr("PSM Beam Response Normalized" , (pb: PSMBeam) => pb.beamResponseNormalized.get)}
+
+        {psmToTr("PSM = Raw / Beam Response" , (pb: PSMBeam) => pb.psm )}
+
+        <tr>
+          <td>({beamData.symmetryAndFlatness.beamName} / PSM Flood Field) / PSM</td>
+          {td(beamData.symmetryAndFlatness.top_cu)}
+          {td(beamData.symmetryAndFlatness.bottom_cu)}
+          {td(beamData.symmetryAndFlatness.left_cu)}
+          {td(beamData.symmetryAndFlatness.right_cu)}
+          {td(beamData.symmetryAndFlatness.center_cu)}
+        </tr>
+
+      </table>
+    </div>
+  }
+  // @formatter:on
+
   /**
    * Format data for just the given output and beam.  Build an HTML response to show it.
    *
@@ -555,15 +646,37 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       RTImageSID_mm = symFlat.RTImageSID_mm,
       procedurePK = output.procedurePK
     )
+
     val beamData = history.find(h => h.output.outputPK.get == outputPK).get
 
+    /** If PSM was used, then get the grid of beams. */
+    val psmGrid: Option[PSMGrid] = {
+      if (beamData.symmetryAndFlatness.psmDataDate.isDefined) {
+        val list = PSMBeam.getByMachineAndTime(output.machinePK.get, beamData.symmetryAndFlatness.psmDataDate.get)
+        if (list.isEmpty)
+          None
+        else {
+          val grid = PSMGrid.makePSMGrid(list)
+          Some(grid)
+        }
+      }
+      else
+        None
+    }
+
+    // @formatter:off
     val content = {
       <div class="row">
         <div class="col-md-4 col-md-offset-4">
-          {resultTable(beamData)}{inputTable(beamData)}
+          {resultTable(beamData)}
+          {inputTable(beamData)}
+        </div>
+        <div class="col-md-6 col-md-offset-3" style="margin-bottom:70px;">
+          {if (psmGrid.isDefined) psmCalcTable(psmGrid.get, beamData)}
         </div>
       </div>
     }
+    // @formatter:on
 
     val text = WebUtil.specialCharTagsToLiteralXml(PrettyXML.xmlToText(content))
     WebUtil.setResponse(text, response, Status.SUCCESS_OK)
