@@ -717,7 +717,7 @@ Note that when building a package for release, the Maven build process uses the 
     </WedgeBeamList>
 
     <!-- Diameter of sample spots in mm. -->
-    <SymmetryAndFlatnessDiameter_mm>5.0</SymmetryAndFlatnessDiameter_mm>
+    <SymmetryAndFlatnessDiameter_mm>10.0</SymmetryAndFlatnessDiameter_mm>
 
     <!-- For two SymFlat results to be compared to each other (for history chart), their Source to
     Image Distances must be at least this close together.   Floating point, in mm, default 10.0 . -->
