@@ -123,9 +123,38 @@ object Util extends Logging {
     */
   private val fileSystemWriteSync = "sync"
 
+  /**
+    * Delete the given file, retrying if necessary.  Also check to make sure that delete was successful.
+    *
+    * If it can not be deleted within 2 seconds, then give up and log an error.
+    *
+    * @param file File to delete.
+    */
+  private def deleteFile(file: File): Unit = {
+    val timeout = System.currentTimeMillis() + 2000
+
+    if (file.exists())
+      logger.info(s"Attempting to delete file $file")
+
+    while (file.exists() && (System.currentTimeMillis() < timeout)) {
+      try {
+        file.delete
+      } catch {
+        case t: Throwable =>
+          logger.warn(s"Exception while deleting file $file : ${fmtEx(t)}")
+      }
+      Thread.sleep(100) // wait for file MS system
+      if (file.exists())
+        logger.warn(s"Attempt to delete file failed: $file")
+    }
+
+    if (file.exists())
+      logger.warn(s"Failed to delete file, giving up. $file")
+  }
+
   def writeBinaryFile(file: File, data: Array[Byte]): Unit =
     fileSystemWriteSync.synchronized({
-      file.delete
+      deleteFile(file)
       val fos = new FileOutputStream(file)
       fos.write(data)
       fos.flush()
@@ -143,7 +172,7 @@ object Util extends Logging {
     */
   def writeAttributeListToFile(attributeList: AttributeList, file: File, sourceApplication: String = "AQA"): Unit = {
     fileSystemWriteSync.synchronized({
-      file.delete
+      deleteFile(file)
       DicomUtil.writeAttributeListToFile(attributeList, file, sourceApplication)
     })
   }
@@ -552,22 +581,6 @@ object Util extends Logging {
 
   /**
     * Write a PNG file in a thread safe way.
-    */
-  def writePngX(im: RenderedImage, pngFile: File): Unit =
-    fileSystemWriteSync.synchronized({
-      pngFile.delete
-      val fos = new FileOutputStream(pngFile)
-      ImageIO.write(im, "png", fos)
-      try {
-        fos.flush()
-        fos.close()
-      } catch {
-        case t: Throwable => logger.warn("problem closing file output stream for PNG file " + pngFile.getAbsolutePath + " : " + t)
-      }
-    })
-
-  /**
-    * Write a PNG file in a thread safe way.
     *
     * First render the image into a byte array.  This can take time and is thread safe, so it does not
     * need to be done in a synchronized way.  Then write the byte array to a file, which does need to
@@ -584,15 +597,6 @@ object Util extends Logging {
       case t: Throwable => logger.warn("problem writing file for PNG file " + pngFile.getAbsolutePath + " : " + t)
     }
   }
-
-  /**
-    * Write a JPG / JPEG file in a thread safe way.
-    */
-  def writeJpg(im: RenderedImage, jpegFile: File): Unit =
-    fileSystemWriteSync.synchronized({
-      jpegFile.delete
-      ImageIO.write(im, "jpg", new FileOutputStream(jpegFile))
-    })
 
   /**
     * Round the angle to the closest 90 degree angle.
@@ -614,21 +618,20 @@ object Util extends Logging {
   }
 
   /**
-   * Round the angle to the closest 2 degree angle.
-   *
-   * @param angleInDegrees Angle to round off.
-   */
+    * Round the angle to the closest 2 degree angle.
+    *
+    * @param angleInDegrees Angle to round off.
+    */
   //noinspection ScalaWeakerAccess
   def angleRoundedTo2(angleInDegrees: Double): Int = {
     (((angleInDegrees + 720) / 2).round.toInt * 2) % 360
   }
 
-
   /**
-   * Round the angle to the closest 2 degree angle.
-   *
-   * @param angleInDegrees Angle to round off.
-   */
+    * Round the angle to the closest 2 degree angle.
+    *
+    * @param angleInDegrees Angle to round off.
+    */
   //noinspection ScalaWeakerAccess
   def angleRoundedTo5(angleInDegrees: Double): Int = {
     (((angleInDegrees + 720) / 5).round.toInt * 5) % 360
