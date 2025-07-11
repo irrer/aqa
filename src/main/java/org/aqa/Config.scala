@@ -865,7 +865,8 @@ object Config extends Logging {
   requireReadableDirectory("tmpDirFile", tmpDirFile)
   requireReadableDirectory("machineConfigurationDirFile", machineConfigurationDirFile)
 
-  val CenterDoseRadius_mm: Double = logMainText("CenterDoseRadius_mm", "5.0").toDouble
+  val CenterDoseDiameter_mm: Double = logMainText("CenterDoseDiameter_mm", "10.0").toDouble
+  val CenterDoseRadius_mm: Double = CenterDoseDiameter_mm / 2
   val CenterDoseHistoryRange: Int = logMainText("CenterDoseHistoryRange", "1000000").toInt
 
   val CollimatorPositionTolerance_mm: Double = logMainText("CollimatorPositionTolerance_mm", "2.0").toDouble
@@ -878,7 +879,8 @@ object Config extends Logging {
   val WedgeTolerance_pct: Double = logMainText("WedgeTolerance_pct", "2.0").toDouble
   val WedgeHistoryRange: Int = logMainText("WedgeHistoryRange", "1000000").toInt
 
-  val SymmetryAndFlatnessDiameter_mm: Double = logMainText("SymmetryAndFlatnessDiameter_mm", "5.0").toDouble
+  val SymmetryAndFlatnessDiameter_mm: Double = logMainText("SymmetryAndFlatnessDiameter_mm", "10.0").toDouble
+  val SymmetryAndFlatnessRadius_mm: Double = SymmetryAndFlatnessDiameter_mm / 2
   val SymmetryAndFlatnessRTImageSIDProximity_mm: Double = logMainText("SymmetryAndFlatnessRTImageSIDProximity_mm", "10.0").toDouble
 
   val SymmetryPercentLimit: Double = logMainText("SymmetryPercentLimit", "2.0").toDouble
@@ -1033,7 +1035,8 @@ object Config extends Logging {
   // =================================================================================
 
   val PSMWholeDetectorBeamNamePattern: String = logMainText("PSMWholeDetectorBeamNamePattern", ".*whole.*")
-  val PSMRadius_mm: Double = logMainText("PSMRadius_mm", "2.5").toDouble
+  val PSMDiameter_mm: Double = logMainText("PSMDiameter_mm", "10.0").toDouble
+  val PSMRadius_mm: Double = PSMDiameter_mm / 2
 
   private val PSMMaxFloodFieldAge_day: Double = logMainText("PSMMaxFloodFieldAge_day", "732.0").toDouble
   val PSMMaxFloodFieldAge_ms: Long = (PSMMaxFloodFieldAge_day * 24 * 60 * 60 * 1000).round
