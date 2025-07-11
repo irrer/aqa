@@ -42,7 +42,7 @@ object CustomizeRtPlanInterface {
 
   val interface = new CustomizeRtPlanInterface
 
-  val machineIdTag = "MachineId"
+  private val machineIdTag = "MachineId"
   val patientIdTag = "Patient ID"
   val patientNameTag = "Patient Name"
   val machineNameTag = "Machine Name"
@@ -84,7 +84,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
   private def planName = new WebInputText(CustomizeRtPlanInterface.planNameTag, true, 2, 0, "Name to distinguish this plan from others", false)
 
   /**
-    * Name by which machine is referenced in DICOM files.  Often different than the common reference to the machine.
+    * Name by which machine is referenced in DICOM files.  Often different from the common reference to the machine.
     *
     * @return Machine name.
     */
@@ -120,7 +120,8 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     new MakeRtplanIsoCheckNoTable,
     new MakeRtplanIsoCheckMinimalTable,
     new MakeRtplanIsoCheckFullTable,
-    new MakeRtplanPSM
+    new MakeRtplanPSM,
+    new MakeRtplanPSMMinimal
   )
 
   class FormButtonProcedure(name: String, val procedure: Option[Procedure]) extends FormButton(name, col = 2, offset = 0, subUrl = subUrl, pathOf, ButtonType.BtnPrimary) {}
@@ -186,7 +187,7 @@ class CustomizeRtPlanInterface extends Restlet with SubUrlRoot with Logging {
     val planNameTooLongErr = if (valueMap(planName.label).length > 16) Error.make(patientID, "Plan Name can not be over 16 characters..") else styleNone
     // removed this check because it might stop people from generating a plan.  Technically the DICOM spec says that it
     // must be 16 characters or shorter, but the reality is that a lot of systems handle longer strings.
-    //val machTooLongErr = if (valueMap(machineName.label).size > 16) Error.make(patientID, "Machine Name can not be over 16 characters..") else styleNone
+    //val machTooLongErr = if (valueMap(machineName.label).size > 16) Error.make(patientID, "Machine Name can not be over 16 characters...") else styleNone
 
     tolErr ++ planNameErr ++ machErr ++ patIdErr ++ patNameErr ++ patIdTooLongErr ++ planNameTooLongErr // ++ machTooLongErr
   }
