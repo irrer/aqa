@@ -23,6 +23,7 @@ import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.Util
+import org.aqa.webrun.psm.PSMGrid
 
 import java.sql.Timestamp
 
@@ -51,7 +52,7 @@ case class SymmetryAndFlatness(
     span_mm: Option[Double], // distance in mm between opposing measurement areas (both left-right and top-bottom).
     diameter_mm: Option[Double], // diameter in mm of the area sampled.
     RTImageSID_mm: Option[Double] // distance in mm from source to image (DICOM metadata 3002,0026)
-) {
+) extends Logging {
 
   def insert: SymmetryAndFlatness = {
     val insertQuery = SymmetryAndFlatness.query returning SymmetryAndFlatness.query.map(_.symmetryAndFlatnessPK) into
@@ -64,15 +65,6 @@ case class SymmetryAndFlatness(
 
   val isBaselineFunc: Boolean = isBaseline
 
-  private val list = Seq(top_cu, bottom_cu, right_cu, left_cu, center_cu)
-
-  private val min = list.min
-  private val max = list.max
-
-  val axialSymmetry: Double = ((top_cu - bottom_cu) / bottom_cu) * 100
-  val transverseSymmetry: Double = ((right_cu - left_cu) / left_cu) * 100
-  val flatness: Double = ((max - min) / (max + min)) * 100
-
   /** Coefficients of Variation. */
   val topCOV: Double = topStdDev_cu / top_cu
   val bottomCOV: Double = bottomStdDev_cu / bottom_cu
@@ -80,18 +72,212 @@ case class SymmetryAndFlatness(
   val rightCOV: Double = rightStdDev_cu / right_cu
   val centerCOV: Double = centerStdDev_cu / center_cu
 
-  def profileConstancy(baseline: SymmetryAndFlatness): Double = {
-    if (symmetryAndFlatnessPK.nonEmpty && baseline.symmetryAndFlatnessPK.get == symmetryAndFlatnessPK.get) {
-      0
+  // - - - - - - - - - - - - - - - - - - - - - - - -
+
+  def rawImageQaTop(psmGrid: PSMGrid): Double = {
+    psmGrid.topBeam.rawImage * top_cu
+  }
+
+  def beamResponseQaTop(psmGrid: PSMGrid): Double = {
+    rawImageQaTop(psmGrid) / psmGrid.topBeam.psm
+  }
+
+  // - - - - - - - - - - - - - - - - - - - - - - - -
+
+  def rawImageQaBottom(psmGrid: PSMGrid): Double = {
+    psmGrid.bottomBeam.rawImage * bottom_cu
+  }
+
+  def beamResponseQaBottom(psmGrid: PSMGrid): Double = {
+    rawImageQaBottom(psmGrid) / psmGrid.bottomBeam.psm
+  }
+
+  // - - - - - - - - - - - - - - - - - - - - - - - -
+
+  def rawImageQaLeft(psmGrid: PSMGrid): Double = {
+    psmGrid.leftBeam.rawImage * left_cu
+  }
+
+  def beamResponseQaLeft(psmGrid: PSMGrid): Double = {
+    rawImageQaLeft(psmGrid) / psmGrid.leftBeam.psm
+  }
+
+  // - - - - - - - - - - - - - - - - - - - - - - - -
+
+  def rawImageQaRight(psmGrid: PSMGrid): Double = {
+    psmGrid.rightBeam.rawImage * right_cu
+  }
+
+  def beamResponseQaRight(psmGrid: PSMGrid): Double = {
+    rawImageQaRight(psmGrid) / psmGrid.rightBeam.psm
+  }
+
+  // - - - - - - - - - - - - - - - - - - - - - - - -
+
+  def rawImageQaCenter(psmGrid: PSMGrid): Double = {
+    psmGrid.centerBeam.rawImage * center_cu
+  }
+
+  def beamResponseQaCenter(psmGrid: PSMGrid): Double = {
+    rawImageQaCenter(psmGrid) / psmGrid.centerBeam.psm
+  }
+
+  // - - - - - - - - - - - - - - - - - - - - - - - -
+
+  private def checkPsmMode(psmGrid: Option[PSMGrid]): Boolean = {
+    val ok = (psmGrid.isEmpty && psmDataDate.isEmpty) || (psmGrid.isDefined && psmDataDate.isDefined)
+
+    if (!ok)
+      logger.warn(
+        s"psmGrid parameter and psmDataDate must either both be defined or neither defined." +
+          s"  grid.isDefined: ${psmGrid.isDefined}   psmDataDate.isDefined  ${psmDataDate.isDefined}"
+      )
+    ok
+  }
+
+  def axialSymmetry(psmGrid: Option[PSMGrid]): Option[Double] = {
+    if (checkPsmMode(psmGrid)) {
+      if (psmGrid.isEmpty) {
+        val sym = ((top_cu - bottom_cu) / bottom_cu) * 100
+        Some(sym)
+      } else {
+        val t = beamResponseQaTop(psmGrid.get)
+        val b = beamResponseQaBottom(psmGrid.get)
+        val sym = ((t - b) / b) * 100
+        Some(sym)
+      }
+    } else
+      None
+  }
+
+  def transverseSymmetry(psmGrid: Option[PSMGrid]): Option[Double] = {
+    if (checkPsmMode(psmGrid)) {
+      if (psmGrid.isEmpty) {
+        val ts = ((right_cu - left_cu) / left_cu) * 100
+        Some(ts)
+      } else {
+        val r = beamResponseQaRight(psmGrid.get)
+        val l = beamResponseQaLeft(psmGrid.get)
+        val ts = ((r - l) / l) * 100
+        Some(ts)
+      }
     } else {
-      val t = (top_cu / center_cu) - (baseline.top_cu / baseline.center_cu)
-      val b = (bottom_cu / center_cu) - (baseline.bottom_cu / baseline.center_cu)
-      val l = (left_cu / center_cu) - (baseline.left_cu / baseline.center_cu)
-      val r = (right_cu / center_cu) - (baseline.right_cu / baseline.center_cu)
+      None
+    }
+  }
 
-      val profConst = ((t + b + l + r) * 100) / 4
+  private val list = Seq(top_cu, bottom_cu, right_cu, left_cu, center_cu)
 
-      profConst
+  private def psmList(psmGrid: Option[PSMGrid]): Seq[Double] = {
+    Seq( //
+      beamResponseQaTop(psmGrid.get),
+      beamResponseQaBottom(psmGrid.get),
+      beamResponseQaLeft(psmGrid.get),
+      beamResponseQaRight(psmGrid.get),
+      beamResponseQaCenter(psmGrid.get)
+    )
+  }
+
+  /**
+    * Get the minimum value of the 5 points.
+    * @param psmGrid Used if this is a PSM data set.
+    * @return Minimum value, or None on error.
+    */
+  private def min(psmGrid: Option[PSMGrid]): Double = {
+    checkPsmMode(psmGrid)
+    if (psmGrid.isEmpty)
+      list.min
+    else
+      psmList(psmGrid).min
+  }
+
+  /**
+    * Get the maximum value of the 5 points.
+    * @param psmGrid Used if this is a PSM data set.
+    * @return Maximum value, or None on error.
+    */
+  private def max(psmGrid: Option[PSMGrid]): Double = {
+    checkPsmMode(psmGrid)
+    if (psmGrid.isEmpty)
+      list.max
+    else
+      psmList(psmGrid).max
+  }
+
+  /**
+    * Get the flatness.
+    * @param psmGrid Used if this is a PSM data set.
+    * @return Flatness, or None on error.
+    */
+  def flatness(psmGrid: Option[PSMGrid]): Option[Double] = {
+    if (checkPsmMode(psmGrid)) {
+      val f = ((max(psmGrid) - min(psmGrid)) / (max(psmGrid) + min(psmGrid))) * 100
+      Some(f)
+    } else
+      None
+  }
+
+  def profileConstancy(psmGrid: Option[PSMGrid], baseline: SymmetryAndFlatness, baselinePsmGrid: Option[PSMGrid]): Option[Double] = {
+
+    val psmOk = checkPsmMode(psmGrid)
+    val psmBaselineOk = baseline.checkPsmMode(baselinePsmGrid)
+
+    // check to make sure that either both or neither of the data sets use PSM.
+    val bothMatch = (psmDataDate.isDefined && baseline.psmDataDate.isDefined) || (psmDataDate.isEmpty && baseline.psmDataDate.isEmpty)
+
+    val allOk = psmOk && psmBaselineOk && bothMatch
+
+    if (!allOk) {
+      logger.warn(
+        s"SymFlat PSM mismatch. " +
+          s" psmGrid.isDefined:${psmGrid.isDefined}    psmDataDate.isDefined:${psmDataDate.isDefined}" +
+          s"     psmGrid.isDefined:${baselinePsmGrid.isDefined}    psmDataDate.isDefined:${baseline.psmDataDate.isDefined}"
+      )
+      None // there is something wrong with the data.
+    } else {
+      // if this is the baseline, then the answer is zero.
+      if (symmetryAndFlatnessPK.nonEmpty && (baseline.symmetryAndFlatnessPK.get == symmetryAndFlatnessPK.get)) {
+        Some(0.0)
+      } else {
+
+        if (psmGrid.isEmpty) {
+
+          val t = (top_cu / center_cu) - (baseline.top_cu / baseline.center_cu)
+          val b = (bottom_cu / center_cu) - (baseline.bottom_cu / baseline.center_cu)
+          val l = (left_cu / center_cu) - (baseline.left_cu / baseline.center_cu)
+          val r = (right_cu / center_cu) - (baseline.right_cu / baseline.center_cu)
+
+          val profConst = ((t + b + l + r) * 100) / 4
+
+          Some(profConst)
+
+        } else
+          //
+          {
+            // process for PSM
+
+            val tCu = beamResponseQaTop(psmGrid.get)
+            val bCu = beamResponseQaBottom(psmGrid.get)
+            val lCu = beamResponseQaLeft(psmGrid.get)
+            val rCu = beamResponseQaRight(psmGrid.get)
+            val cCu = beamResponseQaCenter(psmGrid.get)
+
+            val tCuBase = baseline.beamResponseQaTop(baselinePsmGrid.get)
+            val bCuBase = baseline.beamResponseQaBottom(baselinePsmGrid.get)
+            val lCuBase = baseline.beamResponseQaLeft(baselinePsmGrid.get)
+            val rCuBase = baseline.beamResponseQaRight(baselinePsmGrid.get)
+            val cCuBase = baseline.beamResponseQaCenter(baselinePsmGrid.get)
+
+            val t = (tCu / cCu) - (tCuBase / cCuBase)
+            val b = (bCu / cCu) - (bCuBase / cCuBase)
+            val l = (lCu / cCu) - (lCuBase / cCuBase)
+            val r = (rCu / cCu) - (rCuBase / cCuBase)
+
+            val profConst = ((t + b + l + r) * 100) / 4
+
+            Some(profConst)
+          }
+      }
     }
   }
 
@@ -102,29 +288,37 @@ case class SymmetryAndFlatness(
     * @param baselineValue Known good baseline used as a reference.
     * @return True on pass, false on fail.
     */
-  private def doesPass(value: Double, baselineValue: Double, limit: Double): Boolean = {
-    val diff = (value - baselineValue).abs
-    val pass = limit >= diff
-    pass
+  private def doesPass(value: Option[Double], baselineValue: Option[Double], limit: Double): Boolean = {
+    if (value.isEmpty || baselineValue.isEmpty)
+      false
+    else {
+      val diff = (value.get - baselineValue.get).abs
+      val pass = limit >= diff
+      pass
+    }
   }
 
-  def axialSymmetryPass(baseline: SymmetryAndFlatness): Boolean =
-    doesPass(axialSymmetry, baseline.axialSymmetry, Config.SymmetryPercentLimit)
+  def axialSymmetryPass(baseline: SymmetryAndFlatness, psmGrid: Option[PSMGrid], baselinePsmGrid: Option[PSMGrid]): Boolean =
+    doesPass(axialSymmetry(psmGrid), baseline.axialSymmetry(baselinePsmGrid), Config.SymmetryPercentLimit)
 
-  def transverseSymmetryPass(baseline: SymmetryAndFlatness): Boolean =
-    doesPass(transverseSymmetry, baseline.transverseSymmetry, Config.SymmetryPercentLimit)
+  def transverseSymmetryPass(baseline: SymmetryAndFlatness, psmGrid: Option[PSMGrid], baselinePsmGrid: Option[PSMGrid]): Boolean =
+    doesPass(transverseSymmetry(psmGrid), baseline.transverseSymmetry(baselinePsmGrid), Config.SymmetryPercentLimit)
 
-  def flatnessPass(baseline: SymmetryAndFlatness): Boolean =
-    doesPass(flatness, baseline.flatness, Config.FlatnessPercentLimit)
+  def flatnessPass(baseline: SymmetryAndFlatness, psmGrid: Option[PSMGrid], baselinePsmGrid: Option[PSMGrid]): Boolean =
+    doesPass(flatness(psmGrid), baseline.flatness(baselinePsmGrid), Config.FlatnessPercentLimit)
 
-  def profileConstancyPass(baseline: SymmetryAndFlatness): Boolean =
-    doesPass(profileConstancy(baseline), baseline.profileConstancy(baseline), Config.ProfileConstancyPercentLimit)
+  def profileConstancyPass(baseline: SymmetryAndFlatness, psmGrid: Option[PSMGrid], baselinePsmGrid: Option[PSMGrid]): Boolean =
+    doesPass(
+      profileConstancy(psmGrid, baseline, baselinePsmGrid),
+      baseline.profileConstancy(baselinePsmGrid, baseline, baselinePsmGrid),
+      Config.ProfileConstancyPercentLimit
+    )
 
-  def allPass(baseline: SymmetryAndFlatness): Boolean = {
-    axialSymmetryPass(baseline) &&
-    transverseSymmetryPass(baseline) &&
-    flatnessPass(baseline) &&
-    profileConstancyPass(baseline)
+  def allPass(baseline: SymmetryAndFlatness, psmGrid: Option[PSMGrid], baselinePsmGrid: Option[PSMGrid]): Boolean = {
+    axialSymmetryPass(baseline, psmGrid, baselinePsmGrid) &&
+    transverseSymmetryPass(baseline, psmGrid, baselinePsmGrid) &&
+    flatnessPass(baseline, psmGrid, baselinePsmGrid) &&
+    profileConstancyPass(baseline, psmGrid, baselinePsmGrid)
   }
 
   def insertOrUpdate(): Int = Db.run(SymmetryAndFlatness.query.insertOrUpdate(this))
@@ -260,6 +454,25 @@ object SymmetryAndFlatness extends Logging {
 
   case class SymmetryAndFlatnessHistory(output: Output, symmetryAndFlatness: SymmetryAndFlatness, baselineOutput: Output, baseline: SymmetryAndFlatness) extends HasOutput {
     override def getOutput: Output = output
+
+    val psmGrid: Option[PSMGrid] = {
+      if (symmetryAndFlatness.psmDataDate.isDefined)
+        PSMGrid.get(output.machinePK.get, symmetryAndFlatness.psmDataDate.get)
+      else
+        None
+    }
+
+    val psmGridBaseline: Option[PSMGrid] = {
+      if (baseline.psmDataDate.isDefined)
+        PSMGrid.get(output.machinePK.get, baseline.psmDataDate.get)
+      else
+        None
+    }
+
+    val axialSymmetry: Option[Double] = symmetryAndFlatness.axialSymmetry(psmGrid)
+    val transverseSymmetry: Option[Double] = symmetryAndFlatness.transverseSymmetry(psmGrid)
+    val flatness: Option[Double] = symmetryAndFlatness.flatness(psmGrid)
+    val profileConstancy: Option[Double] = symmetryAndFlatness.profileConstancy(psmGrid, baseline, psmGridBaseline)
   }
 
   private case class OutputSymFlat(output: Output, sf: SymmetryAndFlatness) {}

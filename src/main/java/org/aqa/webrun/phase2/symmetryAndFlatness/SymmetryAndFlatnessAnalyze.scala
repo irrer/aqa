@@ -23,18 +23,18 @@ import java.awt.image.BufferedImage
 import java.sql.Timestamp
 
 /**
-  * Perform the core analysis.
-  *
-  * @param outputPK                                Attach to this output.
-  * @param procedurePK                             Procedure.
-  * @param machinePK                               Machine.
-  * @param dataDate                                Output's data date
-  * @param attributeList                           DICOM of this beam.
-  * @param beamName                                Name of beam.
-  * @param collimatorCenter                        Collimator centering offset.
-  * @param floodField                              PhaseAny flood field.
-  * @param symmetryAndFlatnessBaselineRedoBeamList List of beams that were marked as baselines by the user.
-  */
+ * Perform the core analysis.
+ *
+ * @param outputPK                                Attach to this output.
+ * @param procedurePK                             Procedure.
+ * @param machinePK                               Machine.
+ * @param dataDate                                Output's data date
+ * @param attributeList                           DICOM of this beam.
+ * @param beamName                                Name of beam.
+ * @param collimatorCenter                        Collimator centering offset.
+ * @param floodField                              PhaseAny flood field.
+ * @param symmetryAndFlatnessBaselineRedoBeamList List of beams that were marked as baselines by the user.
+ */
 case class SymmetryAndFlatnessAnalyze( //
                                        outputPK: Long,
                                        procedurePK: Long,
@@ -45,7 +45,7 @@ case class SymmetryAndFlatnessAnalyze( //
                                        collimatorCenter: Point2D.Double,
                                        floodField: Option[AttributeList],
                                        symmetryAndFlatnessBaselineRedoBeamList: Seq[String]
-) extends Logging {
+                                     ) extends Logging {
 
   private def circleRadiusInPixels(isoImageTrans: IsoImagePlaneTranslator, radius_mm: Double): Double = {
     val imagePlaneCenterInPixels = isoImageTrans.iso2Pix(0, 0)
@@ -62,11 +62,11 @@ case class SymmetryAndFlatnessAnalyze( //
   private val scaledImage: DicomImage = new DicomImage(attributeList).scalePixels(attributeList)
 
   /**
-    * Get the average pixel value for one spot in HU or CU or whatever units the image is using.
-    *
-    * @param point : Center of circle in image.
-    * @return Mean value of pixels in circle in CU.
-    */
+   * Get the average pixel value for one spot in HU or CU or whatever units the image is using.
+   *
+   * @param point : Center of circle in image.
+   * @return Mean value of pixels in circle in CU.
+   */
   private def evalPoint(point: SymmetryAndFlatnessPoint, image: DicomImage, useCollimatorCentering: Boolean): Double = {
     val center =
       if (useCollimatorCentering)
@@ -80,11 +80,11 @@ case class SymmetryAndFlatnessAnalyze( //
   }
 
   /**
-    * Get the standard deviation of the pixel values in CU for one spot in HU or CU or whatever units the image is using.
-    *
-    * @param point : Center of circle in image.
-    * @return Standard deviation of pixels in circle in CU.
-    */
+   * Get the standard deviation of the pixel values in CU for one spot in HU or CU or whatever units the image is using.
+   *
+   * @param point : Center of circle in image.
+   * @return Standard deviation of pixels in circle in CU.
+   */
   private def evalPointStdDev(point: SymmetryAndFlatnessPoint): Double = {
     val center = new Point2D.Double(point.x_mm + collimatorCenter.getX, point.y_mm + collimatorCenter.getY)
     val pixList = Phase2Util.makeCenterDosePointList(attributeList, center, radius_mm = Config.SymmetryAndFlatnessDiameter_mm / 2)
@@ -118,7 +118,7 @@ case class SymmetryAndFlatnessAnalyze( //
                                   correctedImage: DicomImage,
                                   symmetryAndFlatness: SymmetryAndFlatness,
                                   psmGrid: Option[PSMGrid] = None // if defined, use the spacing in this grid
-  ): BufferedImage = {
+                                ): BufferedImage = {
     val image = correctedImage.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
     Config.applyWatermark(image)
     val graphics = ImageUtil.getGraphics(image)
@@ -140,7 +140,7 @@ case class SymmetryAndFlatnessAnalyze( //
       graphics.drawOval((center.getX - radius).round.toInt, (center.getY - radius).round.toInt, circleSize, circleSize)
       val description = point.name + " " + dbl2Text(point.x_mm) + ", " + dbl2Text(point.y_mm)
       ImageText.drawTextOffsetFrom(graphics, center.getX, center.getY - radius, description, 90)
-      ImageText.drawTextOffsetFrom(graphics, center.getX, center.getY + radius, value.formatted("%6.4f"), 270)
+      ImageText.drawTextOffsetFrom(graphics, center.getX, center.getY + radius, "%6.4f".format(value), 270)
     }
 
     def pointOf(configured: SymmetryAndFlatnessPoint, psmBeam: Option[PSMBeam]): SymmetryAndFlatnessPoint = {
@@ -204,11 +204,8 @@ case class SymmetryAndFlatnessAnalyze( //
       def calcCu(psmBeam: Option[PSMBeam], symFlatPoint: SymmetryAndFlatnessPoint): Double = {
         if (doPsm) {
           val psmPoint = SymmetryAndFlatnessPoint("dummyName", psmBeam.get.xCenter_mm, psmBeam.get.yCenter_mm)
-          val monthlyWd = evalPoint(psmPoint, scaledImage, useCollimatorCentering = false)
-          val phaseAnyFloodField = psmBeam.get.floodField_cu.get
-          val psm = psmBeam.get.psm
-          val value = (monthlyWd / phaseAnyFloodField) / psm
-          value
+          val qaWholeDetector = evalPoint(psmPoint, scaledImage, useCollimatorCentering = false)
+          qaWholeDetector
         } else
           evalPoint(symFlatPoint, scaledImage, useCollimatorCentering = true)
 
@@ -280,7 +277,22 @@ case class SymmetryAndFlatnessAnalyze( //
 
     logger.info("Making annotated image of beam " + beamName)
     val annotatedImage = makeAnnotatedImage(correctedImage, symmetryAndFlatness, psmGrid)
-    val result = SymmetryAndFlatnessRun.SymmetryAndFlatnessBeamResult(symmetryAndFlatness, annotatedImage, transverseProfile, transverse_pct, axialProfile, axial_pct, baseline)
+    val psmGridBaseline = {
+      if (baseline.psmDataDate.isDefined)
+        PSMGrid.get(machinePK, baseline.psmDataDate.get)
+      else
+        None
+    }
+    val result = SymmetryAndFlatnessRun.SymmetryAndFlatnessBeamResult( //
+      symmetryAndFlatness,
+      annotatedImage,
+      transverseProfile,
+      transverse_pct,
+      axialProfile,
+      axial_pct,
+      baseline,
+      psmGrid,
+      psmGridBaseline)
 
     logger.info("Finished analysis of beam " + beamName)
 

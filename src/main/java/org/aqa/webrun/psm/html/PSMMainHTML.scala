@@ -12,6 +12,7 @@ import org.aqa.webrun.psm.PSMBeamAnalysisResult
 import org.aqa.webrun.psm.PSMCharts
 import org.aqa.webrun.psm.PSMDicom
 import org.aqa.webrun.psm.PSMGradientAscent
+import org.aqa.webrun.psm.PSMGrid
 
 import java.awt.Color
 import java.io.File
@@ -19,27 +20,29 @@ import scala.collection.immutable.Seq
 import scala.xml.Elem
 
 /**
-  * Generate HTML page to show all PSM data.
-  */
+ * Generate HTML page to show all PSM data.
+ */
 
 class PSMMainHTML(
-    extendedData: ExtendedData,
-    rtplan: AttributeList,
-    resultList: Seq[PSMBeamAnalysisResult],
-    psmGradientAscent: Option[PSMGradientAscent],
-    ffAl: AttributeList,
-    ffImg: DicomImage,
-    wdAl: AttributeList,
-    wdImg: DicomImage,
-    rawImg: DicomImage,
-    cbrImg: DicomImage,
-    brImg: Option[DicomImage],
-    psmImg: Option[DicomImage]
-) extends Logging {
+                   extendedData: ExtendedData,
+                   rtplan: AttributeList,
+                   resultList: Seq[PSMBeamAnalysisResult],
+                   psmGradientAscent: Option[PSMGradientAscent],
+                   ffAl: AttributeList,
+                   ffImg: DicomImage,
+                   wdAl: AttributeList,
+                   wdImg: DicomImage,
+                   rawImg: DicomImage,
+                   cbrImg: DicomImage,
+                   brImg: Option[DicomImage],
+                   psmImg: Option[DicomImage]
+                 ) extends Logging {
 
   def make(): Unit = {
 
     val resultHtml = new ResultHtml(extendedData, resultList)
+
+    val grid = PSMGrid(resultList)
 
     val dir = extendedData.output.dir
 
@@ -47,19 +50,60 @@ class PSMMainHTML(
 
       val trans = new IsoImagePlaneTranslator(wdAl)
 
-      val ffRow = PSMHtmlImage(extendedData, "Flood Field", ffImg, trans, dir = dir, al = Some(ffAl))
-      val wdRow = PSMHtmlImage(extendedData, "Whole Detector", wdImg, trans, dir = dir, al = Some(wdAl))
-      val rawRow = PSMHtmlImage(extendedData, "Raw Image = Flood Field * Whole Detector", rawImg, trans, dir = dir)
-      val cbrRow = PSMHtmlImage(extendedData, "Beam Response Beam Centers", cbrImg, trans, dir = dir, resultList = resultList, color = Some(Color.white))
+      val ffRow = PSMHtmlImage( //
+        extendedData,
+        name = "Flood Field",
+        image = ffImg,
+        grid = grid,
+        trans,
+        dir = dir,
+        al = Some(ffAl),
+        valueGetter = psmBeam => psmBeam.floodField_cu.get,
+        color = Some(Color.white))
+
+      val wdRow = PSMHtmlImage( //
+        extendedData,
+        name = "Whole Detector",
+        image = wdImg,
+        grid = grid,
+        trans,
+        dir = dir,
+        al = Some(wdAl),
+        valueGetter = psmBeam => psmBeam.wholeDetector_cu.get,
+        color = Some(Color.white))
+
+      val rawRow = PSMHtmlImage( //
+        extendedData,
+        name = "Raw Image = Flood Field * Whole Detector",
+        image = rawImg,
+        grid = grid,
+        trans,
+        dir = dir,
+        valueGetter = psmBeam => psmBeam.rawImage,
+        color = Some(Color.white))
+
+      val cbrRow = PSMHtmlImage( //
+        extendedData,
+        name = "Beam Response Beam Centers",
+        image = cbrImg,
+        grid = grid,
+        trans,
+        dir = dir,
+        valueGetter = psmBeam => psmBeam.mean_cu,
+        resultList = resultList,
+        color = Some(Color.white))
+
       val brRow: Option[PSMHtmlImage] = {
         if (psmGradientAscent.isDefined && brImg.isDefined)
           Some(
             PSMHtmlImage(
               extendedData,
-              "Beam Response Interpolated and Normalized",
-              brImg.get,
+              name = "Beam Response Interpolated and Normalized",
+              image = brImg.get,
+              grid = grid,
               trans,
               dir = dir,
+              valueGetter = psmBeam => psmBeam.beamResponseNormalized.get,
               center = Some(psmGradientAscent.get.getMaxPoint_iso),
               resultList = resultList,
               color = Some(Color.white)
@@ -68,8 +112,16 @@ class PSMMainHTML(
         else
           None
       }
+
       val psmRow: Option[PSMHtmlImage] = {
-        if (psmImg.isDefined) Some(PSMHtmlImage(extendedData, "PSM = Raw / Beam Response", psmImg.get, trans, dir = dir))
+        if (psmImg.isDefined) Some(PSMHtmlImage(extendedData,
+          name = "PSM = Raw / Beam Response",
+          image = psmImg.get,
+          grid = grid,
+          trans,
+          dir = dir,
+          valueGetter = psmBeam => psmBeam.psm,
+          color = Some(Color.white)))
         else
           None
       }
@@ -82,7 +134,7 @@ class PSMMainHTML(
                 Image
               </th>
               <th>
-                Center Pixels
+                Beam Values
               </th>
               <th>
                 Profiles

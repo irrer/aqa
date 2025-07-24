@@ -18,9 +18,6 @@ package org.aqa.webrun.phase2.symmetryAndFlatness
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageText
-import edu.umro.ImageUtil.ImageUtil
-import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -35,7 +32,6 @@ import org.aqa.webrun.phase2.RunReq
 import org.aqa.webrun.phase2.SubProcedureResult
 import org.aqa.webrun.psm.PSMGrid
 
-import java.awt.Color
 import java.awt.geom.Point2D
 import java.awt.image.BufferedImage
 import java.sql.Timestamp
@@ -63,61 +59,10 @@ object SymmetryAndFlatnessRun extends Logging {
       transverse_pct: IndexedSeq[Double],
       axialProfile: Seq[Double],
       axial_pct: IndexedSeq[Double],
-      baseline: SymmetryAndFlatness
-  ) {
-
-    /** True if everything is ok. */
-    /*
-    val pass: Boolean = Seq(axialSymmetryStatus, transverseSymmetryStatus, flatnessStatus).forall(s => s.toString.equals(ProcedureStatus.pass.toString))
-    logger.info("sym+flatness pass: " + pass)
-     */
-
-    /** Aggregate status. */
-    /*
-    val status: ProcedureStatus.ProcedureStatus = boolToStatus(pass)
-    logger.info("sym+flatness aggregate status: " + status)
-     */
-  }
-
-  private def circleRadiusInPixels(isoImageTrans: IsoImagePlaneTranslator): Double = {
-    val radius_mm = Config.SymmetryAndFlatnessDiameter_mm / 2
-    val imagePlaneCenterInPixels = isoImageTrans.iso2Pix(0, 0)
-    val radiusInPixels = isoImageTrans.iso2Pix(radius_mm, radius_mm).distance(imagePlaneCenterInPixels)
-    radiusInPixels
-  }
-
-  private def makeAnnotatedImage(correctedImage: DicomImage, attributeList: AttributeList, symmetryAndFlatness: SymmetryAndFlatness): BufferedImage = {
-    val image = correctedImage.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
-    Config.applyWatermark(image)
-    val graphics = ImageUtil.getGraphics(image)
-
-    val translator = new IsoImagePlaneTranslator(attributeList)
-    val radius = circleRadiusInPixels(translator)
-    val circleSize = (radius * 2).round.toInt
-
-    Util.addGraticules(image, translator, Color.gray)
-
-    Util.addAxialAndTransverse(image)
-
-    def dbl2Text(d: Double): String = if (d.round.toInt == d) d.toInt.toString else d.toString
-
-    def annotatePoint(point: SymmetryAndFlatnessPoint, value: Double): Unit = {
-      graphics.setColor(Color.black)
-      val center = translator.iso2Pix(point.asPoint)
-      graphics.drawOval((center.getX - radius).round.toInt, (center.getY - radius).round.toInt, circleSize, circleSize)
-      val description = point.name + " " + dbl2Text(point.x_mm) + ", " + dbl2Text(point.y_mm)
-      ImageText.drawTextOffsetFrom(graphics, center.getX, center.getY - radius, description, 90)
-      ImageText.drawTextOffsetFrom(graphics, center.getX, center.getY + radius, value.formatted("%6.4f"), 270)
-    }
-
-    annotatePoint(Config.SymmetryPointTop, symmetryAndFlatness.top_cu)
-    annotatePoint(Config.SymmetryPointBottom, symmetryAndFlatness.bottom_cu)
-    annotatePoint(Config.SymmetryPointRight, symmetryAndFlatness.right_cu)
-    annotatePoint(Config.SymmetryPointLeft, symmetryAndFlatness.left_cu)
-    annotatePoint(Config.SymmetryPointCenter, symmetryAndFlatness.center_cu)
-
-    image
-  }
+      baseline: SymmetryAndFlatness,
+      psmGrid: Option[PSMGrid],
+      psmGridBaseline: Option[PSMGrid]
+  ) {}
 
   private def getAttributeList(beamName: String, runReq: RunReq): AttributeList = {
     val isFlood = beamName.equalsIgnoreCase(Config.FloodFieldBeamName)
@@ -126,7 +71,6 @@ object SymmetryAndFlatnessRun extends Logging {
   }
 
   def makeBaselineName(beamName: String, dataName: String): String = dataName + " " + beamName
-
 
   /**
     * Entry point for testing only.
@@ -248,11 +192,11 @@ object SymmetryAndFlatnessRun extends Logging {
         val sf = r.symmetryAndFlatness
         val text = {
           "    " + sf.beamName.format("%16s") + " : " +
-            "    axial sym:" + sf.axialSymmetryPass(bs).toString.format("%5s") + " : " +
-            "    flatness:" + sf.flatnessPass(bs).toString.format("%5s") + " : " +
-            "    transverse sym:" + sf.transverseSymmetryPass(bs).toString.format("%5s") + " : " +
-            "    profile const:" + sf.profileConstancyPass(bs).toString.format("%5s") + " : " +
-            "    all: " + sf.allPass(bs).toString.format("%5s")
+            "    axial sym:" + sf.axialSymmetryPass(bs, r.psmGrid, r.psmGridBaseline).toString.format("%5s") + " : " +
+            "    flatness:" + sf.flatnessPass(bs, r.psmGrid, r.psmGridBaseline).toString.format("%5s") + " : " +
+            "    transverse sym:" + sf.transverseSymmetryPass(bs, r.psmGrid, r.psmGridBaseline).toString.format("%5s") + " : " +
+            "    profile const:" + sf.profileConstancyPass(bs, r.psmGrid, r.psmGridBaseline).toString.format("%5s") + " : " +
+            "    all: " + sf.allPass(bs, r.psmGrid, r.psmGridBaseline).toString.format("%5s")
         }
         text
       }
@@ -261,7 +205,7 @@ object SymmetryAndFlatnessRun extends Logging {
 
       //val pass = resultList.map(r => r.symmetryAndFlatness.allPass(r.baseline)).reduce(_ && _)
       val pass = {
-        val list = resultList.map(r => r.symmetryAndFlatness.allPass(r.baseline))
+        val list = resultList.map(r => r.symmetryAndFlatness.allPass(r.baseline, r.psmGrid, r.psmGridBaseline))
         list.nonEmpty && list.reduce(_ && _)
       }
       val status = if (pass) ProcedureStatus.pass else ProcedureStatus.fail

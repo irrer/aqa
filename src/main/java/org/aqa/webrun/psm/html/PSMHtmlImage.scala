@@ -13,6 +13,8 @@ import org.aqa.web.C3Chart
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.psm.PSMBeamAnalysisResult
 import org.aqa.Logging
+import org.aqa.db.PSMBeam
+import org.aqa.webrun.psm.PSMGrid
 
 import java.awt.geom.Point2D
 import java.awt.Color
@@ -37,6 +39,7 @@ import scala.xml.Elem
   * @param trans Transform for scaling chart.
   * @param dir Put files here.
   * @param al DICOM metadata, if applicable.  If present, show the DICOM metadata.
+  * @param valueGetter Gets the value for beam display.
   * @param center Max point, if applicable.  If present, show on image.
   * @param resultList List of results, if applicable.  If present, show the values of the 42 beams on the main image.
   */
@@ -44,9 +47,11 @@ case class PSMHtmlImage(
     extendedData: ExtendedData,
     name: String,
     image: DicomImage,
+    grid: PSMGrid,
     trans: IsoImagePlaneTranslator,
     dir: File,
     al: Option[AttributeList] = None,
+    valueGetter: PSMBeam => Double,
     center: Option[Point2D.Double] = None,
     resultList: Seq[PSMBeamAnalysisResult] = Seq(),
     color: Option[Color] = None
@@ -111,19 +116,48 @@ case class PSMHtmlImage(
     chart
   }
 
-  private def centralPixels(image: DicomImage): Elem = {
-    val centerSize = 8
-    val rectangle = new Rectangle((image.width - centerSize) / 2, (image.height - centerSize) / 2, centerSize, centerSize)
-    val subImage = image.getSubimage(rectangle)
+  private val specialBeamNameList = {
+    Seq( //
+      grid.topBeam.beamName,
+      grid.bottomBeam.beamName,
+      grid.leftBeam.beamName,
+      grid.rightBeam.beamName,
+      grid.centerBeam.beamName
+    )
+  }
 
-    def row(y: Int): Elem = {
-      <tr>{(0 until centerSize).map(x => WebUtil.setPrecisionAttr(<td></td>, subImage.get(x, y)))}</tr>
+  private def beamValues(): Elem = {
+
+    def show(x: Int, y: Int): Elem = {
+      grid.get(x, y) match {
+        case Some(beam) =>
+          val backgroundColor = {
+            if (specialBeamNameList.contains(beam.psmBeam.beamName))
+              "#dddddd"
+            else
+              "white"
+          }
+          <td style={s"text-align: center; background-color:$backgroundColor;border: 1px solid #999999;"}>
+            <small>
+              <b>{beam.psmBeam.beamName}</b>
+              <br>
+                {WebUtil.setPrecisionAttr(<span> </span>, valueGetter(beam.psmBeam))}
+              </br>
+            </small>
+          </td>
+        case _ =>
+          <td style="border: 1px solid #999999;"> </td>
+
+      }
     }
 
-    <table class="table responsive table-bordered" style="font-size: 0.70em;">
-      {(0 until centerSize).map(row)}
-    </table>
+    def doRow(y: Int): Elem = {
+      val list = (0 until grid.width).map(x => show(x, y))
+      <tr>{list}</tr>
+    }
 
+    val list = (0 until grid.height).map(doRow)
+    <table class="table table-bordered">{list}</table>
   }
 
   private def annotateBeamCenters(bufImg: BufferedImage): Unit = {
@@ -146,14 +180,17 @@ case class PSMHtmlImage(
     def drawCircle(result: PSMBeamAnalysisResult): Unit = {
       val center_pix = trans.iso2Pix(result.psmBeam.xCenter_mm, result.psmBeam.yCenter_mm)
       val gc = ImageUtil.getGraphics(bufImg)
-      gc.setColor(Color.black)
+      val color = new Color(138, 196, 212)
+      gc.setColor(color)
 
       val width = trans.iso2PixDistX(Config.PSMRadius_mm * 2).toInt
       val height = trans.iso2PixDistY(Config.PSMRadius_mm * 2).toInt
 
       val text = fmt(result.psmBeam.mean_cu)
-      //ImageText.drawTextCenteredAt(gc, center_pix.getX, center_pix.getY - offset, text1)
-      ImageText.drawTextCenteredAt(gc, center_pix.getX, center_pix.getY, text)
+      val textHeight = ImageText.getTextDimensions(gc, text).getHeight.round
+
+      val y = center_pix.getY - (trans.iso2PixDistY(Config.PSMRadius_mm) + textHeight)
+      ImageText.drawTextCenteredAt(gc, center_pix.getX, y, text)
 
       gc.drawOval((center_pix.getX - width / 2).toInt, (center_pix.getY - height / 2).toInt, width, height)
     }
@@ -200,6 +237,8 @@ case class PSMHtmlImage(
   if (center.isDefined)
     annotateMaxCoordinates(center.get, bufImage, trans)
 
+  // TODO add labeled beam values
+
   Config.applyWatermark(bufImage)
 
   private val pngFileName = id + ".png"
@@ -224,7 +263,7 @@ case class PSMHtmlImage(
   val elem: Elem = {
     <tr>
         <td title="Click for larger chart, larger chart, and metadata.">{imageRef}</td>
-        <td>{centralPixels(image)}</td>
+        <td>{beamValues()}</td>
         <td>{chart.html}</td>
       </tr>
   }

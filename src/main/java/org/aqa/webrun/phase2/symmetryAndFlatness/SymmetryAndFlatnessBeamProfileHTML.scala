@@ -25,6 +25,7 @@ import org.aqa.web.WebServer
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
+import org.aqa.webrun.psm.PSMGrid
 
 import java.awt.Color
 import java.io.File
@@ -39,7 +40,6 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
       subDir: File,
       extendedData: ExtendedData,
       result: SymmetryAndFlatnessRun.SymmetryAndFlatnessBeamResult,
-      runReq: RunReq
   ): (Elem, String) = {
 
     val graphTransverse = new C3Chart(
@@ -64,67 +64,6 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
 
     def psmProcessing: (Seq[Elem], String) = {
       (Seq(), "")
-      /*
-    val psm = runReq.getPsm(extendedData.machine.machinePK.get)
-    if (result.symmetryAndFlatness.psmDataDate.isEmpty || psm.isEmpty) {
-      (Seq(), "")
-    } else {
-
-      val symFlat = result.symmetryAndFlatness
-
-      val wdAl = runReq.rtimageMap(symFlat.beamName)
-      val trans = new IsoImagePlaneTranslator(runReq.rtimageMap(symFlat.beamName))
-
-      val ffImg = psm.get.getFloodFieldScaled
-
-      val wdImg = new DicomImage(wdAl).scalePixels(wdAl)
-
-      val ffXwdImg = ffImg.fun2((a, b) => a * b, wdImg)
-
-      val psmImg = psm.get.imageScaled
-
-      val brImg = ffXwdImg.fun2(PSMUtil.funcDiv, psmImg)
-
-      val dir = SymmetryAndFlatnessHTML.makeSubDir(extendedData.output.dir)
-
-      val ffRow = PSMHtmlImage(extendedData, "FF: Flood Field", ffImg, trans, dir = dir, al = Some(psm.get.getFloodFieldDicom))
-      val wdRow = PSMHtmlImage(extendedData, "WD: " + symFlat.beamName + " used as Whole Detector", wdImg, trans, dir = dir, al = Some(wdAl))
-      val ffXWDRow = PSMHtmlImage(extendedData, symFlat.beamName + " times Flood Field", ffXwdImg, trans, dir = dir)
-      val psmRow = PSMHtmlImage(extendedData, "PSM", psmImg, trans, dir = dir)
-      val brRow = PSMHtmlImage(extendedData, "BR: Beam Response", brImg, trans, dir = dir, color = Some(Color.white))
-
-      val elem = {
-        <div class="row">
-          <div class="col-md-10">
-            {WebUtil.showPrecision}
-            <table class="table responsive table-bordered" style="margin-top:25px;">
-              <thead>
-                <tr>
-                  <th title="Click for larger image, larger chart, and metadata.">
-                    Image
-                  </th>
-                  <th>
-                    Center Pixels
-                  </th>
-                  <th>
-                    Profiles
-                  </th>
-                </tr>
-              </thead>
-              {ffRow.elem}
-              {wdRow.elem}
-              {ffXWDRow.elem}
-              {psmRow.elem}
-              {brRow.elem}
-            </table>
-          </div>
-        </div>
-      }
-
-      val js = Seq(ffRow, wdRow, ffXWDRow, psmRow, brRow).map(_.js).mkString("\n")
-      (Seq(elem), js)
-    }
-       */
     }
 
     val psmProc = psmProcessing
@@ -215,8 +154,27 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
   }
 
   def makeDisplay(subDir: File, extendedData: ExtendedData, result: SymmetryAndFlatnessRun.SymmetryAndFlatnessBeamResult, runReq: RunReq): Unit = {
-    val status = if (result.symmetryAndFlatness.allPass(result.baseline)) ProcedureStatus.pass else ProcedureStatus.fail
-    val elemJavascript = makeContent(subDir, extendedData, result, runReq)
+
+    val psmGrid = {
+      if (result.symmetryAndFlatness.psmDataDate.isDefined)
+        PSMGrid.get(extendedData.machine.machinePK.get, result.symmetryAndFlatness.psmDataDate.get)
+      else
+        None
+    }
+
+    val psmGridBaseline = {
+      if (result.baseline.psmDataDate.isDefined)
+        PSMGrid.get(extendedData.machine.machinePK.get, result.baseline.psmDataDate.get)
+      else
+        None
+    }
+
+    val status =
+      if (result.symmetryAndFlatness.allPass(result.baseline, psmGrid, psmGridBaseline))
+        ProcedureStatus.pass
+      else
+        ProcedureStatus.fail
+    val elemJavascript = makeContent(subDir, extendedData, result)
     val html = Phase2Util.wrapSubProcedure(extendedData, elemJavascript._1, title = "Symmetry and Flatness " + result.symmetryAndFlatness.beamName, status, Some(elemJavascript._2), runReq.rtimageMap)
     Util.writeBinaryFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, result.symmetryAndFlatness.beamName, result.symmetryAndFlatness.psmDataDate.isDefined), html.getBytes)
   }

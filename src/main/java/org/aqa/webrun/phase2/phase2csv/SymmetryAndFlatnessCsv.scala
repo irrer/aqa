@@ -19,6 +19,7 @@ package org.aqa.webrun.phase2.phase2csv
 import org.aqa.Util
 import org.aqa.db.Output
 import org.aqa.db.SymmetryAndFlatness
+import org.aqa.webrun.psm.PSMGrid
 
 import java.sql.Timestamp
 
@@ -58,23 +59,65 @@ class SymmetryAndFlatnessCsv(metadataCache: MetadataCache) extends Phase2Csv[Sym
       "NA"
   }
 
+  private def psmGridOf(sf: SF): Option[PSMGrid] = {
+    if (sf.symmetryAndFlatness.psmDataDate.isDefined)
+      PSMGrid.get(sf.output.machinePK.get, sf.symmetryAndFlatness.psmDataDate.get)
+    else
+      None
+  }
+
+  private def psmGridBaselineOf(sf: SF): Option[PSMGrid] = {
+    if (sf.baseline.psmDataDate.isDefined)
+      PSMGrid.get(sf.output.machinePK.get, sf.baseline.psmDataDate.get)
+    else
+      None
+  }
+
+  private def optDouble(d: Option[Double]): Any = {
+    if (d.isDefined)
+      d.get
+    else
+      "NA"
+  }
+
+  private def axialSym(sf: SF): Any = {
+    optDouble(sf.symmetryAndFlatness.axialSymmetry(psmGridOf(sf)))
+  }
+
+  private def transSym(sf: SF): Any = {
+    optDouble(sf.symmetryAndFlatness.transverseSymmetry(psmGridOf(sf)))
+  }
+
+  private def flat(sf: SF): Any = {
+    optDouble(sf.symmetryAndFlatness.flatness(psmGridOf(sf)))
+  }
+
+  private def constancy(sf: SF): Any = {
+    optDouble(sf.symmetryAndFlatness.profileConstancy(psmGridOf(sf), sf.baseline, psmGridBaselineOf(sf)))
+  }
+
   override protected def makeColList: Seq[CsvCol[SF]] = {
+
     Seq(
       CsvCol("Beam Name", "Common name of RTPLAN beam.", (sf: SF) => sf.symmetryAndFlatness.beamName),
       CsvCol("Uses PSM", "True if PSM (Pixel Sensitivity Matrix) was used to correct image.", (sf: SF) => sf.symmetryAndFlatness.psmDataDate.isDefined.toString),
-      CsvCol("Axial Symmetry", "((top - bottom) / bottom) * 100", (sf: SF) => sf.symmetryAndFlatness.axialSymmetry),
-      CsvCol("Transverse Symmetry", "((right - left ) / left ) * 100", (sf: SF) => sf.symmetryAndFlatness.transverseSymmetry),
-      CsvCol("Flatness", "(max - min) / (max + min) * 100", (sf: SF) => sf.symmetryAndFlatness.flatness),
+      CsvCol("Axial Symmetry", "((top - bottom) / bottom) * 100", axialSym),
+      CsvCol("Transverse Symmetry", "((right - left ) / left ) * 100", transSym),
+      CsvCol("Flatness", "(max - min) / (max + min) * 100", flat),
       CsvCol(
         "Profile Constancy",
         "average of (X / center) - (baseline X / baseline center), where X iterates through top, bottom, right, left",
-        (sf: SF) => sf.symmetryAndFlatness.profileConstancy(sf.baseline)
+        constancy
       ),
       CsvCol(
         "Baseline Designation",
         "explicit: Designated by user as a baseline.  implicit: Used as baseline when an explicit one is not defined.  If blank, then it is not used as a baseline.",
         (sf: SF) => baselineDesignation(sf)
       ),
+      CsvCol("PSM Date", "Date and time that PSM was delivered.  Used only when available.", (sf: SF) => optDate(sf.symmetryAndFlatness.psmDataDate)),
+      CsvCol("Span", "Distance in mm between centers of opposing sample points.", (sf: SF) => sf.symmetryAndFlatness.span_mm.get),
+      CsvCol("Diameter", "Diameter in mm in the isoplane of the circle of pixels sampled at each of the five points.", (sf: SF) => sf.symmetryAndFlatness.diameter_mm.get),
+      CsvCol("RTImageSID", "Distance mm from source to image DICOM tag 3002,0026.", (sf: SF) => sf.symmetryAndFlatness.RTImageSID_mm.get),
       CsvCol("Top CU", "Average CU of pixel values in the top circle of the image.", (sf: SF) => sf.symmetryAndFlatness.top_cu),
       CsvCol("Bottom CU", "Average CU of pixel values in the bottom circle of the image.", (sf: SF) => sf.symmetryAndFlatness.bottom_cu),
       CsvCol("Left CU", "Average CU of pixel values in the left hand circle of the image.", (sf: SF) => sf.symmetryAndFlatness.left_cu),

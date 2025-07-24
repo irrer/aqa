@@ -19,28 +19,28 @@ import java.awt.image.BufferedImage
 import javax.vecmath.Point2i
 
 /**
-  * Measure the CU at center of the beam.
-  * If they are inside the EPID image plane, also measure edges.
-  *
-  * @param rtplan       DICOM RTPLAN for delivering beams.
-  * @param extendedData Metadata
-  * @param trans        For translating between pixel and isoplane coordinates.
-  * @param rtimage      Beam image.
-  */
+ * Measure the CU at center of the beam.
+ * If they are inside the EPID image plane, also measure edges.
+ *
+ * @param rtplan       DICOM RTPLAN for delivering beams.
+ * @param extendedData Metadata
+ * @param trans        For translating between pixel and isoplane coordinates.
+ * @param rtimage      Beam image.
+ */
 case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, trans: IsoImagePlaneTranslator, rtimage: AttributeList, psmRunReq: PSMRunReq) extends Logging {
 
   /**
-    * Attempt to measure the position of each of the four edges.  This is not really necessary, but the data is
-    * available so we might as well analyze and save it in case there is a potential use.
-    *
-    * In some cases there are artifacts in the images which make them impossible to
-    *
-    * @param center_mm  Center in isoplane in mm.
-    * @param rtplanBeam Beam from RTPLAN.
-    * @param dicomImage Image pixels.
-    * @param beamName   Name of beam.
-    * @return
-    */
+   * Attempt to measure the position of each of the four edges.  This is not really necessary, but the data is
+   * available so we might as well analyze and save it in case there is a potential use.
+   *
+   * In some cases there are artifacts in the images which make them impossible to
+   *
+   * @param center_mm  Center in isoplane in mm.
+   * @param rtplanBeam Beam from RTPLAN.
+   * @param dicomImage Image pixels.
+   * @param beamName   Name of beam.
+   * @return
+   */
   private def measureEdges(center_mm: Point2D.Double, rtplanBeam: DicomBeam, dicomImage: DicomImage, beamName: String): Option[MeasureTBLREdges.AnalysisResult] = {
     // @formatter:off
     val topPlanned_mm    = center_mm.getY - rtplanBeam.y2Jaw.get
@@ -133,6 +133,7 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
     /**
      * Use the <code>coordinateList</code> to select pixels from the given attribute list, and then scale the
      * values according to the attribute list.
+     *
      * @param al For this DICOM.
      * @return Mean value of pixels scaled to be in cu.
      */
@@ -160,6 +161,9 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
     val floodField_cu: Option[Double] = meanCuOf(psmRunReq.floodField)
 
     val wholeDetector_cu = meanCuOf(psmRunReq.wholeDetector)
+
+    // If this is a redo, then this will remove the old one from the cache.
+    PSMGrid.remove(extendedData.machine.machinePK.get, extendedData.output.dataDate.get)
 
     val psmBeam = org.aqa.db.PSMBeam(
       psmBeamPK = None,

@@ -5,10 +5,12 @@ import org.aqa.db.PSMBeam
 
 import java.awt.image.BufferedImage
 import java.awt.Point
+import java.sql.Timestamp
 import javax.vecmath.Point2d
 
 /**
  * Organize beams into a two-dimensional grid.
+ *
  * @param resultList List of beam measurements.
  */
 case class PSMGrid(resultList: Seq[PSMBeamAnalysisResult]) {
@@ -35,9 +37,9 @@ case class PSMGrid(resultList: Seq[PSMBeamAnalysisResult]) {
   }
 
   /**
-    * A two-dimensional array containing all results, positionally sorted vertically and horizontally.  If there
-    * is no result for the given position, then it will be None.
-    */
+   * A two-dimensional array containing all results, positionally sorted vertically and horizontally.  If there
+   * is no result for the given position, then it will be None.
+   */
   val grid: Seq[Seq[Option[PSMBeamAnalysisResult]]] = {
     def makeRow(y: Int): Seq[Option[PSMBeamAnalysisResult]] = (0 until width).map(x => findResult(x, y))
 
@@ -61,13 +63,13 @@ case class PSMGrid(resultList: Seq[PSMBeamAnalysisResult]) {
   }
 
   /**
-    * The grid coordinates of the center point.
-    */
+   * The grid coordinates of the center point.
+   */
   private val centerGridPoint: Point = {
     def coordinatesMatch(x: Int, y: Int): Boolean = {
       get(x, y) match {
         case Some(r) => (r.psmBeam.xCenter_mm == centerPsmBeam.xCenter_mm) && (r.psmBeam.yCenter_mm == centerPsmBeam.yCenter_mm)
-        case _       => false
+        case _ => false
       }
     }
 
@@ -129,12 +131,63 @@ case class PSMGrid(resultList: Seq[PSMBeamAnalysisResult]) {
 object PSMGrid {
 
   /**
-   * Make a result, faking parameters not needed.
+   * Make a result, faking parameters that are not needed.
    *
    * @param psmBeam Contains the real data.
    * @return A fully defined result.
    */
   private def beamToResult(psmBeam: PSMBeam): PSMBeamAnalysisResult = PSMBeamAnalysisResult(psmBeam, new AttributeList, new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB), Map())
 
+  /**
+   * Make a grid from a list of beams.
+   * Only the PSMBeam fields will be valid.
+   * @param psmBeamList List of beams comprising the grid.
+   * @return A grid of beams.
+   */
   def makePSMGrid(psmBeamList: Seq[PSMBeam]): PSMGrid = PSMGrid(psmBeamList.map(PSMGrid.beamToResult))
+
+  /** Keep recently referenced PSMGrid objects here. */
+  private val cache = scala.collection.mutable.Map[String, PSMGrid]()
+
+  private def makeKey(machinePK: Long, timestamp: Timestamp): String = s"$machinePK ${timestamp.getTime}"
+
+  /**
+   * Get the PSM grid with the given specification.
+   * @param machinePK This machine.
+   * @param timestamp This data date timestamp.
+   * @return The PSM grid, or None.
+   */
+  def get(machinePK: Long, timestamp: Timestamp): Option[PSMGrid] = {
+    val key = makeKey(machinePK, timestamp)
+
+    cache.get(key) match {
+      case Some(grid) => Some(grid)
+      case _ =>
+        val list = PSMBeam.getByMachineAndTime(machinePK, timestamp)
+        if (list.isEmpty)
+          None
+        else {
+          val grid = makePSMGrid(list)
+          cache.synchronized {
+            cache.put(key, grid)
+          }
+          Some(grid)
+        }
+    }
+  }
+
+  /**
+   * If the given entry is in the cache, remove it.
+   * @param machinePK This machine.
+   * @param timestamp This data date timestamp.
+   * @return The PSMGrid, if it was in the cache.
+   */
+  def remove(machinePK: Long, timestamp: Timestamp): Option[PSMGrid] = {
+    val key = makeKey(machinePK, timestamp)
+
+    cache.synchronized{
+    cache.remove(key)
+    }
+  }
+
 }

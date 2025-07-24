@@ -85,7 +85,9 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, hasPs
     inTimeRange.filter(itr => relevantBaseline.contains(itr.maintenanceRecordPK.get) || (!itr.category.equals(MaintenanceCategory.setBaseline)))
   }
 
-  private def makeChart(chartTitle: String, toleranceRange: Double, baselineDate: Timestamp, baselineValue: Double, valueList: Seq[Double]): C3ChartHistory = {
+  private def makeChart(chartTitle: String, toleranceRange: Double, baselineDate: Timestamp, baselineValueOpt: Option[Double], valueList: Seq[Double]): C3ChartHistory = {
+
+    val baselineValue: Double = if (baselineValueOpt.isDefined) baselineValueOpt.get else 0.0
 
     val chartId = C3Chart.idTagPrefix + Util.textToId(chartTitle)
 
@@ -218,45 +220,45 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, hasPs
       .get
 
     val chartAxial = {
-      val valueList = history.map(h => h.symmetryAndFlatness.axialSymmetry)
+      val valueList = history.flatMap(h => h.axialSymmetry)
       makeChart(
         axialSymmetryName,
         toleranceRange = Config.SymmetryPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
-        sfAndBaseline.symmetryAndFlatness.axialSymmetry,
+        sfAndBaseline.axialSymmetry,
         valueList
       )
     }
 
     val chartTransverse = {
-      val valueList = history.map(h => h.symmetryAndFlatness.transverseSymmetry)
+      val valueList = history.flatMap(h => h.transverseSymmetry)
       makeChart(
         transverseSymmetryName,
         toleranceRange = Config.SymmetryPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
-        sfAndBaseline.symmetryAndFlatness.transverseSymmetry,
+        sfAndBaseline.transverseSymmetry,
         valueList
       )
     }
 
     val chartFlatness = {
-      val valueList = history.map(h => h.symmetryAndFlatness.flatness)
+      val valueList = history.flatMap(h => h.flatness)
       makeChart(
         flatnessName,
         toleranceRange = Config.FlatnessPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
-        sfAndBaseline.symmetryAndFlatness.flatness,
+        sfAndBaseline.flatness,
         valueList
       )
     }
 
     val chartProfileConstancy = {
-      val valueList = history.map(h => h.symmetryAndFlatness.profileConstancy(h.baseline))
+      val valueList = history.flatMap(h => h.profileConstancy)
       makeChart(
         profileConstancyName,
         toleranceRange = Config.ProfileConstancyPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
-        sfAndBaseline.symmetryAndFlatness.profileConstancy(sfAndBaseline.symmetryAndFlatness),
+        sfAndBaseline.profileConstancy,
         valueList
       )
     }

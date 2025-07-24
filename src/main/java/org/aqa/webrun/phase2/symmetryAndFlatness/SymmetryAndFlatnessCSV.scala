@@ -81,18 +81,18 @@ object SymmetryAndFlatnessCSV {
       ("delivery Time", (sfb: SFB) => Util.standardDateFormat.format(sfb.output.dataDate.get)),
       ("beamName", (sfb: SFB) => sfb.symmetryAndFlatness.beamName),
       ("SOPInstanceUID", (sfb: SFB) => sfb.symmetryAndFlatness.SOPInstanceUID),
-      ("axialSymmetry CU", (sfb: SFB) => sfb.symmetryAndFlatness.axialSymmetry),
-      ("axialSymmetryBaseline CU", (sfb: SFB) => sfb.baseline.axialSymmetry),
-      ("axialSymmetryStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.axialSymmetryPass(sfb.baseline))),
-      ("transverseSymmetry CU", (sfb: SFB) => sfb.symmetryAndFlatness.transverseSymmetry),
-      ("transverseSymmetryBaseline CU", (sfb: SFB) => sfb.baseline.transverseSymmetry),
-      ("transverseSymmetryStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.transverseSymmetryPass(sfb.baseline))),
-      ("flatness CU", (sfb: SFB) => sfb.symmetryAndFlatness.flatness),
-      ("flatnessBaseline CU", (sfb: SFB) => sfb.baseline.flatness),
-      ("flatnessStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.flatnessPass(sfb.baseline))),
-      ("profileConstancy CU", (sfb: SFB) => sfb.symmetryAndFlatness.profileConstancy(sfb.baseline)),
-      ("profileConstancyBaseline CU", (sfb: SFB) => sfb.baseline.profileConstancy(sfb.baseline)),
-      ("profileConstancyStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.profileConstancyPass(sfb.baseline))),
+      ("axialSymmetry CU", (sfb: SFB) => sfb.axialSymmetry),
+      ("axialSymmetryBaseline CU", (sfb: SFB) => sfb.baseline.axialSymmetry(sfb.psmGrid)),
+      ("axialSymmetryStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.axialSymmetryPass(sfb.baseline, sfb.psmGrid, sfb.psmGridBaseline))),
+      ("transverseSymmetry CU", (sfb: SFB) => sfb.transverseSymmetry),
+      ("transverseSymmetryBaseline CU", (sfb: SFB) => sfb.baseline.transverseSymmetry(sfb.psmGrid)),
+      ("transverseSymmetryStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.transverseSymmetryPass(sfb.baseline, sfb.psmGrid, sfb.psmGridBaseline))),
+      ("flatness CU", (sfb: SFB) => sfb.flatness),
+      ("flatnessBaseline CU", (sfb: SFB) => sfb.baseline.flatness(sfb.psmGrid)),
+      ("flatnessStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.flatnessPass(sfb.baseline, sfb.psmGrid, sfb.psmGridBaseline))),
+      ("profileConstancy CU", (sfb: SFB) => sfb.profileConstancy),
+      ("profileConstancyBaseline CU", (sfb: SFB) => sfb.baseline.profileConstancy(sfb.psmGrid, sfb.baseline, sfb.psmGridBaseline)),
+      ("profileConstancyStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.profileConstancyPass(sfb.baseline, sfb.psmGrid, sfb.psmGridBaseline))),
       ("top CU", (sf: SFB) => sf.symmetryAndFlatness.top_cu),
       ("bottom CU", (sf: SFB) => sf.symmetryAndFlatness.bottom_cu),
       ("left CU", (sf: SFB) => sf.symmetryAndFlatness.left_cu),
@@ -103,7 +103,7 @@ object SymmetryAndFlatnessCSV {
     def symmetryAndFlatnessToCsv(sfb: SFB): String = {
       def fmt(any: Any): String = {
         any match {
-          case d: Double => d.formatted("%14.11e")
+          case d: Double => "%14.11e".format(d)
           case _         => Util.textToCsv(any.toString)
         }
       }
