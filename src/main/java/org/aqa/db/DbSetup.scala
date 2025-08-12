@@ -103,6 +103,7 @@ object DbSetup extends Logging {
     MachineLog.query,
     MaintenanceRecord.query,
     Output.query,
+    OutputApproval.query,
     OutputFiles.query,
     OutputNote.query,
     DicomSeries.query,

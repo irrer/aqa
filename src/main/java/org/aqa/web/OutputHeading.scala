@@ -26,6 +26,7 @@ import org.aqa.web.OutputHeading.returnUrlTag
 import org.aqa.web.WebUtil._
 import org.aqa.webrun.ExtendedData
 import org.aqa.Config
+import org.aqa.approval.ApprovalHtml
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.OutputHeading.reference
 import org.restlet.Request
@@ -83,6 +84,10 @@ class OutputHeading extends Restlet with SubUrlAdmin with Logging {
       <span>
         <span aqaalias="">{extendedData.user.id}</span>
       </span>
+    }
+
+    def approvalElem: Elem = {
+      ApprovalHtml(extendedData.outputPK).elem
     }
 
     def elapsedTimeElem: Elem = {
@@ -171,6 +176,7 @@ class OutputHeading extends Restlet with SubUrlAdmin with Logging {
           <td style={s"$align $padding $border $noBorder"} > {epidElem} </td>
           <td style={trStyle} > {dataAcquisitionDateElem} </td>
           <td style={trStyle} > {analysisStartDateElem} </td>
+          <td style={trStyle} > {approvalElem} </td>
           <td style={trStyle} > {elapsedTimeElem} </td>
           <td style={trStyle} title="User and institution"> {userElem} <br/> {institutionElem} </td>
           <td style={s"$align $padding $wrap $noBorder"} > {redoElem} </td>

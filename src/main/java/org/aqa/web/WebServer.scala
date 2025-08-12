@@ -20,6 +20,7 @@ import edu.umro.RestletUtil.NetworkIpFilter
 import edu.umro.RestletUtil.RestletHttps
 import org.aqa.Config
 import org.aqa.Logging
+import org.aqa.approval.ApprovalChangeRestlet
 import org.aqa.customizeRtPlan.CustomizeRtPlanInterface
 import org.aqa.customizeRtPlan.phase3plan.Phase3HTML
 import org.aqa.db.CachedUser
@@ -553,6 +554,7 @@ class WebServer extends Application with Logging {
         new MaintenanceRecordUpdate,
         new UserUpdate,
         new UserList,
+        new ApprovalChangeRestlet,
         new PatientProcedureList,
         new PatientProcedureUpdate,
         new PatientProcedureXml,

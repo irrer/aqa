@@ -707,3 +707,52 @@ function showOutputHeader() {
   }
 }
 
+
+ // ------------------------------------------------------------------------------------------
+
+function ApprovalChange(outputPK) {
+
+  var xhttp = new XMLHttpRequest();
+
+  var selectorId = "Approval_" + outputPK;
+
+  var selector = document.getElementById(selectorId);
+
+  var selectorPrevValue = selector.getAttribute("prevvalue");
+
+  var selectorValue = selector.value;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4) {
+      if (this.status == 200) {
+        var text = this.responseText;
+        var args = text.split(("\n"));
+
+        var newStatus = args[0];
+        var newUser = args[1];
+        var newDate = args[2];
+
+        selector.value = newStatus;
+        selector.setAttribute("prevvalue", newStatus);
+
+        document.getElementById("ApprovalUser_" + outputPK).textContent = newUser;
+        document.getElementById("ApprovalDate_" + outputPK).textContent = newDate;
+        refreshAliasCount = refreshAliasCount + 4;
+        aliasRefreshTime = 10;
+        translateAliases();
+        /*
+        */
+      }
+      else {
+        selector.value = selectorPrevValue;
+      }
+    }
+  };
+
+
+  if (selectorValue != selectorPrevValue) {
+    xhttp.open("POST", "/ApprovalChangeRestlet?status=" + selectorValue + "&outputPK=" + outputPK, true);
+    xhttp.send();
+  }
+
+}

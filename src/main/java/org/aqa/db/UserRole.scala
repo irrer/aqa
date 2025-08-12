@@ -27,6 +27,7 @@ object UserRole extends Enumeration {
   val user: UserRole.Value = Value // can run procedures
   val dev: UserRole.Value = Value // can develop procedures
   val admin: UserRole.Value = Value // can change configuration
+  val adminApprover: UserRole.Value = Value // can change configuration and approve results
 
   /**
     * Convert text to a UserRole.  Is case insensitive.
@@ -53,6 +54,18 @@ object UserRole extends Enumeration {
     println("stringToUserRole AdMin : " + stringToUserRole("AdMin"))
 
     println("stringToUserRole foo : " + stringToUserRole("foo"))
+  }
+
+  /**
+   * Determine if the given role is an approver.
+   * @param role Check this out.
+   * @return true if they can approve results.
+   */
+  def isApprover(role: UserRole.Value): Boolean = {
+    role match {
+      case UserRole. adminApprover => true
+      case _ => false
+    }
   }
 
 }
