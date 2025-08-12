@@ -69,6 +69,7 @@ import scala.xml.Elem
 import scala.xml.MetaData
 import scala.xml.Node
 import scala.xml.PrettyPrinter
+import scala.xml.Text
 import scala.xml.XML
 
 object WebUtil extends Logging {
@@ -106,6 +107,20 @@ object WebUtil extends Logging {
 
   /** ID for upload file object in web page. */
   val uploadFileLabel = "uploadFile"
+
+  /**
+   * Add an attribute to the element and return a new element.
+   *
+   * @param elem  Original element.
+   * @param name  Name of attribute.
+   * @param value Value of attribute.
+   * @return New element.
+   */
+  def addAttr(elem: Elem, name: String, value: String): Elem = {
+    val attr = new scala.xml.UnprefixedAttribute(name, Text(value), scala.xml.Null)
+    elem % attr
+  }
+
 
   private val aqaAliasAttr: MetaData = {
       <div aqaalias=""/>

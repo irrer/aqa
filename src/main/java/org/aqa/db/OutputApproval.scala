@@ -18,6 +18,7 @@ package org.aqa.db
 
 import org.aqa.db.Db.driver.api._
 import org.aqa.Logging
+import org.aqa.web.WebUtil
 
 import java.sql.Timestamp
 import scala.xml.Elem
@@ -87,11 +88,11 @@ object OutputApproval extends Logging {
 
       val elem1: Elem = new Elem(null, "option", scala.xml.Null, scala.xml.TopScope, minimizeEmpty = false, Text(text))
 
-      val elem2 = elem1 % new scala.xml.UnprefixedAttribute("value", Text(name), scala.xml.Null)
+      val elem2 = WebUtil.addAttr(elem1, "value", name) //   elem1 % new scala.xml.UnprefixedAttribute("value", Text(name), scala.xml.Null)
 
       val elem3 =
         if (selected)
-          elem2 % new scala.xml.UnprefixedAttribute("selected", Text("true"), scala.xml.Null)
+          WebUtil.addAttr(elem2, "selected", "true")
         else
           elem2
 
