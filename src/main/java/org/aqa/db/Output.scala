@@ -191,7 +191,8 @@ object Output extends Logging {
       procedure_version: String,
       user_id: String,
       dataValidity: DataValidity.Value,
-      note: Option[String]
+      note: Option[String],
+      outputApprovalList: Seq[OutputApproval]
   ) {}
 
   /**
@@ -231,8 +232,32 @@ object Output extends Logging {
     val sorted = filteredByDate.sortBy(_._6.desc).take(maxSize)
     val noteMap = OutputNote.list().map(n => (n.outputPK, n.contentAsText)).toMap
 
-    val result = Db.run(sorted.result).map(a => ExtendedValues(a._1, a._2, a._3._1, a._3._2, a._4, a._5, a._6, a._7, a._8, a._9, toDV(a._10), noteMap.get(a._5)))
-    result
+    val result = Db.run(sorted.result)
+
+    val approvalList: Seq[OutputApproval] = OutputApproval.getByInstitution(instPK)
+
+    def approvalsOf(outputPK: Long): Seq[OutputApproval] = {
+      approvalList.filter(_.outputPK == outputPK).sortBy(_.creationDateTime.getTime)
+    }
+
+    val list = result.map(a =>
+      ExtendedValues( //
+        a._1,
+        a._2,
+        a._3._1,
+        a._3._2,
+        a._4,
+        a._5, // outputPK
+        a._6,
+        a._7,
+        a._8,
+        a._9,
+        toDV(a._10),
+        noteMap.get(a._5),
+        approvalsOf(a._5)
+      )
+    )
+    list
   }
 
   /**
@@ -253,8 +278,33 @@ object Output extends Logging {
 
     val noteMap = OutputNote.list().map(n => (n.outputPK, n.contentAsText)).toMap
 
-    val result = Db.run(sorted.result).map(a => ExtendedValues(a._1, a._2, a._3._1, a._3._2, a._4, a._5, a._6, a._7, a._8, a._9, toDV(a._10), noteMap.get(a._5)))
-    result
+    val result = Db.run(sorted.result)
+
+    val approvalList: Seq[OutputApproval] = OutputApproval.getByInstitution(None)
+
+    def approvalsOf(outputPK: Long): Seq[OutputApproval] = {
+      approvalList.filter(_.outputPK == outputPK).sortBy(_.creationDateTime.getTime)
+    }
+
+    val list = result.map(a =>
+      ExtendedValues( //
+        a._1,
+        a._2,
+        a._3._1,
+        a._3._2,
+        a._4,
+        a._5,
+        a._6,
+        a._7,
+        a._8,
+        a._9,
+        toDV(a._10),
+        noteMap.get(a._5),
+        approvalsOf(a._5)
+      )
+    )
+
+    list
   }
 
   /**

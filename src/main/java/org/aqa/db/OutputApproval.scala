@@ -144,13 +144,47 @@ object OutputApproval extends Logging {
   /**
     * Get the approval (if there is one) for the given output.
     * @param outputPK For this output.
-    * @return the OutputApproval, if it exists.
+    * @return the list of OutputApprovals, if any, sorted by date.
     */
   def getByOutput(outputPK: Long): Seq[OutputApproval] = {
     val action = for {
       approval <- OutputApproval.query if approval.outputPK === outputPK
     } yield approval
     Db.run(action.result).sortBy(_.creationDateTime.getTime)
+  }
+
+  /**
+    * Gets all approvals for the given institution.
+    * @param instPK Specifies institution.
+    * @return List of all approvals, in no particular order.
+    */
+  def getByInstitution(instPK: Option[Long]): Seq[OutputApproval] = {
+
+    if (instPK.isDefined) {
+      val inPK = instPK.get
+      val sch = for {
+        machPK <- Machine.query.filter(m => m.institutionPK === inPK).map(mm => mm.machinePK)
+        outputPK <- Output.query.filter(o => o.machinePK === machPK).map(oo => oo.outputPK)
+        approval <- OutputApproval.query.filter(a => a.outputPK === outputPK)
+      } yield approval
+
+      val list = Db.run(sch.result)
+
+      list
+    } else
+      list() // get for all institutions
+  }
+
+  /**
+    * Get the approval (if there is one) for the given output.
+    * @param outputPKSet For these outputs.
+    * @return the list of OutputApprovals that have an outputPK in the given set.
+    */
+  def getByOutputSet(outputPKSet: Set[Long]): Seq[OutputApproval] = {
+    val action = for {
+      approval <- OutputApproval.query if approval.outputPK.inSet(outputPKSet)
+    } yield approval
+    Db.run(action.result)
   }
 
   def delete(outputApprovalPK: Long): Int = {

@@ -32,6 +32,7 @@ import org.aqa.web.OutputList.statusTag
 import org.aqa.web.WebUtil._
 import org.aqa.webrun.WebRun
 import org.aqa.Config
+import org.aqa.db.OutputApproval
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.data.MediaType
@@ -65,7 +66,7 @@ object OutputList {
     <a title="Click to re-run analysis. New results will replace previous results." href={path + "?" + redoTag + "=" + outputPK}>Redo</a>
   }
 
-  /** Flag that controls whether a bulk redo is running.   Set to false to suspend the bulk redo. */
+  /** Flag that controls whether a bulk redo is running.   Set false to suspend the bulk redo. */
   private val bulkRedoIsRunning = new AtomicBoolean(true)
 }
 
@@ -82,7 +83,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   val refresh: FormButton = makeButton("Refresh", ButtonType.BtnPrimary)
 
   /**
-    * Generate the contents for the the "To Do" list.  It consists of
+    * Generate the contents for the "To Do" list.  It consists of
     * any outputs that exist.
     * @param valueMap parameter list.
     * @return List of output PKs
@@ -106,7 +107,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   }
 
   /**
-    * Generate the contents for the the "Done" list.  It consists of
+    * Generate the contents for the "Done" list.  It consists of
     * any outputs that do not exist.
     * @param valueMap parameter list.
     * @return List of output PKs
@@ -257,6 +258,19 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   private val procedureCol = new Column[ColT]("Procedure", d => d.procedure_name + " " + d.procedure_version)
 
+  private def approvalListToHtml(d: ColT): String = {
+    d.outputApprovalList.lastOption match {
+      case Some(approval) =>
+        OutputApproval.statusList.find(s => s.name.equals(approval.status)) match {
+          case Some(sts) => sts.htmlPrefix
+          case _         => "NA"
+        }
+      case _ => OutputApproval.UNAPPROVED.htmlPrefix
+    }
+  }
+
+  private val approvalCol = new Column[ColT]("Approval", approvalListToHtml)
+
   private val machineCol = new Column[ColT]("Machine", _.machine_id, colT => wrapAlias(colT.machine_id))
 
   def noteText(col: ColT): String = if (col.note.isDefined) col.note.get.take(40) else "- - - - -"
@@ -268,7 +282,7 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
   //private val noteCol = new Column[ColT]("Note", "", colT => showNote(colT))
   private val noteCol = new Column[ColT]("Note", c => noteText(c), showNote)
 
-  override val columnList: Seq[Column[ColT]] = Seq(startTimeCol, inputFileCol, redoCol, procedureCol, machineCol, noteCol, institutionCol, userCol, deleteCol)
+  override val columnList: Seq[Column[ColT]] = Seq(startTimeCol, inputFileCol, redoCol, procedureCol, approvalCol, machineCol, noteCol, institutionCol, userCol, deleteCol)
 
   /**
     * Get the set of outputs that user wants to redo.  Return empty set if none.  This

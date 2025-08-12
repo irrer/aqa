@@ -11,6 +11,7 @@ import org.aqa.web.WebUtil._
 import org.aqa.web.WebUtil.SubUrlRoot
 import org.aqa.Config
 import org.aqa.db.CachedUser
+import org.aqa.db.OutputApproval
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -31,6 +32,7 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
   private val newestButton = makeButton(" << Newest ", primary = false, ButtonType.BtnDefault)
   private val prevButton = makeButton(" < Prev Page ", primary = false, ButtonType.BtnDefault)
 
+  private val refreshButton = makeButton("Refresh", primary = false, ButtonType.BtnDefault)
   private val nextButton = makeButton("Next Page > ", primary = false, ButtonType.BtnDefault)
   private val oldestButton = makeButton(" Oldest >> ", primary = true, ButtonType.BtnDefault)
 
@@ -81,7 +83,7 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
     new WebForm(
       pathOf,
       title = None,
-      rowList = List(List(newestButton, prevButton, nextButton, oldestButton, rowsPerPageField), List(machineSelector, requireIsoCheck, datePicker), List(list)),
+      rowList = List(List(refreshButton, newestButton, prevButton, nextButton, oldestButton, rowsPerPageField), List(machineSelector, requireIsoCheck, datePicker), List(list)),
       fileUpload = -1,
       runScript = Some(WLUpdateRestlet.makeJS)
     )
@@ -96,9 +98,6 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
         -1
     }
   }
-
-  /* shows the small WL icon. */
-  private val imageElem = <img height="16px" src="/static/images/WL_EPID.png"/>
 
   /* Number of ms in a 24-hour day. */
   private val day_ms = 24 * 60 * 60 * 1000
@@ -152,6 +151,16 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
 
       val machineName = machineList.find(_.machinePK.get == output.machinePK.get).get.id
 
+      val approval = OutputApproval.getByOutput(output.outputPK.get).lastOption
+
+      val approvalText: String = {
+        if (approval.isDefined && OutputApproval.stringToStatus(approval.get.status).isDefined) {
+          OutputApproval.stringToStatus(approval.get.status).get.htmlPrefix
+        } else {
+          OutputApproval.UNAPPROVED.htmlPrefix
+        }
+      }
+
       val link = {
         val dateText = dateFormat.format(new Date(output.dataDate.get.getTime))
         val href = ViewOutput.viewOutputUrl(output.outputPK.get)
@@ -160,17 +169,17 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
 
       <tr>
         <td style={padding}>{link}</td>
-        <td style={padding}>{imageElem}</td>
+        <td style={padding}>{approvalText}</td>
         <td style={padding}>{WebUtil.wrapAlias(machineName)}</td>
         <td style={padding}>{OutputList.redoUrl(output.outputPK.get)}</td>
       </tr>
     }
 
     <div>
-      <table>
-        <tr>
+      <table style="text-align: center;">
+        <tr style="text-align: center;">
           <td style={padding}><b>Date</b></td>
-          <td style={padding}></td>
+          <td style={padding}><b>Approval</b></td>
           <td style={padding}><b>Machine</b></td>
           <td style={padding}></td>
         </tr>
@@ -195,6 +204,10 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
     }
     val vm = valueMap + (datePicker.label -> d)
     setFormResponse(vm, response)
+  }
+
+  private def refresh(valueMap: ValueMapT, response: Response): Unit = {
+    setFormResponse(valueMap, response)
   }
 
   private def showNewest(valueMap: ValueMapT, response: Response): Unit = {
@@ -246,11 +259,12 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
       super.handle(request, response)
       val valueMap = getValueMap(request)
       0 match {
-        case _ if buttonIs(valueMap, oldestButton) => showOldest(valueMap, response)
-        case _ if buttonIs(valueMap, newestButton) => showNewest(valueMap, response)
-        case _ if buttonIs(valueMap, prevButton)   => showPrev(valueMap, response)
-        case _ if buttonIs(valueMap, nextButton)   => showNext(valueMap, response)
-        case _                                     => setFormResponse(valueMap, response)
+        case _ if buttonIs(valueMap, refreshButton) => refresh(valueMap, response)
+        case _ if buttonIs(valueMap, oldestButton)  => showOldest(valueMap, response)
+        case _ if buttonIs(valueMap, newestButton)  => showNewest(valueMap, response)
+        case _ if buttonIs(valueMap, prevButton)    => showPrev(valueMap, response)
+        case _ if buttonIs(valueMap, nextButton)    => showNext(valueMap, response)
+        case _                                      => setFormResponse(valueMap, response)
       }
     } catch {
       case t: Throwable =>
