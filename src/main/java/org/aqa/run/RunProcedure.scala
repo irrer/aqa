@@ -44,6 +44,7 @@ import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil._
 import org.aqa.webrun.ExtendedData
 import org.aqa.AnonymizeUtil
+import org.aqa.db.OutputApproval
 import org.aqa.db.OutputNote
 import org.restlet.Request
 import org.restlet.Response
@@ -717,6 +718,12 @@ object RunProcedure extends Logging {
         val newOutputNote = oldOutputNote.get.copy(outputPK = newOutput.outputPK.get)
         newOutputNote.insertOrUpdate()
       }
+
+      // Get the list of approvals associated with the old output, if there are any.
+      val oldApprovalList: Seq[OutputApproval] =
+        OutputApproval.getByOutput(oldOutput.get.outputPK.get)
+      // make approvals point to new output
+      oldApprovalList.map(a => a.copy(outputPK = newOutput.outputPK.get).insertOrUpdate())
 
       // instantiate the input files from originals
       val extendedData = ExtendedData.get(newOutput)
