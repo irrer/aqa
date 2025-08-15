@@ -1,0 +1,135 @@
+<div title="Approvals">
+    <!--
+    Copyright 2025 Regents of the University of Michigan
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    -->
+
+    <!--
+
+    Note: Data is from https://automatedqualityassurance.org/results/INST_2/MACH_21/Phase2_0.1_4/2019-03-12T19-11-11-943_326/output_2019-03-12T19-11-20-117/SymmetryAndFlatness/SymmetryAndFlatness.html
+
+    This was done with a 20 cm field because at the time 18 cm did not have enough data.
+
+     -->
+
+    <h2>@@title@@</h2>
+    Approvals are how the system records the fact that test results have been reviewed and assessed.
+    <p>
+        There are three possible approval states:
+        Initially results are initially marked as UNAPPROVED and appear in the top banner of the web page:
+    </p>
+    <ul>
+        <li>◯ UNAPPROVED</li>
+        <li>✅ APPROVED</li>
+        <li>❌ REJECTED</li>
+    </ul>
+
+    <p>
+        These states follow the convention established for approving DICOM plans.
+        <br>
+        Initially results are initially marked as UNAPPROVED and appear in the top banner of the web page:
+    </p>
+
+
+    <div style="margin:30px;">
+        <p>
+            <a href="ApprovalInitial.png" title="">
+                <img src="ApprovalInitial.png" style="margin:10px; border: 1px solid #CCCCCC;" alt="">
+            </a>
+        </p>
+        <p style="text-align: left;"><i>Approval after results have been calculated.
+        </i>
+        </p>
+        <p></p>
+    </div>
+
+
+    <div style="margin:30px;">
+        <p>
+            <a href="ApprovalChoosing.png" title="">
+                <img src="ApprovalChoosing.png" style="margin:10px; border: 1px solid #CCCCCC;" alt="">
+            </a>
+        </p>
+        <p style="text-align: left;"><i>User is choosing new approval state.
+        </i>
+        </p>
+        <p></p>
+    </div>
+
+
+    <div style="margin:30px;">
+        <p>
+            <a href="ApprovalDone.png" title="">
+                <img src="ApprovalDone.png" style="margin:10px; border: 1px solid #CCCCCC;" alt="">
+            </a>
+        </p>
+        <p style="text-align: left;"><i>Results have been approved. The approver's ID and time of approval have been
+            recorded.
+        </i>
+        </p>
+        <p></p>
+    </div>
+
+    <p>
+        The approval may be changed as many times as needed. Each change is recorded, but only the most recent change is
+        displayed.
+    </p>
+
+    <p>
+        The approval state of results are listed in both the <!--suppress HtmlUnknownTarget --> <a
+            href="/view/OutputList">Results</a> and <!--suppress HtmlUnknownTarget --> <a
+            href="/WLNav">Winston Lutz</a> pages. Clicking on the approval status will show the results.
+        This allows the user to see which results need approval.
+    </p>
+
+    <div style="margin:30px;">
+        <p>
+            <a href="WLList.png" title="">
+                <img src="WLList.png" style="margin:10px; border: 1px solid #CCCCCC;" alt="">
+            </a>
+        </p>
+        <p style="text-align: left;"><i>Winston Lutz list showing approvals.
+        </i>
+        </p>
+        <p></p>
+    </div>
+
+
+    <p>
+        Only users designated as approvers may approve results. Approvers may set other users as approvers via the
+        Administration / <!--suppress HtmlUnknownTarget -->
+        <a href="/admin/UserList">Users</a> page. Clicking the checkbox in the Approver column will go
+        into effect immediately.
+    </p>
+
+    <div style="margin:30px;">
+        <p>
+            <a href="Approvers.png" title="">
+                <img src="Approvers.png" style="margin:10px; border: 1px solid #CCCCCC;" alt="">
+            </a>
+        </p>
+        <p style="text-align: left;"><i>Checking boxes grant approval rights.
+        </i>
+        </p>
+        <p></p>
+    </div>
+
+    <p>
+        Any user that is whitelisted (grants special administrative privileges) is always an approver. This provides a
+        way to create the first approver.
+    </p>
+
+    <div style="margin-bottom:150px;"></div>
+
+</div>
