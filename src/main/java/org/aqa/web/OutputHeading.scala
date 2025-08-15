@@ -87,7 +87,16 @@ class OutputHeading extends Restlet with SubUrlAdmin with Logging {
     }
 
     def approvalElem: Elem = {
-      ApprovalHtml(extendedData.outputPK).elem
+      val user = {
+        try {
+          val u = WebUtil.getUser(response.getRequest)
+          // make sure that this user was not cached
+          User.get(u.get.userPK.get)
+        } catch {
+          case _: Throwable => None
+        }
+      }
+      ApprovalHtml(extendedData.outputPK, user).elem
     }
 
     def elapsedTimeElem: Elem = {

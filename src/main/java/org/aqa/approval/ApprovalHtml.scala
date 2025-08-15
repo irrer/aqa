@@ -4,11 +4,12 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.db.OutputApproval
 import org.aqa.db.User
 import org.aqa.Util
+import org.aqa.web.WebUtil
 
 import java.text.SimpleDateFormat
 import scala.xml.Elem
 
-case class ApprovalHtml(outputPK: Long) {
+case class ApprovalHtml(outputPK: Long, user: Option[User]) {
 
   def elem: Elem = {
     val approvalStatus = OutputApproval.getByOutput(outputPK).lastOption
@@ -18,10 +19,6 @@ case class ApprovalHtml(outputPK: Long) {
     def choiceList(status: String) = {
 
       def toElem(statusChoice: OutputApproval.Status): Elem = statusChoice.toOption(status.equals(statusChoice.name))
-
-      Trace.trace("UNAPPROVED: " + toElem(OutputApproval.UNAPPROVED))
-      Trace.trace("APPROVED  : " + toElem(OutputApproval.APPROVED))
-      Trace.trace("REJECTED  : " + toElem(OutputApproval.REJECTED))
 
       Seq(
         toElem(OutputApproval.UNAPPROVED),
@@ -37,7 +34,11 @@ case class ApprovalHtml(outputPK: Long) {
           {choiceList(status)}
         </select>
       }
-      sel
+
+      if (user.isDefined && user.get.isApprover)
+        sel
+      else
+        WebUtil.addAttr(sel, "disabled", "disabled")
     }
 
     def userElem(userId: String): Elem = {
@@ -76,8 +77,5 @@ case class ApprovalHtml(outputPK: Long) {
 }
 
 object ApprovalHtml {
-
-  // val dateFormat = new SimpleDateFormat("EEE MMM d yyyy H:mm") // TODO put back
-  val dateFormat = new SimpleDateFormat("EEE MMM d yyyy H:mm:ss") // TODO take out
-
+  val dateFormat = new SimpleDateFormat("EEE MMM d yyyy H:mm")
 }
