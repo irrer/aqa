@@ -48,29 +48,36 @@ case class ApprovalHtml(outputPK: Long, user: Option[User]) {
       <span id={s"ApprovalDate_$outputPK"}>{dateText}</span>
     }
 
-    if (approvalStatus.isDefined) {
+    val elem =
+      if (approvalStatus.isDefined) {
 
-      val status = approvalStatus.get.status
-      val userId = User.get(approvalStatus.get.userPK).get.id
-      val dateText = Util.formatDate(ApprovalHtml.dateFormat, approvalStatus.get.creationDateTime)
+        val status = approvalStatus.get.status
+        val userId = User.get(approvalStatus.get.userPK).get.id
+        val dateText = Util.formatDate(ApprovalHtml.dateFormat, approvalStatus.get.creationDateTime)
 
-      val content = {
-        <span>
+        val content = {
+          <span>
           {makeSelector(status)}
           {userElem(userId)}
           <br>{dateElem(dateText)}</br>
         </span>
-      }
-      content
-    } else {
+        }
 
-      <span>
+        content
+      } else {
+
+        <span>
         {makeSelector(OutputApproval.defaultStatus.name)}
           {userElem("")}
         <br/>
         {dateElem("")}
       </span>
-    }
+      }
+
+    if (user.isEmpty || (!user.get.isApprover))
+      WebUtil.addAttr(elem, "title", "You are not authorized to approve results.")
+    else
+      elem
   }
 
 }
