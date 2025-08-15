@@ -104,7 +104,7 @@ case class User(
     */
   def isApprover: Boolean = {
     (authorizations.isDefined && authorizations.get.contains(approverTag)) ||
-    WebUtil.userIsWhitelisted(id)
+    (getRealId.isDefined && WebUtil.userIsWhitelisted(getRealId.get))
   }
 }
 
