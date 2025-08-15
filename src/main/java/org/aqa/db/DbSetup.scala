@@ -72,7 +72,19 @@ object DbSetup extends Logging {
     val institutionPK = ensureAtLeastOneInstitution.institutionPK.get
     def encrypt(text: String) = AnonymizeUtil.encryptWithNonce(institutionPK, text)
 
-    val adminUser = new User(None, "admin", Some(encrypt("admin")), encrypt("An Administrator"), encrypt(email), institutionPK, hashedPassword, passwordSalt, UserRole.admin.toString, None)
+    val adminUser = new User( //
+      userPK = None,
+      id = "admin",
+      id_real = Some(encrypt("admin")),
+      fullName_real = encrypt("An Administrator"),
+      email_real = encrypt(email),
+      institutionPK = institutionPK,
+      hashedPassword = hashedPassword,
+      passwordSalt = passwordSalt,
+      role = UserRole.admin.toString,
+      termsOfUseAcknowledgment = None,
+      authorizations = None
+    )
     val user = adminUser.insert.copy(id = AnonymizeUtil.aliasify(AnonymizeUtil.userAliasPrefixId, institutionPK))
     user.insertOrUpdate()
     User.get(user.userPK.get).get

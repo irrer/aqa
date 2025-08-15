@@ -21,6 +21,7 @@ import edu.umro.RestletUtil.RestletHttps
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.approval.ApprovalChangeRestlet
+import org.aqa.approval.SetApproverStateRestlet
 import org.aqa.customizeRtPlan.CustomizeRtPlanInterface
 import org.aqa.customizeRtPlan.phase3plan.Phase3HTML
 import org.aqa.db.CachedUser
@@ -555,6 +556,7 @@ class WebServer extends Application with Logging {
         new UserUpdate,
         new UserList,
         new ApprovalChangeRestlet,
+        new SetApproverStateRestlet,
         new PatientProcedureList,
         new PatientProcedureUpdate,
         new PatientProcedureXml,

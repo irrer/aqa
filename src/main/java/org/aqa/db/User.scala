@@ -21,7 +21,9 @@ import org.aqa.Config
 import org.aqa.Crypto
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
+import org.aqa.db.User.approverTag
 import org.aqa.web.AnonymousTranslate
+import org.aqa.web.WebUtil
 import org.aqa.webrun.phase2.phase2csv.MetadataCache
 
 import java.sql.Timestamp
@@ -36,7 +38,8 @@ case class User(
     hashedPassword: String, // cryptographically hashed password
     passwordSalt: String, // salt used for hashing password
     role: String, // user role which defines authorization
-    termsOfUseAcknowledgment: Option[Timestamp] // time at which user agreed to the legal terms of the service, or 'None' if they never did.
+    termsOfUseAcknowledgment: Option[Timestamp], // time at which user agreed to the legal terms of the service, or 'None' if they never did.
+    authorizations: Option[String]
 ) {
 
   def insert: User = {
@@ -77,7 +80,8 @@ case class User(
       "  hashedPswd: " + fmt(hashedPassword) +
       "  pswdSalt: " + fmt(passwordSalt) +
       "  role: " + role +
-      "  useAck: " + (if (termsOfUseAcknowledgment.isDefined) termsOfUseAcknowledgment.get else "None")
+      "  useAck: " + (if (termsOfUseAcknowledgment.isDefined) termsOfUseAcknowledgment.get else "None") +
+      "  authz: " + (if (authorizations.isDefined) authorizations.get else "None")
   }
 
   /**
@@ -93,11 +97,22 @@ case class User(
     else
       None
   }
+
+  /**
+    * Determine if the user is an approver of test results.  Note that whitelisted users can also approve.
+    * @return true if user is an approver of test results
+    */
+  def isApprover: Boolean = {
+    (authorizations.isDefined && authorizations.get.contains(approverTag)) ||
+    WebUtil.userIsWhitelisted(id)
+  }
 }
 
 object User extends Logging {
 
   private val adminIndicator = "admin"
+
+  val approverTag = "approver"
 
   class UserTable(tag: Tag) extends Table[User](tag, "user") {
 
@@ -111,8 +126,9 @@ object User extends Logging {
     def passwordSalt = column[String]("passwordSalt")
     def role = column[String]("role")
     def termsOfUseAcknowledgment = column[Option[Timestamp]]("termsOfUseAcknowledgment")
+    def authorizations = column[Option[String]]("authorizations")
 
-    def * = (userPK.?, id, id_real, fullName_real, email_real, institutionPK, hashedPassword, passwordSalt, role, termsOfUseAcknowledgment) <> (User.apply _ tupled, User.unapply)
+    def * = (userPK.?, id, id_real, fullName_real, email_real, institutionPK, hashedPassword, passwordSalt, role, termsOfUseAcknowledgment, authorizations) <> (User.apply _ tupled, User.unapply)
 
     def institutionFK = foreignKey("User_institutionPKConstraint", institutionPK, Institution.query)(_.institutionPK, onDelete = ForeignKeyAction.Restrict, onUpdate = ForeignKeyAction.Cascade)
   }
@@ -128,7 +144,7 @@ object User extends Logging {
   }
 
   /**
-    * Get the of user with the given id.  Comparison is case insensitive.
+    * Get the of user with the given id.  Comparison is case-insensitive.
     */
   def getUserById(idRaw: String): Option[User] = {
     val id = idRaw.trim.toLowerCase
@@ -160,7 +176,7 @@ object User extends Logging {
     val fullName_realText = AnonymizeUtil.encryptWithNonce(institutionPK, fullName)
     val email_realText = AnonymizeUtil.encryptWithNonce(institutionPK, email)
 
-    val tmpUser = new User(None, "unknown", Some(id_realText), fullName_realText, email_realText, institutionPK, hashedPassword, passwordSalt, roleText, None)
+    val tmpUser = new User(None, "unknown", Some(id_realText), fullName_realText, email_realText, institutionPK, hashedPassword, passwordSalt, roleText, None, None)
     val userWithPk = tmpUser.insert
     val aliasId = AnonymizeUtil.aliasify(AnonymizeUtil.userAliasPrefixId, userWithPk.userPK.get)
     userWithPk.copy(id = aliasId).insertOrUpdate()

@@ -23,6 +23,8 @@ import org.aqa.db.User.UserInstitution
 import org.aqa.web.WebUtil._
 import org.restlet.Response
 
+import scala.xml.Elem
+
 object UserList {
   private val path = new String((new UserList).pathOf)
 
@@ -41,13 +43,28 @@ class UserList extends GenericList[UserInstitution] with WebUtil.SubUrlAdmin {
 
   private val institutionCol = new Column[UserInstitution]("Institution", _.institution.name, ui => wrapAlias(ui.institution.name))
 
-  private def optionToString[T](opt: Option[T]): String = if (opt.isDefined) opt.get.toString else "none"
+  private def makeApproverCheckbox(userInstitution: UserInstitution): Elem = {
+    val id = "approver_" + userInstitution.user.userPK.get
+    val checkboxValue = userInstitution.user.isApprover
+    val value = if (checkboxValue) "true" else ""
 
-  def getRole(ui: UserInstitution): String = ui.user.role
+    val cb1 = {
+        <input id={id} prevstate={value} type="checkbox" class="form-control" onclick={s"SetApproverState(${userInstitution.user.userPK.get})"} />
+    }
+    if (checkboxValue) {
+      val cb2 = WebUtil.addAttr(cb1, "checked", "true")
+      val cb3 = WebUtil.addAttr(cb2, "value", "")
+      cb3
+    }
+    else
+      cb1
+  }
 
-  private val roleCol = new Column[UserInstitution]("Role", getRole)
+  private val approverCol = new Column[UserInstitution]("Approver", (a, b) => a.user.role.compareTo(b.user.role) > 0, ui => makeApproverCheckbox(ui) )
 
-  override val columnList = Seq(idCol, nameCol, emailCol, institutionCol, roleCol)
+  private val roleCol = new Column[UserInstitution]("Role", _.user.role)
+
+  override val columnList = Seq(idCol, nameCol, emailCol, institutionCol, approverCol, roleCol)
 
   override def getData(valueMap: ValueMapT, response: Response): Seq[UserInstitution] = {
     val v = valueMap.get(checkbox.label)
@@ -55,7 +72,6 @@ class UserList extends GenericList[UserInstitution] with WebUtil.SubUrlAdmin {
     val instPK = {
       if (all || userIsWhitelisted(response)) None
       else {
-        val userIdReal = valueMap(userIdRealTag)
         val user = CachedUser.get(valueMap(userIdRealTag)).get
         Some(user.institutionPK)
       }
@@ -77,5 +93,41 @@ class UserList extends GenericList[UserInstitution] with WebUtil.SubUrlAdmin {
   override def htmlFieldList(valueMap: ValueMapT): List[WebRow] = {
     val webRow = new WebRow(List(checkbox, refresh))
     List(webRow)
+  }
+
+  override def makeRunScript(): Option[String] = {
+    Some(s"""
+       |
+       |function SetApproverState(userPK) {
+       |
+       |  var xhttp = new XMLHttpRequest();
+       |
+       |  var cbId = "approver_" + userPK;  // checkbox id
+       |
+       |  var cb = document.getElementById(cbId);  // checkbox
+       |  var cbPrevState = cb.getAttribute("prevstate");
+       |  // var cbState = cb.value;
+       |  var cbChecked = cb.checked;
+       |
+       |  xhttp.onreadystatechange = function() {
+       |    if (this.readyState == 4) {
+       |      if (this.status == 200) {
+       |        var newState = this.responseText;
+       |        cb.setAttribute("prevstate", newState);
+       |        var can = (newState === "true");
+       |        cb.checked = (newState === "true");
+       |      }
+       |      else {
+       |        cb.checked = (cbPrevState === "true");
+       |      }
+       |    }
+       |  };
+       |
+       |
+       |  xhttp.open("POST", "/SetApproverStateRestlet?state=" + cbChecked + "&userPK=" + userPK, true);
+       |  xhttp.send();
+       |
+       |}
+       |""".stripMargin)
   }
 }

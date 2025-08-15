@@ -25,7 +25,6 @@ import org.aqa.web.WebUtil.getValueMap
 import org.aqa.Util
 import org.aqa.db.Output
 import org.aqa.db.User
-import org.aqa.db.UserRole
 import org.aqa.web.WebUtil.getUser
 import org.restlet.Request
 import org.restlet.Response
@@ -53,12 +52,8 @@ class ApprovalChangeRestlet extends Restlet with SubUrlRoot with Logging {
   }
 
   private def isApprover(request: Request): Boolean = {
-    val user = WebUtil.getUser(request).get
-    UserRole.stringToUserRole(user.role) match {
-      case Some(r) => UserRole.isApprover(r)
-      case _       => false
-    }
-    true // TODO rm
+    val user = WebUtil.getUser(request)
+    user.isDefined && user.get.isApprover
   }
 
   private def changeApproval(outputPK: Long, request: Request, status: String): OutputApproval = {

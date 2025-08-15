@@ -32,7 +32,8 @@ object SetPasswordManually {
   // newHashedPW : 7257e25108abd527c1181d73bb07d37fa02cbd930dbf87d8278f6eaed0f8e4dd85d91c13e61e01e333ef0c82db90fb6f7e4731abea59309299844cea787b6aab
 
   def main(args: Array[String]): Unit = {
-    val dummy = Config.validate
+    if (!Config.validate)
+      println("Oh no!")
     DbSetup.init
     print("Enter user id: ")
     val id = StdIn.readLine
@@ -41,14 +42,14 @@ object SetPasswordManually {
     val user = CachedUser.get(id)
     if (true) {
 
-      def testPassword(u: User) = {
+      def testPassword(u: User): Unit = {
         val hashed = CachedUser.hashPassword(password, u.passwordSalt)
         if (hashed.equals(u.hashedPassword)) {
           println("User matches: " + u.id)
           println("    " + AnonymizeUtil.decryptWithNonce(u.institutionPK, u.id_real.get))
         }
       }
-      User.list.map(u => testPassword(u))
+      User.list.foreach(u => testPassword(u))
     }
     if (user.isEmpty) {
       println("No such user " + id)
@@ -61,8 +62,8 @@ object SetPasswordManually {
     println("newHashedPW : " + newHashedPW)
 
     val ou = user.get
-    val newUser = new User(ou.userPK, ou.id, None, ou.fullName_real, ou.email_real, ou.institutionPK, newHashedPW, newSalt, ou.role, None)
-    val count = newUser.insertOrUpdate
+    val newUser = new User(ou.userPK, ou.id, None, ou.fullName_real, ou.email_real, ou.institutionPK, newHashedPW, newSalt, ou.role, None, authorizations = None)
+    val count = newUser.insertOrUpdate()
     println("newSalt     : " + newSalt)
     println("newHashedPW : " + newHashedPW)
     if (count == 1) println("success") else println("failed")

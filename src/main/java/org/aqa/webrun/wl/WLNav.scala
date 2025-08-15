@@ -12,6 +12,7 @@ import org.aqa.web.WebUtil.SubUrlRoot
 import org.aqa.Config
 import org.aqa.db.CachedUser
 import org.aqa.db.OutputApproval
+import org.aqa.db.User
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -141,6 +142,20 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
 
     val padding = "padding:12px;"
 
+    val userElemMap = scala.collection.mutable.HashMap[Long, Elem]()
+
+    def getUserElem(approval: Option[OutputApproval]): Elem = {
+      if (approval.isDefined) {
+        userElemMap.get(approval.get.userPK) match {
+          case Some(elem) => elem
+          case _ =>
+            val elem = WebUtil.wrapAlias(User.get(approval.get.userPK).get.id)
+            userElemMap.put(approval.get.userPK, elem)
+            elem
+        }
+      } else { <span> </span> }
+    }
+
     /**
       * Convert one output row to a line in the HTML table.
       *
@@ -153,12 +168,15 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
 
       val approval = OutputApproval.getByOutput(output.outputPK.get).lastOption
 
-      val approvalText: String = {
-        if (approval.isDefined && OutputApproval.stringToStatus(approval.get.status).isDefined) {
+      val approvalElem: Elem = {
+        val text = if (approval.isDefined && OutputApproval.stringToStatus(approval.get.status).isDefined) {
           OutputApproval.stringToStatus(approval.get.status).get.htmlPrefix
         } else {
           OutputApproval.UNAPPROVED.htmlPrefix
         }
+        val href = ViewOutput.viewOutputUrl(output.outputPK.get)
+
+        <a href={href}>{text} {getUserElem(approval)}</a>
       }
 
       val link = {
@@ -169,7 +187,7 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
 
       <tr>
         <td style={padding}>{link}</td>
-        <td style={padding}>{approvalText}</td>
+        <td style={padding}>{approvalElem}</td>
         <td style={padding}>{WebUtil.wrapAlias(machineName)}</td>
         <td style={padding}>{OutputList.redoUrl(output.outputPK.get)}</td>
       </tr>

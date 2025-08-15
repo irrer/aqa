@@ -33,6 +33,7 @@ import org.aqa.web.WebUtil._
 import org.aqa.webrun.WebRun
 import org.aqa.Config
 import org.aqa.db.OutputApproval
+import org.aqa.db.User
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.data.MediaType
@@ -258,18 +259,32 @@ class OutputList extends GenericList[Output.ExtendedValues] with WebUtil.SubUrlV
 
   private val procedureCol = new Column[ColT]("Procedure", d => d.procedure_name + " " + d.procedure_version)
 
-  private def approvalListToHtml(d: ColT): String = {
-    d.outputApprovalList.lastOption match {
-      case Some(approval) =>
-        OutputApproval.statusList.find(s => s.name.equals(approval.status)) match {
-          case Some(sts) => sts.htmlPrefix
-          case _         => "NA"
-        }
-      case _ => OutputApproval.UNAPPROVED.htmlPrefix
+  private val userElemMap = scala.collection.mutable.HashMap[Long, Elem]()
+
+  private def getUserElem(approval: OutputApproval): Elem = {
+    userElemMap.get(approval.userPK) match {
+      case Some(elem) => elem
+      case _ =>
+        val elem = WebUtil.wrapAlias(User.get(approval.userPK).get.id)
+        userElemMap.put(approval.userPK, elem)
+        elem
     }
   }
 
-  private val approvalCol = new Column[ColT]("Approval", approvalListToHtml)
+  private def approvalListToHtml(d: ColT): Elem = {
+    d.outputApprovalList.lastOption match {
+      case Some(approval) =>
+        OutputApproval.statusList.find(s => s.name.equals(approval.status)) match {
+          case Some(sts) =>
+            <a href={getUrl(d.output_outputPK)}>{sts.htmlPrefix} {getUserElem(approval)}</a>
+          case _ => <span>"NA"</span>
+        }
+      case _ =>
+        <a href={getUrl(d.output_outputPK)}> {OutputApproval.UNAPPROVED.htmlPrefix}</a>
+    }
+  }
+
+  private val approvalCol = new Column[ColT]("Approval", _.outputApprovalList.lastOption.toString, approvalListToHtml)
 
   private val machineCol = new Column[ColT]("Machine", _.machine_id, colT => wrapAlias(colT.machine_id))
 

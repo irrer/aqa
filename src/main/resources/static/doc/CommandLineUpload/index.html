@@ -1,0 +1,43 @@
+<div title="Command Line Upload">
+    <!--
+    Copyright 2025 Regents of the University of Michigan
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+    -->
+
+    <!--
+
+    Note: Data is from https://automatedqualityassurance.org/results/INST_2/MACH_21/Phase2_0.1_4/2019-03-12T19-11-11-943_326/output_2019-03-12T19-11-20-117/SymmetryAndFlatness/SymmetryAndFlatness.html
+
+    This was done with a 20 cm field because at the time 18 cm did not have enough data.
+
+     -->
+
+    <h2>@@title@@</h2>
+    As an alternative to the drag-and-drop web interface, it is possible to upload data from the command line.  This guide shows how.
+
+    <h3> test many uploads </h3>
+    <h3> list of procedures </h3>
+    <h3> Run button </h3>
+    <h3> AutoUpload parameter </h3>
+    <h3> zipping files </h3>
+    <h3> HTTP POST (not GET) </h3>
+    <h3> multipart form </h3>
+    <h3> return indicates that the upload was successful, but the analysis might fail </h3>
+    <h3> Curl is standard in Windows 10 and 11, or may be downloaded from: https://curl.se/windows/microsoft.html </h3>
+
+    <pre>
+        curl --user MyUserId:MyPassword --form uploadFile=@Myfile.zip;type=application/zip https://test.automatedqualityassurance.org/run/WinstonLutz_8?Run=Run&AutoUpload=true
+    </pre>
+
+</div>
