@@ -1,6 +1,5 @@
 package org.aqa.approval
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.db.OutputApproval
 import org.aqa.db.User
 import org.aqa.Util
