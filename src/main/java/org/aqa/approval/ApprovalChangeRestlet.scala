@@ -24,8 +24,10 @@ import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil.getValueMap
 import org.aqa.Util
 import org.aqa.db.Output
+import org.aqa.db.Procedure
 import org.aqa.db.User
 import org.aqa.web.WebUtil.getUser
+import org.aqa.webrun.wl.WLUpdateRestlet
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -56,6 +58,19 @@ class ApprovalChangeRestlet extends Restlet with SubUrlRoot with Logging {
     user.isDefined && user.get.isApprover
   }
 
+  private def updateWlAsNeeded(outputPK: Long): Unit = {
+    try {
+      val output = Output.get(outputPK).get
+      val wlProcPK = Procedure.ProcOfWinstonLutz.get.procedurePK.get
+      if (output.procedurePK == wlProcPK) {
+        WLUpdateRestlet.updateWL()
+        logger.info("Updated WL list info")
+      }
+    } catch {
+      case t: Throwable => logger.error("Unable to get output: " + fmtEx(t))
+    }
+  }
+
   private def changeApproval(outputPK: Long, request: Request, status: String): OutputApproval = {
 
     val now = new Timestamp(System.currentTimeMillis())
@@ -73,6 +88,8 @@ class ApprovalChangeRestlet extends Restlet with SubUrlRoot with Logging {
     val newApproval = approval.insert
 
     logger.info(s"New approval inserted: $newApproval")
+
+    updateWlAsNeeded(outputPK)
 
     newApproval
   }
