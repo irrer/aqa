@@ -24,9 +24,9 @@
      -->
 
     <h2>@@title@@</h2>
-    As an alternative to the drag-and-drop web interface, it is possible to upload data from the command line.  This guide shows how.
+    As an alternative to the drag-and-drop web interface, it is possible to upload data from the command line. This
+    guide shows how.
 
-    <h3> test many uploads </h3>
     <h3> list of procedures </h3>
     <h3> Run button </h3>
     <h3> AutoUpload parameter </h3>
@@ -36,8 +36,58 @@
     <h3> return indicates that the upload was successful, but the analysis might fail </h3>
     <h3> Curl is standard in Windows 10 and 11, or may be downloaded from: https://curl.se/windows/microsoft.html </h3>
 
+    <table class="table-bordered">
+        <tr>
+            <td style="padding:10px;"><b>Procedure Name</b></td>
+            <td style="padding:10px;"><b>Procedure Reference</b></td>
+        </tr>
+        <tr>
+            <td style="padding:10px;">Flood Field</td>
+            <td style="padding:10px;">FloodField_11</td>
+        </tr>
+        <tr>
+            <td style="padding:10px;">Focal Spot</td>
+            <td style="padding:10px;">FocalSpot_9</td>
+        </tr>
+        <tr>
+            <td style="padding:10px;">Gap Skew</td>
+            <td style="padding:10px;">GapSkewRun_7</td>
+        </tr>
+        <tr>
+            <td style="padding:10px;">LOC</td>
+            <td style="padding:10px;">LOC_2</td>
+        </tr>
+        <tr>
+            <td style="padding:10px;">LOC baseline</td>
+            <td style="padding:10px;">LOCBaseline_1</td>
+        </tr>
+        <tr>
+            <td style="padding:10px;">Machine Log</td>
+            <td style="padding:10px;">MachineLog_5</td>
+        </tr>
+        <tr>
+            <td style="padding:10px;">PSM</td>
+            <td style="padding:10px;">PSM_10</td>
+        </tr>
+        <tr>
+            <td style="padding:10px;">Phase2</td>
+            <td style="padding:10px;">Phase2_4</td>
+        </tr>
+        <tr>
+            <td style="padding:10px;">Phase3</td>
+            <td style="padding:10px;">Phase3_6</td>
+        </tr>
+        <tr>
+            <td style="padding:10px;">Winston Lutz</td>
+            <td style="padding:10px;">WinstonLutz_8</td>
+        </tr>
+    </table>
+
+    <h3>Example</h3>
+    <p>The following is a fully constructed curl command tha uploads a zipped set of DICOM files for Winston Lutz
+        processing:</p>
     <pre>
-        curl --user MyUserId:MyPassword --form uploadFile=@Myfile.zip;type=application/zip https://test.automatedqualityassurance.org/run/WinstonLutz_8?Run=Run&AutoUpload=true
+        curl --user MyUserId:MyPassword --form uploadFile=@Myfile.zip;type=application/zip https://automatedqualityassurance.org/run/WinstonLutz_8?Run=Run"&"AutoUpload=true
     </pre>
 
 </div>
