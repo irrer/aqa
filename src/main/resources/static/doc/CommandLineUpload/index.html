@@ -15,27 +15,125 @@
     limitations under the License.
     -->
 
-    <!--
-
-    Note: Data is from https://automatedqualityassurance.org/results/INST_2/MACH_21/Phase2_0.1_4/2019-03-12T19-11-11-943_326/output_2019-03-12T19-11-20-117/SymmetryAndFlatness/SymmetryAndFlatness.html
-
-    This was done with a 20 cm field because at the time 18 cm did not have enough data.
-
-     -->
 
     <h2>@@title@@</h2>
     As an alternative to the drag-and-drop web interface, it is possible to upload data from the command line. This
     guide shows how.
 
-    <h3> list of procedures </h3>
-    <h3> Run button </h3>
-    <h3> AutoUpload parameter </h3>
-    <h3> zipping files </h3>
-    <h3> HTTP POST (not GET) </h3>
-    <h3> multipart form </h3>
-    <h3> return indicates that the upload was successful, but the analysis might fail </h3>
-    <h3> Curl is standard in Windows 10 and 11, or may be downloaded from: https://curl.se/windows/microsoft.html </h3>
+    <h3>Example</h3>
 
+    <p>
+        For the impatient, here is an example that uses the Windows <i>cmd</i> command line to upload a zip file and
+        processes it as Winston Lutz. Replace
+        the <span style="color:#1DA60A; text-decoration: underline;">green underlined</span> portions with the
+        appropriate values:
+    </p>
+
+    <b style="margin-left:20px; white-space: nowrap;">
+        C:\Windows\System32\curl.exe --user <span
+            style="color:#1DA60A; text-decoration: underline;">MyUserId:MyPassword</span> --form uploadFile=@<span
+            style="color:#1DA60A; text-decoration: underline;">Myfile</span>.zip;type=application/zip
+        https://automatedqualityassurance.org/run/WinstonLutz_8?Run=Run^AutoUpload=true
+    </b>
+
+    <h3>cURL</h3>
+
+    <p>
+        <a href="https://en.wikipedia.org/wiki/CURL"> cURL is an open source command line program</a> for uploading and
+        downloading files. It comes pre-installed on Windows 10, Windows 11, Apple, and many Linux distributions. It may
+        also be
+        <a href="https://curl.se/">downloaded from its website</a>.
+    </p>
+
+    <h3>Alternatives</h3>
+
+    <p>HTTP operations can be done programmatically. Most programming languages (Python, C#, Java, C) have libraries for
+        uploading files. There are other command line programs for uploading as well. Consult the relevant documentation
+        for details.</p>
+
+    <h3>Technical</h3>
+
+    <p>
+        The upload operation is an <a href="https://en.wikipedia.org/wiki/HTTP">HTTP</a> <a
+            href="https://en.wikipedia.org/wiki/POST_(HTTP)">POST</a> done as <a
+            href="https://en.wikipedia.org/wiki/MIME#form-data">multipart/form data</a>.
+        Multiple files are handled by putting them into a <a
+            href="https://en.wikipedia.org/wiki/ZIP_(file_format)">zip</a> file.
+    </p>
+
+
+    <p>
+        The following describe the parameters used.
+    </p>
+
+    <ol>
+        <li><b>C:\Windows\System32\curl.exe</b> : Explicitly specifies the full path of curl. On most systems curl is
+            already on the PATH, so it's sufficient to just use <i>curl</i>.
+        </li>
+
+        <li><b>--user MyUserId:MyPassword</b> : Specifies the AQA user name and password. Escape characters or quotes
+            may be required if these contain special characters.
+        </li>
+
+        <li>
+            <b>
+                --form
+            </b>
+            : is curl's way of indicating that this is a POST operation in multipart/form format. POST is HTTT's way of
+            indicating an upload, as opposed to the usual GET operation.
+        </li>
+
+
+        <li>
+            <b>
+                uploadFile=@Myfile.zip;type=application/zip
+            </b>
+            : Tells curl to read input from Myfile.zip and that the media type is zip.
+        </li>
+
+
+        <li>
+            <b>
+                automatedqualityassurance.org
+            </b>
+            : The base URL. Other installations of AQA will have a different URL.
+        </li>
+
+
+        <li>
+            <b>
+                WinstonLutz_8
+            </b>
+            : Tells AQA to process this as a Winston Lutz data set. See table below for Phase2 and other types of
+            processing.
+        </li>
+
+
+        <li>
+            <b>
+                ?Run=Run
+            </b>
+            : Tells AQA to do the equivalent of clicking the 'Run' button.
+        </li>
+
+
+        <li>
+            <b>
+                ^&AutoUpload=true
+            </b>
+            : Tells AQA that this is a programmatic upload verses being done via drag-and-drop in a web browser. The
+            browser interface will show analysis progress and then results when finished, but that is not appropriate
+            for programmatic uploads.
+            <br>
+            Note that the carat <b>^</b> is the cmd escape character which tells cmd to interpret the & as a literal
+            ampersand.
+        </li>
+
+
+    </ol>
+
+
+    <h3>List of Procedures</h3>
     <table class="table-bordered">
         <tr>
             <td style="padding:10px;"><b>Procedure Name</b></td>
@@ -81,13 +179,57 @@
             <td style="padding:10px;">Winston Lutz</td>
             <td style="padding:10px;">WinstonLutz_8</td>
         </tr>
+        <!--
+        <tr>
+            <td style="padding:10px;">OBI Daily QA for CBCT</td>
+            <td style="padding:10px;">BBbyCBCT_12</td>
+        </tr>
+        <tr>
+            <td style="padding:10px;">OBI Daily QA for EPID</td>
+            <td style="padding:10px;">BBbyEPID_13</td>
+        </tr>
+        -->
     </table>
 
-    <h3>Example</h3>
-    <p>The following is a fully constructed curl command tha uploads a zipped set of DICOM files for Winston Lutz
-        processing:</p>
-    <pre>
-        curl --user MyUserId:MyPassword --form uploadFile=@Myfile.zip;type=application/zip https://automatedqualityassurance.org/run/WinstonLutz_8?Run=Run"&"AutoUpload=true
-    </pre>
 
+    <h3> Processing </h3>
+    <p>
+        When a zip file is uploaded, AQA will do some quick checks to validate the data. These depend on which test is
+        invoked, and may include checks such as:
+
+    <ul>
+        <li>
+            The related RTPLAN is in AQA. Note: the RTPLAN can be uploaded with the other DICOM files. Once a plan has
+            been uploaded, AQA will remember it for future processing. Some tests do not require a plan.
+        </li>
+
+        <li>
+            Ensure that the files come from the same machine.
+        </li>
+
+        <li>
+            Ensure that the machine is known.
+        </li>
+
+    </ul>
+
+    <p>
+        After the upload completes, the curl command will return, and AQA will start processing the data. At this point
+        another curl command can be run. When multiple data sets are received, AQA will queue them up and process them
+        one at a time.
+    </p>
+
+    <p>
+        After the upload completes, the curl command will return and AQA will start processing the data.
+    </p>
+
+    <p>
+        The AQA platform is configured to operate within the confines of its resources. For that reason, it is
+        recommended that uploads be done in succession one at a time. For example, if hundreds of uploads are to be
+        done, a convenient approach is to put the commands into a single file, and as it is running go have lunch.
+    </p>
+
+    <p style="margin-bottom:150px;">
+
+    </p>
 </div>
