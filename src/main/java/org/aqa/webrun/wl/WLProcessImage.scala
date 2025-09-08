@@ -315,15 +315,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
         val coarseAoi: DicomImage = preprocessImage.preprocessedImage.getSubimage(coarseAoiBounds)
 
-        if (true) { // TODO rm
-          val file = new File(s"D:/tmp/wl/pixels.txt")
-          val text = preprocessImage.preprocessedImage.pixelsToText
-          Util.writeFile(file, text)
-          Trace.trace(s"wrote file $file")
-          Trace.trace(s"coarseAoiBounds: $coarseAoiBounds")
-          Trace.trace(s"coarseAoiBounds: $coarseAoiBounds")
-        }
-
         val fineBoxLocateResult = fineBoxLocate(coarseAoi, pixels, coarseAoiBounds, tol2, tol4)
 
         val result: WLImageResult = fineBoxLocateResult match {
