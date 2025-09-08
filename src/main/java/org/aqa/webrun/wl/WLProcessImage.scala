@@ -1,10 +1,12 @@
 package org.aqa.webrun.wl
 
 import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.MachineWL
@@ -16,15 +18,6 @@ import java.awt.image.BufferedImage
 import java.awt.Color
 import java.awt.Rectangle
 import java.io.File
-
-/*
-class WLBadPixel(val x: Int, val y: Int, val rawValue: Int, val correctedValue: Float, val adjacentValidValueList: Seq[Int]) {
-  override def toString: String = {
-    "   x: " + x + "   y: " + y + "   rawValue: " + rawValue + "   correctedValue: " + correctedValue +
-      adjacentValidValueList.sorted.reverse.foldLeft("\n            Adjacent Valid Values and difference from raw:")((t, v) => t + "\n                " + v + "  :  " + Math.abs(v - rawValue))
-  }
-}
- */
 
 class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: Int, runReq: WLRunReq) extends Logging {
 
@@ -145,8 +138,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
   private def toPng(pix: IndexedSeq[IndexedSeq[Float]]): BufferedImage = toPngScaled(pix, SCALE)
 
   /**
-    * Make an image showing the level of background noise immediately around the ball.
-    */
+   * Make an image showing the level of background noise immediately around the ball.
+   */
   private def showBallBackgroundNoise(areaOfInterest: IndexedSeq[IndexedSeq[Float]], name: String): Unit = {
     val aoiWidth = areaOfInterest.head.length
     val aoiHeight = areaOfInterest.length
@@ -178,15 +171,15 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
   }
 
   /**
-    * Locate the box to sub-pixel accuracy.
-    */
+   * Locate the box to sub-pixel accuracy.
+   */
   private def fineBoxLocate(
-      coarseAoi: DicomImage,
-      pixels: IndexedSeq[IndexedSeq[Float]],
-      aoiBounds: Rectangle,
-      tol2: Int,
-      tol4: Int
-  ): Either[WLImageStatus.Value, WLEdgeSet] = {
+                             coarseAoi: DicomImage,
+                             pixels: IndexedSeq[IndexedSeq[Float]],
+                             aoiBounds: Rectangle,
+                             tol2: Int,
+                             tol4: Int
+                           ): Either[WLImageStatus.Value, WLEdgeSet] = {
 
     // do sanity check to see if the box is reasonably sized.
     if ((coarseAoi.width < tol4) || (coarseAoi.height < tol4))
@@ -271,6 +264,19 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     })
   }
 
+  private val isCardinalAngle: Boolean = {
+
+    val maximumDeviation = 1.0
+
+    val angle = rtimage.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
+
+    val ok = Util.angleRoundedTo90(angle) match {
+      case 0 => (angle > (360 - maximumDeviation)) || (angle < maximumDeviation)
+      case rounded => (angle - rounded).abs < maximumDeviation
+    }
+
+    ok
+  }
 
   def process: WLImageResult = {
     wlMsg.info("Start constructing ProcessImage for " + Util.sopOfAl(rtimage))
@@ -281,7 +287,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
     try {
       // val uncorrectedPixels = fetchPixels()
-      val preprocessImage = WLPreprocessImage(rtimage, imageName, wlMsg)
+      val preprocessImage = WLPreprocessImage(rtimage, imageName, Some(wlMsg))
       val pixels = preprocessImage.preprocessedImage.pixelData
       // val uncorrectedPixels = fetchPixels()
       Util.writePng(toPngScaled(preprocessImage.preprocessedImage.pixelData, 1), new File(subDir, "original.png"))
@@ -299,9 +305,24 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
         if (badPixels.badPixelsCorrected.nonEmpty || badPixels.marginalPixelsCorrected.nonEmpty)
           saveWLBadPixelImage(pixels, badPixels.badPixelsCorrected, badPixels.marginalPixelsCorrected)
 
-        val coarseAoiBounds = WLCoarseBox(new DicomImage(pixels), trans, wlMsg).locate()
+        val coarseAoiBounds = WLCoarseBox(new DicomImage(pixels), trans, Some(wlMsg)).locate()
+
+        /*
+        if (!isCardinalAngle) {
+          Trace.trace(NonCardinal.measureEdges(rtimage, pixels, coarseAoiBounds))
+        }
+        */
 
         val coarseAoi: DicomImage = preprocessImage.preprocessedImage.getSubimage(coarseAoiBounds)
+
+        if (true) { // TODO rm
+          val file = new File(s"D:/tmp/wl/pixels.txt")
+          val text = preprocessImage.preprocessedImage.pixelsToText
+          Util.writeFile(file, text)
+          Trace.trace(s"wrote file $file")
+          Trace.trace(s"coarseAoiBounds: $coarseAoiBounds")
+          Trace.trace(s"coarseAoiBounds: $coarseAoiBounds")
+        }
 
         val fineBoxLocateResult = fineBoxLocate(coarseAoi, pixels, coarseAoiBounds, tol2, tol4)
 

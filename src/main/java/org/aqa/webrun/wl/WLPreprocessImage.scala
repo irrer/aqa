@@ -10,7 +10,7 @@ import edu.umro.ImageUtil.DicomImage
   * @param rtimage Raw image
   * @param imageName Name of image for logging purposes.
   */
-case class WLPreprocessImage(rtimage: AttributeList, imageName: String, wlMsg: WLMessage) {
+case class WLPreprocessImage(rtimage: AttributeList, imageName: String, wlMsg: Option[WLMessage]) {
 
   /**
     * Get the raw pixels.  Ensure that the majority of the pixels are large.  If they are

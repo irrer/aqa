@@ -8,7 +8,7 @@ import org.aqa.Util
 
 import java.awt.Rectangle
 
-case class WLCoarseBox(image: DicomImage, trans: IsoImagePlaneTranslator, wlMsg: WLMessage) extends Logging {
+case class WLCoarseBox(image: DicomImage, trans: IsoImagePlaneTranslator, wlMsg: Option[WLMessage]) extends Logging {
 
   // def this(rtimage: AttributeList) = this(new DicomImage(rtimage), new IsoImagePlaneTranslator(rtimage), wlMsg)
 
@@ -45,13 +45,14 @@ case class WLCoarseBox(image: DicomImage, trans: IsoImagePlaneTranslator, wlMsg:
 
     val rect = new Rectangle(xStartLen.start, yStartLen.start, xStartLen.len, yStartLen.len)
 
-    wlMsg.info(
-      "Rectangle defining coarse box location in mm: " +
-        "    x: " + Util.fmtDbl(trans.pix2IsoCoordX(rect.x)) +
-        "    y: " + Util.fmtDbl(trans.pix2IsoCoordY(rect.y)) +
-        "    width: " + Util.fmtDbl(trans.pix2IsoDistX(rect.width)) +
-        "    height: " + Util.fmtDbl(trans.pix2IsoDistY(rect.height))
-    )
+    if (wlMsg.isDefined)
+      wlMsg.get.info(
+        "Rectangle defining coarse box location in mm: " +
+          "    x: " + Util.fmtDbl(trans.pix2IsoCoordX(rect.x)) +
+          "    y: " + Util.fmtDbl(trans.pix2IsoCoordY(rect.y)) +
+          "    width: " + Util.fmtDbl(trans.pix2IsoDistX(rect.width)) +
+          "    height: " + Util.fmtDbl(trans.pix2IsoDistY(rect.height))
+      )
 
     rect
   }

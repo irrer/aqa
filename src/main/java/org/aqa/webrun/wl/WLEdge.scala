@@ -30,7 +30,7 @@ case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtima
 
   private val pixIn: IndexedSeq[IndexedSeq[Float]] = aoi.pixelData
 
-  val sum: IndexedSeq[Float] = if (vertical) colSum(pixIn) else rowSum(pixIn)
+  private val sum: IndexedSeq[Float] = if (vertical) colSum(pixIn) else rowSum(pixIn)
 
   private def simpleFindEdge(scaledSum: IndexedSeq[Float]): Double = {
 
@@ -187,7 +187,7 @@ case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtima
 
   private val baseOffset_pix = if (vertical) bounds.x else bounds.y
 
-  def posIntAbs_pix: Int = baseOffset_pix + posInt_pix
+  // def posIntAbs_pix: Int = baseOffset_pix + posInt_pix
 
   def posAbs_pix: Double = baseOffset_pix + pos_pix
 
