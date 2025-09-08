@@ -20,11 +20,33 @@
     <p>
         The flood field is used by AQA to create a PSM (Pixel Sensitivity Matrix). Treatment machines create a new flood
         field when an EPID recalibration is performed. This procedure allows users to upload their latest flood field to
-        AQA.  This is often done as a prelude to uploading a PSM.
+        AQA. This is often done as a prelude to uploading a PSM.
     </p>
     <p>
         A flood field may also be uploaded with the PSM files.
     </p>
+    <h3>Exporting Flood Fields</h3>
+    <p>
+        Perform the following steps at the treatment machine to export a flood field.
+    </p>
+    <ul>
+        <li>Service mode &#x1F846; advanced</li>
+        <li>Imaging monitor &#x1F846; import arrow in bottom right hand corner of screen
+
+            <ul>
+                <li>XI/mirror/calibration/default/approved/OMVmodule/NoSyncDRI</li>
+                <li>Select flood fields (FF in the image title)</li>
+            </ul>
+        </li>
+
+        <li>on bottom of imaging monitor &#x1F846; select image for export. Hover mouse over image for details.</li>
+        <li>Select arrow at bottom right hand corner of screen (export) &#x1F846; I drive/</li>
+    </ul>
+    <p>
+        Export as <em>.dcm</em> format.
+    </p>
+
+    <h3>Flood Field Files</h3>
     <p>
         The flood field consists of a single DICOM image with modality RTIMAGE. However, while RTIMAGE files generally
         contain a DICOM <a
