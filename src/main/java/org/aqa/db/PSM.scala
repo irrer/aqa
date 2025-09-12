@@ -25,6 +25,7 @@ import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.webrun.psm.PSMUtil
+import org.aqa.AQATypes.ImSeq
 
 import java.nio.ByteBuffer
 import java.sql.Timestamp
@@ -61,14 +62,14 @@ case class PSM(
 
     val buf = ByteBuffer.wrap(pixelArray)
 
-    def makeRow(rowIndex: Int): IndexedSeq[Float] = {
+    def makeRow(rowIndex: Int): ImSeq[Float] = {
       val start = rowIndex * Columns * 4
       (0 until Columns).map(x => {
         buf.getFloat(start + (x * 4))
       })
     }
 
-    val pixels: IndexedSeq[IndexedSeq[Float]] = {
+    val pixels: ImSeq[ImSeq[Float]] = {
       (0 until Rows).map(rowIndex => makeRow(rowIndex))
     }
 

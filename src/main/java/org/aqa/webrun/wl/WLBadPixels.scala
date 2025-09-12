@@ -1,12 +1,13 @@
 package org.aqa.webrun.wl
 
 import edu.umro.ImageUtil.DicomImage
+import org.aqa.AQATypes._
 import org.aqa.Config
 import org.aqa.Logging
 
 import scala.annotation.tailrec
 
-case class WLBadPixels(uncorrectedImage: DicomImage, imageName: String, wlMsg: Option[WLMessage]) extends Logging {
+case class WLBadPixels(uncorrectedImage: DicomImage, wlMsg: Option[WLMessage]) extends Logging {
 
   private val uncorrectedPixels = uncorrectedImage.pixelData
 
@@ -17,7 +18,7 @@ case class WLBadPixels(uncorrectedImage: DicomImage, imageName: String, wlMsg: O
   /**
     * Make a list of bad pixels.
     */
-  private def findWLBadPixels(pixelGapLimit: Int): Seq[UncorrectedWLBadPixel] = {
+  private def findWLBadPixels(pixelGapLimit: Int): List[UncorrectedWLBadPixel] = {
     def getLimits: (Double, Double) = {
       def isGood(a: Double, b: Double): Boolean = scala.math.abs(a - b) <= pixelGapLimit
 
@@ -60,7 +61,7 @@ case class WLBadPixels(uncorrectedImage: DicomImage, imageName: String, wlMsg: O
     * @param uncorrectedPixelList List of uncorrected pixels
     * @return
     */
-  private def uncorrectedWLBadPixelsToWLBadPixels(uncorrectedPixelList: Seq[UncorrectedWLBadPixel]): Seq[WLBadPixel] = {
+  private def uncorrectedWLBadPixelsToWLBadPixels(uncorrectedPixelList: ImSeq[UncorrectedWLBadPixel]): ImSeq[WLBadPixel] = {
 
     // A pixel is good if its coordinates are valid, and it is not on the bad pixel list
     val height = uncorrectedPixels.length
@@ -122,18 +123,18 @@ case class WLBadPixels(uncorrectedImage: DicomImage, imageName: String, wlMsg: O
     correctWLBadPixelsPrivate(uncorrectedPixels, badPixelList)
   }
 
-  private val badPixelListUncorrected: Seq[UncorrectedWLBadPixel] = findWLBadPixels(Config.WLBadPixelGapLimit)
+  private val badPixelListUncorrected: ImSeq[UncorrectedWLBadPixel] = toImSeq(findWLBadPixels(Config.WLBadPixelGapLimit))
 
-  private val marginalPixelListUncorrected: Seq[UncorrectedWLBadPixel] = findWLBadPixels(Config.WLMarginalPixelGapLimit)
+  private val marginalPixelListUncorrected: ImSeq[UncorrectedWLBadPixel] = toImSeq(findWLBadPixels(Config.WLMarginalPixelGapLimit))
 
   //noinspection ScalaWeakerAccess
-  val badPixelsCorrected: Seq[WLBadPixel] = uncorrectedWLBadPixelsToWLBadPixels(badPixelListUncorrected)
+  val badPixelsCorrected: ImSeq[WLBadPixel] = uncorrectedWLBadPixelsToWLBadPixels(badPixelListUncorrected)
 
-  val marginalPixelsCorrected: Seq[WLBadPixel] = uncorrectedWLBadPixelsToWLBadPixels(marginalPixelListUncorrected)
+  val marginalPixelsCorrected: ImSeq[WLBadPixel] = uncorrectedWLBadPixelsToWLBadPixels(marginalPixelListUncorrected)
 
   val correctedImage: IndexedSeq[IndexedSeq[Float]] = correctWLBadPixels(badPixelsCorrected)
 
-  if (wlMsg.isDefined) wlMsg.get.info(s"$imageName Number of bad pixels: " + badPixelsCorrected.size + " : " + badPixelsCorrected)
-  if (wlMsg.isDefined) wlMsg.get.info(s"$imageName Number of marginal pixels: " + marginalPixelsCorrected.size + " : " + marginalPixelsCorrected)
+  if (wlMsg.isDefined) wlMsg.get.info(s"Number of bad pixels: " + badPixelsCorrected.size + " : " + badPixelsCorrected)
+  if (wlMsg.isDefined) wlMsg.get.info(s"Number of marginal pixels: " + marginalPixelsCorrected.size + " : " + marginalPixelsCorrected)
 
 }

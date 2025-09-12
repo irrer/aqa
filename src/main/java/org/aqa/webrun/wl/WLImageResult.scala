@@ -40,24 +40,24 @@ class Edges(val top: Double, val bottom: Double, val left: Double, val right: Do
 }
 
 case class WLImageResult(
-    imageStatus: WLImageStatus.ImageStatus,
-    boxP: Option[Point] = None,
-    ballP: Option[Point] = None,
-    edgesUnscaled: Option[Edges] = None,
-    boxEdgesP: Option[Edges] = None,
-    edgeSet: Option[WLEdgeSet] = None,
-    directory: File,
-    rtimage: AttributeList,
-    pixels: Option[Array[Array[Float]]] = None,
-    coarseAoiBounds: Option[Rectangle] = None,
-    brcX: Option[Double] = None,
-    brcY: Option[Double] = None,
-    badPixelList: Seq[WLBadPixel],
-    marginalPixelList: Seq[WLBadPixel],
-    extendedData: ExtendedData,
-    runReq: WLRunReq
-) {
-  val ok: Boolean = boxP.isDefined && (ballP.isDefined)
+                          imageStatus: WLImageStatus.ImageStatus,
+                          boxP: Option[Point] = None,
+                          ballP: Option[Point] = None,
+                          edgesUnscaled: Option[Edges] = None,
+                          boxEdgesP: Option[Edges] = None,
+                          edgeSet: Option[WLEdgeSet] = None,
+                          directory: File,
+                          rtimage: AttributeList,
+                          pixels: Option[Array[Array[Float]]] = None,
+                          coarseAoiBounds: Option[Rectangle] = None,
+                          brcX: Option[Double] = None,
+                          brcY: Option[Double] = None,
+                          badPixelList: Seq[WLBadPixel],
+                          marginalPixelList: Seq[WLBadPixel],
+                          extendedData: ExtendedData,
+                          runReq: WLRunReq
+                        ) {
+  val ok: Boolean = boxP.isDefined && ballP.isDefined
   val offX: Double = if (ok) boxP.get.x - ballP.get.x else -1
   val offY: Double = if (ok) boxP.get.y - ballP.get.y else -1
   val offXY: Double = if (ok) Math.sqrt((offX * offX) + (offY * offY)) else -1
@@ -68,12 +68,9 @@ case class WLImageResult(
   val ball: Point = if (ballP.isEmpty) new Point(-1, -1) else ballP.get
   val boxEdges: Edges = if (boxEdgesP.isEmpty) new Edges(-1, -1, -1, -1) else boxEdgesP.get
 
-  val contentTime: Date = {
-    val content = Util.dicomGetTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime)
-    val acquisition = Util.dicomGetTimeAndDate(rtimage, TagByName.AcquisitionDate, TagByName.AcquisitionTime)
-    val list = Seq(content, acquisition).flatten
-    list.head
-  }
+
+  val contentTime: Date = WLImageUtil.timeOf(rtimage)
+
 
   /** Elapsed time in ms of this slice since the first slice in the series was captured. */
   val elapsedTime_ms: Long = {
@@ -158,17 +155,6 @@ case class WLImageResult(
   private def offset_mm: Double = Math.sqrt((offsetX_mm * offsetX_mm) + (offsetY_mm * offsetY_mm))
 
   override def toString: String = {
-
-    def badPixelListToString(list: Seq[WLBadPixel], name: String): String = {
-      if (list.isEmpty)
-        "NA"
-      else
-        "" +
-          "    " + name + " pixels: " + list.size + "\n" +
-          list.foldLeft("")((t, bad) => {
-            t + "    " + bad + "\n"
-          })
-    }
 
     def opt(dFun: () => Double): String = {
       try {

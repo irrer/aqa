@@ -8,9 +8,9 @@ import edu.umro.ImageUtil.DicomImage
   * track, and correct any bad pixels.
   *
   * @param rtimage Raw image
-  * @param imageName Name of image for logging purposes.
+  * @param wlMsg For logging purposes.
   */
-case class WLPreprocessImage(rtimage: AttributeList, imageName: String, wlMsg: Option[WLMessage]) {
+case class WLPreprocessImage(rtimage: AttributeList, wlMsg: Option[WLMessage]) {
 
   /**
     * Get the raw pixels.  Ensure that the majority of the pixels are large.  If they are
@@ -51,7 +51,7 @@ case class WLPreprocessImage(rtimage: AttributeList, imageName: String, wlMsg: O
   private val imageWithBadPixels: DicomImage = new DicomImage(fetchPixels())
 
   /** Bad pixel information. */
-  val badPixels: WLBadPixels = WLBadPixels(imageWithBadPixels, imageName, wlMsg)
+  val badPixels: WLBadPixels = WLBadPixels(imageWithBadPixels, wlMsg)
 
   /** Image that should be analyzed. */
   val preprocessedImage: DicomImage = new DicomImage(badPixels.correctedImage)

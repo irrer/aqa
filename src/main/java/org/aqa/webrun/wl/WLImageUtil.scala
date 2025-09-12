@@ -1,8 +1,12 @@
 package org.aqa.webrun.wl
 
+import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
 import org.aqa.Config
+import org.aqa.Util
 
 import java.awt.image.BufferedImage
+import java.util.Date
 
 object WLImageUtil {
 
@@ -54,9 +58,9 @@ object WLImageUtil {
   }
 
   /**
-   * Take the average of the darkest background pixels for
-   * each row and subtract it from each pixel.
-   */
+    * Take the average of the darkest background pixels for
+    * each row and subtract it from each pixel.
+    */
   def normalizeArea(aoi: IndexedSeq[IndexedSeq[Float]]): IndexedSeq[IndexedSeq[Float]] = {
     aoi.map(row => {
       val bias = row.sorted.take(Config.WLNumBackgroundPixels).sum / Config.WLNumBackgroundPixels
@@ -64,4 +68,41 @@ object WLImageUtil {
     })
   }
 
+  /**
+    * Get the time that the given image was captured.
+    * @param rtimage For this RTIMAGE.
+    * @return Time and date of capture.
+    */
+  def timeOf(rtimage: AttributeList): Date = {
+    val content = Util.dicomGetTimeAndDate(rtimage, TagByName.ContentDate, TagByName.ContentTime)
+    val acquisition = Util.dicomGetTimeAndDate(rtimage, TagByName.AcquisitionDate, TagByName.AcquisitionTime)
+    val list = Seq(content, acquisition).flatten
+    list.head
+  }
+
+  /**
+    * Get the time that the given image was captured in ms.
+    * @param rtimage For this RTIMAGE.
+    * @return Time and date of capture in ms.
+    */
+  def timeOfMs(rtimage: AttributeList): Long = timeOf(rtimage).getTime
+
+  /**
+    * Determine if the given angle is a cardinal angle.  If it is within 1 degree of a cardinal
+    * angle, then it is considered to be at a cardinal angle.  This criteria is specific to WL.
+    *
+    * @param angle For this angle.
+    * @return True if the angle is close enough to a cardinal angle.
+    */
+  def isCardinalAngle(angle: Double): Boolean = {
+
+    val maximumDeviation = 1.0
+
+    val ok = Util.angleRoundedTo90(angle) match {
+      case 0       => (angle > (360 - maximumDeviation)) || (angle < maximumDeviation)
+      case rounded => (angle - rounded).abs < maximumDeviation
+    }
+
+    ok
+  }
 }

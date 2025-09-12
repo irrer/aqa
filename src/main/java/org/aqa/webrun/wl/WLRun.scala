@@ -31,15 +31,7 @@ import scala.xml.Elem
 
 class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq] {
 
-  private def dateTime(al: AttributeList) = {
-    val dt = Seq(
-      Util.dicomGetTimeAndDate(al, TagByName.ContentDate, TagByName.ContentTime),
-      Util.dicomGetTimeAndDate(al, TagByName.AcquisitionDate, TagByName.AcquisitionTime)
-    ).flatten.head
-    dt.getTime
-  }
-
-  private def getRtimageList(alList: Seq[AttributeList]) = alList.filter(al => Util.isRtimage(al)).sortBy(dateTime)
+  private def getRtimageList(alList: Seq[AttributeList]) = alList.filter(al => Util.isRtimage(al)).sortBy(WLImageUtil.timeOfMs)
 
   /**
     * Send an EventNet event indicating that a WL has been done.
@@ -137,7 +129,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
       // case _ if epidSeriesList.size > 1       => formError("EPID images are from " + numSeries + " different series.")
       // case _ if orthogonalAngleList.size != 2 => formError("Need to have images with both vertical and horizontal gantry angles.  Given beam had " + gantryAngleList.mkString("  "))
       case _ =>
-        val runReq = WLRunReq(epidList.sortBy(dateTime), rtplan)
+        val runReq = WLRunReq(epidList.sortBy(WLImageUtil.timeOfMs), rtplan)
         Right(runReq)
     }
     result
@@ -148,7 +140,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
       case Some(rtplanUid) => Phase2Util.fetchRtplan(rtplanUid, alList)
       case _               => None
     }
-    val result = WLRunReq(getRtimageList(alList).sortBy(dateTime), rtplan)
+    val result = WLRunReq(getRtimageList(alList).sortBy(WLImageUtil.timeOfMs), rtplan)
     result
   }
 
@@ -167,7 +159,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
     * @return Earliest date+time if available.
     */
   override def getDataDate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Option[Timestamp] = {
-    getRtimageList(alList).map(dateTime).map(ms => new Timestamp(ms)).headOption
+    getRtimageList(alList).map(WLImageUtil.timeOfMs).map(ms => new Timestamp(ms)).headOption
   }
 
   override def getProcedure: Procedure = procedure

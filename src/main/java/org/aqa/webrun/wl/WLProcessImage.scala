@@ -6,7 +6,6 @@ import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.MachineWL
@@ -29,7 +28,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
   private val ResolutionX = trans.pix2IsoDistX(1)
   private val ResolutionY = trans.pix2IsoDistY(1)
 
-  private val wlMsg = WLMessage(extendedData, rtimage)
+  private val wlMsg = WLMessage(runReq, rtimage)
 
   // private val gantryAngle = Util.gantryAngle(rtimage)
   // private val collimatorAngle = Util.collimatorAngle(rtimage)
@@ -138,8 +137,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
   private def toPng(pix: IndexedSeq[IndexedSeq[Float]]): BufferedImage = toPngScaled(pix, SCALE)
 
   /**
-   * Make an image showing the level of background noise immediately around the ball.
-   */
+    * Make an image showing the level of background noise immediately around the ball.
+    */
   private def showBallBackgroundNoise(areaOfInterest: IndexedSeq[IndexedSeq[Float]], name: String): Unit = {
     val aoiWidth = areaOfInterest.head.length
     val aoiHeight = areaOfInterest.length
@@ -171,15 +170,15 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
   }
 
   /**
-   * Locate the box to sub-pixel accuracy.
-   */
+    * Locate the box to sub-pixel accuracy.
+    */
   private def fineBoxLocate(
-                             coarseAoi: DicomImage,
-                             pixels: IndexedSeq[IndexedSeq[Float]],
-                             aoiBounds: Rectangle,
-                             tol2: Int,
-                             tol4: Int
-                           ): Either[WLImageStatus.Value, WLEdgeSet] = {
+      coarseAoi: DicomImage,
+      pixels: IndexedSeq[IndexedSeq[Float]],
+      aoiBounds: Rectangle,
+      tol2: Int,
+      tol4: Int
+  ): Either[WLImageStatus.Value, WLEdgeSet] = {
 
     // do sanity check to see if the box is reasonably sized.
     if ((coarseAoi.width < tol4) || (coarseAoi.height < tol4))
@@ -265,17 +264,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
   }
 
   private val isCardinalAngle: Boolean = {
-
-    val maximumDeviation = 1.0
-
     val angle = rtimage.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
-
-    val ok = Util.angleRoundedTo90(angle) match {
-      case 0 => (angle > (360 - maximumDeviation)) || (angle < maximumDeviation)
-      case rounded => (angle - rounded).abs < maximumDeviation
-    }
-
-    ok
+    WLImageUtil.isCardinalAngle(angle)
   }
 
   def process: WLImageResult = {
@@ -287,7 +277,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
     try {
       // val uncorrectedPixels = fetchPixels()
-      val preprocessImage = WLPreprocessImage(rtimage, imageName, Some(wlMsg))
+      val preprocessImage = WLPreprocessImage(rtimage, Some(wlMsg))
       val pixels = preprocessImage.preprocessedImage.pixelData
       // val uncorrectedPixels = fetchPixels()
       Util.writePng(toPngScaled(preprocessImage.preprocessedImage.pixelData, 1), new File(subDir, "original.png"))
