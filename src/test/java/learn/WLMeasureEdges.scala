@@ -27,11 +27,13 @@ import org.aqa.webrun.wl.WLCoarseBox
 import org.aqa.webrun.wl.WLMessage
 import org.aqa.BiCubicImage
 import org.aqa.webrun.wl.WLPreprocessImage
+import org.aqa.Config
 import org.aqa.DicomFile
 import org.aqa.Logging
 
 import java.awt.Color
 import java.awt.Graphics2D
+import java.awt.geom.Point2D
 import java.io.File
 
 case class WLMeasureEdges(rtimage: AttributeList, wlMessage: Option[WLMessage]) extends Logging {}
@@ -44,14 +46,15 @@ object WLMeasureEdges extends Logging {
   case class PointSet(line: WLLine, offsetPos: Double, offsetNeg: Double) extends Logging {
     val middle: Double = (offsetPos + offsetNeg) / 2
 
+    val size: Double = offsetPos.abs + offsetNeg.abs
+
     override def toString: String = s"line: $line   offsetPos: $offsetPos   offsetNeg: $offsetNeg   middle: $middle"
   }
 
-  def getMidPoint(line: WLLine, biCubicImage: BiCubicImage, pixBandWidth: Double, resolution: Double, offTheEdge: Double): PointSet = {
+  def getOffsets(line: WLLine, biCubicImage: BiCubicImage, pixBandWidth: Double, resolution: Double, offsetLo: Double, offsetHi: Double): PointSet = {
 
     def minPoint(start: Double, finish: Double): Double = {
       val profile = line.makeProfile(start, finish, biCubicImage, pixBandWidth, resolution)
-      Trace.trace("profile:\n" + profile.take(4).mkString("\n"))
       val min = profile.min
       val Index = profile.indexOf(min)
       val partialProfile = profile.drop(Index)
@@ -62,14 +65,16 @@ object WLMeasureEdges extends Logging {
       edgeSigned
     }
 
-    val pointSet = PointSet(line, minPoint(0, offTheEdge), minPoint(0, -offTheEdge))
-    Trace.trace(pointSet)
+    // val pointSet = PointSet(line, minPoint(offsetLo, offsetHi), minPoint(-offsetLo, -offsetHi))
+    val pos = minPoint(offsetLo, offsetHi)
+    val neg = minPoint(-offsetLo, -offsetHi)
+
+    val pointSet = PointSet(line, pos, neg)
     pointSet
   }
 
   def measure(rtimage: AttributeList): Unit = {
 
-    Trace.trace
 
     val file = new File("""D:\tmp\wl\nonorth\1\0005.dcm""")
 
@@ -81,8 +86,6 @@ object WLMeasureEdges extends Logging {
     }
 
     val bufImg = dicomImage.toDeepColorBufferedImage(0.01)
-
-    val biCubicImage = BiCubicImage(dicomImage, Some(bufImg))
 
     val trans = new IsoImagePlaneTranslator(rtimage)
 
@@ -98,6 +101,7 @@ object WLMeasureEdges extends Logging {
     if (true) {
       val text = "Collimator Angle: " + Util.fmtDbl(colAngle)
       ImageText.drawTextCenteredAt(gc, dicomImage.width / 2, 40, text)
+      Trace.trace(text)
     }
 
     def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit = {
@@ -111,42 +115,125 @@ object WLMeasureEdges extends Logging {
       gc.drawRect(coarseAoi.x, coarseAoi.y, coarseAoi.width, coarseAoi.height)
     }
 
-    val xCenter = coarseAoi.getCenterX
-    val yCenter = coarseAoi.getCenterY
+    // val biCubicImage = BiCubicImage(dicomImage, Some(bufImg))
+    val biCubicImage = BiCubicImage(dicomImage, None)
 
-    Trace.trace(s"colAngle: $colAngle")
+    /** Coarse center point found by using center of mass of the rectangle containing ball. */
+    val centerPointA = new Point2D.Double(coarseAoi.getCenterX, coarseAoi.getCenterY)
+
+    val resolutionInitial = 0.25 // TODO make configurable
 
     // ------------------------------------------------------------------------------------
 
-    val line0 = WLLine(xCenter, yCenter, colAngle)
+    case class Edges(center: Point2D.Double, size0: Double, size90: Double) {
 
-    val resolution = 0.2 // TODO make configurable
+      // def recenter: Edges = {}
+    }
 
-    val offTheEdge = dicomImage.width + dicomImage.height
+    /**
+      * Make a set of edges centered at the two orthogonal point sets.
+      * @param pointSet0 Parallel to collimator.
+      * @param pointSet90 Perpendicular to collimator.
+      * @return Edges with point centered between the two point sets.
+      */
+    def makeEdges(pointSet0: PointSet, pointSet90: PointSet): Edges = {
+
+      val point0 = pointSet0.line.pointOn(pointSet0.middle)
+      val line90 = WLLine(point0.getX, point0.getY, pointSet0.line.perpendicular.angle)
+
+      val point90 = pointSet90.line.pointOn(pointSet90.middle)
+      val line0 = WLLine(point90.getX, point90.getY, pointSet90.line.perpendicular.angle)
+
+      Edges(line90.intersection(line0), pointSet0.size, pointSet90.size)
+    }
+
+    /**
+      * Find a second approximation of the center point using two thin bands of pixels that cross the coarse
+      * center point, one strip at the collimator angle, and the other perpendicular to the collimator angle.
+      *
+      * The point of using a thin band, is to ensure that there is no interference with the other two edges.
+      * The point of using a band with multiple pixels is to increase the number of pixels being used to
+      * limit the effects of each individual pixel.
+      */
+
+    val edgesB: Edges = {
+
+      val lineB = WLLine(centerPointA.getX, centerPointA.getY, colAngle)
+
+      // specify a number of pixels that will eventually take go off the edge of the imager
+      val offTheEdge = dicomImage.width + dicomImage.height
+
+      // Make a band of pixels parallel to the collimator angle.  This profile of this band can be used to find the edges.
+      val pointSetB0: PointSet = getOffsets(lineB, biCubicImage, pixBandWidth, resolutionInitial, 0, offTheEdge)
+
+      // Same as for pointSetB0, but perpendicular to the collimator angle.
+      val pointSetB90 = getOffsets(lineB.perpendicular, biCubicImage, pixBandWidth, resolutionInitial, 0, offTheEdge)
+
+      val newEdges = makeEdges(pointSetB0, pointSetB90)
+      Trace.trace("newEdges: " + newEdges)
+
+      newEdges
+    }
+
+    // ------------------------------------------------------------------------------------
+
+    // find a third (and final) approximation of the center point using four areas of interest around the
+    // expected positions of the four edges.
+
+    val tol = pixPerMm * Config.WLBoxEdgeTolerance_mm
+    val tol2 = tol * 2
+
+    val resolutionFinal = 0.05
+
+    val edgesC: Edges = {
+      val pointSet0 = {
+        val pixBandWidth = edgesB.size90 - tol2
+        val line0 = WLLine(edgesB.center.getX, edgesB.center.getY, colAngle)
+        getOffsets(line0, biCubicImage, pixBandWidth, resolutionFinal, offsetLo = 0, offsetHi = (edgesB.size0 + tol) / 2)
+      }
+
+      val pointSet90 = {
+        val pixBandWidth = edgesB.size0 - tol2
+        val line90 = WLLine(edgesB.center.getX, edgesB.center.getY, Util.modulo360(colAngle + 90))
+        getOffsets(line90, biCubicImage, pixBandWidth, resolutionFinal, offsetLo = 0, offsetHi = (edgesB.size90 + tol) / 2)
+      }
+
+      val e = makeEdges(pointSet0, pointSet90)
+      Trace.trace(s"edgesC: $e")
+      e
+    }
+
+    /*
+    val lineC = WLLine(centerPointB.getX, centerPointB.getY, colAngle)
 
     // this is the center point that was found by using a thin band of pixels along either line.
-    val centerPointA = {
-      val line0A = {
-        val p = line0.pointOn(getMidPoint(line0, biCubicImage, pixBandWidth, resolution, offTheEdge).middle)
-        WLLine(p.getX, p.getY, line0.perpendicular.angle)
+    val centerPointC = {
+      val lineC0 = {
+        val p = lineB.pointOn(getMidPoint(lineB, biCubicImage, pixBandWidth, resolution, offTheEdge).middle)
+        WLLine(p.getX, p.getY, lineB.perpendicular.angle)
       }
 
       // def getMidPoint(line: WLLine, biCubicImage: BiCubicImage, pixBandWidth: Double, resolution: Double, offTheEdge: Double): PointSet = {
 
-      val line90A = {
-        val perpendicular = line0.perpendicular
+      val lineC90 = {
+        val perpendicular = lineB.perpendicular
         val p = perpendicular.pointOn(getMidPoint(perpendicular, biCubicImage, pixBandWidth, resolution, offTheEdge).middle)
         WLLine(p.getX, p.getY, perpendicular.perpendicular.angle)
       }
 
-      line0A.intersection(line90A)
-    }
+      lineC0.intersection(lineC90)
+     */
 
-    Trace.trace(s" center coarse:  $xCenter  $yCenter")
-    Trace.trace(s" center fine: $centerPointA")
-    Trace.trace(s" dist: " + centerPointA.distance(xCenter, yCenter))
+    // ------------------------------------------------------------------------------------
 
-    val line0A = WLLine(centerPointA.getX, centerPointA.getY, line0.angle)
+    /*
+    if (true) { // Show info for debugging. TODO rm.
+      Trace.trace(s" center coarse:  ${centerPointA.getX}  $centerPointA.getY")
+      Trace.trace(s" center fine: $centerPointB")
+      Trace.trace(s" dist: " + centerPointB.distance(centerPointA.getX, centerPointA.getY))
+
+      val line0A = WLLine(centerPointB.getX, centerPointB.getY, lineB.angle)
+     */
 
     /*
     val pair0 = getMidPoint(line0)
@@ -167,8 +254,6 @@ object WLMeasureEdges extends Logging {
     Util.writeFile(txtFile, dicomImage.pixelsToText)
 
     Trace.trace(s"wrote $pngFile")
-
-    System.exit(0)
   }
 
   def main(args: Array[String]): Unit = {
@@ -176,6 +261,9 @@ object WLMeasureEdges extends Logging {
     Trace.trace
     val file = new File("""D:\tmp\wl\nonorth\1\0005.dcm""")
     val rtimage = new DicomFile(file).attributeList.get
+    val start = System.currentTimeMillis()
     measure(rtimage)
+    val elapsed = System.currentTimeMillis() - start
+    Trace.trace(s"Elapsed: ${Util.elapsedTimeHumanFriendly(elapsed)}")
   }
 }
