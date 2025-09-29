@@ -1,20 +1,39 @@
 package learn
 
+import edu.umro.ImageUtil.ImageUtil
 import org.aqa.BiCubicImage
 import org.aqa.Logging
 import org.aqa.Util
 
 import java.awt.geom.Point2D
+import java.awt.Color
+import javax.vecmath.Point2d
 import scala.annotation.tailrec
 
-case class WLLine(centerX: Double, centerY: Double, angle: Double) extends Logging {
+case class Point(x: Double, y: Double) {
+  // Auxiliary constructor: from javax.vecmath.Point2d
+  def this(p: Point2d) = this(p.x, p.y)
+
+  // Auxiliary constructor: from java.awt.geom.Point2D.Double
+  def this(p: Point2D.Double) = this(p.getX, p.getY)
+
+}
+
+case class WLLine(centerPoint: javax.vecmath.Point2d, angle: Double) extends Logging {
+
+  def this(centerX: Double, centerY: Double, angle: Double) = this(new javax.vecmath.Point2d(centerX, centerY), angle)
+
+  // def this(point: Point2D.Double, angle: Double) = this(point.getX, point.getY, angle)
 
   def this(point: Point2D.Double, angle: Double) = this(point.getX, point.getY, angle)
+
+  val centerX: Double = centerPoint.getX
+  val centerY: Double = centerPoint.getY
 
   private val perpendicularAngle = Util.modulo360(angle + 90)
 
   /** The line perpendicular to this line, with the same center. */
-  def perpendicular: WLLine = WLLine(centerX: Double, centerY: Double, perpendicularAngle)
+  def perpendicular: WLLine = new WLLine(centerPoint, perpendicularAngle)
 
   private val radians: Double = Math.toRadians(Util.modulo360(angle))
 
@@ -70,7 +89,7 @@ case class WLLine(centerX: Double, centerY: Double, angle: Double) extends Loggi
     * @param resolution Distance between samples in pixels.  0.1 would make 10*10 = 100 samples per pixel.
     * @return Profile of the sampled band.
     */
-  def makeProfile(offsetStart: Double, offsetFinish: Double, biCubicImage: BiCubicImage, width: Double, resolution: Double): Seq[Double] = {
+  def makeGradient(offsetStart: Double, offsetFinish: Double, biCubicImage: BiCubicImage, width: Double, resolution: Double): Seq[Double] = {
 
     val positive = offsetFinish > offsetStart
 
@@ -83,8 +102,7 @@ case class WLLine(centerX: Double, centerY: Double, angle: Double) extends Loggi
         (positive && (offset <= offsetFinish)) || //
         ((!positive) && (offset >= offsetFinish))
       ) {
-        val point = pointOn(offset)
-        val line = WLLine(point.getX, point.getY, perpendicularAngle)
+        val line = new WLLine(pointOn(offset), perpendicularAngle)
 
         val count = (width / resolution).round.toInt
 
@@ -106,6 +124,72 @@ case class WLLine(centerX: Double, centerY: Double, angle: Double) extends Loggi
     }
 
     val profile = add(offsetStart, Seq())
+    profile
+  }
+
+  def makeProfile(offsetStart: Double, offsetFinish: Double, color: Color,  biCubicImage: BiCubicImage, width: Double, resolution: Double): Seq[Double] = {
+
+    val positive = offsetFinish > offsetStart
+
+    val increment = if (positive) resolution else -resolution
+
+    val count = ((offsetStart - offsetFinish).abs / resolution).round.toInt
+
+    val startPoint = pointOn(offsetStart)
+
+    val perpendicularLineLo = new WLLine(startPoint, perpendicularAngle)
+    val perpendicularLineHi = new WLLine(pointOn(offsetFinish), perpendicularAngle)
+
+    @tailrec
+    def add(offset: Double, profile: Seq[Double]): Seq[Double] = {
+
+      if (offset <= (width / 2)) {
+
+        val startPoint = perpendicularLineLo.pointOn(offset)
+        val line = new WLLine(startPoint, angle)
+
+        val prof = //
+          (0 until count)
+            .map(i => biCubicImage.get(line.pointOn(i * increment)))
+            .sum / count
+
+        add(offset + resolution, profile :+ prof)
+      } else
+        profile
+
+    }
+
+    if (true) {
+      val pointLoLo = perpendicularLineLo.pointOn(-width / 2)
+      val pointLoHi = perpendicularLineLo.pointOn(width / 2)
+
+      val pointHiLo = perpendicularLineHi.pointOn(-width / 2)
+      val pointHiHi = perpendicularLineHi.pointOn(width / 2)
+
+      val bufImg = WLMeasureEdges.biCub2.get.bufImg.get
+
+      val gc = ImageUtil.getGraphics(bufImg)
+      gc.setColor(color)
+
+      def dl(p1: Point2D.Double, p2: Point2D.Double): Unit = {
+        gc.drawLine( //
+          p1.getX.round.toInt,
+          p1.getY.round.toInt,
+          p2.getX.round.toInt,
+          p2.getY.round.toInt
+        )
+      }
+
+      dl(pointLoLo, pointLoHi)
+      dl(pointHiLo, pointHiHi)
+
+      dl(pointLoLo, pointHiLo)
+      dl(pointLoHi, pointHiHi)
+
+    }
+
+    val profile = add(-width / 2, Seq())
+
     profile
   }
 

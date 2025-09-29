@@ -43,7 +43,9 @@ case class WLMeasureEdges(rtimage: AttributeList, wlMessage: Option[WLMessage]) 
   */
 object WLMeasureEdges extends Logging {
 
-  case class PointSet(line: WLLine, offsetPos: Double, offsetNeg: Double) extends Logging {
+  var biCub2: Option[BiCubicImage] = None
+
+  case class PointSet(line: WLLine, offsetPos: Double, offsetNeg: Double, aoiSizePos: Double, aoiSizeNeg: Double) extends Logging {
     val middle: Double = (offsetPos + offsetNeg) / 2
 
     val size: Double = offsetPos.abs + offsetNeg.abs
@@ -51,30 +53,44 @@ object WLMeasureEdges extends Logging {
     override def toString: String = s"line: $line   offsetPos: $offsetPos   offsetNeg: $offsetNeg   middle: $middle"
   }
 
-  def getOffsets(line: WLLine, biCubicImage: BiCubicImage, pixBandWidth: Double, resolution: Double, offsetLo: Double, offsetHi: Double): PointSet = {
+  def getOffsets(line: WLLine, color: Color, biCubicImage: BiCubicImage, pixBandWidth: Double, resolution: Double, profileResolution: Option[Double] = None, offsetLo: Double, offsetHi: Double)
+      : PointSet = {
 
-    def minPoint(start: Double, finish: Double): Double = {
-      val profile = line.makeProfile(start, finish, biCubicImage, pixBandWidth, resolution)
-      val min = profile.min
-      val Index = profile.indexOf(min)
-      val partialProfile = profile.drop(Index)
-      val halfway = (min + profile.max) / 2
+    case class Measurement(edge_pix: Double, aoiSize_pix: Double) {}
+
+    def minPoint(start: Double, finish: Double): Measurement = {
+      val gradient = line.makeGradient(start, finish, biCubicImage, pixBandWidth, resolution)
+      val min = gradient.min
+      if (profileResolution.isDefined) try { // TODO
+        val s = {
+          val x = gradient.indexOf(min) * resolution
+          if (finish < 0) -x else x
+        }
+        val profile = line.makeProfile(s, finish, color, biCubicImage, pixBandWidth, profileResolution.get)
+        // Trace.trace("profile:\n" + profile.mkString("\n") + "\n\n")
+
+      } catch {
+        case _: Throwable =>
+          Trace.trace("no profile for you")
+      }
+      val index = gradient.indexOf(min)
+      val partialProfile = gradient.drop(index)
+      val halfway = (min + gradient.max) / 2
       val edgeUnscaled = LocateEdge.locateEdge(partialProfile.map(_.toFloat).toIndexedSeq, halfway)
-      val edge = (edgeUnscaled + Index) * resolution
+      val edge = (edgeUnscaled + index) * resolution
       val edgeSigned = if (start < finish) edge else -edge
-      edgeSigned
+      Measurement(edgeSigned, (finish.abs - (index * resolution)))
     }
 
     // val pointSet = PointSet(line, minPoint(offsetLo, offsetHi), minPoint(-offsetLo, -offsetHi))
     val pos = minPoint(offsetLo, offsetHi)
     val neg = minPoint(-offsetLo, -offsetHi)
 
-    val pointSet = PointSet(line, pos, neg)
+    val pointSet = PointSet(line, pos.edge_pix, neg.edge_pix, pos.aoiSize_pix, neg.aoiSize_pix)
     pointSet
   }
 
   def measure(rtimage: AttributeList): Unit = {
-
 
     val file = new File("""D:\tmp\wl\nonorth\1\0005.dcm""")
 
@@ -85,7 +101,9 @@ object WLMeasureEdges extends Logging {
       WLPreprocessImage(rtimage, None).preprocessedImage
     }
 
-    val bufImg = dicomImage.toDeepColorBufferedImage(0.01)
+    // val bufImg = dicomImage.toDeepColorBufferedImage(0.01)
+    val bufImg = dicomImage.toBufferedImage(Color.white)
+    val bufImg2 = dicomImage.toDeepColorBufferedImage(0.01)
 
     val trans = new IsoImagePlaneTranslator(rtimage)
 
@@ -93,30 +111,34 @@ object WLMeasureEdges extends Logging {
 
     val pixBandWidth = 4 * pixPerMm
 
-    // val gc = ImageUtil.getGraphics(bufImg)
-    val gc = bufImg.getGraphics.asInstanceOf[Graphics2D]
-
-    gc.setColor(Color.black)
-
-    if (true) {
-      val text = "Collimator Angle: " + Util.fmtDbl(colAngle)
-      ImageText.drawTextCenteredAt(gc, dicomImage.width / 2, 40, text)
-      Trace.trace(text)
-    }
-
-    def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit = {
-      // Trace.trace(Util.d2i(x1) + " : " + Util.d2i(y1) + " : " + Util.d2i(x2) + " : " + Util.d2i(y2))
-      gc.drawLine(Util.d2i(x1), Util.d2i(y1), Util.d2i(x2), Util.d2i(y2))
-    }
-
     val coarseAoi = WLCoarseBox(dicomImage, trans, wlMsg = None).locate()
 
-    if (true) {
-      gc.drawRect(coarseAoi.x, coarseAoi.y, coarseAoi.width, coarseAoi.height)
+    if (false) {
+      Trace.trace("Adding rectangle.")
+      // val gc = ImageUtil.getGraphics(bufImg)
+      val gc = bufImg.getGraphics.asInstanceOf[Graphics2D]
+
+      gc.setColor(Color.black)
+
+      if (true) {
+        val text = "Collimator Angle: " + Util.fmtDbl(colAngle)
+        ImageText.drawTextCenteredAt(gc, dicomImage.width / 2, 40, text)
+        Trace.trace(text)
+      }
+
+      def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit = {
+        // Trace.trace(Util.d2i(x1) + " : " + Util.d2i(y1) + " : " + Util.d2i(x2) + " : " + Util.d2i(y2))
+        gc.drawLine(Util.d2i(x1), Util.d2i(y1), Util.d2i(x2), Util.d2i(y2))
+      }
+
+      if (true) {
+        gc.drawRect(coarseAoi.x, coarseAoi.y, coarseAoi.width, coarseAoi.height)
+      }
     }
 
-    // val biCubicImage = BiCubicImage(dicomImage, Some(bufImg))
+    biCub2 = Some(BiCubicImage(dicomImage, Some(bufImg2)))
     val biCubicImage = BiCubicImage(dicomImage, None)
+    // val biCubicImage = BiCubicImage(dicomImage, Some(bufImg))
 
     /** Coarse center point found by using center of mass of the rectangle containing ball. */
     val centerPointA = new Point2D.Double(coarseAoi.getCenterX, coarseAoi.getCenterY)
@@ -125,9 +147,19 @@ object WLMeasureEdges extends Logging {
 
     // ------------------------------------------------------------------------------------
 
-    case class Edges(center: Point2D.Double, size0: Double, size90: Double) {
+    case class Edges(pointSet0: PointSet, pointSet90: PointSet) {
 
-      // def recenter: Edges = {}
+      private val point0 = pointSet0.line.pointOn(pointSet0.middle)
+      val line90 = new WLLine(point0, pointSet0.line.perpendicular.angle)
+
+      private val point90 = pointSet90.line.pointOn(pointSet90.middle)
+      val line0 = new WLLine(point90, pointSet90.line.perpendicular.angle)
+
+      val center: Point2D.Double = line90.intersection(line0)
+
+      val size0: Double = pointSet0.size
+
+      val size90: Double = pointSet90.size
     }
 
     /**
@@ -136,15 +168,8 @@ object WLMeasureEdges extends Logging {
       * @param pointSet90 Perpendicular to collimator.
       * @return Edges with point centered between the two point sets.
       */
-    def makeEdges(pointSet0: PointSet, pointSet90: PointSet): Edges = {
-
-      val point0 = pointSet0.line.pointOn(pointSet0.middle)
-      val line90 = WLLine(point0.getX, point0.getY, pointSet0.line.perpendicular.angle)
-
-      val point90 = pointSet90.line.pointOn(pointSet90.middle)
-      val line0 = WLLine(point90.getX, point90.getY, pointSet90.line.perpendicular.angle)
-
-      Edges(line90.intersection(line0), pointSet0.size, pointSet90.size)
+    def XmakeEdges(pointSet0: PointSet, pointSet90: PointSet): Edges = {
+      ??? // Edges( pointSet0.size, pointSet90.size)
     }
 
     /**
@@ -158,18 +183,18 @@ object WLMeasureEdges extends Logging {
 
     val edgesB: Edges = {
 
-      val lineB = WLLine(centerPointA.getX, centerPointA.getY, colAngle)
+      val lineB = new WLLine(centerPointA, colAngle)
 
       // specify a number of pixels that will eventually take go off the edge of the imager
       val offTheEdge = dicomImage.width + dicomImage.height
 
       // Make a band of pixels parallel to the collimator angle.  This profile of this band can be used to find the edges.
-      val pointSetB0: PointSet = getOffsets(lineB, biCubicImage, pixBandWidth, resolutionInitial, 0, offTheEdge)
+      val pointSetB0: PointSet = getOffsets(lineB, Color.white, biCubicImage, pixBandWidth, resolutionInitial, profileResolution = None, 0, offTheEdge)
 
       // Same as for pointSetB0, but perpendicular to the collimator angle.
-      val pointSetB90 = getOffsets(lineB.perpendicular, biCubicImage, pixBandWidth, resolutionInitial, 0, offTheEdge)
+      val pointSetB90 = getOffsets(lineB.perpendicular, Color.black, biCubicImage, pixBandWidth, resolutionInitial, profileResolution = None, 0, offTheEdge)
 
-      val newEdges = makeEdges(pointSetB0, pointSetB90)
+      val newEdges = Edges(pointSetB0, pointSetB90)
       Trace.trace("newEdges: " + newEdges)
 
       newEdges
@@ -182,23 +207,24 @@ object WLMeasureEdges extends Logging {
 
     val tol = pixPerMm * Config.WLBoxEdgeTolerance_mm
     val tol2 = tol * 2
+    val tol3 = tol * 3
 
     val resolutionFinal = 0.05
 
     val edgesC: Edges = {
       val pointSet0 = {
         val pixBandWidth = edgesB.size90 - tol2
-        val line0 = WLLine(edgesB.center.getX, edgesB.center.getY, colAngle)
-        getOffsets(line0, biCubicImage, pixBandWidth, resolutionFinal, offsetLo = 0, offsetHi = (edgesB.size0 + tol) / 2)
+        val line0 = new WLLine(edgesB.center, colAngle)
+        getOffsets(line0, Color.white, biCubicImage, pixBandWidth, resolutionFinal, profileResolution = Some(0.25), offsetLo = 0, offsetHi = (edgesB.size0 + tol3) / 2)
       }
 
       val pointSet90 = {
         val pixBandWidth = edgesB.size0 - tol2
-        val line90 = WLLine(edgesB.center.getX, edgesB.center.getY, Util.modulo360(colAngle + 90))
-        getOffsets(line90, biCubicImage, pixBandWidth, resolutionFinal, offsetLo = 0, offsetHi = (edgesB.size90 + tol) / 2)
+        val line90 = new WLLine(edgesB.center, Util.modulo360(colAngle + 90))
+        getOffsets(line90, Color.black, biCubicImage, pixBandWidth, resolutionFinal, profileResolution = Some(0.25), offsetLo = 0, offsetHi = (edgesB.size90 + tol3) / 2)
       }
 
-      val e = makeEdges(pointSet0, pointSet90)
+      val e = Edges(pointSet0, pointSet90)
       Trace.trace(s"edgesC: $e")
       e
     }
@@ -248,7 +274,7 @@ object WLMeasureEdges extends Logging {
      */
 
     val pngFile = new File(file.getParent, file.getName.replace("dcm", "png"))
-    Util.writePng(bufImg, pngFile)
+    Util.writePng(bufImg2, pngFile)
 
     val txtFile = new File(file.getParent, file.getName.replace(".dcm", "_.txt"))
     Util.writeFile(txtFile, dicomImage.pixelsToText)

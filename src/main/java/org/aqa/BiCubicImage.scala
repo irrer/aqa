@@ -1,6 +1,7 @@
 package org.aqa
 
 import edu.umro.ImageUtil.DicomImage
+import edu.umro.ScalaUtil.Trace
 import org.apache.commons.math3.analysis.interpolation.PiecewiseBicubicSplineInterpolatingFunction
 import org.apache.commons.math3.analysis.interpolation.PiecewiseBicubicSplineInterpolator
 
@@ -25,8 +26,16 @@ case class BiCubicImage(dicomImage: DicomImage, bufImg: Option[BufferedImage] = 
     * @return Interpolated image value at given coordinates.
     */
   def get(x: Double, y: Double): Double = {
-    if (bufImg.isDefined)
-      bufImg.get.setRGB(x.round.toInt, y.round.toInt, 0)
+    if (bufImg.isDefined) {
+      if ((x > 700) && (y > 700))
+        Trace.trace()
+      try {
+        bufImg.get.setRGB(x.round.toInt, y.round.toInt, 0)
+      } catch {
+        case _: Throwable =>
+          Trace.trace("x,y: " + x + ", " + y)
+      }
+    }
     function.value(y, x)
   }
 

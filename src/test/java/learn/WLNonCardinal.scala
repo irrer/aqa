@@ -44,7 +44,7 @@ case class Line(centerX: Double, centerY: Double, angle: Double) extends Logging
   private val perpendicularAngle = Util.modulo360(angle + 90)
 
   /** The line perpendicular to this line, with the same center. */
-  def perpendicular: WLLine = WLLine(centerX: Double, centerY: Double, perpendicularAngle)
+  def perpendicular: WLLine = new WLLine(centerX: Double, centerY: Double, perpendicularAngle)
 
   private val radians: Double = Math.toRadians(Util.modulo360(angle))
 
@@ -97,7 +97,7 @@ case class Line(centerX: Double, centerY: Double, angle: Double) extends Logging
     def add(offset: Double, profile: Seq[Double]): Seq[Double] = {
       if (offset <= offsetHi) {
         val point = pointOn(offset)
-        val line = WLLine(point.getX, point.getY, perpendicularAngle)
+        val line = new WLLine(point, perpendicularAngle)
 
         val count = (width / resolution).round.toInt
 
@@ -161,7 +161,6 @@ object WLNonCardinal {
 
     val pixBandWidth = 2 * pixPerMm
 
-
     // val gc = ImageUtil.getGraphics(bufImg)
     val gc = bufImg.getGraphics.asInstanceOf[Graphics2D]
 
@@ -190,7 +189,7 @@ object WLNonCardinal {
     val yCenter = coarseAoi.getCenterY
 
     if (true) {
-      val line = WLLine(xCenter, yCenter, colAngle)
+      val line = new WLLine(xCenter, yCenter, colAngle)
       drawLineP(line.pointOn(100), line.pointOn(-100))
 
       val pLine = line.perpendicular
@@ -199,7 +198,7 @@ object WLNonCardinal {
 
       (0 until 20).foreach(i => {
         val p = line.pointOn(i * 4)
-        val l = WLLine(p.getX, p.getY, pLine.angle)
+        val l = new WLLine(p, pLine.angle)
 
         val lo = l.pointOn(-pixBandWidth)
         val hi = l.pointOn(pixBandWidth)
@@ -210,7 +209,7 @@ object WLNonCardinal {
       var resolution = 1.0
       while (resolution > 0.1) {
         val start = System.currentTimeMillis()
-        val profile = line.makeProfile(0, 2000, biCubicImage, pixBandWidth, resolution)
+        val profile = line.makeGradient(0, 2000, biCubicImage, pixBandWidth, resolution)
         val elapsed = "%8d".format(System.currentTimeMillis() - start)
 
         val min = profile.min
