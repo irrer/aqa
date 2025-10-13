@@ -80,8 +80,8 @@ class SSSNCImport(extendedData: ExtendedData, isoCheck: WLIsoCheck, collimator: 
         {makeCsvRow(2, "CBCT - Gantry Iso X (mm)", -isoCheck.isoX)}
         {makeCsvRow(3, s"CBCT - Gantry Iso Y (mm)", -isoCheck.isoY)}
         {makeCsvRow(4, "CBCT - Gantry Iso Z (mm)", -isoCheck.isoZ)}
-        {makeCsvRow(5, "Table - Gantry Iso X (mm)", if (hasTable) isoTable.get.get_IsoTable_X_Optimized - isoCheck.isoX else Double.NaN)}
-        {makeCsvRow(6, "Table - Gantry Iso Z (mm)", if (hasTable) isoTable.get.get_IsoTable_Z_Optimized - isoCheck.isoZ else Double.NaN)}
+        {makeCsvRow(5, "Table + Gantry Iso X (mm)", if (hasTable) isoTable.get.get_IsoTable_X_Optimized + isoCheck.isoX else Double.NaN)}
+        {makeCsvRow(6, "Table + Gantry Iso Z (mm)", if (hasTable) isoTable.get.get_IsoTable_Z_Optimized + isoCheck.isoZ else Double.NaN)}
         {makeCsvRow(7, "Gantry Flex (mm)", isoCheck.gantryFlex)}
         {makeCsvRow(8, "Col-Gantry misalignment (mm)", isoCheck.collGantryMisalign)}
         {makeCsvRow(9, "MLC offset (mm)", isoCheck.mlcOffsetY)}
