@@ -64,6 +64,7 @@ object AQA extends Logging {
         new PeriodicRestart(Config.RestartTime)
         FileCleanup.cleanupThread(30 * 1000)
         DicomSeries.fixRedundantInBackground(delFlag = true, delay_ms = 30 * 1000)
+        Util.loadRestletAnnotationUtils() // force the Restlet annotation utils to be loaded to avoid a build error.
         logger.info("AQA service started")
       } else
         logger.error("Could not validate configuration")

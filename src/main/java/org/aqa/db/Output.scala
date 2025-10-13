@@ -23,6 +23,7 @@ import org.aqa.db.Db.driver.api._
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.GetSeries
 import org.aqa.web.WebServer
+import views.html.defaultpages.error
 
 import java.io.File
 import java.sql.Timestamp
@@ -160,9 +161,30 @@ object Output extends Logging {
   val valid = Output.query.filter(o => o.dataValidity === DataValidity.valid.toString)
 
   def get(outputPK: Long): Option[Output] = {
-    val action = for { output <- Output.query if output.outputPK === outputPK } yield output
+    val action = for {output <- Output.query if output.outputPK === outputPK} yield output
     val list = Db.run(action.result)
     list.headOption
+  }
+
+  def verifyOutput(outputPK: Long, source: String): Boolean = {
+    val timeout = System.currentTimeMillis() + 5000 // wait up to 5 seconds for the output to exist
+    val interval_ms = 250
+
+    def exists(): Boolean = {
+      val e = Output.get(outputPK).isDefined
+      if (!e)
+        logger.error(s"Source: $source Output does not exist: $outputPK")
+      e
+    }
+
+    if (exists())
+      true
+    else {
+      while ((timeout > System.currentTimeMillis()) && (!exists())) {
+        Thread.sleep(interval_ms)
+      }
+      exists()
+    }
   }
 
   /**
