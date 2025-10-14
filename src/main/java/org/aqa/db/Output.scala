@@ -42,7 +42,7 @@ case class Output(
     status: String, // termination status
     dataValidity: String
 ) // whether the data is valid or otherwise
-{
+  extends Logging {
 
   /**
     * Insert into table, returning the row that was inserted.  Note that outputPK in the return value is defined.
@@ -160,10 +160,39 @@ object Output extends Logging {
   val valid = Output.query.filter(o => o.dataValidity === DataValidity.valid.toString)
 
   def get(outputPK: Long): Option[Output] = {
-    val action = for { output <- Output.query if output.outputPK === outputPK } yield output
+    val action = for {output <- Output.query if output.outputPK === outputPK} yield output
     val list = Db.run(action.result)
     list.headOption
   }
+
+  /**
+   * Verify that the given output row exists.  If not, retry a few times, then give up.
+   *
+   * @param outputPK Check this output.
+   * @param source   Identifies caller.
+   * @return True if output exists.
+   */
+  def verifyOutput(outputPK: Long, source: String): Boolean = {
+    val timeout = System.currentTimeMillis() + 5000 // wait up to 5 seconds for the output to exist
+    val interval_ms = 250
+
+    def exists(): Boolean = {
+      val e = Output.get(outputPK).isDefined
+      if (!e)
+        logger.error(s"Source: $source Output does not exist: $outputPK")
+      e
+    }
+
+    if (exists())
+      true
+    else {
+      while ((timeout > System.currentTimeMillis()) && (!exists())) {
+        Thread.sleep(interval_ms)
+      }
+      exists()
+    }
+  }
+
 
   /**
     * Find the output given the name of its directory.  This parameter must exactly match the <code>output.directory</code> field.
