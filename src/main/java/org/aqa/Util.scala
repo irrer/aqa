@@ -1657,6 +1657,16 @@ object Util extends Logging {
       data.takeRight(total)
   }
 
+  /**
+   * Force the build process to load the restlet annotation utils.
+   * Executing this function does nothing and has no side effects.
+   */
+  def loadRestletAnnotationUtils(): Unit = {
+    if (System.currentTimeMillis() == -1)
+      logger.info("AnnotationUtils.getInstance(): " + org.restlet.engine.resource.AnnotationUtils.getInstance())
+  }
+
+
   def main(args: Array[String]): Unit = {
     Config.validate
 
