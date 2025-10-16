@@ -82,7 +82,7 @@ case class PSMBeam(
       "    beamResponseNormalized: " + Util.fmtDbl(beamResponseNormalized)
   }
 
-  def rawImage: Double = wholeDetector_cu.get / floodField_cu.get
+  def rawImage: Double = wholeDetector_cu.get * floodField_cu.get // multiply
 
   def psm: Double = rawImage / beamResponseNormalized.get
 
