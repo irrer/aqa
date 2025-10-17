@@ -23,11 +23,11 @@ import org.aqa.db.Db.driver.api._
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.GetSeries
 import org.aqa.web.WebServer
-import views.html.defaultpages.error
 
 import java.io.File
 import java.sql.Timestamp
 import java.util.Date
+import scala.annotation.tailrec
 
 case class Output(
     outputPK: Option[Long], // primary key
@@ -42,17 +42,49 @@ case class Output(
     machinePK: Option[Long], // optionally supplied by analysis procedure to indicate treatment machine
     status: String, // termination status
     dataValidity: String
-) // whether the data is valid or otherwise
-{
+    ) // whether the data is valid or otherwise
+  extends Logging {
 
   /**
-    * Insert into table, returning the row that was inserted.  Note that outputPK in the return value is defined.
-    */
-  def insert: Output = {
+   * Insert into table, returning the row that was inserted.  Note that outputPK in the return value is defined.
+   */
+  def insertOnce: Output = {
+    logger.info(s"Inserting output record: ${toString()}")
     val insertQuery = Output.query returning Output.query.map(_.outputPK) into ((output, outputPK) => output.copy(outputPK = Some(outputPK)))
     val action = insertQuery += this
     val result = Db.run(action)
+    println(action.statements.mkString("\n    "))
+    logger.info(s"Result of output: ${result.toString()}")
+    try {
+      Output.verifyOutput(result.outputPK.get, "Output.insert")
+    }
+    catch {
+      case t: Throwable =>
+        logger.error("Output was created with empty outputPK? " + fmtEx(t))
+    }
     result
+  }
+
+  /**
+   * Perform insert with retry.
+   * @return Inserted output row.
+   */
+  def insert: Output = {
+    @tailrec
+    def doit(count: Int): Output = {
+      val o = insertOnce
+      if (o.outputPK.isDefined && Output.get(o.outputPK.get).isDefined)
+        o
+      else {
+        logger.error(s"Retrying Output insert into database. output: ${toString}")
+        if (count > 0)
+          doit(count - 1)
+        else
+          o
+      }
+    }
+
+    doit(3)
   }
 
   def getUser: Option[User] = if (userPK.isDefined) User.get(userPK.get) else None
