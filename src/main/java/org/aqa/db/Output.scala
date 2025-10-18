@@ -27,7 +27,6 @@ import org.aqa.web.WebServer
 import java.io.File
 import java.sql.Timestamp
 import java.util.Date
-import scala.annotation.tailrec
 
 case class Output(
     outputPK: Option[Long], // primary key
@@ -42,49 +41,17 @@ case class Output(
     machinePK: Option[Long], // optionally supplied by analysis procedure to indicate treatment machine
     status: String, // termination status
     dataValidity: String
-    ) // whether the data is valid or otherwise
-  extends Logging {
+) // whether the data is valid or otherwise
+{
 
   /**
-   * Insert into table, returning the row that was inserted.  Note that outputPK in the return value is defined.
-   */
-  def insertOnce: Output = {
-    logger.info(s"Inserting output record: ${toString()}")
+    * Insert into table, returning the row that was inserted.  Note that outputPK in the return value is defined.
+    */
+  def insert: Output = {
     val insertQuery = Output.query returning Output.query.map(_.outputPK) into ((output, outputPK) => output.copy(outputPK = Some(outputPK)))
     val action = insertQuery += this
     val result = Db.run(action)
-    println(action.statements.mkString("\n    "))
-    logger.info(s"Result of output: ${result.toString()}")
-    try {
-      Output.verifyOutput(result.outputPK.get, "Output.insert")
-    }
-    catch {
-      case t: Throwable =>
-        logger.error("Output was created with empty outputPK? " + fmtEx(t))
-    }
     result
-  }
-
-  /**
-   * Perform insert with retry.
-   * @return Inserted output row.
-   */
-  def insert: Output = {
-    @tailrec
-    def doit(count: Int): Output = {
-      val o = insertOnce
-      if (o.outputPK.isDefined && Output.get(o.outputPK.get).isDefined)
-        o
-      else {
-        logger.error(s"Retrying Output insert into database. output: ${toString}")
-        if (count > 0)
-          doit(count - 1)
-        else
-          o
-      }
-    }
-
-    doit(3)
   }
 
   def getUser: Option[User] = if (userPK.isDefined) User.get(userPK.get) else None
@@ -193,30 +160,9 @@ object Output extends Logging {
   val valid = Output.query.filter(o => o.dataValidity === DataValidity.valid.toString)
 
   def get(outputPK: Long): Option[Output] = {
-    val action = for {output <- Output.query if output.outputPK === outputPK} yield output
+    val action = for { output <- Output.query if output.outputPK === outputPK } yield output
     val list = Db.run(action.result)
     list.headOption
-  }
-
-  def verifyOutput(outputPK: Long, source: String): Boolean = {
-    val timeout = System.currentTimeMillis() + 5000 // wait up to 5 seconds for the output to exist
-    val interval_ms = 250
-
-    def exists(): Boolean = {
-      val e = Output.get(outputPK).isDefined
-      if (!e)
-        logger.error(s"Source: $source Output does not exist: $outputPK")
-      e
-    }
-
-    if (exists())
-      true
-    else {
-      while ((timeout > System.currentTimeMillis()) && (!exists())) {
-        Thread.sleep(interval_ms)
-      }
-      exists()
-    }
   }
 
   /**

@@ -53,7 +53,6 @@ case class BBbyCBCT(
 
   //noinspection SpellCheckingInspection
   def insert: BBbyCBCT = {
-    Output.verifyOutput(outputPK, "BBbyCBCT.insert")
     val insertQuery = BBbyCBCT.query returning BBbyCBCT.query.map(_.bbByCBCTPK) into ((bbByCBCT, bbByCBCTPK) => bbByCBCT.copy(bbByCBCTPK = Some(bbByCBCTPK)))
     val action = insertQuery += this
     val result = Db.run(action)
@@ -193,7 +192,7 @@ object BBbyCBCT {
   }
 
   def insertSeq(list: Seq[BBbyCBCT]): Unit = {
-    list.foreach(_.insert)
+    list.foreach(_.insertOrUpdate())
   }
 
   case class BBbyCBCTHistory(date: Date, bbByCBCT: BBbyCBCT) {

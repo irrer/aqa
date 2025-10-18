@@ -35,10 +35,7 @@ case class OutputFiles(
 ) // The files in zip form created by the process
 {
 
-  def insert(): Unit = {
-    Output.verifyOutput(outputPK, "OutputFiles.insert")
-    Db.run(OutputFiles.query += this)
-  }
+  def insert(): Unit = Db.run(OutputFiles.query += this)
 
 }
 

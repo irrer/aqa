@@ -60,7 +60,6 @@ case class BBbyEPID(
 
   //noinspection SpellCheckingInspection
   def insert: BBbyEPID = {
-    Output.verifyOutput(outputPK, "BBbyEPID.insert")
     val insertQuery = BBbyEPID.query returning BBbyEPID.query.map(_.bbByEPIDPK) into ((bbByEPID, bbByEPIDPK) => bbByEPID.copy(bbByEPIDPK = Some(bbByEPIDPK)))
     val action = insertQuery += this
     val result = Db.run(action)
@@ -215,7 +214,7 @@ object BBbyEPID extends Logging {
   }
 
   def insertSeq(list: Seq[BBbyEPID]): Unit = {
-    list.foreach(_.insert)
+    list.foreach(_.insertOrUpdate())
   }
 
   case class BBbyEPIDHistory(date: Date, bbByEPID: BBbyEPID) {
