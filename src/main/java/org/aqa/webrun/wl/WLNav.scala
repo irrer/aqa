@@ -11,8 +11,12 @@ import org.aqa.web.WebUtil._
 import org.aqa.web.WebUtil.SubUrlRoot
 import org.aqa.Config
 import org.aqa.db.CachedUser
+import org.aqa.db.IsoCheck
 import org.aqa.db.OutputApproval
 import org.aqa.db.User
+import org.aqa.db.WinstonLutz
+import org.aqa.webrun.wl.isoCheck.WLIsoTable
+import org.aqa.webrun.wl.isoCheck.WLMap
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -185,21 +189,45 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
         <a title="Data analysis time" href={href}> {dateText}</a>
       }
 
+      val wlList = WinstonLutz.getByOutput(output.outputPK.get).sortBy(_.dataDate.getTime)
+
+      val beams: String = {
+        wlList.size.toString
+      }
+
+      val isoCheckHtml: String = {
+        val isoCheck = IsoCheck.getByOutput(output.outputPK.get)
+        if (isoCheck.nonEmpty) {
+          val wlMap = new WLMap(wlList)
+
+          val wlIsoTable = WLIsoTable.make(wlMap)
+
+          // one of the beams is used for both table and non-table calculations, so use 8 insteat of 9.
+          val size = if (wlIsoTable.isDefined) wlIsoTable.get.beamList.size + 8 else 9
+          s"IsoCheck $size"
+        } else
+          ""
+      }
+
       <tr>
         <td style={padding}>{link}</td>
         <td style={padding}>{approvalElem}</td>
         <td style={padding}>{WebUtil.wrapAlias(machineName)}</td>
         <td style={padding}>{OutputList.redoUrl(output.outputPK.get)}</td>
+        <td style={padding}>{beams}</td>
+        <td style={padding}>{isoCheckHtml}</td>
       </tr>
     }
 
     <div>
-      <table style="text-align: center;">
+      <table style="text-align: left;">
         <tr style="text-align: center;">
           <td style={padding}><b>Date</b></td>
           <td style={padding}><b>Approval</b></td>
           <td style={padding}><b>Machine</b></td>
-          <td style={padding}></td>
+          <td style={padding}><b>Machine</b></td>
+          <td style={padding}><b>No. of Beams</b></td>
+          <td style={padding}><b>IsoCheck</b></td>
         </tr>
         {dataList.map(toRow)}
       </table>
