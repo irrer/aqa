@@ -97,7 +97,10 @@ object RunProcedure extends Logging {
             "    Current number of simultaneous processes: " + numProc +
             "    Elapsed wait time in ms: " + waitElapsed
         )
+        val start = System.currentTimeMillis()
         val result = func()
+        val elapsed = System.currentTimeMillis() - start
+        logger.info(s"Done with processing.     Current number of simultaneous processes: $numProc     elapsed time in ms: $elapsed")
         result
       } catch {
         case t: Throwable =>
@@ -105,6 +108,7 @@ object RunProcedure extends Logging {
           throw t
       } finally {
         Config.procedureLock.release()
+        logger.info("Released semaphore.")
         Util.garbageCollect()
       }
     } else {
