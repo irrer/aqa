@@ -221,7 +221,7 @@ class WLNav extends Restlet with SubUrlRoot with Logging {
 
     <div>
       <table style="text-align: left;">
-        <tr style="text-align: center;">
+        <tr>
           <td style={padding}><b>Date</b></td>
           <td style={padding}><b>Approval</b></td>
           <td style={padding}><b>Machine</b></td>
