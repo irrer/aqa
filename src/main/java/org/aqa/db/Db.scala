@@ -127,6 +127,28 @@ object Db extends Logging {
 
   private val dbSync = "Synchronize the database 4329832097432095743250743287325987687698769876"
 
+  /**
+    * Perform a trivial operation to verify that the connection to the database and the database itself are operating properly.
+    * @return True if the database operation succeeded.
+    */
+  private def dbOk(): Boolean = {
+    val status = {
+      try {
+        val dbAction = sql"select 2 + 3".as[Int]
+        val select1 = db.run(dbAction)
+        val result = Await.result(select1, TIMEOUT)
+        val ok = (result.size == 1) && (result.head == 5)
+        ok
+      } catch {
+        case t: Throwable =>
+          logger.error(s"Database connection has failed. Exception: ${fmtEx(t)}")
+          false
+      }
+    }
+    logger.info(s"Database operating status (true is good, false is bad): $status")
+    status
+  }
+
   def run[R](op: DBIOAction[R, NoStream, Nothing]): R =
     dbSync.synchronized {
 
@@ -162,9 +184,19 @@ object Db extends Logging {
       } catch {
         case ex: Throwable =>
           val stackTrace = fmtEx(new RuntimeException("Db.run stack trace from Slick internal error"))
-          val msg = "Error from Slick database connection: " + fmtEx(ex) + "\nAQA source stack trace:" + stackTrace
+          val msg = "Error from Slick database: " + fmtEx(ex) + "\nAQA source stack trace:" + stackTrace
           logger.error(msg)
-          throw ex
+
+          if (dbOk()) {
+            // The database is operating fine, so it must be the caller's fault.
+            throw ex
+          } else {
+            // database is not working.  Restart the service.
+            logger.error(s"Unable to connect to database.  Restarting service.")
+            Thread.sleep(30 * 1000) // give database time to recover.
+            System.exit(1)
+            null.asInstanceOf[R] // this will never be executed, but satisfies the compiler's type checking.
+          }
       }
 
     }
