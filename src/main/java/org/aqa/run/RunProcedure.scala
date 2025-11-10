@@ -64,6 +64,10 @@ import scala.util.Try
 import scala.xml.Elem
 import scala.xml.XML
 
+/**
+  * Run a procedure.  This handled all types of procedures, including those with DICOM and XML.
+  *
+  */
 object RunProcedure extends Logging {
 
   private val runButtonName = "Run"
@@ -71,6 +75,12 @@ object RunProcedure extends Logging {
 
   private val outputSubDirNamePrefix = "output_"
 
+  /*
+   * For internal testing, the following was used to upload a data set:
+   * cmd command for testing on local machine:
+   * curl.exe --insecure --user MyUserId:MyPassword --form uploadFile=@2025-11-07T06-16-48-799_size_764504_BB_by_EPID-0.1__TB1_OBI_2024Q1_RTIMAGE_2.zip;type=application/zip https://localhost:9443/run/BBbyEPID_7?Run=Run^&AutoUpload=true
+   */
+  
   /**
     * Perform a function but wrap it in a semaphore to limit the number of resources consumed.
     *
@@ -154,7 +164,7 @@ object RunProcedure extends Logging {
   /**
     * Make the string nice for using as a file name, replacing invalid characters (like /) with _, and all blanks with _, and appending the given primary key.
     */
-  private def niceifyAndAppendPK(text: String, pk: Long): String = makeValidName(text + "_" + pk.toString)
+  private def makeNiceAndAppendPK(text: String, pk: Long): String = makeValidName(text + "_" + pk.toString)
 
   private def makeValidName(text: String): String = FileUtil.replaceInvalidFileNameCharacters(text, '_').replace(' ', '_')
 
@@ -175,8 +185,8 @@ object RunProcedure extends Logging {
       List(
         institutionFileName(machine),
         makeValidName(machine.fileName),
-        niceifyAndAppendPK(procedure.fileName, procedure.procedurePK.get),
-        niceifyAndAppendPK(Util.currentTimeAsFileName, inputPK)
+        makeNiceAndAppendPK(procedure.fileName, procedure.procedurePK.get),
+        makeNiceAndAppendPK(Util.currentTimeAsFileName, inputPK)
       )
 
     val inputDir: File = nameHierarchy.foldLeft(Config.resultsDirFile)((d, name) => new File(d, name))
@@ -264,7 +274,7 @@ object RunProcedure extends Logging {
   }
 
   /**
-    * Make sure that all of the DICOM series are saved in the database.
+    * Make sure that all the DICOM series are saved in the database.
     *
     * There are two situations:
     *
@@ -335,7 +345,7 @@ object RunProcedure extends Logging {
           // should kill the running procedure, but there is no good way to do that.
           saveResults(ProcedureStatus.timeout, extendedData)
       }
-      // if any post processing is to be done, do it here
+      // if any post-processing is to be done, do it here
       runTrait.postRun(extendedData, runReq)
       AnonymousTranslate.clearCache(extendedData.machine.institutionPK) // invalidate cached alias translation values in case anything was added or changed.
       logger.info(s"Unlocking output ${extendedData.outputPK}")
@@ -380,7 +390,7 @@ object RunProcedure extends Logging {
       val retryInterval_ms = 5 * 1000
       @tailrec
       def zipFiles(count: Int): Array[Byte] = {
-        // Only try this a finite number of times.  Also the output directory must exist.
+        // Only try this a finite number of times.  Also, the output directory must exist.
         if ((count > 0) && extendedData.output.dir.isDirectory) {
           try {
             extendedData.output.makeZipOfFiles
@@ -406,7 +416,7 @@ object RunProcedure extends Logging {
   /**
     * Make a new input for the incoming data.  Generally this is purely new data, but there is the possibility that data that has
     * already been processed will be re-processed.  In that case, treat the data as new, except for RTPLANS, which may be used by
-    * multiple tests.  Afterwards the old version of the Input will be deleted.  The intention is to allow a complete redo of a
+    * multiple tests.  Afterward the old version of the Input will be deleted.  The intention is to allow a complete redo of a
     * data set, and for there to be only one set of analysis results for a given set of data.
     */
   private def makeNewInput(
@@ -477,7 +487,7 @@ object RunProcedure extends Logging {
         real
       }
 
-      // list of de-anonyimized radiation machine names.
+      // list of de-anonymized radiation machine names.
       val realList = RadiationMachineNameList.filter(_.nonEmpty).map(deAnon)
 
       // find machines that have a name that matches one on the realList
