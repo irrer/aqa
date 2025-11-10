@@ -223,9 +223,11 @@ object RunProcedure extends Logging {
   private def deleteInput(inputPK: Long): Unit = {
     Input.get(inputPK) match {
       case Some(input) =>
+        // it is important to delete the input before deleting the files.  That way if it has to wait for an
+        // output to become unlocked, the output's files are preserved until processing is finished.
+        Input.delete(inputPK)
         Util.deleteFileTreeSafely(input.dir)
         logger.info("Deleted input dir " + input.dir + " and its child output dirs.")
-        Input.delete(inputPK)
       case _ => ;
     }
   }
@@ -336,6 +338,8 @@ object RunProcedure extends Logging {
       // if any post processing is to be done, do it here
       runTrait.postRun(extendedData, runReq)
       AnonymousTranslate.clearCache(extendedData.machine.institutionPK) // invalidate cached alias translation values in case anything was added or changed.
+      logger.info(s"Unlocking output ${extendedData.outputPK}")
+      Output.unlockOutput(extendedData.outputPK)
       Util.garbageCollect()
     }
 
@@ -546,7 +550,7 @@ object RunProcedure extends Logging {
         status = ProcedureStatus.running.toString,
         dataValidity = DataValidity.valid.toString
       )
-      val out = tempOutput.insert
+      val out = Output.insertAndLock(tempOutput)
       out
     }
 
@@ -713,7 +717,7 @@ object RunProcedure extends Logging {
           // Keep the validity state of the old data.  This is most likely what the user wants, especially in the case of bulk re-do's.
           dataValidity = oldOutput.get.dataValidity
         )
-        val out = tempOutput.insert
+        val out = Output.insertAndLock(tempOutput)
         out
       }
 

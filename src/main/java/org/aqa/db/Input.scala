@@ -158,17 +158,23 @@ object Input extends Logging {
   def delete(inputPK: Long): Int = {
     get(inputPK) match {
       case Some(input) =>
+        val lockedOutputList = Output.getByInputPKSet(Set(inputPK)).map(_.outputPK.get).filter(Output.outputIsLocked)
+        if (lockedOutputList.nonEmpty)
+          logger.info("waiting for output(s) to be unlocked: " + lockedOutputList.mkString("  "))
+        lockedOutputList.foreach(Output.waitForOutputToBeUnlocked)
+
         logger.info("Deleting input: " + input)
+        val q = query.filter(_.inputPK === inputPK)
+        val start = System.currentTimeMillis
+        val action = q.delete
+        val count = Db.run(action)
+        val elapsed = System.currentTimeMillis - start
+        logger.info("input has been deleted: " + inputPK + "    Elapsed ms: " + elapsed)
+        count
       case None =>
-        logger.info("inputPK " + inputPK + " does not exist but still attempting to delete it")
+        logger.info("inputPK " + inputPK + " does not exist.")
+        0
     }
-    val q = query.filter(_.inputPK === inputPK)
-    val start = System.currentTimeMillis
-    val action = q.delete
-    val count = Db.run(action)
-    val elapsed = System.currentTimeMillis - start
-    logger.info("input has been deleted: " + inputPK + "    Elapsed ms: " + elapsed)
-    count
   }
 
   /**

@@ -42,7 +42,7 @@ case class Output(
     status: String, // termination status
     dataValidity: String
 ) // whether the data is valid or otherwise
-  extends Logging {
+    extends Logging {
 
   /**
     * Insert into table, returning the row that was inserted.  Note that outputPK in the return value is defined.
@@ -336,7 +336,110 @@ object Output extends Logging {
     list
   }
 
+  /**
+    * List of outputs that are locked.  Outputs are locked when first created, to protect against another
+    * thread deleting them before processing is finished.  If they were prematurely deleted, then it would
+    * cause misleading exceptions, such as failure of a database operation or failure to write a file to disk.
+    */
+  private val lockedOutputList: scala.collection.mutable.Set[Long] = scala.collection.mutable.Set[Long]()
+
+  /** If an output is not unlocked within this time, then unlock it anyway.  This is a guard against a
+    *  process failing to unlock an output when it should.
+    *  */
+  private val maxLockTime_ms = 5 * 60 * 1000
+
+  /**
+    * Determine if an output is locked.
+    * @param outputPK For this output.
+    * @return True if locked.
+    */
+  def XisLocked(outputPK: Long): Boolean = {
+    lockedOutputList.synchronized {
+      lockedOutputList.contains(outputPK)
+    }
+  }
+
+  /**
+    * Unlock an output.
+    * @param outputPK This output.
+    */
+  def unlockOutput(outputPK: Long): Unit = {
+    lockedOutputList.synchronized {
+      if (lockedOutputList.contains(outputPK)) {
+        lockedOutputList.remove(outputPK)
+        logger.info(s"Unlocked output $outputPK")
+      }
+    }
+  }
+
+  /**
+    * Insert an output row in the database and lock it against premature deletion.  Doing
+    * this in a synchronized way protects against a race condition.
+    *
+    * Also, start a thread that will eventually unlock the output no matter what.
+    *
+    * @param output For this output.
+    * @return The new output, with a valid primary key outputPK.
+    */
+  def insertAndLock(output: Output): Output = {
+    val newOutput = lockedOutputList.synchronized {
+      val newOutput = output.insert
+      val outputPK = newOutput.outputPK.get
+      lockedOutputList.add(outputPK)
+      logger.info(s"Locked output $outputPK")
+      newOutput
+    }
+
+    case class Unlocker(outPK: Long) extends Runnable {
+      override def run(): Unit = {
+        logger.info(s"Starting background thread to unlock $outPK at ${new Date(System.currentTimeMillis() + maxLockTime_ms)}")
+        val timeout = System.currentTimeMillis() + maxLockTime_ms
+        while (outputIsLocked(outPK) && (System.currentTimeMillis() < timeout)) {
+          Thread.sleep(10 * 1000)
+        }
+        if (outputIsLocked(outPK)) {
+          logger.info(s"Unlocking output $outPK due to exceeding maximum lock time of $maxLockTime_ms ms.")
+          unlockOutput(outPK)
+        } else {
+          logger.info(s"Output $outPK was unlocked in a normal mannar.")
+        }
+      }
+    }
+
+    new Thread(Unlocker(newOutput.outputPK.get)).start()
+    newOutput
+  }
+
+  /**
+    * Return true if the output is locked.
+    * @param outputPK For this output.
+    * @return True if locked.
+    */
+  def outputIsLocked(outputPK: Long): Boolean = {
+    lockedOutputList.synchronized {
+      logger.info(s"outputIsLocked $outputPK  ${lockedOutputList.contains(outputPK)}")
+      lockedOutputList.contains(outputPK)
+    }
+  }
+
+  /**
+    * Wait for an output to be unlocked.  Don't return until it is.
+    * @param outputPK For this output.
+    */
+  def waitForOutputToBeUnlocked(outputPK: Long): Unit = {
+    if (outputIsLocked(outputPK)) {
+      logger.info(s"Output $outputPK is locked.  Going to wait for it to be unlocked.")
+      while (outputIsLocked(outputPK)) {
+        Thread.sleep(2 * 1000)
+      }
+      logger.info(s"Done waiting for unlock of output $outputPK")
+    }
+  }
+
   def delete(outputPK: Long): Int = {
+
+    waitForOutputToBeUnlocked(outputPK)
+
     get(outputPK) match {
       case Some(output) =>
         logger.info("Deleting output: " + output)
