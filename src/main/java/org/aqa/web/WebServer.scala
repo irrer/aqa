@@ -564,6 +564,7 @@ class WebServer extends Application with Logging {
         new ProcedureUpdate,
         new ProcedureList,
         new ServiceInfo,
+        new AQAClientInterface,
         new ServiceInstance,
         new SystemModificationList,
         systemModificationUpdate,
