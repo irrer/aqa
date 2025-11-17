@@ -95,7 +95,7 @@ object EpidNoise extends Logging {
 
       val img = ImageUtil.magnify(smallImg, scale)
 
-      val file = new File(dir, s"${dir.getName}_${mv}_MV.png")
+      val file = new File(dir, s"${dir.getName}_Noise_${"%4.1f".format(noise)}_${mv}_MV.png")
 
       Util.writePng(img, file)
       println(s"wrote file ${file.getAbsolutePath}")
@@ -103,7 +103,7 @@ object EpidNoise extends Logging {
       println(
         s"${dir.getName} gantry: ${"%3d"
           .format(gantryAngle)} noise: ${"%5.2f".format(noise)}    rows: ${dicomImage.Rows}   columns: ${dicomImage.Columns}    minPix: $minPix  maxPix: $maxPix   pixRange: ${"%4.0f"
-          .format(maxPix - minPix)}   KVP: $mv"
+          .format(maxPix - minPix)}   MV: $mv"
       )
 
       println(dir)
