@@ -21,6 +21,7 @@ import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.DicomFile
 import org.aqa.Logging
 import org.aqa.Util
@@ -60,7 +61,9 @@ object EpidNoise extends Logging {
       }
 
       val al = {
+        Trace.trace()
         val rtImageList = dir.listFiles().map(f => DicomFile(f)).filter(df => df.attributeList.isDefined).map(_.attributeList.get).filter(Util.isRtimage)
+        Trace.trace()
         rtImageList.filter(al => Util.angleRoundedTo90(Util.gantryAngle(al)) == gantryAngle).head
       }
 
@@ -95,7 +98,7 @@ object EpidNoise extends Logging {
 
       val img = ImageUtil.magnify(smallImg, scale)
 
-      val file = new File(dir, s"${dir.getName}_Noise_${"%4.1f".format(noise)}_${mv}_MV.png")
+      val file = new File(dir, s"${dir.getName}_Sig2Noise_${"%4.1f".format(noise)}_MV_$mv.png")
 
       Util.writePng(img, file)
       println(s"wrote file ${file.getAbsolutePath}")
