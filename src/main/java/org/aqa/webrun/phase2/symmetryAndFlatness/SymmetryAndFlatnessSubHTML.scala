@@ -34,6 +34,7 @@ import org.aqa.web.WebUtil.getValueMap
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.DicomFile
 import org.aqa.db.PSMBeam
+import org.aqa.web.ViewOutput
 import org.aqa.webrun.psm.PSMGrid
 import org.restlet.Request
 import org.restlet.Response
@@ -166,6 +167,8 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       }
 
     val elem = {
+      val baselineUrl = ViewOutput.viewOutputUrl(symFlatDataSet.baseline.outputPK)
+
       <td style={"vertical-align: middle;" + {
         if (isPsm) psmStyle else ""
       }} class={errorClass} rowspan="4">
@@ -174,6 +177,8 @@ object SymmetryAndFlatnessSubHTML extends Logging {
           {Phase2Util.jawDescription(symFlatDataSet.al, symFlatDataSet.rtplan)}
         </br>{Phase2Util.angleDescription(symFlatDataSet.al)}{psmElem}
         </a> <br></br> <label title="Check to use this beam as a baseline." for={id}>Baseline</label>{input}
+        <br></br>
+        <a href={baselineUrl}>View Baseline</a>
       </td>
     }
     elem
