@@ -127,6 +127,8 @@ class OutputHeading extends Restlet with SubUrlAdmin with Logging {
     def epidElem: Elem = {
       <span>
         {extendedData.epid.model}
+        <br/>
+        {DownloadDicomRestlet.makeReference(extendedData.outputPK)}
       </span>
     }
 

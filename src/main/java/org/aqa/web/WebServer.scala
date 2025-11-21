@@ -556,6 +556,7 @@ class WebServer extends Application with Logging {
         new UserUpdate,
         new UserList,
         new ApprovalChangeRestlet,
+        new DownloadDicomRestlet,
         new SetApproverStateRestlet,
         new PatientProcedureList,
         new PatientProcedureUpdate,

@@ -82,8 +82,68 @@
         on the <a href="/static/admin.html">Administration</a> page.
     </p>
 
-    <div style="margin:200px;">
+    <p>
+        When downloading DICOM files, if the user is from the same institution as the data, then the files are
+        de-anonymized. The de-anonymization is not perfect because some scalar values can not be un-done. In general
+        these are not important for machine testing, but could cause conflicts if imported to other systems that check
+        these fields. Specifically:
+    </p>
 
+    <table class="table bordered">
+        <thead>
+        <tr>
+            <td><b>DICOM Tag</b></td>
+            <td><b>Name</b></td>
+            <td><b>Anonymized Value</b></td>
+        </tr>
+        </thead>
+        <tr>
+            <td>0010,0030</td>
+            <td> PatientBirthDate</td>
+            <td> 18000101</td>
+        </tr>
+        <tr>
+            <td>0010,0032</td>
+            <td> PatientBirthTime</td>
+            <td> 000000</td>
+        </tr>
+        <tr>
+            <td>0010,0040</td>
+            <td> PatientSex</td>
+            <td> O</td>
+        </tr>
+        <tr>
+            <td>0010,1010</td>
+            <td> PatientAge</td>
+            <td> 0</td>
+        </tr>
+        <tr>
+            <td>0010,1020</td>
+            <td> PatientSize</td>
+            <td> 0</td>
+        </tr>
+        <tr>
+            <td>0010,1030</td>
+            <td> PatientWeight</td>
+            <td> 0</td>
+        </tr>
+        <tr>
+            <td>0008,0050</td>
+            <td> AccessionNumber</td>
+            <td> 0</td>
+        </tr>
+    </table>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div style="margin:30px; border: 1px solid lightgrey;">
+                <img style="margin:30px;" src="Download.png"/>
+            </div>
+            <em style="margin-left:270px;">Interface for downloading DICOM files.</em>
+        </div>
+    </div>
+
+    <div style="margin:200px;">
     </div>
 
 </div>
