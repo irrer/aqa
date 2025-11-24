@@ -47,8 +47,8 @@ import scala.collection.immutable
 import scala.xml.Elem
 
 /**
- * Analyze DICOM files for symmetry and flatness.
- */
+  * Analyze DICOM files for symmetry and flatness.
+  */
 object SymmetryAndFlatnessSubHTML extends Logging {
 
   private def titleDetails = "Click to view graphs and other details"
@@ -124,9 +124,9 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   }
 
   private def detailsColumn(
-                             subDir: File,
-                             symFlatDataSet: SymmetryAndFlatnessDataSet
-                           ): Elem = {
+      subDir: File,
+      symFlatDataSet: SymmetryAndFlatnessDataSet
+  ): Elem = {
 
     val psmGridOf: Option[PSMGrid] = {
       if (symFlatDataSet.symmetryAndFlatness.psmDataDate.isDefined)
@@ -161,17 +161,19 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 
     val input =
       if (symFlatDataSet.symmetryAndFlatness.isBaseline) {
-          <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"} checked={baseline}/>
+        <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"} checked={baseline}/>
       } else {
-          <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"}/>
+        <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"}/>
       }
 
     val elem = {
       val baselineUrl = ViewOutput.viewOutputUrl(symFlatDataSet.baseline.outputPK)
 
-      <td style={"vertical-align: middle;" + {
-        if (isPsm) psmStyle else ""
-      }} class={errorClass} rowspan="4">
+      <td style={
+        "vertical-align: middle;" + {
+          if (isPsm) psmStyle else ""
+        }
+      } class={errorClass} rowspan="4">
         <a href={detailUrl} title={titleDetails}>
           {symFlatDataSet.symmetryAndFlatness.beamName}<br>
           {Phase2Util.jawDescription(symFlatDataSet.al, symFlatDataSet.rtplan)}
@@ -199,7 +201,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       )
     )
     val imgSmall = {
-        <img src={imgUrl} width="100"/>
+      <img src={imgUrl} width="100"/>
     }
     val ref = {
       <a href={dicomHref}>
@@ -217,7 +219,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     val v = Config.SymmetryPercentLimit
     val elem = {
       <td style="text-align: center;">
-        {v.formatted("%5.2f")}
+        {"%5.2f".format(v)}
       </td>
     }
     WebUtil.setPrecisionAttr(elem, v)
@@ -227,7 +229,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     val v = Config.FlatnessPercentLimit
     val elem = {
       <td style="text-align: center;">
-        {Config.FlatnessPercentLimit.formatted("%5.2f")}
+        {"%5.2f".format(Config.FlatnessPercentLimit)}
       </td>
     }
     WebUtil.setPrecisionAttr(elem, v)
@@ -237,7 +239,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     val v = Config.ProfileConstancyPercentLimit
     val elem = {
       <td style="text-align: center;">
-        {v.formatted("%5.2f")}
+        {"%5.2f".format(v)}
       </td>
     }
     WebUtil.setPrecisionAttr(elem, v)
@@ -247,8 +249,8 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     if (baseline.isDefined) {
       val v = pctRounded(baseline.get)
       val elem = {
-        <td style="text-align: center;" title={"Baseline % : " + baseline.get.formatted("%10.8f")}>
-          {pctRounded(baseline.get).formatted("%5.3f").trim}
+        <td style="text-align: center;" title={"Baseline % : " + "%10.8f".format(baseline.get)}>
+          {"%5.3f".format(pctRounded(baseline.get)).trim}
         </td>
       }
       WebUtil.setPrecisionAttr(elem, v)
@@ -259,8 +261,8 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     val errorClass = if (percent.abs > limit.abs) "danger" else "normal"
     val v = pctRounded(percent)
     val elem =
-      <td style="text-align: center;" class={errorClass} title={"Difference: " + percent.formatted("%10.8f")}>
-        {pctRounded(percent).formatted("%5.2f").trim}
+      <td style="text-align: center;" class={errorClass} title={"Difference: " + "%10.8f".format(percent)}>
+        {"%5.2f".format(pctRounded(percent)).trim}
       </td>
     WebUtil.setPrecisionAttr(elem, v)
   }
@@ -356,7 +358,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
               val b = symFlatData.baseline.profileConstancy( psmGridBaselineOf(symFlatData), symFlatData.baseline,psmGridBaselineOf(symFlatData)  )
 
               (a, b) match {
-                case (Some(a), Some(b)) => a - b
+                case (Some(aa), Some(bb)) => aa - bb
                 case _ => 0.0
               }
             }
