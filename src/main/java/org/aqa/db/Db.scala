@@ -32,7 +32,7 @@ import scala.util.Success
 
 object Db extends Logging {
 
-  /** Ensure that the the configuration has been read. */
+  /** Ensure that the configuration has been read. */
   Config.validate
 
   private def isSqlServer: Boolean = Config.SlickDb.getString("db.default.driver").toLowerCase.contains("sqlserver")
@@ -95,7 +95,7 @@ object Db extends Logging {
           ds.setURL(get("url"))
           ds.setDatabaseName(get("databaseName"))
 
-          // prove that we can get a connection.  If this fails, then we can not connect to the database and it is better to know right away
+          // prove that we can get a connection.  If this fails, then we can not connect to the database, and it is better to know right away
           logger.info("Attempting to open connection to SQL Server database ...")
           val connection = ds.getConnection
           logger.info("Was able to open connection to SQL Server database: " + connection)

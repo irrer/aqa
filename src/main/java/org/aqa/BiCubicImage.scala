@@ -7,7 +7,13 @@ import org.apache.commons.math3.analysis.interpolation.PiecewiseBicubicSplineInt
 
 import java.awt.geom.Point2D
 import java.awt.image.BufferedImage
+import javax.vecmath.Point2d
 
+/**
+ * Image abstraction that supports sub-pixel sampling via BiCubic mapping.
+ * @param dicomImage For this DICOM image.
+ * @param bufImg Optionally mark sample points in this image buffer.  Mostly for debugging.
+ */
 case class BiCubicImage(dicomImage: DicomImage, bufImg: Option[BufferedImage] = None) extends Logging {
 
   private val xCoordinateList: Array[Double] = (0 until dicomImage.width).map(_.toDouble).toArray
@@ -27,10 +33,8 @@ case class BiCubicImage(dicomImage: DicomImage, bufImg: Option[BufferedImage] = 
     */
   def get(x: Double, y: Double): Double = {
     if (bufImg.isDefined) {
-      if ((x > 700) && (y > 700))
-        Trace.trace()
       try {
-        bufImg.get.setRGB(x.round.toInt, y.round.toInt, 0)
+        bufImg.get.setRGB(x.round.toInt, y.round.toInt, 255)
       } catch {
         case _: Throwable =>
           Trace.trace("x,y: " + x + ", " + y)
@@ -40,5 +44,7 @@ case class BiCubicImage(dicomImage: DicomImage, bufImg: Option[BufferedImage] = 
   }
 
   def get(point: Point2D.Double): Double = get(point.getX, point.getY)
+
+  def get(point: Point2d): Double = get(point.getX, point.getY)
 
 }
