@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.aqa.webrun.wl
+package org.aqa.webrun.wl.nonCardinal
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
@@ -30,6 +30,9 @@ import org.aqa.Config
 import org.aqa.DicomFile
 import org.aqa.Logging
 import org.aqa.Util
+import org.aqa.webrun.wl.WLCoarseBox
+import org.aqa.webrun.wl.WLMessage
+import org.aqa.webrun.wl.WLPreprocessImage
 
 import java.awt.Color
 import java.awt.geom.Point2D

@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl
+package org.aqa.webrun.wl.nonCardinal
 
 import edu.umro.ImageUtil.LocateEdge
 import org.aqa.AQALine
