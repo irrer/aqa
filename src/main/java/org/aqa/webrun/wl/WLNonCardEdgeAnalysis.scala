@@ -22,24 +22,28 @@ import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.ScaledImage
 import edu.umro.ScalaUtil.Trace
 import org.aqa.AQALine
 import org.aqa.BiCubicImage
 import org.aqa.Config
 import org.aqa.DicomFile
+import org.aqa.Logging
 import org.aqa.Util
 
 import java.awt.Color
 import java.awt.geom.Point2D
 import java.awt.image.BufferedImage
+import java.awt.Rectangle
 import java.io.File
 import javax.vecmath.Point2d
+import javax.vecmath.Point2i
 
-case class WLNonCardinal( //
+case class WLNonCardEdgeAnalysis( //
     preprocessedImage: DicomImage,
     al: AttributeList,
     wlMessage: Option[WLMessage] = None
-) {
+) extends Logging {
 
   private val collAngle = Util.collimatorAngle(al)
 
@@ -60,7 +64,7 @@ case class WLNonCardinal( //
     *
     * @return List of approximated edges.
     */
-  private def approximateLocationOfEdges(coarseCenter: Point2d): NonCardEdgeSet = {
+  private def approximateLocationOfEdges(coarseCenter: Point2d): WLNonCardEdgeSet = {
     // number of pixels in one mm
     val pixPerMm = trans.iso2PixDistX(1)
 
@@ -80,7 +84,7 @@ case class WLNonCardinal( //
     val y1 = WLNonCardEdge("Approximate Y1", yLine, 0, -maxLength, biCubicImage, pixBandWidth, approximateResolution)
     val y2 = WLNonCardEdge("Approximate Y2", yLine, 0, maxLength, biCubicImage, pixBandWidth, approximateResolution)
 
-    val edgeSet: NonCardEdgeSet = NonCardEdgeSet(x1, x2, y1, y2)
+    val edgeSet: WLNonCardEdgeSet = WLNonCardEdgeSet(x1, x2, y1, y2)
 
     edgeSet
   }
@@ -93,7 +97,7 @@ case class WLNonCardinal( //
     * @param approximateEdgeLocations Approximate locations of edges.
     * @return
     */
-  private def preciselyLocateEdges(approximateEdgeLocations: NonCardEdgeSet): NonCardEdgeSet = {
+  private def preciseLocationOfEdges(approximateEdgeLocations: WLNonCardEdgeSet): WLNonCardEdgeSet = {
     val xLine = AQALine(approximateEdgeLocations.center, collAngle)
     val yLine = xLine.perpendicular
 
@@ -104,20 +108,119 @@ case class WLNonCardinal( //
 
     val ael = approximateEdgeLocations
 
-    val distX = ael.X1.edgeCenter.distance(ael.X2.edgeCenter) + penumbra_pix
-    val distY = ael.Y1.edgeCenter.distance(ael.Y2.edgeCenter) + penumbra_pix
+    val distanceX = ael.X1.edgeCenter.distance(ael.X2.edgeCenter) + penumbra_pix
+    val distanceY = ael.Y1.edgeCenter.distance(ael.Y2.edgeCenter) + penumbra_pix
 
     val xWidth = ael.Y1.edgeCenter.distance(ael.Y2.edgeCenter) - penumbra_pix
     val yWidth = ael.X1.edgeCenter.distance(ael.X2.edgeCenter) - penumbra_pix
 
-    val x1 = WLNonCardEdge("Precise X1", xLine, 0, distX, biCubicImage, xWidth, preciseResolution)
-    val x2 = WLNonCardEdge("Precise X2", xLine, 0, -distX, biCubicImage, xWidth, preciseResolution)
-    val y1 = WLNonCardEdge("Precise Y1", yLine, 0, -distY, biCubicImage, yWidth, preciseResolution)
-    val y2 = WLNonCardEdge("Precise Y2", yLine, 0, distY, biCubicImage, yWidth, preciseResolution)
+    val x1 = WLNonCardEdge("X1", xLine, 0, distanceX, biCubicImage, xWidth, preciseResolution)
+    val x2 = WLNonCardEdge("X2", xLine, 0, -distanceX, biCubicImage, xWidth, preciseResolution)
+    val y1 = WLNonCardEdge("Y1", yLine, 0, -distanceY, biCubicImage, yWidth, preciseResolution)
+    val y2 = WLNonCardEdge("Y2", yLine, 0, distanceY, biCubicImage, yWidth, preciseResolution)
 
-    val edgeSet: NonCardEdgeSet = NonCardEdgeSet(x1, x2, y1, y2)
+    val edgeSet: WLNonCardEdgeSet = WLNonCardEdgeSet(x1, x2, y1, y2)
 
     edgeSet
+  }
+
+  /**
+    * Calculate the rectangle to enclose the region of the image that contains all the areas of interest
+    * that were used for edge measurement.
+    *
+    * @param border_pix Number of extra pixels to serve as a border separating the AOIs from the image edge.
+    * @return Bounding rectangle.
+    */
+  private def calcAoiBounds(border_pix: Int): Rectangle = {
+    def listCoordinates(edge: WLNonCardEdge): Seq[Point2d] = {
+      Seq(
+        edge.loLoAoi, //
+        edge.loHiAoi, //
+        edge.hiLoAoi, //
+        edge.hiHiAoi
+      )
+    }
+
+    val coordinateList = edgeLocations.edgeList.flatMap(listCoordinates)
+
+    val minX = (coordinateList.map(_.getX).min - border_pix).round.toInt
+    val maxX = (coordinateList.map(_.getX).max + border_pix).round.toInt
+    val minY = (coordinateList.map(_.getY).min - border_pix).round.toInt
+    val maxY = (coordinateList.map(_.getY).max + border_pix).round.toInt
+
+    val width = maxX - minX
+    val height = maxY - minY
+
+    val boundingRectangle = new Rectangle(minX, minY, width, height)
+
+    boundingRectangle
+  }
+
+  private def pointIsInBallAoi(point: Point2i): Boolean = {
+    edgeLocations.X1.loLine.pointIsBetween(point, edgeLocations.X2.loLine) &&
+    edgeLocations.Y1.loLine.pointIsBetween(point, edgeLocations.Y2.loLine)
+  }
+
+  /**
+    * Construct the Ball AOI by determining which points are within the edge lines that define the minimum edge values.
+    *
+    * @return Ball AOI.
+    */
+  private def makeBallBoundary(): Rectangle = {
+
+    val pointList =
+      for ( //
+        x <- 0 until preprocessedImage.width;
+        y <- 0 until preprocessedImage.height;
+        if pointIsInBallAoi(new Point2i(x, y))
+      ) yield new Point2i(x, y)
+
+    val x = pointList.map(_.getX).min
+    val y = pointList.map(_.getY).min
+    val width = pointList.map(_.getX).max - x
+    val height = pointList.map(_.getY).max - y
+
+    new Rectangle(x, y, width, height)
+  }
+
+  /**
+    * Make an image that only contains the ball, with pixels outside the lo-line areas 'blacked' out.
+    * @param bounds Bounds of ball AOI.
+    * @return
+    */
+  def makeBallAOI(bounds: Rectangle): DicomImage = {
+
+    val minPixelValue = preprocessedImage.minPixelValue
+
+    def doPoint(point: Point2i): Float = {
+      if (pointIsInBallAoi(point))
+        preprocessedImage.get(point.getX, point.getY)
+      else
+        minPixelValue
+    }
+
+    def doRow(y: Int): IndexedSeq[Float] =
+      (0 until preprocessedImage.width).map(x => doPoint(new Point2i(x, y)))
+
+    val array = (0 until preprocessedImage.height).map(doRow)
+    new DicomImage(array).getSubimage(bounds)
+  }
+
+  private def annotate(image: BufferedImage, scaledImage: ScaledImage): BufferedImage = {
+
+    val border_pix = 3
+    val image_scale = 4
+
+    val boundingRectangle = calcAoiBounds(border_pix)
+
+    val si = ScaledImage(image_scale, boundingRectangle.x, boundingRectangle.y)
+
+    val coarseBallBoundary = makeBallBoundary()
+    val coarseBallAoi = makeBallAOI(coarseBallBoundary)
+
+    // val aoi: BufferedImage = ImageUtil.magnify(ImageUtil.subImage(origImage, boundingRectangle), imgScale)
+
+    ???
   }
 
   // main processing comprised of three steps
@@ -126,21 +229,30 @@ case class WLNonCardinal( //
   private val coarseCenter: Point2d = locateCoarseCenter()
 
   /** Approximate position of the 4 edges.  Testing shows that this is accurate to about 0.05 pixels.  But we can do better! */
-  private val approximateEdgeLocationList: NonCardEdgeSet = approximateLocationOfEdges(coarseCenter)
+  private val approximateEdgeLocationList: WLNonCardEdgeSet = approximateLocationOfEdges(coarseCenter)
 
   Trace.trace("approximateEdgeLocationList:" + approximateEdgeLocationList)
 
-  private val preciseEdgeLocations = preciselyLocateEdges(approximateEdgeLocationList)
+  private val preciseEdgeLocations = preciseLocationOfEdges(approximateEdgeLocationList)
 
-  val edgeLocations: NonCardEdgeSet = preciseEdgeLocations
-
+  val edgeLocations: WLNonCardEdgeSet = preciseEdgeLocations
   Trace.trace("edgeLocations:" + edgeLocations)
+
+  private val coarseBallBoundary = makeBallBoundary()
+
+  private val coarseBallAoi = makeBallAOI(coarseBallBoundary)
+
+  private val ncBall = WLNonCardBall(edgeLocations, preprocessedImage)
+
+  Trace.trace("ball center: " + ncBall.ballCenter)
+
+  Trace.trace()
 }
 
 /**
   * Quick program to show the center raw pixel values from DICOM files.
   */
-object WLNonCardinal {
+object WLNonCardEdgeAnalysis {
 
   def main(args: Array[String]): Unit = {
 
@@ -148,13 +260,14 @@ object WLNonCardinal {
 
     // val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/1/0002.dcm""")
-    val file = new File("""D:/tmp/wl/nonorth/1/0006.dcm""")
+    // val file = new File("""D:/tmp/wl/nonorth/1/0006.dcm""")
+    // val file = new File("""D:/tmp/wl/nonorth/WLNonCardNon45_20250625_Peyton/20250625_G180C30T0.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/0010.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/1/0002.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""") // rotated 315
     // val file = new File("""D:/tmp/wl/nonorth/1/0006.dcm""") // rotated 45
     // val file = new File("""D:/tmp/wl/nonorth/1/0001.dcm""")
-    // val file = new File("""D:/tmp/wl/nonorth/psm/0018.dcm""")
+    val file = new File("""D:/tmp/wl/nonorth/psm/0018.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/TB5_Aug_20/0002.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/BR1_Phase2/0014.dcm""")
 
@@ -168,7 +281,7 @@ object WLNonCardinal {
     }
 
     Trace.trace()
-    val nonCardinal = new WLNonCardinal(dicomImage, al)
+    val nonCardinal = new WLNonCardEdgeAnalysis(dicomImage, al)
     Trace.trace()
     Trace.trace(nonCardinal)
 
@@ -180,6 +293,8 @@ object WLNonCardinal {
       val maxPixelValue = sortedPixels.dropRight(10).last
       dicomImage.toBufferedImage(ImageUtil.rgbColorMap(Color.blue), minPixelValue, maxPixelValue)
     }
+
+    val origImage = ImageUtil.magnify(bufImg, 1)
 
     val trans = new IsoImagePlaneTranslator(al)
 
@@ -198,39 +313,76 @@ object WLNonCardinal {
     }
 
     // ------------------------------------------------------------------------------------
-    if (true) {
-      def drawAoi(edgeSet: NonCardEdgeSet, bufImg: BufferedImage): Unit = {
 
-        val gc = ImageUtil.getGraphics(bufImg)
+    if (true) {
+      val start = System.currentTimeMillis()
+      val imgScale = 3
+
+      def listCoordinates(edge: WLNonCardEdge): Seq[Point2d] = {
+        Seq(
+          edge.loLoAoi, //
+          edge.loHiAoi, //
+          edge.hiLoAoi, //
+          edge.hiHiAoi
+        )
+      }
+
+      val coordinateList = nonCardinal.edgeLocations.edgeList.flatMap(listCoordinates)
+
+      val border_pix = 3
+      val minX = (coordinateList.map(_.getX).min - border_pix).round.toInt
+      val maxX = (coordinateList.map(_.getX).max + border_pix).round.toInt
+      val minY = (coordinateList.map(_.getY).min - border_pix).round.toInt
+      val maxY = (coordinateList.map(_.getY).max + border_pix).round.toInt
+
+      val width = maxX - minX
+      val height = maxY - minY
+
+      val boundingRectangle = new Rectangle(minX, minY, width, height)
+
+      val si = ScaledImage(imgScale, minX, minY)
+
+      val aoi: BufferedImage = ImageUtil.magnify(ImageUtil.subImage(origImage, boundingRectangle), imgScale)
+
+      // val buf = si.magnify(origImage)
+      Trace.trace("making big image")
+      def drawAoi(edgeSet: WLNonCardEdgeSet, aoi: BufferedImage): Unit = {
+
+        val gc = ImageUtil.getGraphics(aoi)
 
         gc.setColor(Color.white)
 
-        def drawLine(p1: Point2d, p2: Point2d): Unit = {
-          gc.drawLine(p1.getX.toInt, p1.getY.toInt, p2.getX.toInt, p2.getY.toInt)
-        }
-
         def drawEdge(edge: WLNonCardEdge): Unit = {
           gc.setColor(Color.white)
-          drawLine(edge.loLoAoi, edge.loHiAoi)
-          drawLine(edge.hiLoAoi, edge.hiHiAoi)
-          drawLine(edge.loLoAoi, edge.hiLoAoi)
-          drawLine(edge.loHiAoi, edge.hiHiAoi)
+
+          si.drawTextCenteredAt(gc, (edge.loLoAoi.getX + edge.hiHiAoi.getX) / 2, (edge.loLoAoi.getY + edge.hiHiAoi.getY) / 2, edge.name)
+
+          si.drawLine(gc, edge.loLoAoi, edge.loHiAoi)
+          si.drawLine(gc, edge.hiLoAoi, edge.hiHiAoi)
+          si.drawLine(gc, edge.loLoAoi, edge.hiLoAoi)
+          si.drawLine(gc, edge.loHiAoi, edge.hiHiAoi)
           gc.setColor(Color.red)
-          drawLine(edge.edgeLo, edge.edgeHi)
+          si.drawLine(gc, edge.edgeLo, edge.edgeHi)
         }
 
-        // drawEdge(edgeSet.X1)
-        // drawEdge(edgeSet.X2)
-        // drawEdge(edgeSet.Y1)
+        drawEdge(edgeSet.X1)
+        drawEdge(edgeSet.X2)
+        drawEdge(edgeSet.Y1)
         drawEdge(edgeSet.Y2)
-
       }
 
-      drawAoi(nonCardinal.edgeLocations, bufImg)
+      drawAoi(nonCardinal.edgeLocations, aoi)
 
-      Trace.trace("Center of four edges as pixels: " + nonCardinal.edgeLocations.center)
-      Trace.trace("Center of four edges as iso: " + trans.pix2IsoCoordX(nonCardinal.edgeLocations.center.getX) + ", " + trans.pix2IsoCoordY(nonCardinal.edgeLocations.center.getY))
+      val file = new File("""D:/tmp/foy.png""")
+
+      ImageUtil.writePngFile(aoi, file)
+      val elapsed = System.currentTimeMillis() - start
+      println(s"Elapsed ms: $elapsed    Wrote file $file")
     }
+
+    Trace.trace("Center of four edges as pixels: " + nonCardinal.edgeLocations.center)
+    Trace.trace("Center of four edges as iso: " + trans.pix2IsoCoordX(nonCardinal.edgeLocations.center.getX) + ", " + trans.pix2IsoCoordY(nonCardinal.edgeLocations.center.getY))
+
     // ------------------------------------------------------------------------------------
 
     /**
@@ -283,71 +435,3 @@ object WLNonCardinal {
     System.exit(0)
   }
 }
-
-/*
-
- // This CORRECTLY draws a nice box around the coarse AOI with the edges labeled as X1, X2, Y1, Y2
-
-    private val bufImg = {
-      val sortedPixels = preprocessedImage.pixelData.flatten.sorted
-      val minPixelValue = sortedPixels(10)
-      // calculate the approximate brightness of the ball, and use that to set the brightness scale.
-      val maxPixelValue: Float = {
-        val cX = approximateAoi.getCenterX.round.toInt
-        val cY = approximateAoi.getCenterY.round.toInt
-
-        val range = -3 until 3
-        val pixList = for (x <- range; y <- range) yield (preprocessedImage.get(x + cX, y + cY))
-
-        pixList.sum / pixList.size
-      }
-      val img = preprocessedImage.toBufferedImage(ImageUtil.rgbColorMap(Color.blue), minPixelValue, maxPixelValue)
-      img
-    }
-    private val gc = bufImg.getGraphics.asInstanceOf[Graphics2D]
-
-    gc.setColor(Color.white)
-
-    private def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit = {
-      // Trace.trace(Util.d2i(x1) + " : " + Util.d2i(y1) + " : " + Util.d2i(x2) + " : " + Util.d2i(y2))
-      gc.drawLine(Util.d2i(x1), Util.d2i(y1), Util.d2i(x2), Util.d2i(y2))
-    }
-
-    val rot = WLRotator(al)
-
-    val X1Y1 = rot.trans.iso2Pix(rot.rot(new Point2D.Double(rot.jawsXLeft, rot.jawsYTop)))
-    val X2Y1 = rot.trans.iso2Pix(rot.rot(new Point2D.Double(rot.jawsXRight, rot.jawsYTop)))
-
-    val X1Y2 = rot.trans.iso2Pix(rot.rot(new Point2D.Double(rot.jawsXLeft, rot.jawsYBottom)))
-    val X2Y2 = rot.trans.iso2Pix(rot.rot(new Point2D.Double(rot.jawsXRight, rot.jawsYBottom)))
-
-    Trace.trace(s"jawsYTop   : ${rot.jawsYTop.round}")
-    Trace.trace(s"jawsYBottom: ${rot.jawsYBottom.round}")
-    Trace.trace(s"jawsXLeft  : ${rot.jawsXLeft.round}")
-    Trace.trace(s"jawsXRight : ${rot.jawsXRight.round}")
-
-    Trace.trace(s"\n    topLeft: $X1Y2\n    topRight: $X2Y2\n    bottomLeft: $X1Y1\n    bottomRight: $X2Y1")
-
-    drawLine(X1Y2.getX, X1Y2.getY, X2Y2.getX, X2Y2.getY)
-    drawLine(X1Y2.getX, X1Y2.getY, X1Y1.getX, X1Y1.getY)
-    drawLine(X2Y1.getX, X2Y1.getY, X1Y1.getX, X1Y1.getY)
-    drawLine(X2Y2.getX, X2Y2.getY, X2Y1.getX, X2Y1.getY)
-
-    /**
- * Label the collimator edge
- * @param name Edge name.
- * @param point1 One end.
- * @param point2 The other end.
- */
-    def labelEdge(name: String, point1: Point2D.Double, point2: Point2D.Double): Unit = {
-      val centerX = (point1.getX + point2.getX) / 2
-      val centerY = (point1.getY + point2.getY) / 2
-      ImageText.drawTextCenteredAt(gc, centerX, centerY, name)
-    }
-
-    labelEdge("X1", X1Y2, X1Y1)
-    labelEdge("X2", X2Y2, X2Y1)
-    labelEdge("Y1", X1Y1, X2Y1)
-    labelEdge("Y2", X1Y2, X2Y2)
-
- */

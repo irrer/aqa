@@ -90,7 +90,7 @@ case class WLNonCardEdge( //
   val edgeCenter: Point2d = line.pointOn(if (offsetFinish > 0) position else -position)
 
   /** Line at the nearest (from line's center) edge of the AOI. */
-  private val loLine = {
+  val loLine: AQALine = {
     val distance = indexOfMin * resolution
     val offset = if (positive) distance else -distance
     new AQALine(line.pointOn(offset), line.perpendicularAngle)
@@ -101,7 +101,7 @@ case class WLNonCardEdge( //
   val loHiAoi: Point2d = loLine.pointOn(width / 2)
 
   /** Line at the farthest (from line's center) edge of the AOI. */
-  private val hiLine = new AQALine(line.pointOn(offsetFinish), line.perpendicularAngle)
+  val hiLine: AQALine = new AQALine(line.pointOn(offsetFinish), line.perpendicularAngle)
 
   val hiLoAoi: Point2d = hiLine.pointOn(-width / 2)
 

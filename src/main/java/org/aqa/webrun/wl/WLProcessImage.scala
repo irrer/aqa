@@ -333,7 +333,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
             if (WLBallAreaIsFlat.ballAreaIsFlat(coarseAoi.pixelData, ballAoi, wlMsg)) {
               WLImageResult(WLImageStatus.BallMissing, directory = subDir, rtimage = rtimage, badPixelList = Seq(), marginalPixelList = Seq(), extendedData = extendedData, runReq = runReq)
             } else {
-              val wlBall = WLBall(coarseAoi, ballAoi, subDir, SCALE, BALL_RADIUS, X_INCREMENT, ResolutionX, ResolutionY, wlParameters, tol, wlMsg)
+              val wlBall = WLBall(coarseAoi, ballAoi, subDir, SCALE, BALL_RADIUS, X_INCREMENT, ResolutionX, ResolutionY, wlParameters, tol, Some(wlMsg))
               wlBall.findBallCenter() match {
                 case Some(ballRelativeCenter: (Double, Double)) =>
 

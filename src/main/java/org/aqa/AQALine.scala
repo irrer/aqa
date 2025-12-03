@@ -1,6 +1,7 @@
 package org.aqa
 
 import javax.vecmath.Point2d
+import javax.vecmath.Point2i
 import scala.annotation.tailrec
 
 /**
@@ -63,6 +64,25 @@ case class AQALine(centerPoint: Point2d, angle_deg: Double) extends Logging {
         }
     }
     point
+  }
+
+  /**
+    * Determine if the given point is between this line an another line that is parallel to this line.
+    * @param point Point to be tested.
+    * @param other Other line.  Must be parallel to this line.
+    * @return True if between, false if not.
+    */
+  def pointIsBetween(point: Point2d, other: AQALine): Boolean = {
+    val x = point.getX
+    val y = point.getY
+    val y1 = (m * x) + b
+    val y2 = (m * x) + other.b
+    val between = (y - y1) * (y - y2) < 0
+    between
+  }
+
+  def pointIsBetween(point: Point2i, other: AQALine): Boolean = {
+    pointIsBetween(new Point2d(point.getX, point.getY), other)
   }
 
   /**

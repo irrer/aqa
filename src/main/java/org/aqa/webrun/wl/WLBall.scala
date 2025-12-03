@@ -24,7 +24,7 @@ case class WLBall(
     ResolutionY: Double,
     wlParameters: MachineWL,
     tol: Int,
-    wlMsg: WLMessage
+    wlMsg: Option[WLMessage]
 ) extends Logging {
 
   private val tol2 = tol * 2
@@ -99,10 +99,10 @@ case class WLBall(
     val state = (0 to (values.length * increment)).toList.foldLeft((0, false))((s, x) => cross(x, s._1, s._2))
     val crsCount = state._1
     if (crsCount == 2) {
-      wlMsg.info(" Ball spline verified to cross average height exactly twice")
+      wlMsg.foreach(_.info(" Ball spline verified to cross average height exactly twice"))
       true
     } else {
-      wlMsg.error(" Wrong number of times that the ball spline crossed the average value.  Should be 2 but was " + crsCount)
+      wlMsg.foreach(_.error(" Wrong number of times that the ball spline crossed the average value.  Should be 2 but was " + crsCount))
       false
     }
   }
@@ -122,7 +122,7 @@ case class WLBall(
     Util.writePng(image, new File(subDir, "ball_fine.png"))
 
     if (singleMax(cSpline, cSum) && singleMax(rSpline, rSum)) {
-      wlMsg.info("Ball fine location relative to area of interest in pixels: " + fineX.center + ", " + fineY.center)
+      wlMsg.foreach(_.info("Ball fine location relative to area of interest in pixels: " + fineX.center + ", " + fineY.center))
       Some(fineX.center, fineY.center)
     } else
       None
