@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 Regents of the University of Michigan
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.aqa.webrun.wl.nonCardinal
 
 import com.pixelmed.dicom.AttributeList
@@ -8,10 +24,10 @@ import edu.umro.ScalaUtil.DicomUtil
 import java.awt.geom.Point2D
 
 /**
- * Utilities for rotating points to match collimator rotation.
- *
- * @param rtimage DICOM image containing geometric information.
- */
+  * Utilities for rotating points to match collimator rotation.
+  *
+  * @param rtimage DICOM image containing geometric information.
+  */
 case class WLRotator(rtimage: AttributeList) {
   val trans: IsoImagePlaneTranslator = new IsoImagePlaneTranslator(rtimage)
 
@@ -37,10 +53,10 @@ case class WLRotator(rtimage: AttributeList) {
   val jawsYBottom: Double = -jawsYBottomStd
 
   /**
-   * Rotate and offset the given iso point according to the rtimage.
-   * @param point Rotate this.
-   * @return New point in iso coordinates.
-   */
+    * Rotate and offset the given iso point according to the rtimage.
+    * @param point Rotate this.
+    * @return New point in iso coordinates.
+    */
   def rot(point: Point2D.Double): Point2D.Double = {
 
     val y = -point.getY

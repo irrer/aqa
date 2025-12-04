@@ -40,7 +40,6 @@ import java.awt.image.BufferedImage
 import java.awt.Rectangle
 import java.io.File
 import javax.vecmath.Point2d
-import javax.vecmath.Point2i
 
 case class WLNonCardEdgeAnalysis( //
     preprocessedImage: DicomImage,
@@ -144,7 +143,7 @@ case class WLNonCardEdgeAnalysis( //
       )
     }
 
-    val coordinateList = edgeLocations.edgeList.flatMap(listCoordinates)
+    val coordinateList = edgeSet.edgeList.flatMap(listCoordinates)
 
     val minX = (coordinateList.map(_.getX).min - border_pix).round.toInt
     val maxX = (coordinateList.map(_.getX).max + border_pix).round.toInt
@@ -159,73 +158,6 @@ case class WLNonCardEdgeAnalysis( //
     boundingRectangle
   }
 
-  private def pointIsInBallAoi(point: Point2i): Boolean = {
-    edgeLocations.X1.loLine.pointIsBetween(point, edgeLocations.X2.loLine) &&
-    edgeLocations.Y1.loLine.pointIsBetween(point, edgeLocations.Y2.loLine)
-  }
-
-  /**
-    * Construct the Ball AOI by determining which points are within the edge lines that define the minimum edge values.
-    *
-    * @return Ball AOI.
-    */
-  private def makeBallBoundary(): Rectangle = {
-
-    val pointList =
-      for ( //
-        x <- 0 until preprocessedImage.width;
-        y <- 0 until preprocessedImage.height;
-        if pointIsInBallAoi(new Point2i(x, y))
-      ) yield new Point2i(x, y)
-
-    val x = pointList.map(_.getX).min
-    val y = pointList.map(_.getY).min
-    val width = pointList.map(_.getX).max - x
-    val height = pointList.map(_.getY).max - y
-
-    new Rectangle(x, y, width, height)
-  }
-
-  /**
-    * Make an image that only contains the ball, with pixels outside the lo-line areas 'blacked' out.
-    * @param bounds Bounds of ball AOI.
-    * @return
-    */
-  def makeBallAOI(bounds: Rectangle): DicomImage = {
-
-    val minPixelValue = preprocessedImage.minPixelValue
-
-    def doPoint(point: Point2i): Float = {
-      if (pointIsInBallAoi(point))
-        preprocessedImage.get(point.getX, point.getY)
-      else
-        minPixelValue
-    }
-
-    def doRow(y: Int): IndexedSeq[Float] =
-      (0 until preprocessedImage.width).map(x => doPoint(new Point2i(x, y)))
-
-    val array = (0 until preprocessedImage.height).map(doRow)
-    new DicomImage(array).getSubimage(bounds)
-  }
-
-  private def annotate(image: BufferedImage, scaledImage: ScaledImage): BufferedImage = {
-
-    val border_pix = 3
-    val image_scale = 4
-
-    val boundingRectangle = calcAoiBounds(border_pix)
-
-    val si = ScaledImage(image_scale, boundingRectangle.x, boundingRectangle.y)
-
-    val coarseBallBoundary = makeBallBoundary()
-    val coarseBallAoi = makeBallAOI(coarseBallBoundary)
-
-    // val aoi: BufferedImage = ImageUtil.magnify(ImageUtil.subImage(origImage, boundingRectangle), imgScale)
-
-    ???
-  }
-
   // main processing comprised of three steps
 
   // Find the coarse center using center of mass.
@@ -234,22 +166,9 @@ case class WLNonCardEdgeAnalysis( //
   /** Approximate position of the 4 edges.  Testing shows that this is accurate to about 0.05 pixels.  But we can do better! */
   private val approximateEdgeLocationList: WLNonCardEdgeSet = approximateLocationOfEdges(coarseCenter)
 
-  Trace.trace("approximateEdgeLocationList:" + approximateEdgeLocationList)
-
   private val preciseEdgeLocations = preciseLocationOfEdges(approximateEdgeLocationList)
 
-  val edgeLocations: WLNonCardEdgeSet = preciseEdgeLocations
-  Trace.trace("edgeLocations:" + edgeLocations)
-
-  private val coarseBallBoundary = makeBallBoundary()
-
-  private val coarseBallAoi = makeBallAOI(coarseBallBoundary)
-
-  private val ncBall = WLNonCardBall(edgeLocations, preprocessedImage)
-
-  Trace.trace("ball center: " + ncBall.ballCenter)
-
-  Trace.trace()
+  val edgeSet: WLNonCardEdgeSet = preciseEdgeLocations
 }
 
 /**
@@ -261,7 +180,7 @@ object WLNonCardEdgeAnalysis {
 
     Trace.trace
 
-    // val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""")
+    val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/1/0002.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/1/0006.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/WLNonCardNon45_20250625_Peyton/20250625_G180C30T0.dcm""")
@@ -270,7 +189,7 @@ object WLNonCardEdgeAnalysis {
     // val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""") // rotated 315
     // val file = new File("""D:/tmp/wl/nonorth/1/0006.dcm""") // rotated 45
     // val file = new File("""D:/tmp/wl/nonorth/1/0001.dcm""")
-    val file = new File("""D:/tmp/wl/nonorth/psm/0018.dcm""")
+    // val file = new File("""D:/tmp/wl/nonorth/psm/0018.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/TB5_Aug_20/0002.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/BR1_Phase2/0014.dcm""")
 
@@ -330,7 +249,7 @@ object WLNonCardEdgeAnalysis {
         )
       }
 
-      val coordinateList = nonCardinal.edgeLocations.edgeList.flatMap(listCoordinates)
+      val coordinateList = nonCardinal.edgeSet.edgeList.flatMap(listCoordinates)
 
       val border_pix = 3
       val minX = (coordinateList.map(_.getX).min - border_pix).round.toInt
@@ -374,17 +293,24 @@ object WLNonCardEdgeAnalysis {
         drawEdge(edgeSet.Y2)
       }
 
-      drawAoi(nonCardinal.edgeLocations, aoi)
+      drawAoi(nonCardinal.edgeSet, aoi)
 
       val file = new File("""D:/tmp/foy.png""")
 
       ImageUtil.writePngFile(aoi, file)
+
+      Trace.trace()
+      val nonCardBall = WLNonCardBall(nonCardinal.edgeSet, dicomImage)
+      Trace.trace()
+      Trace.trace("Ball center: " + nonCardBall.ballCenterFirstTry)
+      Trace.trace()
+
       val elapsed = System.currentTimeMillis() - start
       println(s"Elapsed ms: $elapsed    Wrote file $file")
     }
 
-    Trace.trace("Center of four edges as pixels: " + nonCardinal.edgeLocations.center)
-    Trace.trace("Center of four edges as iso: " + trans.pix2IsoCoordX(nonCardinal.edgeLocations.center.getX) + ", " + trans.pix2IsoCoordY(nonCardinal.edgeLocations.center.getY))
+    Trace.trace("Center of four edges as pixels: " + nonCardinal.edgeSet.center)
+    Trace.trace("Center of four edges as iso: " + trans.pix2IsoCoordX(nonCardinal.edgeSet.center.getX) + ", " + trans.pix2IsoCoordY(nonCardinal.edgeSet.center.getY))
 
     // ------------------------------------------------------------------------------------
 
