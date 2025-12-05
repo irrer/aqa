@@ -302,7 +302,7 @@ object WLNonCardEdgeAnalysis {
       Trace.trace()
       val nonCardBall = WLNonCardBall(nonCardinal.edgeSet, dicomImage)
       Trace.trace()
-      Trace.trace("Ball center: " + nonCardBall.ballCenterFirstTry)
+      nonCardBall.doit()
       Trace.trace()
 
       val elapsed = System.currentTimeMillis() - start

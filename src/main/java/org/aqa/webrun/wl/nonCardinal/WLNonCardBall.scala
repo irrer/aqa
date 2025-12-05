@@ -37,7 +37,8 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
   }
 
   /**
-    * Construct the Ball AOI by determining which points are within the edge lines that define the minimum edge values.
+    * Construct the Ball AOI by determining which points are within the edge lines that define thei
+    * minimum edge values that were determined during edge measurement.
     *
     * @return Ball AOI.
     */
@@ -88,170 +89,34 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
     new DicomImage(array).getSubimage(bounds)
   }
 
-  private val looseBounds = makeBallBounds()
-  private val ballAOI = makeBallAOI(looseBounds)
+  private val ballAOIBounds = makeBallBounds()
+  private val ballAOI = makeBallAOI(ballAOIBounds)
 
-  if (true) {
+  if (true) { // TODO rm
 
     val bufImg = preprocessedImage.toDeepColorBufferedImage(0.01)
 
     val gc = ImageUtil.getGraphics(bufImg)
     gc.setColor(Color.white)
 
-    gc.drawRect(looseBounds.x, looseBounds.y, looseBounds.width, looseBounds.height)
-    ImageDisplay.showImageAndWait(bufImg)
+    gc.drawRect(ballAOIBounds.x, ballAOIBounds.y, ballAOIBounds.width, ballAOIBounds.height)
+    ImageDisplay.showInMSPaint(bufImg)
+    Thread.sleep(2 * 1000) // let MS Paint start
     Trace.trace()
   }
 
-  /** X Profile of the ball including surrounding area. */
-  //noinspection ScalaWeakerAccess
-  val xLooseAOIProfile: IndexedSeq[Float] = ballAOI.columnSums.toIndexedSeq.map(_ / ballAOI.height)
+  private def findCenter(bounds: Rectangle): Point2d = {
 
-  /** Y Profile of the ball including surrounding area. */
-  //noinspection ScalaWeakerAccess
-  val yLooseAOIProfile: IndexedSeq[Float] = ballAOI.rowSums.toIndexedSeq.map(_ / ballAOI.width)
+    val center = new Point2d(bounds.getX + (bounds.getWidth / 2.0), bounds.getX + (bounds.getHeight / 2.0))
 
-  /**
-    * Use center of mass on the entire area to find the center of the ball.
-    * @return Center, in absolute pixel coordinates.
-    */
-  private def findCoarseBallCenter(): Point2d = {
-    val x = ImageUtil.centerOfMass(xLooseAOIProfile)
-    val y = ImageUtil.centerOfMass(yLooseAOIProfile)
-    val center = new Point2d(x + looseBounds.x, y + looseBounds.y)
-    center
-  }
-
-  private case class LooseLimits(lo: Int, hi: Int) {
-    val range: Int = hi - lo
-  }
-
-  /**
-    * Return the first and last indices of the given profile that have points above a low
-    * threshold.  These roughly determine the position of the ball.
-    * @param looseProfile For this profile.
-    * @return low and high indices.
-    */
-  private def findFindCutoffPoints(looseProfile: IndexedSeq[Float]): LooseLimits = {
-    val lowPercent = 10.0
-
-    val valueRange = looseProfile.max - looseProfile.min
-
-    val threshold = looseProfile.min + ((valueRange * lowPercent) / 100)
-
-    val highList = looseProfile.indices.filter(i => looseProfile(i) > threshold)
-
-    val lo = highList.head
-    val hi = highList.last
-
-    val range: Int = hi - lo
-
-    val borderPercent = 50.0
-    val borderCount = ((range * borderPercent) / 100).round.toInt
-
-    val loLimit = Math.max(0, lo - borderCount)
-    val hiLimit = Math.min(looseProfile.size - 1, hi + borderCount)
-    LooseLimits(loLimit, hiLimit)
-  }
-
-  /**
-    * Define a rectangle in absolute coordinates that define an area of interest
-    * that fits tightly around the ball.
-    *
-    * @return Tight ball AOI.
-    */
-  private def makeTightBounds(): Rectangle = {
-
-    val xLimits = findFindCutoffPoints(xLooseAOIProfile)
-    val yLimits = findFindCutoffPoints(yLooseAOIProfile)
-
-    val tightBounds = new Rectangle(looseBounds.x + xLimits.lo, looseBounds.y + yLimits.lo, xLimits.range, yLimits.range)
-
-    tightBounds
-  }
-
-  //noinspection ScalaWeakerAccess
-  val tightBounds: Rectangle = makeTightBounds()
-
-  //noinspection ScalaWeakerAccess
-  val tightAoi: DicomImage = preprocessedImage.getSubimage(tightBounds)
-
-  //noinspection ScalaWeakerAccess
-  val xTightProfile: IndexedSeq[Float] = tightAoi.columnSums.map(_ / tightAoi.height)
-  //noinspection ScalaWeakerAccess
-  val yTightProfile: IndexedSeq[Float] = tightAoi.rowSums.map(_ / tightAoi.width)
-
-  private def findBallCenterFirst(): Point2d = {
-
-    val minValue: Float = {
-      val sortedPixelList = tightAoi.pixelData.flatten.sorted
-      // drop bad pixels and find the mean of the next 10 low pixels.  Use this as 'zero'.
-      sortedPixelList.slice(5, 15).sum / 10
-    }
-
-    val xNormalizedTightProfile = xTightProfile.map(_ - minValue)
-    val yNormalizedTightProfile = yTightProfile.map(_ - minValue)
-
-    val x = ImageUtil.centerOfMass(xNormalizedTightProfile)
-    val y = ImageUtil.centerOfMass(yNormalizedTightProfile)
-
-    if (true) {
-      val bufImg = tightAoi.toBufferedImage(Color.blue)
-      ImageDisplay.showInMSPaint(bufImg)
-    }
-
-    val xAbsolute_pix = x + tightBounds.x
-    val yAbsolute_pix = y + tightBounds.y
-
-    new Point2d(xAbsolute_pix, yAbsolute_pix)
+    ???
 
   }
 
-  /**
-    * Locate the ball again, this time using an AOI that is centered on a point very close to the ball's center.
-    * @param ballCenterFirstTry First approximation of finding ball.
-    * @return Centered ball.
-    */
-  private def findBallCenterSecond(ballCenterFirstTry: Point2d): Point2d = {
-
-    val first = new Point2d(ballCenterFirstTry.x - looseBounds.x, ballCenterFirstTry.y - looseBounds.y)
-
-    val t = first.x
-    val b = looseBounds.width - first.x
-    val l = first.y
-    val r = looseBounds.height - first.y
-
-    val minDistance = Seq(t, b, l, r).min
-
-    val centeredBoundary = new Rectangle( //
-      rnd(ballCenterFirstTry.x - minDistance), //
-      rnd(ballCenterFirstTry.y - minDistance),
-      rnd(minDistance * 2),
-      rnd(minDistance * 2)
-    )
-
-    val centeredAOI = preprocessedImage.getSubimage(centeredBoundary)
-
-    val xProfile = centeredAOI.columnSums
-    val yProfile = centeredAOI.rowSums
-
-    val relativeX = ImageUtil.centerOfMass(xProfile)
-    val relativeY = ImageUtil.centerOfMass(yProfile)
-
-    val xAbsolute_pix = relativeX + centeredBoundary.x
-    val yAbsolute_pix = relativeY + centeredBoundary.y
-
-    new Point2d(xAbsolute_pix, yAbsolute_pix)
+  def doit(): Unit = {
+    Trace.trace()
+    makeBallAOI(ballAOIBounds)
+    Trace.trace()
   }
-
-  Trace.trace("xLooseAOIProfile:\n" + xLooseAOIProfile.mkString("\n") + "\n\n\n\n")
-
-  val ballCenterFirstTry: Point2d = findBallCenterFirst()
-  Trace.trace(s"ballCenterFirstTry: $ballCenterFirstTry")
-
-  val ballCenterSecondTry: Point2d = findBallCenterSecond(ballCenterFirstTry)
-  Trace.trace(s"ballCenterSecondTry: $ballCenterSecondTry")
-
-  Trace.trace(s" ballCenterFirstTry distance to ballCenterSecondTry: ${ballCenterSecondTry.distance(ballCenterFirstTry)}")
 
 }
