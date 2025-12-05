@@ -18,6 +18,7 @@ package org.aqa.webrun.dailyQA
 
 import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.AngleType
 import org.aqa.Config
 import org.aqa.Logging
@@ -31,6 +32,8 @@ import org.aqa.db.Output
 import org.aqa.run.ProcedureStatus
 
 case class DailyDataSetComposite(composite: BBbyEPIDComposite, cbct: BBbyCBCT, machine: Machine, output: Output, bbByEpid: Seq[BBbyEPID], cbctDicomSeries: DicomSeries) extends Logging {
+
+  val lowestEpidKVP: Double = bbByEpid.map(_.attributeList).flatMap(al => DicomUtil.findAllSingle(al, TagByName.KVP)).map(_.getDoubleValues.head).min
 
   // unique reference to this set of data
   val checksum: String = {
@@ -64,6 +67,11 @@ case class DailyDataSetComposite(composite: BBbyEPIDComposite, cbct: BBbyCBCT, m
       }
     }
     (!machineDailyQA.requireXRayOffset) || anyOffsetOk
+  }
+
+  private def KVPok(): Boolean = {
+    val ok = lowestEpidKVP >= Config.BBbyEPIDMinAllowedKVP
+    ok
   }
 
   /**
@@ -122,6 +130,8 @@ case class DailyDataSetComposite(composite: BBbyEPIDComposite, cbct: BBbyCBCT, m
       case _ if exceedsPass(composite.xAdjusted_mm) => ProcedureStatus.warning
       case _ if exceedsPass(composite.yAdjusted_mm) => ProcedureStatus.warning
       case _ if exceedsPass(composite.zAdjusted_mm) => ProcedureStatus.warning
+
+      case _ if !KVPok() => ProcedureStatus.fail
 
       case _ if vertZ > machineDailyQA.passLimit_mm => ProcedureStatus.warning
       case _ if horzZ > machineDailyQA.passLimit_mm => ProcedureStatus.warning

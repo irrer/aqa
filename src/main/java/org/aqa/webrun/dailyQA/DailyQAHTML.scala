@@ -76,7 +76,7 @@ object DailyQAHTML extends Logging {
       }
     }
 
-    def fmtAngle(angle: Double) = angle.formatted("%12.8f").trim
+    def fmtAngle(angle: Double) = "%12.8f".format(angle).trim
 
     case class Col(name: String, title: String, toElem: DailyDataSetComposite => Elem) {
       def toHeader: Elem = <th title={title}>
@@ -131,14 +131,15 @@ object DailyQAHTML extends Logging {
       patientName
     }
 
-    def posnRow(posn: Double, machineDailyQA: MachineDailyQA): Elem = {
-      val text = posn.formatted("%7.2f").trim
-      val title = posn.formatted("%12.6f").trim
-      if (posn.abs > machineDailyQA.warningLimit_mm) {
+    def positionRow(position: Double, machineDailyQA: MachineDailyQA): Elem = {
+      val text = "%7.2f".format(position).trim
+
+      val title = "%12.6f".format(position)
+      if (position.abs > machineDailyQA.warningLimit_mm) {
         <td class="danger" title={title + " is above warning limit of " + machineDailyQA.warningLimit_mm + " mm"}>
           {text}
         </td>
-      } else if (posn.abs > machineDailyQA.passLimit_mm) {
+      } else if (position.abs > machineDailyQA.passLimit_mm) {
         <td class="warning" title={title + " is above pass limit of " + machineDailyQA.passLimit_mm + " mm but below warning limit of " + machineDailyQA.warningLimit_mm + " mm"}>
           {text}
         </td>
@@ -163,8 +164,14 @@ object DailyQAHTML extends Logging {
       val y = dataSet.cbct.err_mm.getY
       val z = dataSet.cbct.err_mm.getZ
 
-      val text = x.formatted("%7.2f").trim + ", " + y.formatted("%7.2f").trim + ", " + z.formatted("%7.2f").trim
-      val title = x.formatted("%12.6f").trim + ", " + y.formatted("%12.6f").trim + ", " + z.formatted("%12.6f").trim
+      val text = {
+        def fmt(d: Double) = "%7.2f".format(d).trim
+        fmt(x) + ", " + fmt(y) + ", " + fmt(z)
+      }
+      val title = {
+        def fmt(d: Double) = "%12.6f".format(d).trim
+        fmt(x) + ", " + fmt(y) + ", " + fmt(z)
+      }
 
       def exceeds = {
         val limit = Config.DailyQACBCTLimit_mm
@@ -185,7 +192,7 @@ object DailyQAHTML extends Logging {
     def colTableMovement(dataSet: DailyDataSetComposite): Elem = {
       val composite = dataSet.composite
 
-      def fmt(d: Option[Double]) = (d.get / 10).formatted("%4.1f")
+      def fmt(d: Option[Double]) = "%4.1f".format(d.get / 10)
 
       if (composite.tableXlateral_mm.isDefined) {
         <td title={Util.fmtDbl(composite.tableXlateral_mm.get / 10) + ", " + Util.fmtDbl(composite.tableYvertical_mm.get / 10) + ", " + Util.fmtDbl(composite.tableZlongitudinal_mm.get / 10) + ", "}>
@@ -202,12 +209,12 @@ object DailyQAHTML extends Logging {
     }
 
     def colVertXCax(dataSet: DailyDataSetComposite): Elem = {
-      posnRow(dataSet.composite.xAdjusted_mm.get, dataSet.machineDailyQA)
+      positionRow(dataSet.composite.xAdjusted_mm.get, dataSet.machineDailyQA)
     }
 
     def colVertZCax(dataSet: DailyDataSetComposite): Elem = {
       val offset = dataSet.vertList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ
-      posnRow(offset, dataSet.machineDailyQA)
+      positionRow(offset, dataSet.machineDailyQA)
     }
 
     def colHorzGantryAngle(dataSet: DailyDataSetComposite): Elem = {
@@ -218,16 +225,16 @@ object DailyQAHTML extends Logging {
     }
 
     def colHorzYCax(dataSet: DailyDataSetComposite): Elem = {
-      posnRow(dataSet.composite.yAdjusted_mm.get, dataSet.machineDailyQA)
+      positionRow(dataSet.composite.yAdjusted_mm.get, dataSet.machineDailyQA)
     }
 
     def colHorzZCax(dataSet: DailyDataSetComposite): Elem = {
       val offset = dataSet.horzList.head.epid3DZ_mm - dataSet.cbct.err_mm.getZ
-      posnRow(offset, dataSet.machineDailyQA)
+      positionRow(offset, dataSet.machineDailyQA)
     }
 
     def colEpidPlanCbct(dataSet: DailyDataSetComposite): Elem = {
-      if (dataSet.composite.offsetAdjusted_mm.isDefined) posnRow(dataSet.composite.offsetAdjusted_mm.get, dataSet.machineDailyQA)
+      if (dataSet.composite.offsetAdjusted_mm.isDefined) positionRow(dataSet.composite.offsetAdjusted_mm.get, dataSet.machineDailyQA)
       else <div>undefined</div>
     }
 
@@ -261,6 +268,31 @@ object DailyQAHTML extends Logging {
     }
 
     def colEpidImages(dataSet: DailyDataSetComposite): Elem = {
+
+      def showKVPError: Elem = {
+
+        def fmt(d: Double): String = {
+          if (d.round == d)
+            d.round.toString
+          else
+            Util.fmtDbl(d)
+        }
+
+        def kvpToText(kvp: Double): String = {
+          if (kvp < 1000) {
+            fmt(kvp) + " KVP"
+          } else
+            fmt(kvp / 1000) + " MV"
+        }
+
+        val title = s"One or more EPID images were acquired with a${WebUtil.titleNewline}low energy of ${kvpToText(dataSet.lowestEpidKVP)}.  Minimum is ${kvpToText(Config.BBbyEPIDMinAllowedKVP)}"
+        <td title={title} class="danger">
+          <a href={ViewOutput.viewOutputUrl(dataSet.composite.outputPK)}>EPID Details
+            <br/> <b style="color:red;">Low Energy</b>
+          </a>
+        </td>
+      }
+
       def showXRayError: Elem = {
         val title =
           "The X-Ray Image Receptor Translation for this machine is set to" + WebUtil.titleNewline +
@@ -276,7 +308,7 @@ object DailyQAHTML extends Logging {
         </td>
       }
 
-      def f(d: Double) = d.formatted("%12.2f").trim()
+      def f(d: Double) = "%12.2f".format(d).trim()
       val tableMovement = dataSet.bbByEpid.map(e => f(e.tableXlateral_mm) + ", " + f(e.tableYvertical_mm) + ", " + f(e.tableZlongitudinal_mm)).distinct
 
       def showTableMovementError: Elem = {
@@ -295,9 +327,10 @@ object DailyQAHTML extends Logging {
       }
 
       0 match {
-        case _ if !dataSet.xRayOffsetOk  => showXRayError
-        case _ if tableMovement.size > 1 => showTableMovementError
-        case _                           => showLink
+        case _ if dataSet.lowestEpidKVP < Config.BBbyEPIDMinAllowedKVP => showKVPError
+        case _ if !dataSet.xRayOffsetOk                                => showXRayError
+        case _ if tableMovement.size > 1                               => showTableMovementError
+        case _                                                         => showLink
       }
     }
 
@@ -568,7 +601,7 @@ object DailyQAHTML extends Logging {
 
         /**
           * True if Daily QA on the given machine is in progress.  It is better to acknowledge to the user that it
-          * takes time to run things instead of giving warnings and errors right away..
+          * takes time to run things instead of giving warnings and errors right away.
           */
         val inProgress: Boolean = {
           // this much time until it has been 'too long'
