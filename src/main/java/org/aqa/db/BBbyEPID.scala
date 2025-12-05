@@ -240,35 +240,6 @@ object BBbyEPID extends Logging {
   }
 
   /** EPID data and related results. */
-  case class DailyDataSetEPIDJJ(output: Output, machine: Machine, bbByEPID: BBbyEPID) {
-
-    private val angType = AngleType.classifyAngle(bbByEPID.gantryAngle_deg)
-
-    def isHorz: Boolean = angType.isDefined && angType.get.toString.equals(AngleType.horizontal.toString)
-
-    def isVert: Boolean = angType.isDefined && angType.get.toString.equals(AngleType.vertical.toString)
-  }
-
-  /**
-    * Get all results that were acquired on one day for one institution.
-    */
-  def getForOneDayX(date: Date, institutionPK: Long): Seq[DailyDataSetEPIDJJ] = {
-
-    val beginDate = new Timestamp(Util.dateTimeToDate(date).getTime)
-
-    val endDate = new Timestamp(beginDate.getTime + (24 * 60 * 60 * 1000))
-
-    val search = for {
-      output <- Output.query.filter(o => o.dataDate.isDefined && (o.dataDate >= beginDate) && (o.dataDate < endDate))
-      bbByEPID <- BBbyEPID.query.filter(c => c.outputPK === output.outputPK)
-      machine <- Machine.query.filter(m => (m.machinePK === output.machinePK) && (m.institutionPK === institutionPK))
-    } yield (output, machine, bbByEPID)
-
-    val seq = Db.run(search.result).map(omc => DailyDataSetEPIDJJ(omc._1, omc._2, omc._3))
-    seq
-  }
-
-  /** EPID data and related results. */
   case class DailyDataSetEPID(output: Output, machine: Machine, data: Either[AttributeList, BBbyEPID]) {
 
     val al: AttributeList = data match {
