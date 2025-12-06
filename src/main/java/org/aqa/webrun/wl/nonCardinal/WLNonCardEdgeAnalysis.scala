@@ -300,9 +300,9 @@ object WLNonCardEdgeAnalysis {
       ImageUtil.writePngFile(aoi, file)
 
       Trace.trace()
-      val nonCardBall = WLNonCardBall(nonCardinal.edgeSet, dicomImage)
+      val nonCardBall = WLNonCardBall(nonCardinal.edgeSet, dicomImage, BiCubicImage(dicomImage))
       Trace.trace()
-      nonCardBall.doit()
+      nonCardBall.doIt()
       Trace.trace()
 
       val elapsed = System.currentTimeMillis() - start
