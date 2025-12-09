@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package org.aqa.webrun.wl.nonCardinal
 
 import edu.umro.ImageUtil.LocateEdge
@@ -85,23 +84,23 @@ case class WLNonCardEdge( //
   val profile: Seq[Double] = appendToProfile(offsetStart, Seq())
 
   /** Min profile value. */
-  val min_cu: Double = profile.min
+  val min: Double = profile.min
 
   /** Max profile value. */
-  val max_cu: Double = profile.max
+  val max: Double = profile.max
 
   /** Difference between max and min.  This is useful for gauging the validity of the edge.  This number should be
     * close to the overall range of the image.  If not, then this is probably not a Winston Lutz image.
     */
-  val range_cu: Double = min_cu - max_cu
+  val range: Double = max - min
 
   // Use this to define one edge of the AOI
-  private val indexOfMin = profile.indexOf(min_cu)
+  private val indexOfMin = profile.indexOf(min)
 
   private val edge = profile.dropRight(indexOfMin)
 
   /** Distance from the point to the edge. */
-  val position: Double = LocateEdge.locateEdge(edge.map(_.toFloat).toIndexedSeq, (min_cu + edge.max) / 2) * resolution
+  val position: Double = LocateEdge.locateEdge(edge.map(_.toFloat).toIndexedSeq, (min + edge.max) / 2) * resolution
 
   /** Point where the WL edge  */
   val edgeCenter: Point2d = line.pointOn(if (offsetFinish > 0) position else -position)
