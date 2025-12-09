@@ -99,7 +99,7 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
   private val ballAOIBounds = makeBallBounds()
   private val ballAOI = makeBallAOI(ballAOIBounds)
 
-  if (false) { // TODO rm
+  if (true) { // TODO rm
 
     val bufImg = preprocessedImage.toDeepColorBufferedImage(0.01)
 
@@ -139,14 +139,19 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
 
   private val bounds: Rectangle = makeBallBounds()
 
-  private def calcCenter(pointSpacing: Double): Point2d = {
-    bounds.getCenterX
+  /**
+    * Find the center of mass.  A circular area is searched, and is defined by the center point given, and a
+    *
+    * radius.  The radius is defined by the shortest distance from the center to an edge of the AOI.
+    * @param pointSpacing The resolution. Sample the image this many pixels apart.  e.g., 0.5 would mean sampling every 1/2 pixel.
+    * @param center Use this as the center of the search.  If not defined, use the center of the AOI.
+    * @return The center of mass.
+    */
+  private def calcCenter(pointSpacing: Double, center: Point2d = new Point2d(bounds.getCenterX, bounds.getCenterY)): Point2d = {
 
-    val center = new Point2d(bounds.getCenterX, bounds.getCenterY)
+    val radius = Math.min(bounds.width / 2.0, bounds.getHeight / 2.0) * 0.9
 
-    val radius = Math.min(bounds.width / 2.0, bounds.getHeight / 2.0)
-
-    Trace.trace(s"radius: $radius")
+    // Trace.trace(s"radius: $radius")
 
     val numCircle = (radius / pointSpacing).ceil.round.toInt
 
@@ -176,7 +181,44 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
   }
    */
 
-  def byRect(spacing: Double): Point2d = {
+  /**
+    * Estimate the radius of the ball.  This assumes that it has the usual approximate profile.
+    *
+    * This is done by finding those pixels that are outside a hard-coded number of standard
+    * deviation.  This number is currently 1.0.
+    *
+    * If the value returned is 0 or near 0, then it does indicate that there is no ball.
+    *
+    * Caveat: This function is NOT a validation check, and always return a value.  That value
+    * can only be trusted if the ball has been validated by other means. For example, if the
+    * image is of a patient scan, then this will still return a value.
+    *
+    * @return Radius of the ball in pixels.  Value will generally not be a round (integer) number.
+    */
+  private def estimateBallRadius_pix(): Double = {
+    val subImage = preprocessedImage.getSubimage(ballAOIBounds)
+
+    // pixels that exceed the mean p
+    val stdDevFactor = 1.0
+
+    // Pixel values sorted. Drop a few from each end to discard bad pixels.
+    val pixList = subImage.pixelData.flatten.sorted.drop(5).dropRight(5)
+
+    val stdDev = ImageUtil.stdDev(pixList)
+    val meanOf = pixList.sum / pixList.size
+
+    val ballPixValueThreshold = meanOf + (stdDev * stdDevFactor)
+
+    val ballPixList = pixList.filter(_ > ballPixValueThreshold)
+
+    val ballArea = ballPixList.size
+
+    val ballRadius = Math.sqrt(ballArea / Math.PI)
+
+    ballRadius
+  }
+
+  private def byRect(spacing: Double): Point2d = {
     val xCount = (bounds.getWidth / spacing).round.toInt
     val yCount = (bounds.getHeight / spacing).round.toInt
 
@@ -211,21 +253,31 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
 
     var sp = 1.0
 
-    case class Dodo(time: Long, spacing: Double, center: Point2d) {}
+    val ballRadius = estimateBallRadius_pix()
 
-    /*
-    val list = (0 until 16).map(i => {
+    estimateBallRadius_pix()
+    estimateBallRadius_pix()
+    estimateBallRadius_pix()
+
+    case class Dodo(time: Long, spacing: Double, centerList: Seq[Point2d]) {}
+
+    val list = (0 until 13).map(_ => {
       val start = System.currentTimeMillis()
-      val center = calcCenter(sp)
+      val center0 = calcCenter(sp)
       val elapsed = System.currentTimeMillis() - start
 
-      Trace.trace(s"spacing: $sp    center: $center")
+      val centerList = (0 until 10).tail.foldLeft(Seq(center0))((list, index) => list :+ calcCenter(sp, list(index - 1)))
 
+      val distList = centerList.indices.tail.map(i => centerList(i).distance(centerList(i - 1)))
+
+      Trace.trace(s"""spacing: $sp    ${distList.map(d => "%14.10f".format(d)).mkString("    ")}  """)
+
+      val oldSp = sp
       sp = sp * 0.75
-      Dodo(elapsed, sp + 0, center)
+      Dodo(elapsed, oldSp, centerList)
     })
-     */
 
+    /*
     val list = (0 until 16).map(i => {
       val start = System.currentTimeMillis()
       val center = byRect(sp)
@@ -235,11 +287,14 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
       sp = sp * 0.75
       Dodo(elapsed, sp + 0, center)
     })
+     */
 
     list.indices.foreach(i => {
       val dodo = list(i)
-      val distance: Double = if (i == 0) -1 else dodo.center.distance(list(i - 1).center)
-      Trace.trace(s"time: ${"%10d".format(dodo.time)}    spacing: ${"%20.15f".format(dodo.spacing)}    distance: ${"%20.15f".format(distance)}   center: ${dodo.center}")
+      val distList = dodo.centerList.indices.tail.map(i => dodo.centerList(i).distance(dodo.centerList(i - 1)))
+      val centerText = dodo.centerList.map(c => "%20.15f".format(c.getX) + ", " + "%20.15f".format(c.getY)).mkString("  |  ")
+      val distText = distList.map(d => "%14.10f".format(d)).mkString("    ")
+      Trace.trace(s"time: ${"%10d".format(dodo.time)}    spacing: ${"%20.15f".format(dodo.spacing)}    distanceList: $distText    centerList: $centerText")
     })
 
     Trace.trace()
