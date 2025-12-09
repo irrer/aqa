@@ -40,9 +40,9 @@ case class WLPreprocessImage(rtimage: AttributeList, wlMsg: Option[WLMessage]) {
         def invert(pix: Float): Float = minPlusMax - pix
 
         val invertedDicomImage = di.fun1(invert)
-        invertedDicomImage.pixelData.map(_.toIndexedSeq).toIndexedSeq
+        invertedDicomImage.pixelData.map(_.toIndexedSeq)
       } else
-        di.pixelData.map(_.toIndexedSeq).toIndexedSeq
+        di.pixelData.map(_.toIndexedSeq)
     }
 
     pixelData
