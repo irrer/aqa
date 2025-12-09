@@ -5,10 +5,18 @@ import javax.vecmath.Point2i
 import scala.annotation.tailrec
 
 /**
-  * Define and handle the geometry of 'traveling' along non-cardinal lines within an image.
-  * @param centerPoint Point on the line.
-  * @param angle_deg Angle of in degrees.
-  */
+ * Define and handle the geometry of 'traveling' along non-cardinal lines within an image.
+ *
+ * Non-cardinal angle geometry is handled using a starting point (x,y) and then moving a
+ * given distance (can be positive or negative) from that point on the line.
+ *
+ * Cardinal angles are also supported.
+ *
+ * All math is in pixels (not mm or iso).
+ *
+ * @param centerPoint Point on the line.
+ * @param angle_deg   Angle of in degrees.
+ */
 case class AQALine(centerPoint: Point2d, angle_deg: Double) extends Logging {
 
   def this(centerX: Double, centerY: Double, angle: Double) = this(new javax.vecmath.Point2d(centerX, centerY), angle)
@@ -32,20 +40,22 @@ case class AQALine(centerPoint: Point2d, angle_deg: Double) extends Logging {
   private val b: Double = centerY - (m * centerX)
 
   private def x2y(x: Double): Double = (m * x) + b
+
   private def y2x(y: Double): Double = if (m == 0) b else (y - b) / m
 
   /**
-    * Find a point on the line offset from the center.
-    * @param offset Distance along line from center.
-    * @return New point on the line.
-    */
+   * Find a point on the line offset from the center.
+   *
+   * @param offset Distance along line from center.
+   * @return New point on the line.
+   */
   def pointOn(offset: Double): Point2d = {
 
     val point = angle_deg match {
       case _ if (angle_deg.abs > 359) || (angle_deg.abs < 1) => new Point2d(centerX + offset, centerY)
-      case _ if (angle_deg > 179) && (angle_deg < 181)       => new Point2d(centerX + offset, centerY)
-      case _ if (angle_deg > 89) && (angle_deg < 91)         => new Point2d(centerX, centerY + offset)
-      case _ if (angle_deg > 269) && (angle_deg < 271)       => new Point2d(centerX, centerY + offset)
+      case _ if (angle_deg > 179) && (angle_deg < 181) => new Point2d(centerX + offset, centerY)
+      case _ if (angle_deg > 89) && (angle_deg < 91) => new Point2d(centerX, centerY + offset)
+      case _ if (angle_deg > 269) && (angle_deg < 271) => new Point2d(centerX, centerY + offset)
 
       case _ =>
         val useX = //
@@ -67,11 +77,12 @@ case class AQALine(centerPoint: Point2d, angle_deg: Double) extends Logging {
   }
 
   /**
-    * Determine if the given point is between this line an another line that is parallel to this line.
-    * @param point Point to be tested.
-    * @param other Other line.  Must be parallel to this line.
-    * @return True if between, false if not.
-    */
+   * Determine if the given point is between this line an another line that is parallel to this line.
+   *
+   * @param point Point to be tested.
+   * @param other Other line.  Must be parallel to this line.
+   * @return True if between, false if not.
+   */
   def pointIsBetween(point: Point2d, other: AQALine): Boolean = {
     val x = point.getX
     val y = point.getY
@@ -86,14 +97,15 @@ case class AQALine(centerPoint: Point2d, angle_deg: Double) extends Logging {
   }
 
   /**
-    * Make profile of the sum of values along the line.
-    * @param offsetStart Start of segment in pixels offset from this line's point.
-    * @param offsetFinish End of segment in pixels offset from this line's point.
-    * @param biCubicImage Use this to interpret values between pixels.
-    * @param width Width of sample band in pixels.
-    * @param resolution Distance between samples in pixels.  0.1 would make 10*10 = 100 samples per pixel.
-    * @return Profile of the sampled band.
-    */
+   * Make profile of the sum of values along the line.
+   *
+   * @param offsetStart  Start of segment in pixels offset from this line's point.
+   * @param offsetFinish End of segment in pixels offset from this line's point.
+   * @param biCubicImage Use this to interpret values between pixels.
+   * @param width        Width of sample band in pixels.
+   * @param resolution   Distance between samples in pixels.  0.1 would make 10*10 = 100 samples per pixel.
+   * @return Profile of the sampled band.
+   */
   def makeProfile(offsetStart: Double, offsetFinish: Double, biCubicImage: BiCubicImage, width: Double, resolution: Double): Seq[Double] = {
 
     val positive = offsetFinish > offsetStart
@@ -105,7 +117,7 @@ case class AQALine(centerPoint: Point2d, angle_deg: Double) extends Logging {
       if //
       (
         (positive && (offset <= offsetFinish)) || //
-        ((!positive) && (offset >= offsetFinish))
+          ((!positive) && (offset >= offsetFinish))
       ) {
         val line = new AQALine(pointOn(offset), perpendicularAngle)
 
@@ -133,14 +145,25 @@ case class AQALine(centerPoint: Point2d, angle_deg: Double) extends Logging {
   }
 
   /**
-    * Find the intersection of the two lines.
-    * @param other The other line.  Must not be parallel to this line.
-    * @return The point where they intersect.
-    */
+   * Find the intersection of the two lines.
+   *
+   * @param other The other line.  Must not be parallel to this line.
+   * @return The point where they intersect.
+   */
   def intersection(other: AQALine): Point2d = {
-    val x = (other.b - b) / (m - other.m)
-    val y = x2y(x)
-    new Point2d(x, y)
+    val intersect = angle_deg match {
+      // @formatter:off
+      case   0 => new Point2d(other.centerPoint.x      ,       centerPoint.y)
+      case  90 => new Point2d(      centerPoint.x      , other.centerPoint.y)
+      case 180 => new Point2d(other.centerPoint.x      ,       centerPoint.y)
+      case 270 => new Point2d(      centerPoint.x      , other.centerPoint.y)
+      // @formatter:on
+      case _ =>
+        val x = (other.b - b) / (m - other.m)
+        val y = x2y(x)
+        new Point2d(x, y)
+    }
+    intersect
   }
 }
 
