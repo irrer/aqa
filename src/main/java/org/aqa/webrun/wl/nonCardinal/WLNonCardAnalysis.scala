@@ -15,7 +15,7 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
 
   private val nonCardinal = new WLNonCardEdgeAnalysis(preprocessedImage, al)
   private val biCubicImage = BiCubicImage(preprocessedImage)
-  private val wlNonCardBall = WLNonCardBall(nonCardinal.edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, biCubicImage: BiCubicImage)
+  private val wlNonCardBall = WLNonCardBall(nonCardinal.edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, biCubicImage: BiCubicImage, al)
 
   /** Establish a threshold for the min-to-max pixel range.  An edge must have at least this amount of change in pixel value to be considered valid. */
   private val wholeImagePixelValueRangeThreshold_cu: Double = {

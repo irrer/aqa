@@ -16,9 +16,11 @@
 
 package org.aqa.webrun.wl.nonCardinal
 
+import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageDisplay
 import edu.umro.ImageUtil.ImageUtil
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.Trace
 import org.aqa.BiCubicImage
 import org.aqa.Logging
@@ -30,17 +32,27 @@ import javax.vecmath.Point2i
 
 /**
   * Measure the position of the ball and also verify that it is a valid ball.
+  *
   * @param edgeSet Surrounding edges.
   * @param preprocessedImage Image containing ball.
   * @param biCubicImage Interpolated version of preprocessedImage.
+  * @param al Original DICOM.
   */
-case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, biCubicImage: BiCubicImage) extends Logging {
+case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, biCubicImage: BiCubicImage, al: AttributeList) extends Logging {
 
-  private def rnd(d: Double): Int = d.round.toInt
+  private val trans = new IsoImagePlaneTranslator(al)
 
-  private def pointIsInBallAoi(point: Point2i): Boolean = {
+  private def pointIsInBallAoi(point: Point2d): Boolean = {
     edgeSet.X1.loLine.pointIsBetween(point, edgeSet.X2.loLine) &&
     edgeSet.Y1.loLine.pointIsBetween(point, edgeSet.Y2.loLine)
+  }
+
+  private val pointsInBounds: Seq[Point2i] = {
+    for ( //
+      x <- 0 until preprocessedImage.width; //
+      y <- 0 until preprocessedImage.height //
+      if pointIsInBallAoi(new Point2d(x, y))
+    ) yield new Point2i(x, y)
   }
 
   /**
@@ -51,19 +63,24 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
     */
   private def makeBallBounds(): Rectangle = {
 
-    val pointList =
-      for ( //
-        x <- 0 until preprocessedImage.width; //
-        y <- 0 until preprocessedImage.height //
-        if pointIsInBallAoi(new Point2i(x, y))
-      ) yield new Point2i(x, y)
-
-    val x = pointList.map(_.getX).min
-    val y = pointList.map(_.getY).min
-    val width = pointList.map(_.getX).max - x
-    val height = pointList.map(_.getY).max - y
+    val x = pointsInBounds.map(_.getX).min
+    val y = pointsInBounds.map(_.getY).min
+    val width = pointsInBounds.map(_.getX).max - x
+    val height = pointsInBounds.map(_.getY).max - y
 
     new Rectangle(x, y, width, height)
+  }
+
+  def calculateRadiusToNearestEdge(point: Point2d): Double = {
+
+    val radius_pix = Seq( //
+      edgeSet.X1.loLine.distanceToPoint(point),
+      edgeSet.X2.loLine.distanceToPoint(point),
+      edgeSet.Y1.loLine.distanceToPoint(point),
+      edgeSet.Y2.loLine.distanceToPoint(point)
+    ).min
+
+    radius_pix
   }
 
   /**
@@ -82,15 +99,15 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
       list.slice(badPixelCount, badPixelCount + samplePixelCount).sum / samplePixelCount
     }
 
-    def doPoint(point: Point2i): Float = {
+    def doPoint(point: Point2d): Float = {
       if (pointIsInBallAoi(point))
-        preprocessedImage.get(point.getX, point.getY)
+        preprocessedImage.get(point.getX.toInt, point.getY.toInt)
       else
         minPixelValue
     }
 
     def doRow(y: Int): IndexedSeq[Float] =
-      (0 until preprocessedImage.width).map(x => doPoint(new Point2i(x, y)))
+      (0 until preprocessedImage.width).map(x => doPoint(new Point2d(x, y)))
 
     val array = (0 until preprocessedImage.height).map(doRow)
     new DicomImage(array).getSubimage(bounds)
@@ -99,7 +116,7 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
   private val ballAOIBounds = makeBallBounds()
   private val ballAOI = makeBallAOI(ballAOIBounds)
 
-  if (true) { // TODO rm
+  if (false) { // TODO rm
 
     val bufImg = preprocessedImage.toDeepColorBufferedImage(0.01)
 
@@ -115,71 +132,9 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
   // private val pointSpacing: Double = 0.2
 
   private case class Pt(x: Double, y: Double) {
+    def this(point: Point2d) = this(point.getX, point.getY)
     val value: Double = biCubicImage.get(x, y)
   }
-
-  private def addCircle(radius: Double, center: Point2d, pointSpacing: Double): Seq[Pt] = {
-
-    val diameter = Math.PI * 2 * radius
-
-    val count = (diameter / pointSpacing).ceil.round.toInt
-    val radianIncrement = (Math.PI * 2) / count
-
-    def makePoint(i: Int): Pt = {
-      val radian = radianIncrement * i
-
-      val x = center.getX + (Math.sin(radian) * radius)
-      val y = center.getY + (Math.cos(radian) * radius)
-
-      Pt(x, y)
-    }
-
-    (0 until count).map(makePoint)
-  }
-
-  private val bounds: Rectangle = makeBallBounds()
-
-  /**
-    * Find the center of mass.  A circular area is searched, and is defined by the center point given, and a
-    *
-    * radius.  The radius is defined by the shortest distance from the center to an edge of the AOI.
-    * @param pointSpacing The resolution. Sample the image this many pixels apart.  e.g., 0.5 would mean sampling every 1/2 pixel.
-    * @param center Use this as the center of the search.  If not defined, use the center of the AOI.
-    * @return The center of mass.
-    */
-  private def calcCenter(pointSpacing: Double, center: Point2d = new Point2d(bounds.getCenterX, bounds.getCenterY)): Point2d = {
-
-    val radius = Math.min(bounds.width / 2.0, bounds.getHeight / 2.0) * 0.9
-
-    // Trace.trace(s"radius: $radius")
-
-    val numCircle = (radius / pointSpacing).ceil.round.toInt
-
-    val pointList = (0 until numCircle).flatMap(c => addCircle(c * pointSpacing, center, pointSpacing: Double))
-
-    if (false) {
-      val img = preprocessedImage.toBufferedImage(Color.blue)
-      val gc = ImageUtil.getGraphics(img)
-      val color: Int = Color.white.getRGB
-      pointList.foreach(pt => img.setRGB(pt.x.toInt, pt.y.toInt, color))
-      ImageDisplay.showInMSPaint(img)
-      Thread.sleep(2000)
-    }
-
-    val totalMass = pointList.map(_.value).sum
-    val xCenter = pointList.map(pt => pt.x * pt.value).sum / totalMass
-    val yCenter = pointList.map(pt => pt.y * pt.value).sum / totalMass
-
-    new Point2d(xCenter, yCenter)
-  }
-
-  /*
-  @tailrec
-  private def findCenter(center: Point2d = new Point2d(bounds.getCenterX, bounds.getCenterY)): Point2d = {
-
-    calcCenter(1.0)
-  }
-   */
 
   /**
     * Estimate the radius of the ball.  This assumes that it has the usual approximate profile.
@@ -199,7 +154,7 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
     val subImage = preprocessedImage.getSubimage(ballAOIBounds)
 
     // pixels that exceed the mean p
-    val stdDevFactor = 1.0
+    val stdDevFactor = 1.75
 
     // Pixel values sorted. Drop a few from each end to discard bad pixels.
     val pixList = subImage.pixelData.flatten.sorted.drop(5).dropRight(5)
@@ -213,91 +168,185 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
 
     val ballArea = ballPixList.size
 
-    val ballRadius = Math.sqrt(ballArea / Math.PI)
+    // val ballRadius = Math.sqrt(ballArea / Math.PI)
 
+    val ballRadius = trans.iso2PixDistX(5.0)
     ballRadius
   }
 
-  private def byRect(spacing: Double): Point2d = {
-    val xCount = (bounds.getWidth / spacing).round.toInt
-    val yCount = (bounds.getHeight / spacing).round.toInt
+  private val estimatedBallRadius_pix = estimateBallRadius_pix()
 
-    def makeRow(r: Int): Seq[Pt] = {
-      val y = r * spacing + bounds.getY
-      val baseX = bounds.getX
+  private def makePointList(radius_pix: Double, pointSpacing: Double): Seq[Point2d] = {
 
-      (0 until xCount).map(x => Pt(x * spacing + baseX, y))
+    def addCircle(radius: Double, pointSpacing: Double): Seq[Point2d] = {
+
+      val diameter = Math.PI * 2 * radius
+
+      val count = (diameter / pointSpacing).ceil.round.toInt
+      val radianIncrement = (Math.PI * 2) / count
+
+      def makePoint(i: Int): Point2d = {
+        val radian = radianIncrement * i
+
+        val x = Math.sin(radian) * radius
+        val y = Math.cos(radian) * radius
+
+        new Point2d(x, y)
+      }
+
+      (0 until count).map(makePoint)
     }
+    val numCircle = (radius_pix / pointSpacing).ceil.round.toInt
 
-    val list = (0 until yCount).map(makeRow)
+    val pointList = (0 until numCircle).flatMap(c => addCircle(c * pointSpacing, pointSpacing: Double))
 
-    val rowSums = list.map(row => row.map(_.value).sum).map(_.toFloat)
+    logger.info(s"Point spacing: $pointSpacing     Number of points used to find ball ${pointList.size}")
 
-    val columnSums = {
-      def doCol(x: Int): Double = (0 until yCount).map(y => list(y)(x).value).sum
-      (0 until xCount).map(doCol).map(_.toFloat)
-    }
-
-    val xx = ImageUtil.centerOfMass(columnSums)
-    val yy = ImageUtil.centerOfMass(rowSums)
-
-    val x = (ImageUtil.centerOfMass(columnSums) * spacing) + bounds.getX
-    val y = (ImageUtil.centerOfMass(rowSums) * spacing) + bounds.getY
-
-    new Point2d(x, y)
+    pointList
   }
 
-  def doIt(): Unit = {
-    Trace.trace()
-    makeBallAOI(ballAOIBounds)
+  private def makePointArray(center: Point2d, resolution_pix: Double): Seq[Point2d] = {
+    val upperLimit = calculateRadiusToNearestEdge(edgeSet.center) / 2
+    val thisLimit = calculateRadiusToNearestEdge(center)
 
-    var sp = 1.0
+    val radius_pix = Math.min(upperLimit, thisLimit)
 
-    val ballRadius = estimateBallRadius_pix()
+    val count = ((radius_pix * 2) / resolution_pix).round.toInt
 
-    estimateBallRadius_pix()
-    estimateBallRadius_pix()
-    estimateBallRadius_pix()
+    val xStart = center.getX - radius_pix
+    val yStart = center.getY - radius_pix
 
-    case class Dodo(time: Long, spacing: Double, centerList: Seq[Point2d]) {}
+    def indexToPoint(x: Int, y: Int): Point2d = {
+      val xx = xStart + (x * resolution_pix)
+      val yy = yStart + (y * resolution_pix)
+      new Point2d(xx, yy)
+    }
 
-    val list = (0 until 13).map(_ => {
-      val start = System.currentTimeMillis()
-      val center0 = calcCenter(sp)
-      val elapsed = System.currentTimeMillis() - start
+    def isWithinRadius(x: Int, y: Int): Boolean = indexToPoint(x, y).distance(center) <= radius_pix
 
-      val centerList = (0 until 10).tail.foldLeft(Seq(center0))((list, index) => list :+ calcCenter(sp, list(index - 1)))
+    val list = for (x <- 0 until count; y <- 0 until count; if isWithinRadius(x, y)) yield indexToPoint(x, y)
+    list
+  }
 
-      val distList = centerList.indices.tail.map(i => centerList(i).distance(centerList(i - 1)))
+  private val bounds: Rectangle = makeBallBounds()
 
-      Trace.trace(s"""spacing: $sp    ${distList.map(d => "%14.10f".format(d)).mkString("    ")}  """)
+  /**
+    * Find the brightest cluster of pixels to use as the approximate center.
+    *
+    * radius.  The radius is defined by the shortest distance from the center to an edge of the AOI.
+    * @return The center of mass.
+    */
+  private def calcApproximateCenter(): Point2d = {
+    val resolution = 0.5
 
-      val oldSp = sp
-      sp = sp * 0.75
-      Dodo(elapsed, oldSp, centerList)
-    })
+    val brightestCount = 100
+
+    val xSize = (bounds.getWidth / resolution).round.toInt
+    val ySize = (bounds.getHeight / resolution).round.toInt
+
+    def makeRow(y: Int): Seq[Point2d] = {
+      val yCoordinate = bounds.getY + (y * resolution)
+      val row = (0 until xSize).map(x => new Point2d(bounds.getX + (x * resolution), yCoordinate))
+      val inBounds = row.filter(pointIsInBallAoi)
+      inBounds
+    }
+
+    val matrix = (0 until ySize).map(makeRow)
+
+    val dimmest = matrix.flatten.sortBy(p => biCubicImage.get(p.x, p.y)).take(brightestCount)
+    val brightest = matrix.flatten.sortBy(p => biCubicImage.get(p.x, p.y)).takeRight(brightestCount)
+
+    val xCenter = brightest.map(_.getX).sum / brightestCount
+    val yCenter = brightest.map(_.getY).sum / brightestCount
+
+    val approximateCenter = new Point2d(xCenter, yCenter)
+
+    if (false) {
+      val img = preprocessedImage.toDeepColorBufferedImage(0.01)
+
+      dimmest.foreach(p => {
+        img.setRGB(p.getX.toInt, p.getY.toInt, Color.orange.getRGB)
+      })
+
+      brightest.foreach(p => {
+        img.setRGB(p.getX.toInt, p.getY.toInt, Color.black.getRGB)
+      })
+
+      img.setRGB(xCenter.toInt, yCenter.toInt, Color.white.getRGB)
+      ImageDisplay.showInMSPaint(img)
+      Thread.sleep(2000)
+    }
+
+    approximateCenter
+  }
+
+  private def findCenterOfMass(center: Point2d, pointList: Seq[Point2d]): Point2d = {
+    val list = pointList.map(p => Pt(p.x, p.y))
+    val totalMass = list.map(_.value).sum
+
+    Trace.trace(s"Number of points: ${pointList.size}    mean mass: ${totalMass / list.size}")
+
+    val xCenter = list.map(p => p.x * p.value).sum / totalMass
+    val yCenter = list.map(p => p.y * p.value).sum / totalMass
+
+    new Point2d(xCenter, yCenter)
+  }
+
+  /** Used as the sampling rate across the biCubicImage.  A value of 0.1 means for every pixel, 100 samples will be taken. */
+  private val resolution_pix = 0.25
+
+  private val evalPointList = makePointList(estimatedBallRadius_pix, resolution_pix)
+
+  /**
+    * Evaluate how close this is to the actual center.
+    *
+    * @param center A guess as to where the center is.
+    * @return A number indicating how close the given center actually is.  Smaller number means closer.
+    */
+  def evaluate(center: Point2d): Double = {
+    val cX = center.getX
+    val cY = center.getY
+    val meanBrightness = evalPointList.map(p => biCubicImage.get(p.getX + cX, p.getY + cY)).sum / evalPointList.size
+    meanBrightness
+  }
+
+  def doIt(): Point2d = {
+
+    // logger.info(s"Estimated radius in pixels: $searchRadius_pix     radius in mm: ${trans.pix2IsoDistX(searchRadius_pix)}")
+
+    val center1 = calcApproximateCenter()
+    val searchRadius_pix = calculateRadiusToNearestEdge(center1)
+
+    Trace.trace(s"approximateCenter: $center1")
+
+    val pointList2 = makePointArray(center1, 0.2)
+    val center2 = findCenterOfMass(center1, pointList2)
+    Trace.trace(s"center2: $center2")
+
+    val pointList3 = makePointArray(center2, 0.1)
+    val center3 = findCenterOfMass(center2, pointList3)
+    Trace.trace(s"center3: $center3")
+    System.exit(99)
+
+    center3
 
     /*
-    val list = (0 until 16).map(i => {
-      val start = System.currentTimeMillis()
-      val center = byRect(sp)
-      val elapsed = System.currentTimeMillis() - start
+    val start = System.currentTimeMillis()
+    val finder = new WLNonCardBallFinder(this, approximateCenter, initialSearchAreaSize_pix)
+    val elapsed = System.currentTimeMillis() - start
+    Trace.trace(s"Elapsed: $elapsed")
 
-      Trace.trace(s" elapsed: $elapsed   spacing: $sp    center: $center")
-      sp = sp * 0.75
-      Dodo(elapsed, sp + 0, center)
-    })
+    val answer = finder.getMaxPoint_iso
+
+    Trace.trace(s"answer: $answer")
+
+    Trace.trace(s"approximate to exact distance: ${answer.p2d.distance(approximateCenter)}")
+
+    def fmt(d: Double) = "%20.15f".format(d)
+    logger.info(s"Final ball location: x: ${fmt(answer.x)}   y: ${fmt(answer.y)}   mean pixel value: ${fmt(answer.value)}   elapsed ms: $elapsed    resolution_pix: $resolution_pix")
+
+    System.exit(99)
+    answer.p2d
      */
-
-    list.indices.foreach(i => {
-      val dodo = list(i)
-      val distList = dodo.centerList.indices.tail.map(i => dodo.centerList(i).distance(dodo.centerList(i - 1)))
-      val centerText = dodo.centerList.map(c => "%20.15f".format(c.getX) + ", " + "%20.15f".format(c.getY)).mkString("  |  ")
-      val distText = distList.map(d => "%14.10f".format(d)).mkString("    ")
-      Trace.trace(s"time: ${"%10d".format(dodo.time)}    spacing: ${"%20.15f".format(dodo.spacing)}    distanceList: $distText    centerList: $centerText")
-    })
-
-    Trace.trace()
   }
-
 }

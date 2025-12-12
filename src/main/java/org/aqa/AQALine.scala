@@ -165,6 +165,18 @@ case class AQALine(centerPoint: Point2d, angle_deg: Double) extends Logging {
     }
     intersect
   }
+
+  /**
+   * Determine the distance from this line to an arbitray point.
+   * @param point Point to find distance from.
+   * @return Distance to the point.
+   */
+  def distanceToPoint(point: Point2d): Double = {
+    val perpendicularLine = AQALine(point, perpendicularAngle)
+    val intersect = perpendicularLine.intersection(this)
+    val distance = point.distance(intersect)
+    distance
+  }
 }
 
 object AQALine extends Logging {

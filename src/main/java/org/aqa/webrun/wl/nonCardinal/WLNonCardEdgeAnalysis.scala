@@ -180,20 +180,28 @@ object WLNonCardEdgeAnalysis {
 
     Trace.trace
 
-    val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""")
+    // val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""")
+    val file = new File("""D:/tmp/wl/nonorth/WLNonCardNon45_20250625_Peyton/20250625_G180C30T0.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/1/0002.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/1/0006.dcm""")
-    // val file = new File("""D:/tmp/wl/nonorth/WLNonCardNon45_20250625_Peyton/20250625_G180C30T0.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/0010.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/1/0002.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""") // rotated 315
     // val file = new File("""D:/tmp/wl/nonorth/1/0006.dcm""") // rotated 45
+
     // val file = new File("""D:/tmp/wl/nonorth/1/0001.dcm""")
+
     // val file = new File("""D:/tmp/wl/nonorth/psm/0018.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/TB5_Aug_20/0002.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/BR1_Phase2/0014.dcm""")
 
     val al = new DicomFile(file).attributeList.get
+
+    if (true) {
+      val trans = new IsoImagePlaneTranslator(al)
+      Trace.trace(s"5 iso == ${trans.iso2PixDistX(5.0)} pix")
+      Trace.trace(s"210 pix == ${trans.pix2IsoDistX(210.0)} iso")
+    }
 
     val colAngle = al.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
 
@@ -300,7 +308,7 @@ object WLNonCardEdgeAnalysis {
       ImageUtil.writePngFile(aoi, file)
 
       Trace.trace()
-      val nonCardBall = WLNonCardBall(nonCardinal.edgeSet, dicomImage, BiCubicImage(dicomImage))
+      val nonCardBall = WLNonCardBall(nonCardinal.edgeSet, dicomImage, BiCubicImage(dicomImage), al)
       Trace.trace()
       nonCardBall.doIt()
       Trace.trace()
