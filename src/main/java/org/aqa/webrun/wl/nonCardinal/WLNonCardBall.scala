@@ -233,7 +233,7 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
 
     val list = for (x <- 0 until count; y <- 0 until count; if isWithinRadius(x, y)) yield indexToPoint(x, y)
 
-    if (true) { // TODO rm Show all points being used.
+    if (false) { // TODO rm Show all points being used.
       val img = preprocessedImage.toDeepColorBufferedImage(0.01)
 
       val distinctList = list.map(p => new Point2i(p.getX.toInt, p.getY.toInt)).distinct
@@ -271,7 +271,7 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
 
     val list = for (x <- 0 until count; y <- 0 until count) yield indexToPoint(x, y)
 
-    if (true) { // TODO rm Show all points being used.
+    if (false) { // TODO rm Show all points being used.
       val img = preprocessedImage.toDeepColorBufferedImage(0.01)
 
       val distinctList = list.map(p => new Point2i(p.getX.toInt, p.getY.toInt)).distinct
@@ -319,7 +319,7 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
 
     val approximateCenter = new Point2d(xCenter, yCenter)
 
-    if (true) {
+    if (false) {
       val img = preprocessedImage.toDeepColorBufferedImage(0.01)
 
       dimmest.foreach(p => {
@@ -428,26 +428,48 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
   private def findApproximateCenterOfMass(): Point2d = {
     val resolution_pix = 0.2
 
+    val smoothingFactor = 51
+
     val pointList = makeArray(resolution_pix)
 
-    val xProfile = pointList.groupBy(_.x).values.toSeq.sortBy(_.head.x).map(group => group.map(_.value).sum / group.size)
-    val yProfile = pointList.groupBy(_.y).values.toSeq.sortBy(_.head.y).map(group => group.map(_.value).sum / group.size)
+    def smoothing(list: Seq[Double], groupSize: Int): Seq[Double] = {
+      val indices = (0 until groupSize).map(i => i - (groupSize / 2))
+
+      def getSmoothed(i: Int): Double = {
+        val data = indices.map(o => i + o).filter(o2 => (o2 >= 0) && (o2 < list.size)).map(o3 => list(o3))
+        data.sum / data.size
+      }
+
+      list.indices.map(getSmoothed)
+    }
+
+    val xProfile = {
+      val l = pointList.groupBy(_.x).values.toSeq.sortBy(_.head.x).map(group => group.map(_.value).sum / group.size)
+      val smooth = smoothing(l, smoothingFactor)
+      smooth
+    }
+
+    val yProfile = {
+      val l = pointList.groupBy(_.y).values.toSeq.sortBy(_.head.y).map(group => group.map(_.value).sum / group.size)
+      val smooth = smoothing(l, smoothingFactor)
+      smooth
+    }
 
     if (true) {
-      ImageDisplay.showChart(xProfile, title = "X Profile")
-      ImageDisplay.showChart(yProfile, title = "Y Profile")
+      ImageDisplay.showChart(xProfile, title = s"X Profile smoothing $smoothingFactor")
+      ImageDisplay.showChart(yProfile, title = s"Y Profile smoothing $smoothingFactor")
 
       val xSlope = xProfile.tail.indices.map(i => xProfile(i + 1) - xProfile(i))
-      ImageDisplay.showChart(xSlope, title = "X Velocity")
+      ImageDisplay.showChart(xSlope, title = s"X Velocity smoothing $smoothingFactor")
 
       val ySlope = yProfile.tail.indices.map(i => yProfile(i + 1) - yProfile(i))
-      ImageDisplay.showChart(ySlope, title = "Y Velocity")
+      ImageDisplay.showChart(ySlope, title = s"Y Velocity smoothing $smoothingFactor")
 
       val xAcc = xSlope.tail.indices.map(i => xSlope(i + 1) - xSlope(i))
-      ImageDisplay.showChart(xAcc, title = "X Acceleration")
+      ImageDisplay.showChart(xAcc, title = s"X Acceleration smoothing $smoothingFactor")
 
       val yAcc = ySlope.tail.indices.map(i => ySlope(i + 1) - ySlope(i))
-      ImageDisplay.showChart(yAcc, title = "Y Acceleration")
+      ImageDisplay.showChart(yAcc, title = s"Y Acceleration smoothing $smoothingFactor")
 
     }
 
