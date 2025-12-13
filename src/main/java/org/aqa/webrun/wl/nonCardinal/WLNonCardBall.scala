@@ -125,15 +125,20 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
 
     gc.drawRect(ballAOIBounds.x, ballAOIBounds.y, ballAOIBounds.width, ballAOIBounds.height)
     ImageDisplay.showInMSPaint(bufImg)
-    Thread.sleep(2 * 1000) // let MS Paint start
+    // Thread.sleep(2 * 1000) // let MS Paint start
     Trace.trace()
   }
 
-  // private val pointSpacing: Double = 0.2
-
   private case class Pt(x: Double, y: Double) {
     def this(point: Point2d) = this(point.getX, point.getY)
+
+    def point2d: Point2d = new Point2d(x, y)
+
     val value: Double = biCubicImage.get(x, y)
+  }
+
+  private case class PtSynthetic(x: Double, y: Double, value: Double) {
+    def point2d: Point2d = new Point2d(x, y)
   }
 
   /**
@@ -205,8 +210,8 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
     pointList
   }
 
-  private def makePointArray(center: Point2d, resolution_pix: Double): Seq[Point2d] = {
-    val upperLimit = calculateRadiusToNearestEdge(edgeSet.center) / 2
+  private def makePointArray1(center: Point2d, resolution_pix: Double): Seq[Point2d] = {
+    val upperLimit = calculateRadiusToNearestEdge(edgeSet.center) // / 2
     val thisLimit = calculateRadiusToNearestEdge(center)
 
     val radius_pix = Math.min(upperLimit, thisLimit)
@@ -224,7 +229,60 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
 
     def isWithinRadius(x: Int, y: Int): Boolean = indexToPoint(x, y).distance(center) <= radius_pix
 
+    Trace.trace(s"center: $center   radius_pix: $radius_pix")
+
     val list = for (x <- 0 until count; y <- 0 until count; if isWithinRadius(x, y)) yield indexToPoint(x, y)
+
+    if (true) { // TODO rm Show all points being used.
+      val img = preprocessedImage.toDeepColorBufferedImage(0.01)
+
+      val distinctList = list.map(p => new Point2i(p.getX.toInt, p.getY.toInt)).distinct
+      distinctList.foreach(p => {
+        img.setRGB(p.x, p.y, Color.white.getRGB)
+      })
+
+      ImageDisplay.showInMSPaint(img)
+      // Thread.sleep(2000)
+    }
+
+    list
+  }
+
+  private def makePointArray(center: Point2d, resolution_pix: Double): Seq[Point2d] = {
+    val upperLimit = calculateRadiusToNearestEdge(edgeSet.center) // / 2
+    val thisLimit = calculateRadiusToNearestEdge(center)
+
+    val radius_pix = Math.min(upperLimit, thisLimit)
+
+    val count = ((radius_pix * 2) / resolution_pix).round.toInt
+
+    val xStart = center.getX - radius_pix
+    val yStart = center.getY - radius_pix
+
+    def indexToPoint(x: Int, y: Int): Point2d = {
+      val xx = xStart + (x * resolution_pix)
+      val yy = yStart + (y * resolution_pix)
+      new Point2d(xx, yy)
+    }
+
+    def isWithinRadius(x: Int, y: Int): Boolean = indexToPoint(x, y).distance(center) <= radius_pix
+
+    Trace.trace(s"center: $center   radius_pix: $radius_pix")
+
+    val list = for (x <- 0 until count; y <- 0 until count) yield indexToPoint(x, y)
+
+    if (true) { // TODO rm Show all points being used.
+      val img = preprocessedImage.toDeepColorBufferedImage(0.01)
+
+      val distinctList = list.map(p => new Point2i(p.getX.toInt, p.getY.toInt)).distinct
+      distinctList.foreach(p => {
+        img.setRGB(p.x, p.y, Color.white.getRGB)
+      })
+
+      ImageDisplay.showInMSPaint(img)
+      Thread.sleep(2000)
+    }
+
     list
   }
 
@@ -261,7 +319,7 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
 
     val approximateCenter = new Point2d(xCenter, yCenter)
 
-    if (false) {
+    if (true) {
       val img = preprocessedImage.toDeepColorBufferedImage(0.01)
 
       dimmest.foreach(p => {
@@ -280,7 +338,7 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
     approximateCenter
   }
 
-  private def findCenterOfMass(center: Point2d, pointList: Seq[Point2d]): Point2d = {
+  private def findCenterOfMass(pointList: Seq[Point2d]): Point2d = {
     val list = pointList.map(p => Pt(p.x, p.y))
     val totalMass = list.map(_.value).sum
 
@@ -289,13 +347,26 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
     val xCenter = list.map(p => p.x * p.value).sum / totalMass
     val yCenter = list.map(p => p.y * p.value).sum / totalMass
 
+    val xProfile = {
+      val groupList = list.groupBy(_.x).values.toIndexedSeq.sortBy(_.head.x)
+      groupList.map(g => g.map(l => l.value).sum / g.size)
+    }
+
+    Trace.trace("X profile\n" + xProfile.mkString("\n"))
+
+    val yProfile = {
+      val groupList = list.groupBy(_.y).values.toIndexedSeq.sortBy(_.head.y)
+      groupList.map(g => g.map(l => l.value).sum)
+    }
+    Trace.trace("Y profile\n" + yProfile.mkString("\n"))
+
     new Point2d(xCenter, yCenter)
   }
 
   /** Used as the sampling rate across the biCubicImage.  A value of 0.1 means for every pixel, 100 samples will be taken. */
-  private val resolution_pix = 0.25
+  private val resolution_pix_old = 0.25
 
-  private val evalPointList = makePointList(estimatedBallRadius_pix, resolution_pix)
+  private val evalPointList = makePointList(estimatedBallRadius_pix, resolution_pix_old)
 
   /**
     * Evaluate how close this is to the actual center.
@@ -310,6 +381,85 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
     meanBrightness
   }
 
+  private def makeArray(resolution_pix: Double): Seq[PtSynthetic] = {
+    val pX1Y1 = edgeSet.X1.loLine.intersection(edgeSet.Y1.loLine)
+    val pX1Y2 = edgeSet.X1.loLine.intersection(edgeSet.Y2.loLine)
+    val pX2Y1 = edgeSet.X2.loLine.intersection(edgeSet.Y1.loLine)
+    val pX2Y2 = edgeSet.X2.loLine.intersection(edgeSet.Y2.loLine)
+
+    val extremes = Seq( //
+      pX1Y1,
+      pX1Y2,
+      pX2Y1,
+      pX2Y2
+    )
+
+    val xMin = extremes.map(_.x).min
+    val xMax = extremes.map(_.x).max
+    val yMin = extremes.map(_.y).min
+    val yMax = extremes.map(_.y).max
+
+    val xDist = xMax - xMin // distance between X lines
+    val yDist = yMax - yMin // distance between Y lines
+
+    val xCount = (xDist / resolution_pix).round.toInt
+    val yCount = (yDist / resolution_pix).round.toInt
+
+    val ptListInitial = for (x <- 0 until xCount; y <- 0 until yCount) yield { Pt((x * resolution_pix) + xMin, (y * resolution_pix) + yMin) }
+
+    val minValue = {
+      val sorted = ptListInitial.map(_.value).sorted
+      sorted.slice(5, 15).sum / 10
+    }
+
+    val ptListFinal = ptListInitial.map(pt => {
+      val value = if (pointIsInBallAoi(pt.point2d)) pt.value else minValue
+
+      PtSynthetic(pt.x, pt.y, value)
+    })
+    ptListFinal
+
+  }
+
+  /**
+    * Get the approximate center of mass.
+    * @return
+    */
+  private def findApproximateCenterOfMass(): Point2d = {
+    val resolution_pix = 0.2
+
+    val pointList = makeArray(resolution_pix)
+
+    val xProfile = pointList.groupBy(_.x).values.toSeq.sortBy(_.head.x).map(group => group.map(_.value).sum / group.size)
+    val yProfile = pointList.groupBy(_.y).values.toSeq.sortBy(_.head.y).map(group => group.map(_.value).sum / group.size)
+
+    if (true) {
+      ImageDisplay.showChart(xProfile, title = "X Profile")
+      ImageDisplay.showChart(yProfile, title = "Y Profile")
+
+      val xSlope = xProfile.tail.indices.map(i => xProfile(i + 1) - xProfile(i))
+      ImageDisplay.showChart(xSlope, title = "X Velocity")
+
+      val ySlope = yProfile.tail.indices.map(i => yProfile(i + 1) - yProfile(i))
+      ImageDisplay.showChart(ySlope, title = "Y Velocity")
+
+      val xAcc = xSlope.tail.indices.map(i => xSlope(i + 1) - xSlope(i))
+      ImageDisplay.showChart(xAcc, title = "X Acceleration")
+
+      val yAcc = ySlope.tail.indices.map(i => ySlope(i + 1) - ySlope(i))
+      ImageDisplay.showChart(yAcc, title = "Y Acceleration")
+
+    }
+
+    val xMin = pointList.minBy(_.x).x
+    val yMin = pointList.minBy(_.y).y
+
+    val x = (ImageUtil.centerOfMass(xProfile.map(_.toFloat).toIndexedSeq) * resolution_pix) + xMin
+    val y = (ImageUtil.centerOfMass(yProfile.map(_.toFloat).toIndexedSeq) * resolution_pix) + yMin
+
+    new Point2d(x, y)
+  }
+
   def doIt(): Point2d = {
 
     // logger.info(s"Estimated radius in pixels: $searchRadius_pix     radius in mm: ${trans.pix2IsoDistX(searchRadius_pix)}")
@@ -319,13 +469,17 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
 
     Trace.trace(s"approximateCenter: $center1")
 
-    val pointList2 = makePointArray(center1, 0.2)
-    val center2 = findCenterOfMass(center1, pointList2)
+    Trace.trace()
+    val start = System.currentTimeMillis()
+    val center2 = findApproximateCenterOfMass()
+    val elapsed = System.currentTimeMillis() - start
+    Trace.trace(s"Elapsed ms for findApproximateCenterOfMass: $elapsed")
     Trace.trace(s"center2: $center2")
 
     val pointList3 = makePointArray(center2, 0.1)
-    val center3 = findCenterOfMass(center2, pointList3)
+    val center3 = findCenterOfMass(pointList3)
     Trace.trace(s"center3: $center3")
+    Thread.sleep(2000)
     System.exit(99)
 
     center3
