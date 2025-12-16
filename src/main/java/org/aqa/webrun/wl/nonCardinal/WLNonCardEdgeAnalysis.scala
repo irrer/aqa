@@ -60,7 +60,15 @@ case class WLNonCardEdgeAnalysis( //
     new Point2d(rect.getCenterX + 5, rect.getCenterY - 8)
   }
 
-  private def maxOffset(line: AQALine, direction: Int, width: Double, resolution: Double): Double = {
+  /**
+    * Determine the maximum offset for the given line such that the edge AOI will still be within the bounds of the image.
+    * @param line For this line.
+    * @param direction Positive or negative 1.
+    * @param width_pix With in pixel of AOI.
+    * @param resolution_pix Resolution in pixels.  Determines the step size.
+    * @return maximum offset in pixels.
+    */
+  private def maxOffset(line: AQALine, direction: Int, width_pix: Double, resolution_pix: Double): Double = {
 
     def isIn(pt: Point2d): Boolean = {
       val ok = {
@@ -75,19 +83,19 @@ case class WLNonCardEdgeAnalysis( //
     def inBounds(offset: Double): Boolean = {
       val pt = line.pointOn(offset)
       val hiLine = AQALine(pt, line.perpendicularAngle)
-      val hiPt = hiLine.pointOn(width / 2)
+      val hiPt = hiLine.pointOn(width_pix / 2)
 
       val loLine = AQALine(pt, line.perpendicularAngle)
-      val loPt = hiLine.pointOn(width / -2)
+      val loPt = loLine.pointOn(width_pix / -2)
 
       isIn(hiPt) && isIn(loPt)
     }
 
-    val maxDistanceIndices = ((preprocessedImage.width + preprocessedImage.height) / resolution).toInt
+    val maxDistanceIndices = ((preprocessedImage.width + preprocessedImage.height) / resolution_pix).toInt
 
-    val inBoundsList = (0 until maxDistanceIndices).filter(i => inBounds(i * direction * resolution))
+    val inBoundsList = (0 until maxDistanceIndices).filter(i => inBounds(i * direction * resolution_pix))
 
-    val max = inBoundsList.last * direction * resolution
+    val max = inBoundsList.last * direction * resolution_pix
     max
   }
 
@@ -225,9 +233,9 @@ object WLNonCardEdgeAnalysis {
 
     Trace.trace
 
-    val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""")
+    // val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/WLNonCardNon45_20250625_Peyton/20250625_G180C30T0.dcm""")
-    // val file = new File("""D:/tmp/wl/nonorth/ClinicalWinstonLutz_0.1_TB5_2025-12-12T06_34_56/RTIMAGE1.dcm""") // UM Production
+    val file = new File("""D:/tmp/wl/nonorth/ClinicalWinstonLutz_0.1_TB5_2025-12-12T06_34_56/RTIMAGE1.dcm""") // UM Production
     // val file = new File("""D:/tmp/wl/nonorth/1/0002.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/1/0006.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/0010.dcm""")
