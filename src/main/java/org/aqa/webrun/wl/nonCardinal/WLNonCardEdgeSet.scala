@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package org.aqa.webrun.wl.nonCardinal
 
 import org.aqa.AQALine
@@ -35,14 +34,28 @@ case class WLNonCardEdgeSet(
     Y2: WLNonCardEdge
 ) {
 
+  private def meanLineOf(edge1: WLNonCardEdge, edge2: WLNonCardEdge): AQALine = {
+    val center1 = edge1.edgeLine.centerPoint
+    val center2 = edge2.edgeLine.centerPoint
+
+    val x = (center1.getX + center2.getX) / 2
+    val y = (center1.getY + center2.getY) / 2
+
+    new AQALine(new Point2d(x, y), edge1.line.perpendicularAngle)
+  }
+
+  /** Line parallel to ana halfway between collimator edges X1 and X2.  */
+  val xMeanLine: AQALine = meanLineOf(X1, X2)
+
+  /** Line parallel to ana halfway between collimator edges Y1 and Y2.  */
+  val yMeanLine: AQALine = meanLineOf(Y1, Y2)
+
   /**
     * Center of the four edges.
     */
   val center: Point2d = {
-    val xLine = AQALine.makeLine(X1.edgeCenter, X2.edgeCenter)
-    val yLine = AQALine.makeLine(Y1.edgeCenter, Y2.edgeCenter)
-
-    xLine.intersection(yLine)
+    val c = xMeanLine.intersection(yMeanLine)
+    c
   }
 
   val edgeList: Seq[WLNonCardEdge] = Seq(X1, X2, Y1, Y2)

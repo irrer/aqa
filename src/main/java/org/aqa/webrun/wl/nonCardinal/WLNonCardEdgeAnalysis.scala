@@ -19,10 +19,10 @@ package org.aqa.webrun.wl.nonCardinal
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.ImageDisplay
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import edu.umro.ImageUtil.ScaledImage
 import edu.umro.ScalaUtil.Trace
 import org.aqa.AQALine
 import org.aqa.BiCubicImage
@@ -33,10 +33,10 @@ import org.aqa.Util
 import org.aqa.webrun.wl.WLCoarseBox
 import org.aqa.webrun.wl.WLMessage
 import org.aqa.webrun.wl.WLPreprocessImage
+import org.aqa.webrun.wl.WLRunReq
 
 import java.awt.Color
 import java.awt.geom.Point2D
-import java.awt.image.BufferedImage
 import java.awt.Rectangle
 import java.io.File
 import javax.vecmath.Point2d
@@ -60,6 +60,37 @@ case class WLNonCardEdgeAnalysis( //
     new Point2d(rect.getCenterX + 5, rect.getCenterY - 8)
   }
 
+  private def maxOffset(line: AQALine, direction: Int, width: Double, resolution: Double): Double = {
+
+    def isIn(pt: Point2d): Boolean = {
+      val ok = {
+        (pt.x >= 0) &&
+        (pt.y >= 0) &&
+        (pt.x < (preprocessedImage.width - 2)) &&
+        (pt.y < (preprocessedImage.height - 2))
+      }
+      ok
+    }
+
+    def inBounds(offset: Double): Boolean = {
+      val pt = line.pointOn(offset)
+      val hiLine = AQALine(pt, line.perpendicularAngle)
+      val hiPt = hiLine.pointOn(width / 2)
+
+      val loLine = AQALine(pt, line.perpendicularAngle)
+      val loPt = hiLine.pointOn(width / -2)
+
+      isIn(hiPt) && isIn(loPt)
+    }
+
+    val maxDistanceIndices = ((preprocessedImage.width + preprocessedImage.height) / resolution).toInt
+
+    val inBoundsList = (0 until maxDistanceIndices).filter(i => inBounds(i * direction * resolution))
+
+    val max = inBoundsList.last * direction * resolution
+    max
+  }
+
   /**
     * Find the approximate positions of the 4 edges by projecting a band of points in each of the 4 directions
     * from the coarse center.  These are parallel and perpendicular to the coarse center.
@@ -81,14 +112,25 @@ case class WLNonCardEdgeAnalysis( //
     val xLine = AQALine(coarseCenter, collAngle)
     val yLine = xLine.perpendicular
 
-    val x1 = WLNonCardEdge("Approximate X1", xLine, 0, maxLength, biCubicImage, pixBandWidth, approximateResolution)
-    val x2 = WLNonCardEdge("Approximate X2", xLine, 0, -maxLength, biCubicImage, pixBandWidth, approximateResolution)
-    val y1 = WLNonCardEdge("Approximate Y1", yLine, 0, -maxLength, biCubicImage, pixBandWidth, approximateResolution)
-    val y2 = WLNonCardEdge("Approximate Y2", yLine, 0, maxLength, biCubicImage, pixBandWidth, approximateResolution)
+    val x1MaxLen = maxOffset(xLine, 1, pixBandWidth, approximateResolution)
+    val x2MaxLen = maxOffset(xLine, -1, pixBandWidth, approximateResolution)
+    val y1MaxLen = maxOffset(yLine, -1, pixBandWidth, approximateResolution)
+    val y2MaxLen = maxOffset(yLine, 1, pixBandWidth, approximateResolution)
 
-    val edgeSet: WLNonCardEdgeSet = WLNonCardEdgeSet(x1, x2, y1, y2)
+    val x1 = WLNonCardEdge("X1", xLine, 0, x1MaxLen, biCubicImage, pixBandWidth, approximateResolution)
+    val x2 = WLNonCardEdge("X2", xLine, 0, x2MaxLen, biCubicImage, pixBandWidth, approximateResolution)
+    val y1 = WLNonCardEdge("Y1", yLine, 0, y1MaxLen, biCubicImage, pixBandWidth, approximateResolution)
+    val y2 = WLNonCardEdge("Y2", yLine, 0, y2MaxLen, biCubicImage, pixBandWidth, approximateResolution)
 
-    edgeSet
+    val edgeSetApproximate: WLNonCardEdgeSet = WLNonCardEdgeSet(x1, x2, y1, y2)
+
+    val coarseImage = WLNonCardEdgeSetImage.makeImage(edgeSetApproximate, scale = 3, al, border = 3) // TODO
+    ImageDisplay.showInMSPaint(coarseImage) // TODO
+
+    wlMessage.foreach(_.info(s"approximate center iso X: ${trans.pix2IsoCoordX(edgeSetApproximate.center.getX)}"))
+    wlMessage.foreach(_.info(s"approximate center iso Y: ${trans.pix2IsoCoordY(edgeSetApproximate.center.getY)}"))
+
+    edgeSetApproximate
   }
 
   case class AnnotatedEdgeAoi(line: AQALine, offsetStart: Double, offsetFinish: Double, width: Double, position: Double) {}
@@ -121,9 +163,12 @@ case class WLNonCardEdgeAnalysis( //
     val y1 = WLNonCardEdge("Y1", yLine, 0, -distanceY, biCubicImage, yWidth, preciseResolution)
     val y2 = WLNonCardEdge("Y2", yLine, 0, distanceY, biCubicImage, yWidth, preciseResolution)
 
-    val edgeSet: WLNonCardEdgeSet = WLNonCardEdgeSet(x1, x2, y1, y2)
+    val edgeSetPrecise: WLNonCardEdgeSet = WLNonCardEdgeSet(x1, x2, y1, y2)
 
-    edgeSet
+    wlMessage.foreach(_.info(s"precise center iso X: ${trans.pix2IsoCoordX(edgeSetPrecise.center.getX)}"))
+    wlMessage.foreach(_.info(s"precise center iso Y: ${trans.pix2IsoCoordY(edgeSetPrecise.center.getY)}"))
+
+    edgeSetPrecise
   }
 
   /**
@@ -180,8 +225,9 @@ object WLNonCardEdgeAnalysis {
 
     Trace.trace
 
-    // val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""")
-    val file = new File("""D:/tmp/wl/nonorth/WLNonCardNon45_20250625_Peyton/20250625_G180C30T0.dcm""")
+    val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""")
+    // val file = new File("""D:/tmp/wl/nonorth/WLNonCardNon45_20250625_Peyton/20250625_G180C30T0.dcm""")
+    // val file = new File("""D:/tmp/wl/nonorth/ClinicalWinstonLutz_0.1_TB5_2025-12-12T06_34_56/RTIMAGE1.dcm""") // UM Production
     // val file = new File("""D:/tmp/wl/nonorth/1/0002.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/1/0006.dcm""")
     // val file = new File("""D:/tmp/wl/nonorth/0010.dcm""")
@@ -211,7 +257,9 @@ object WLNonCardEdgeAnalysis {
     }
 
     Trace.trace()
-    val nonCardinal = new WLNonCardEdgeAnalysis(dicomImage, al)
+    val runReq = WLRunReq(Seq(al), None)
+    val wlMessage = WLMessage(runReq, al)
+    val nonCardinal = new WLNonCardEdgeAnalysis(dicomImage, al, Some(wlMessage))
     Trace.trace()
     Trace.trace(nonCardinal)
 
@@ -223,8 +271,6 @@ object WLNonCardEdgeAnalysis {
       val maxPixelValue = sortedPixels.dropRight(10).last
       dicomImage.toBufferedImage(ImageUtil.rgbColorMap(Color.blue), minPixelValue, maxPixelValue)
     }
-
-    val origImage = ImageUtil.magnify(bufImg, 1)
 
     val trans = new IsoImagePlaneTranslator(al)
 
@@ -244,78 +290,14 @@ object WLNonCardEdgeAnalysis {
 
     // ------------------------------------------------------------------------------------
 
-    if (true) {
-      val start = System.currentTimeMillis()
-      val imgScale = 3
+    val j = WLNonCardEdgeSetImage.makeImage(nonCardinal.edgeSet, scale = 3, al, border = 3)
+    ImageDisplay.showInMSPaint(j) // TODO rm
 
-      def listCoordinates(edge: WLNonCardEdge): Seq[Point2d] = {
-        Seq(
-          edge.loLoAoi, //
-          edge.loHiAoi, //
-          edge.hiLoAoi, //
-          edge.hiHiAoi
-        )
-      }
-
-      val coordinateList = nonCardinal.edgeSet.edgeList.flatMap(listCoordinates)
-
-      val border_pix = 3
-      val minX = (coordinateList.map(_.getX).min - border_pix).round.toInt
-      val maxX = (coordinateList.map(_.getX).max + border_pix).round.toInt
-      val minY = (coordinateList.map(_.getY).min - border_pix).round.toInt
-      val maxY = (coordinateList.map(_.getY).max + border_pix).round.toInt
-
-      val width = maxX - minX
-      val height = maxY - minY
-
-      val boundingRectangle = new Rectangle(minX, minY, width, height)
-
-      val si = ScaledImage(imgScale, minX, minY)
-
-      val aoi: BufferedImage = ImageUtil.magnify(ImageUtil.subImage(origImage, boundingRectangle), imgScale)
-
-      // val buf = si.magnify(origImage)
-      Trace.trace("making big image")
-      def drawAoi(edgeSet: WLNonCardEdgeSet, aoi: BufferedImage): Unit = {
-
-        val gc = ImageUtil.getGraphics(aoi)
-
-        gc.setColor(Color.white)
-
-        def drawEdge(edge: WLNonCardEdge): Unit = {
-          gc.setColor(Color.white)
-
-          si.drawTextCenteredAt(gc, (edge.loLoAoi.getX + edge.hiHiAoi.getX) / 2, (edge.loLoAoi.getY + edge.hiHiAoi.getY) / 2, edge.name)
-
-          si.drawLine(gc, edge.loLoAoi, edge.loHiAoi)
-          si.drawLine(gc, edge.hiLoAoi, edge.hiHiAoi)
-          si.drawLine(gc, edge.loLoAoi, edge.hiLoAoi)
-          si.drawLine(gc, edge.loHiAoi, edge.hiHiAoi)
-          gc.setColor(Color.red)
-          si.drawLine(gc, edge.edgeLo, edge.edgeHi)
-        }
-
-        drawEdge(edgeSet.X1)
-        drawEdge(edgeSet.X2)
-        drawEdge(edgeSet.Y1)
-        drawEdge(edgeSet.Y2)
-      }
-
-      drawAoi(nonCardinal.edgeSet, aoi)
-
-      val file = new File("""D:/tmp/foy.png""")
-
-      ImageUtil.writePngFile(aoi, file)
-
-      Trace.trace()
-      val nonCardBall = WLNonCardBall(nonCardinal.edgeSet, dicomImage, BiCubicImage(dicomImage), al)
-      Trace.trace()
-      nonCardBall.doIt()
-      Trace.trace()
-
-      val elapsed = System.currentTimeMillis() - start
-      println(s"Elapsed ms: $elapsed    Wrote file $file")
-    }
+    Trace.trace()
+    val nonCardBall = WLNonCardBall(nonCardinal.edgeSet, dicomImage, BiCubicImage(dicomImage), al)
+    Trace.trace()
+    nonCardBall.doIt()
+    Trace.trace()
 
     Trace.trace("Center of four edges as pixels: " + nonCardinal.edgeSet.center)
     Trace.trace("Center of four edges as iso: " + trans.pix2IsoCoordX(nonCardinal.edgeSet.center.getX) + ", " + trans.pix2IsoCoordY(nonCardinal.edgeSet.center.getY))
@@ -361,14 +343,20 @@ object WLNonCardEdgeAnalysis {
     labelEdge("Y1", X1Y1, X2Y1)
     labelEdge("Y2", X1Y2, X2Y2)
 
+    /*
     val pngFile = new File(file.getParent, file.getName.replace("dcm", "png"))
     Util.writePng(bufImg, pngFile)
+    ImageDisplay.showInMSPaint(bufImg)
+    Trace.trace(s"wrote $pngFile")
+     */
+
+    ImageDisplay.showInMSPaint(WLNonCardCoarseImage.makeImage(al, dicomImage))
 
     val txtFile = new File(file.getParent, file.getName.replace(".dcm", "_.txt"))
     Util.writeFile(txtFile, dicomImage.pixelsToText)
 
-    Trace.trace(s"wrote $pngFile")
-
+    Thread.sleep(2000)
     System.exit(0)
   }
+
 }

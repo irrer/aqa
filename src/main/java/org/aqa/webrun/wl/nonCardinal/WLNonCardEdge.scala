@@ -124,7 +124,7 @@ case class WLNonCardEdge( //
   val hiHiAoi: Point2d = hiLine.pointOn(width / 2)
 
   /** Line at the edge that was found. */
-  private val edgeLine = new AQALine(edgeCenter, line.perpendicularAngle)
+  val edgeLine = new AQALine(edgeCenter, line.perpendicularAngle)
 
   val edgeLo: Point2d = edgeLine.pointOn(-width / 2)
 
