@@ -36,8 +36,6 @@ import org.aqa.webrun.wl.WLPreprocessImage
 import org.aqa.webrun.wl.WLRunReq
 
 import java.awt.Color
-import java.awt.geom.Point2D
-import java.awt.Rectangle
 import java.io.File
 import javax.vecmath.Point2d
 
@@ -115,8 +113,6 @@ case class WLNonCardEdgeAnalysis( //
     // Width of band to look for edges.
     val pixBandWidth = 4 * pixPerMm
 
-    val maxLength = preprocessedImage.width + preprocessedImage.height
-
     val xLine = AQALine(coarseCenter, collAngle)
     val yLine = xLine.perpendicular
 
@@ -131,12 +127,14 @@ case class WLNonCardEdgeAnalysis( //
     val y2 = WLNonCardEdge("Y2", yLine, 0, y2MaxLen, biCubicImage, pixBandWidth, approximateResolution)
 
     val edgeSetApproximate: WLNonCardEdgeSet = WLNonCardEdgeSet(x1, x2, y1, y2)
+    /*
 
-    val coarseImage = WLNonCardEdgeSetImage.makeImage(edgeSetApproximate, scale = 3, al, border = 3) // TODO
-    ImageDisplay.showInMSPaint(coarseImage) // TODO
+    val coarseImage = WLNonCardEdgeSetImage.makeImage(edgeSetApproximate, scale = 3, al, border = 3)
+    ImageDisplay.showInMSPaint(coarseImage)
 
-    wlMessage.foreach(_.info(s"approximate center iso X: ${trans.pix2IsoCoordX(edgeSetApproximate.center.getX)}"))
-    wlMessage.foreach(_.info(s"approximate center iso Y: ${trans.pix2IsoCoordY(edgeSetApproximate.center.getY)}"))
+    wlMessage.foreach(_.info(s"approximate center iso X: ${trans.pix2IsoCoordX(edgeSetApproximate.center_pix.getX)}"))
+    wlMessage.foreach(_.info(s"approximate center iso Y: ${trans.pix2IsoCoordY(edgeSetApproximate.center_pix.getY)}"))
+     */
 
     edgeSetApproximate
   }
@@ -150,7 +148,7 @@ case class WLNonCardEdgeAnalysis( //
     * @return
     */
   private def preciseLocationOfEdges(approximateEdgeLocations: WLNonCardEdgeSet): WLNonCardEdgeSet = {
-    val xLine = AQALine(approximateEdgeLocations.center, collAngle)
+    val xLine = AQALine(approximateEdgeLocations.center_pix, collAngle)
     val yLine = xLine.perpendicular
 
     // use this granularity of pixels to get initial location of edges.
@@ -173,20 +171,21 @@ case class WLNonCardEdgeAnalysis( //
 
     val edgeSetPrecise: WLNonCardEdgeSet = WLNonCardEdgeSet(x1, x2, y1, y2)
 
-    wlMessage.foreach(_.info(s"precise center iso X: ${trans.pix2IsoCoordX(edgeSetPrecise.center.getX)}"))
-    wlMessage.foreach(_.info(s"precise center iso Y: ${trans.pix2IsoCoordY(edgeSetPrecise.center.getY)}"))
+    wlMessage.foreach(_.info(s"precise center iso X: ${trans.pix2IsoCoordX(edgeSetPrecise.center_pix.getX)}"))
+    wlMessage.foreach(_.info(s"precise center iso Y: ${trans.pix2IsoCoordY(edgeSetPrecise.center_pix.getY)}"))
 
     edgeSetPrecise
   }
 
-  /**
-    * Calculate the rectangle to enclose the region of the image that contains all the areas of interest
-    * that were used for edge measurement.
-    *
-    * @param border_pix Number of extra pixels to serve as a border separating the AOIs from the image edge.
-    * @return Bounding rectangle.
-    */
-  private def calcAoiBounds(border_pix: Int): Rectangle = {
+  /*
+   * Calculate the rectangle to enclose the region of the image that contains all the areas of interest
+   * that were used for edge measurement.
+   *
+   * @param border_pix Number of extra pixels to serve as a border separating the AOIs from the image edge.
+   * @return Bounding rectangle.
+   */
+  /*
+  def calcAoiBounds(border_pix: Int): Rectangle = {
     def listCoordinates(edge: WLNonCardEdge): Seq[Point2d] = {
       Seq(
         edge.loLoAoi, //
@@ -210,6 +209,7 @@ case class WLNonCardEdgeAnalysis( //
 
     boundingRectangle
   }
+   */
 
   // main processing comprised of three steps
 
@@ -217,9 +217,9 @@ case class WLNonCardEdgeAnalysis( //
   private val coarseCenter: Point2d = locateCoarseCenter()
 
   /** Approximate position of the 4 edges.  Testing shows that this is accurate to about 0.05 pixels.  But we can do better! */
-  private val approximateEdgeLocationList: WLNonCardEdgeSet = approximateLocationOfEdges(coarseCenter)
+  val approximateEdgeSet: WLNonCardEdgeSet = approximateLocationOfEdges(coarseCenter)
 
-  private val preciseEdgeLocations = preciseLocationOfEdges(approximateEdgeLocationList)
+  private val preciseEdgeLocations = preciseLocationOfEdges(approximateEdgeSet)
 
   val edgeSet: WLNonCardEdgeSet = preciseEdgeLocations
 }
@@ -298,8 +298,9 @@ object WLNonCardEdgeAnalysis {
 
     // ------------------------------------------------------------------------------------
 
+    /*
     val j = WLNonCardEdgeSetImage.makeImage(nonCardinal.edgeSet, scale = 3, al, border = 3)
-    ImageDisplay.showInMSPaint(j) // TODO rm
+    ImageDisplay.showInMSPaint(j)
 
     Trace.trace()
     val nonCardBall = WLNonCardBall(nonCardinal.edgeSet, dicomImage, BiCubicImage(dicomImage), al)
@@ -307,25 +308,29 @@ object WLNonCardEdgeAnalysis {
     nonCardBall.doIt()
     Trace.trace()
 
-    Trace.trace("Center of four edges as pixels: " + nonCardinal.edgeSet.center)
-    Trace.trace("Center of four edges as iso: " + trans.pix2IsoCoordX(nonCardinal.edgeSet.center.getX) + ", " + trans.pix2IsoCoordY(nonCardinal.edgeSet.center.getY))
+    Trace.trace("Center of four edges as pixels: " + nonCardinal.edgeSet.center_pix)
+    Trace.trace("Center of four edges as iso: " + trans.pix2IsoCoordX(nonCardinal.edgeSet.center_pix.getX) + ", " + trans.pix2IsoCoordY(nonCardinal.edgeSet.center_pix.getY))
+     */
 
     // ------------------------------------------------------------------------------------
 
-    /**
-      * Label the collimator edge
-      * @param name Edge name.
-      * @param point1 One end.
-      * @param point2 The other end.
-      */
+    /*
+     * Label the collimator edge
+     * @param name Edge name.
+     * @param point1 One end.
+     * @param point2 The other end.
+     */
+    /*
     def labelEdge(name: String, point1: Point2D.Double, point2: Point2D.Double): Unit = {
       val centerX = (point1.getX + point2.getX) / 2
       val centerY = (point1.getY + point2.getY) / 2
       ImageText.drawTextCenteredAt(gc, centerX, centerY, name)
     }
+     */
 
     // ------------------------------------------------------------------------------------
 
+    /*
     val rot = WLRotator(al)
 
     val X1Y1 = rot.trans.iso2Pix(rot.rot(new Point2D.Double(rot.jawsXLeft, rot.jawsYTop)))
@@ -350,6 +355,7 @@ object WLNonCardEdgeAnalysis {
     labelEdge("X2", X2Y2, X2Y1)
     labelEdge("Y1", X1Y1, X2Y1)
     labelEdge("Y2", X1Y2, X2Y2)
+     */
 
     /*
     val pngFile = new File(file.getParent, file.getName.replace("dcm", "png"))

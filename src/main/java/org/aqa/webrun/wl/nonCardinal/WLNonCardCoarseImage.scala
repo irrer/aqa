@@ -30,17 +30,15 @@ object WLNonCardCoarseImage {
 
     gc.setColor(Color.white)
 
-    if (true) {
-      val gantryText = "Gantry Angle: " + Util.fmtDbl(gantryAngle)
-      val colText = "Collimator Angle: " + Util.fmtDbl(colAngle)
-      val tableText = "Table Angle: " + Util.fmtDbl(tableAngle)
+    val gantryText = "Gantry Angle: " + Util.fmtDbl(gantryAngle)
+    val colText = "Collimator Angle: " + Util.fmtDbl(colAngle)
+    val tableText = "Table Angle: " + Util.fmtDbl(tableAngle)
 
-      val textHeight = ImageText.getFontHeight(gc)
+    val textHeight = ImageText.getFontHeight(gc)
 
-      ImageText.drawTextCenteredAt(gc, preprocessedImage.width / 2, textHeight * 1.5, gantryText)
-      ImageText.drawTextCenteredAt(gc, preprocessedImage.width / 2, textHeight * 2.5, colText)
-      ImageText.drawTextCenteredAt(gc, preprocessedImage.width / 2, textHeight * 3.5, tableText)
-    }
+    ImageText.drawTextCenteredAt(gc, preprocessedImage.width / 2, textHeight * 1.5, gantryText)
+    ImageText.drawTextCenteredAt(gc, preprocessedImage.width / 2, textHeight * 2.5, colText)
+    ImageText.drawTextCenteredAt(gc, preprocessedImage.width / 2, textHeight * 3.5, tableText)
 
     def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit = {
       // Trace.trace(Util.d2i(x1) + " : " + Util.d2i(y1) + " : " + Util.d2i(x2) + " : " + Util.d2i(y2))

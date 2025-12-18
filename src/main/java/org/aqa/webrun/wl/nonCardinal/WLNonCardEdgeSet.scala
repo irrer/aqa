@@ -53,7 +53,7 @@ case class WLNonCardEdgeSet(
   /**
     * Center of the four edges.
     */
-  val center: Point2d = {
+  val center_pix: Point2d = {
     val c = xMeanLine.intersection(yMeanLine)
     c
   }
@@ -69,6 +69,6 @@ case class WLNonCardEdgeSet(
       "\nX2: " + fmtE(X2) +
       "\nY1: " + fmtE(Y1) +
       "\nY2: " + fmtE(Y2) +
-      "\nCenter: " + fmt(center.getX) + ", " + fmt(center.getY)
+      "\nCenter: " + fmt(center_pix.getX) + ", " + fmt(center_pix.getY)
   }
 }

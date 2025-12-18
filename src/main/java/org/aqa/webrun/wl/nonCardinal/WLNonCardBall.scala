@@ -40,12 +40,18 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
 
   // private val trans = new IsoImagePlaneTranslator(al)
 
+  /**
+    * Determine whether a point is within the AOI of the ball.  The AOI is defined by those points that
+    * are between both X edges and Y edges.
+    * @param point Check this point
+    * @return True if point is in AOI.
+    */
   private def pointIsInBallAoi(point: Point2d): Boolean = {
     edgeSet.X1.loLine.pointIsBetween(point, edgeSet.X2.loLine) &&
     edgeSet.Y1.loLine.pointIsBetween(point, edgeSet.Y2.loLine)
   }
 
-  def calculateRadiusToNearestEdge(point: Point2d): Double = {
+  private def calculateRadiusToNearestEdge(point: Point2d): Double = {
 
     val radius_pix = Seq( //
       edgeSet.X1.loLine.distanceToPoint(point),
@@ -144,8 +150,8 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
     }
 
     val trans = new IsoImagePlaneTranslator(al)
-    val distance_pix = center.distance(edgeSet.center)
-    Trace.trace(s"ball center: $center      edge center: ${edgeSet.center}     distance in pix: $distance_pix distance in mm: ${trans.pix2IsoDistX(distance_pix)}")
+    val distance_pix = center.distance(edgeSet.center_pix)
+    Trace.trace(s"ball center: $center      edge center: ${edgeSet.center_pix}     distance in pix: $distance_pix distance in mm: ${trans.pix2IsoDistX(distance_pix)}")
 
     Trace.trace(s"right  Y2   in mm: ${trans.pix2IsoCoordY(edgeSet.Y2.line.centerY)}")
     Trace.trace(s"left   Y1   in mm: ${trans.pix2IsoCoordY(edgeSet.Y1.line.centerY)}")
@@ -157,7 +163,7 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
     Trace.trace(s"edge left   in mm+ ${trans.pix2IsoCoordY(edgeSet.X1.line.centerY)}")
     Trace.trace(s"edge right  in mm+ ${trans.pix2IsoCoordY(edgeSet.X2.line.centerY)}")
 
-    Trace.trace(s"edge center in mm: ${trans.pix2IsoCoordX(edgeSet.center.x)}  ${trans.pix2IsoCoordY(edgeSet.center.y)}")
+    Trace.trace(s"edge center in mm: ${trans.pix2IsoCoordX(edgeSet.center_pix.x)}  ${trans.pix2IsoCoordY(edgeSet.center_pix.y)}")
     Trace.trace(s"ball center in mm: ${trans.pix2IsoCoordX(center.x)}  ${trans.pix2IsoCoordY(center.y)}")
 
     // TODO this edge calculation is correct

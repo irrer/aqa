@@ -1013,6 +1013,9 @@ object Config extends Logging {
   val WLAmqpRoutingKey: String = logMainText("WLSummarySize", "Aria.Event.EventWLQASRSDone")
   val WLEdgeCoefficientOfVariationMax: Double = logMainText("WLEdgeCoefficientOfVariationMax", "0.007").toDouble
 
+  val WLNonCardMaxStdDev: Double = logMainText("WLNonCardMaxStdDev", "0.1").toDouble
+  val WLNonCardSymmetryLimit : Double = logMainText("WLNonCardSymmetryLimit", "0.4").toDouble
+
   val WLTreatmentMachineList: List[WLTreatmentMachine] = {
     val list = (document \ "WLTreatmentMachineList" \ "WLTreatmentMachine").toList.map(e => new WLTreatmentMachine(e))
     list

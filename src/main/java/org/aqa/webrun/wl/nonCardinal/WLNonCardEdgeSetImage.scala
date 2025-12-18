@@ -14,7 +14,7 @@ import javax.vecmath.Point2d
 
 object WLNonCardEdgeSetImage {
 
-  def makeImage(edgeSet: WLNonCardEdgeSet, scale: Int, al: AttributeList, border: Int): BufferedImage = {
+  def makeImage(edgeSet: WLNonCardEdgeSet, scale: Int, al: AttributeList, border: Int, minPixelValue: Double, maxPixelValue: Double): BufferedImage = {
     val dicomImage: DicomImage = new DicomImage(al)
 
     /** A buffered image using the ball pixels as the brightest pixels. This makes the ball stand out more.  */
@@ -22,7 +22,7 @@ object WLNonCardEdgeSetImage {
 
       val maxPixelValue = {
         val offsetList = (-2 until 3)
-        val valueList = for (x <- offsetList; y <- offsetList) yield dicomImage.get(edgeSet.center.x.toInt + x, edgeSet.center.y.toInt + y)
+        val valueList = for (x <- offsetList; y <- offsetList) yield dicomImage.get(edgeSet.center_pix.x.toInt + x, edgeSet.center_pix.y.toInt + y)
         val mean = valueList.sum / valueList.size
         mean
       }

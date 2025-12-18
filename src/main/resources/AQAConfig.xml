@@ -1262,6 +1262,20 @@ Note that when building a package for release, the Maven build process uses the 
     poor stem transparency. Default: 0.007  -->
     <WLEdgeCoefficientOfVariationMax>0.007</WLEdgeCoefficientOfVariationMax>
 
+    <!-- For non-cardinal ball verification, the standard deviation of the normalized ball area is
+    calculated, and must be above this value for the ball to be considered valid.  This check guards
+    against an image being 'flat' probably because of no phantom.  Specified as a positive floating
+    point value. Default is 0.1 -->
+    <WLNonCardMaxStdDev>0.1</WLNonCardMaxStdDev>
+
+    <!-- Symmetry limit for non-cardinal WL.  To validate that a ball is found, and not just a random
+    shape, the normalized vertical and horizontal profiles of the ball are extracted.  Each half of each
+    profile are subtracted from each other.  A ball will produce a symmetrical profile in both directions,
+    but other shapes will not.  If the result of the subtraction is less than this value, then it
+    is considered to be valid.  The limit chosen was found by calculating the value for a variety of
+    data sets.    Specified as a positive floating point positive number.  Default is  8.0  -->
+    <WLNonCardSymmetryLimit>8.0</WLNonCardSymmetryLimit>
+
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
     <!-- Name of XLSX files in the static dir to be used as a template for making the WL monthly
