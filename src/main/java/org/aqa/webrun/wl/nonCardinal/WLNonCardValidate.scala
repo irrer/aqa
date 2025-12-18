@@ -1,8 +1,10 @@
 package org.aqa.webrun.wl.nonCardinal
 
+import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageDisplay
 import edu.umro.ImageUtil.ImageUtil
+import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.wl.WLMessage
 import org.aqa.Config
@@ -11,30 +13,20 @@ import org.aqa.Util
 import java.awt.Color
 
 case class WLNonCardValidate( //
-    // extendedData: ExtendedData,
-    // al: AttributeList,
-    preprocessedImage: DicomImage,
     nonCardEdge: WLNonCardEdgeAnalysis,
     nonCardBall: WLNonCardBall,
-    // wlRunReq: WLRunReq,
     wlMessage: Option[WLMessage]
 ) {
 
-  /** Boundary containing ball. */
-  private val ballAOI: DicomImage = {
-    val img = WLNonCardBallAOIBounds.makeBallAOI(nonCardEdge.edgeSet, preprocessedImage)
+  val preprocessedImage: DicomImage = nonCardEdge.preprocessedImage
 
-    val sorted = img.pixelData.flatten.sorted
-    val drop = 10
-    val take = 10
-    val minPixel = sorted.slice(drop, drop + take).sum / take
-    val maxPixel = sorted.dropRight(drop).takeRight(take).sum / take
-    val range = maxPixel - minPixel
-    val normalizedImg = new DicomImage(img.transform(f => (f - minPixel) / range))
-    normalizedImg
+  private val ballAOI: DicomImage = {
+    val ball = WLNonCardBallAOIBounds.makeBallAOI(nonCardEdge.edgeSet, preprocessedImage)
+    val normalized = ball.normalize(0.001)
+    normalized
   }
 
-  if (true) { // TODO rm
+  if (false) { // TODO rm
     ImageDisplay.showInMSPaint(ballAOI.toBufferedImage(Color.blue))
   }
 
@@ -48,9 +40,11 @@ case class WLNonCardValidate( //
 
     val min = sorted.slice(badPixelCount, badPixelCount + sampleCount).sum / sampleCount
     val max = sorted.dropRight(badPixelCount).takeRight(sampleCount).sum / sampleCount
+    val range = max - min
 
-    val t = (max - min) * (Config.WLNonCardEdgePercentChange / 100)
-    t
+    val threshold = range * (Config.WLNonCardEdgePercentChange / 100)
+    wlMessage.foreach(_.info(s"Min and max image brightness: $min   $max.    Range: $range.    Threshold = ${Config.WLNonCardEdgePercentChange / 100} * $range = $threshold"))
+    threshold
   }
 
   /**
@@ -61,12 +55,30 @@ case class WLNonCardValidate( //
     */
   private def validateEdge(edge: WLNonCardEdge): Seq[String] = {
 
+    val measuredPctText: String = {
+      val max = wholeImagePixelValueRangeThreshold_cu / (Config.WLNonCardEdgePercentChange / 100)
+      val pct = (edge.range / max) * 100
+      Util.fmtDbl(pct) + "%"
+    }
+
     if (edge.range >= wholeImagePixelValueRangeThreshold_cu) {
-      val msg = s"Edge for ${edge.name} has sufficient contrast of ${Util.fmtDbl(edge.range)} . Threshold: ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)}"
-      wlMessage.foreach(_.warn(msg))
+      val msg = s"Edge for ${edge.name} has sufficient contrast of ${Util.fmtDbl(edge.range)} $measuredPctText . Threshold: ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)}"
+      wlMessage.foreach(_.info(msg))
       Seq()
     } else {
-      val msg = s"Edge for ${edge.name} has insufficient contrast of ${Util.fmtDbl(edge.range)} when it should be at least ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)}"
+      val msg =
+        s"Edge for ${edge.name} has insufficient contrast of ${Util.fmtDbl(edge.range)} ($measuredPctText)  when it should be at least ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WLNonCardEdgePercentChange}%)"
+      wlMessage.foreach(_.warn(msg))
+      Seq(msg)
+    }
+  }
+
+  private def beamEnergyIsHighEnough(): Seq[String] = {
+    val kvp = DicomUtil.findAllSingle(nonCardEdge.al, TagByName.KVP).head.getDoubleValues.head
+    if (kvp >= Config.WLNonCardKVPLimit)
+      Seq()
+    else {
+      val msg = s"DICOM file delivered with (insufficient) $kvp energy, when it should be at least (${Config.WLNonCardKVPLimit})"
       wlMessage.foreach(_.warn(msg))
       Seq(msg)
     }
@@ -137,9 +149,19 @@ case class WLNonCardValidate( //
       diff(yTop, yBottom)
     ).sum
 
-    Trace.trace(s"profile totalDiff: $totalDiff")
+    val error = if (totalDiff < Config.WLNonCardSymmetryLimit) {
+      val msg = s"profile difference in symmetry: $totalDiff is within the valid limit, indicating that the object found is spherical," +
+        s" and therefore a valid phantom.  It must be lower than ${Config.WLNonCardSymmetryLimit} to be valid."
+      wlMessage.foreach(_.info(msg))
+      Seq()
+    } else {
+      val msg = s"profile difference in symmetry: $totalDiff is too large, indicating that the object found is non-spherical," +
+        s" and therefor an invalid phantom.  It must be lower than ${Config.WLNonCardSymmetryLimit} to be valid."
+      wlMessage.foreach(_.info(msg))
+      Seq(msg)
+    }
 
-    Seq() // TODO compare against configured value
+    error
   }
 
   /**
@@ -154,8 +176,8 @@ case class WLNonCardValidate( //
 
     Trace.trace(s"stdDev: $stdDev")
 
-    if (stdDev < Config.WLNonCardMaxStdDev) {
-      val msg = s"Ball are has a standard deviation of $stdDev, which is below the required ${Config.WLNonCardMaxStdDev}.  Probably due to no phantom."
+    if (stdDev < Config.WLNonCardMinStdDev) {
+      val msg = s"Ball are has a standard deviation of $stdDev, which is below the required ${Config.WLNonCardMinStdDev}.  Probably due to no phantom."
       wlMessage.foreach(_.warn(msg))
       Seq(msg)
     } else
@@ -171,6 +193,7 @@ case class WLNonCardValidate( //
   private def makeErrorList(): Seq[String] = {
     val list = Seq( //
       edgesHaveSufficientContrast(),
+      beamEnergyIsHighEnough(),
       ballIsSufficientlyLarge(),
       ballIsSymmetrical()
     ).flatten

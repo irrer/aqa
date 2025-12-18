@@ -1014,8 +1014,9 @@ object Config extends Logging {
   val WLEdgeCoefficientOfVariationMax: Double = logMainText("WLEdgeCoefficientOfVariationMax", "0.007").toDouble
 
   val WLNonCardEdgePercentChange: Double = logMainText("WLNonCardEdgePercentChange", "98.0").toDouble
-  val WLNonCardMaxStdDev: Double = logMainText("WLNonCardMaxStdDev", "0.1").toDouble
+  val WLNonCardMinStdDev: Double = logMainText("WLNonCardMinStdDev", "0.1").toDouble
   val WLNonCardSymmetryLimit : Double = logMainText("WLNonCardSymmetryLimit", "0.4").toDouble
+  val WLNonCardKVPLimit : Double = logMainText("WLNonCardKVPLimit", "0.0").toDouble
 
   val WLTreatmentMachineList: List[WLTreatmentMachine] = {
     val list = (document \ "WLTreatmentMachineList" \ "WLTreatmentMachine").toList.map(e => new WLTreatmentMachine(e))

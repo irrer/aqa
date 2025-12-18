@@ -62,7 +62,7 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
   // ImageDisplay.showInMSPaint(approxImg) // TODO rm
   // ImageDisplay.showInMSPaint(img) // TODO rm
 
-  val validator: WLNonCardValidate = WLNonCardValidate(preprocessedImage, nonCardEdge, nonCardBall, wlMessage)
+  val validator: WLNonCardValidate = WLNonCardValidate(nonCardEdge, nonCardBall, wlMessage)
 
   Trace.trace(s"""validator.errorList:size: ${validator.errorList.size}\n ${validator.errorList.mkString("\n")}""")
 
