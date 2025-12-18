@@ -1262,6 +1262,22 @@ Note that when building a package for release, the Maven build process uses the 
     poor stem transparency. Default: 0.007  -->
     <WLEdgeCoefficientOfVariationMax>0.007</WLEdgeCoefficientOfVariationMax>
 
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <!-- For Winston-Lutz non-cardinal processing, it is important that some validation be performed to
+    ensure that it is valid.  There have been cases where non-WL images have been processed, and these
+    checks to protect against misinterpreting them as real data.
+
+    To validate an edge, a check is performed that measures the degree to which it changes brightness.
+    A 'good' edge will transition from close to the lowest pixel values to the highest.  This number
+    is the percent of the image's full brightness range. For example, if pixel values for the entire
+    image ranged from 2000 to 5000, then the range would be 3000, and 98% of that would be 2940.0,
+    so each edge would have to have at change of least 2940.0 from lowest to highest pixel values
+    to be considered valid.
+
+    Floating point value.  Default is 98.0 -->
+    <WLNonCardEdgePercentChange>98.0</WLNonCardEdgePercentChange>
+
     <!-- For non-cardinal ball verification, the standard deviation of the normalized ball area is
     calculated, and must be above this value for the ball to be considered valid.  This check guards
     against an image being 'flat' probably because of no phantom.  Specified as a positive floating

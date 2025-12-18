@@ -1013,6 +1013,7 @@ object Config extends Logging {
   val WLAmqpRoutingKey: String = logMainText("WLSummarySize", "Aria.Event.EventWLQASRSDone")
   val WLEdgeCoefficientOfVariationMax: Double = logMainText("WLEdgeCoefficientOfVariationMax", "0.007").toDouble
 
+  val WLNonCardEdgePercentChange: Double = logMainText("WLNonCardEdgePercentChange", "98.0").toDouble
   val WLNonCardMaxStdDev: Double = logMainText("WLNonCardMaxStdDev", "0.1").toDouble
   val WLNonCardSymmetryLimit : Double = logMainText("WLNonCardSymmetryLimit", "0.4").toDouble
 

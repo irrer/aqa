@@ -49,7 +49,7 @@ case class WLNonCardValidate( //
     val min = sorted.slice(badPixelCount, badPixelCount + sampleCount).sum / sampleCount
     val max = sorted.dropRight(badPixelCount).takeRight(sampleCount).sum / sampleCount
 
-    val t = (max - min) * 0.9
+    val t = (max - min) * (Config.WLNonCardEdgePercentChange / 100)
     t
   }
 
