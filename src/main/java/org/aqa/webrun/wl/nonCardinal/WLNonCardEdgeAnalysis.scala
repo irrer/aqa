@@ -42,14 +42,13 @@ import javax.vecmath.Point2d
 case class WLNonCardEdgeAnalysis( //
     preprocessedImage: DicomImage,
     al: AttributeList,
-    wlMessage: Option[WLMessage] = None
+    biCubicImage : BiCubicImage,
+    wlMessage: Option[WLMessage]
 ) extends Logging {
 
   private val collAngle = Util.collimatorAngle(al)
 
   private val trans = new IsoImagePlaneTranslator(al)
-
-  private val biCubicImage = BiCubicImage(preprocessedImage)
 
   /** The center of the edges as calculated by finding the center of mass.  This should be accurate to within 3 pixels. */
   private def locateCoarseCenter(): Point2d = {
@@ -267,7 +266,8 @@ object WLNonCardEdgeAnalysis {
     Trace.trace()
     val runReq = WLRunReq(Seq(al), None)
     val wlMessage = WLMessage(runReq, al)
-    val nonCardinal = new WLNonCardEdgeAnalysis(dicomImage, al, Some(wlMessage))
+    val biCubicImage = BiCubicImage(dicomImage)
+    val nonCardinal = new WLNonCardEdgeAnalysis(dicomImage, al, biCubicImage, Some(wlMessage))
     Trace.trace()
     Trace.trace(nonCardinal)
 

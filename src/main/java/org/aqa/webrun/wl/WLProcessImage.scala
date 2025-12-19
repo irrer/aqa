@@ -11,6 +11,7 @@ import org.aqa.Util
 import org.aqa.db.MachineWL
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
+import org.aqa.webrun.wl.nonCardinal.WLNonCardAnalysis
 import org.opensourcephysics.numerics.CubicSpline
 
 import java.awt.image.BufferedImage
@@ -81,7 +82,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
   private val subDir: File = {
     val name = {
-      val n = index.formatted("%02d") + "-" + wlMsg.imageName
+      val n = "%02d".format(index) + "-" + wlMsg.imageName
       FileUtil.replaceInvalidFileNameCharacters(n, '_').replaceAllLiterally(" ", "_")
     }
 
@@ -297,11 +298,11 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
 
         val coarseAoiBounds = WLCoarseBox(new DicomImage(pixels), trans, Some(wlMsg)).locate()
 
-        /*
-        if (!isCardinalAngle) {
-          Trace.trace(NonCardinal.measureEdges(rtimage, pixels, coarseAoiBounds))
+        // jjjjjjjjjjjjjjjjjjjjjjjjjjj ------------------------------------------------------
+        if (!isCardinalAngle) { // TODO rm
+          val  wlNonCardAnalysis = WLNonCardAnalysis(extendedData, rtimage, runReq, Some(wlMsg))
         }
-        */
+        // jjjjjjjjjjjjjjjjjjjjjjjjjjj ------------------------------------------------------
 
         val coarseAoi: DicomImage = preprocessImage.preprocessedImage.getSubimage(coarseAoiBounds)
 

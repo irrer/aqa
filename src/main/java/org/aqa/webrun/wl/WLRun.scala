@@ -2,6 +2,7 @@ package org.aqa.webrun.wl
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.run.ProcedureStatus
@@ -22,6 +23,7 @@ import org.aqa.AnonymizeUtil
 import org.aqa.web.WebServer
 import org.aqa.AQAEventNetClient
 import org.aqa.Config
+import org.aqa.webrun.wl.nonCardinal.WLNonCardAnalysis
 import org.restlet.Request
 import org.restlet.Response
 
@@ -65,10 +67,19 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
     }
   }
 
+  private def isCardinalAngle(rtimage: AttributeList): Boolean = {
+    val angle = rtimage.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
+    WLImageUtil.isCardinalAngle(angle)
+  }
+
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
+
     // Process in parallel for speed.  After that, sort by data time.
-    val results = runReq.epidList.zipWithIndex.par.map(rtimageIndex => new WLProcessImage(extendedData, rtimageIndex._1, rtimageIndex._2, runReq).process).toList
-    //val results = runReq.epidList.zipWithIndex.map(rtimageIndex => new WLProcessImage(extendedData, rtimageIndex._1, rtimageIndex._2, runReq).process).toList // Use this to run non-parallel
+    val results = runReq.epidList.zipWithIndex.filter(alIndex => isCardinalAngle(alIndex._1)).par.map(rtimageIndex => new WLProcessImage(extendedData, rtimageIndex._1, rtimageIndex._2, runReq).process).toList
+
+    val nonCardResults = runReq.epidList.filterNot(isCardinalAngle).map(rtimage => WLNonCardAnalysis(extendedData, rtimage, runReq, Some(WLMessage(runReq, rtimage))))
+
+    Trace.trace(nonCardResults) // TODO rm
 
     val resultHasData = results.filter(r => WLImageStatus.hasResult(r.imageStatus))
 
@@ -94,7 +105,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
     logger.info("Wrote main HTML file " + file.getAbsolutePath)
 
     // true if all images passed.
-    val allPassed = results.map(r => r.imageStatus.toString).distinct.forall(text => text.equals(WLImageStatus.Passed.toString))
+    val allPassed = results.nonEmpty && results.map(r => r.imageStatus.toString).distinct.forall(text => text.equals(WLImageStatus.Passed.toString))
 
     WLUpdateRestlet.updateWL()
     val status =

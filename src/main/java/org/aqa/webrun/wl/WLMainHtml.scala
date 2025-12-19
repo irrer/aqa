@@ -327,7 +327,10 @@ object WLMainHtml extends Logging {
           case Some(result) =>
             makeElem(result.imageStatus.toString, Config.WLFailColor)
           case _ =>
-            makeElem("PASSED", Config.WLPassColor)
+            if (resultList.isEmpty)
+              makeElem("FAILED", Config.WLFailColor)
+            else
+              makeElem("PASSED", Config.WLPassColor)
         }
       }
 

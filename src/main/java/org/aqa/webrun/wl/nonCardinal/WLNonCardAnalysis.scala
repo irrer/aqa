@@ -21,23 +21,8 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
   private val preprocessedImage = WLPreprocessImage(al, None).preprocessedImage
 
   private val biCubicImage = BiCubicImage(preprocessedImage)
-  private val nonCardEdge = new WLNonCardEdgeAnalysis(preprocessedImage, al)
+  private val nonCardEdge = new WLNonCardEdgeAnalysis(preprocessedImage, al, biCubicImage, wlMessage)
   private val nonCardBall = WLNonCardBall(nonCardEdge.edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, biCubicImage: BiCubicImage, al)
-
-  /** Establish a threshold for the min-to-max pixel range.  An edge must have at least this amount of change in pixel value to be considered valid. */
-  private val wholeImagePixelValueRangeThreshold_cu: Double = {
-    val sorted = preprocessedImage.pixelData.flatten.sorted
-
-    // assume that up to one entire row or column of the image has bad pixels.
-    val badPixelCount = Math.max(preprocessedImage.width, preprocessedImage.height) + 5
-    val sampleCount = 10
-
-    val min = sorted.slice(badPixelCount, badPixelCount + sampleCount).sum / sampleCount
-    val max = sorted.dropRight(badPixelCount).takeRight(sampleCount).sum / sampleCount
-
-    val t = (max - min) * 0.9
-    t
-  }
 
   /** Take the mean of the pixels that are in the center of the ball and use those to establish the point in the brightest color level. */
   private val maxPixelValue = {
@@ -85,7 +70,7 @@ object WLNonCardAnalysis {
     val wlMessage: WLMessage = WLMessage(runReq, al)
 
     val wlNonCardAnalysis = WLNonCardAnalysis(ext, al, runReq, Some(wlMessage))
-    val center_pix = wlNonCardAnalysis.nonCardEdge.edgeSet.center_pix
+    Trace.trace("List of errors: " + wlNonCardAnalysis.validator.errorList.mkString("\n"))
 
     Thread.sleep(2000)
     System.exit(99)
