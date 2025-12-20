@@ -67,15 +67,22 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
     }
   }
 
+  private val enableNonCardinalProcessing: Boolean = true;
+
   private def isCardinalAngle(rtimage: AttributeList): Boolean = {
-    val angle = rtimage.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
-    WLImageUtil.isCardinalAngle(angle)
+    if (enableNonCardinalProcessing) { // TODO set this to true to enable nonCardinal processing
+      val angle = rtimage.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
+      WLImageUtil.isCardinalAngle(angle)
+    } else {
+      true
+    }
   }
 
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
 
     // Process in parallel for speed.  After that, sort by data time.
-    val results = runReq.epidList.zipWithIndex.filter(alIndex => isCardinalAngle(alIndex._1)).par.map(rtimageIndex => new WLProcessImage(extendedData, rtimageIndex._1, rtimageIndex._2, runReq).process).toList
+    val results =
+      runReq.epidList.zipWithIndex.filter(alIndex => isCardinalAngle(alIndex._1)).par.map(rtimageIndex => new WLProcessImage(extendedData, rtimageIndex._1, rtimageIndex._2, runReq).process).toList
 
     val nonCardResults = runReq.epidList.filterNot(isCardinalAngle).map(rtimage => WLNonCardAnalysis(extendedData, rtimage, runReq, Some(WLMessage(runReq, rtimage))))
 
@@ -99,7 +106,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
       }
     }
 
-    val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, results, runReq, monthly)
+    val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, results, nonCardResults, runReq, monthly)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, mainHtmlText)
     logger.info("Wrote main HTML file " + file.getAbsolutePath)

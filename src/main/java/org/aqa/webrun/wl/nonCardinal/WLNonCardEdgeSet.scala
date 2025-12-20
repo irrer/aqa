@@ -60,6 +60,21 @@ case class WLNonCardEdgeSet(
 
   val edgeList: Seq[WLNonCardEdge] = Seq(X1, X2, Y1, Y2)
 
+  /** Where lines intersect. */
+  val x1y1: Point2d = X1.edgeLine.intersection(Y1.edgeLine)
+
+  /** Where lines intersect. */
+  val x1y2: Point2d = X1.edgeLine.intersection(Y2.edgeLine)
+
+  /** Where lines intersect. */
+  val x2y1: Point2d = X2.edgeLine.intersection(Y1.edgeLine)
+
+  /** Where lines intersect. */
+  val x2y2: Point2d = X2.edgeLine.intersection(Y2.edgeLine)
+
+  /** list of intersection points */
+  val intersectList: Seq[Point2d] = Seq(x1y1, x1y2, x2y1, x2y2)
+
   override def toString: String = {
     def fmt(d: Double) = "%20.10f".format(d).trim
     def fmtP(p: Point2d) = fmt(p.getX) + ", " + fmt(p.getY)

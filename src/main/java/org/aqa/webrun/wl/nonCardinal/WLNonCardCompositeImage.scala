@@ -1,0 +1,119 @@
+package org.aqa.webrun.wl.nonCardinal
+
+import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.ImageDisplay
+import edu.umro.ImageUtil.ImageUtil
+import edu.umro.ImageUtil.ScaledImage
+import org.aqa.Config
+
+import java.awt.image.BufferedImage
+import java.awt.Color
+import java.awt.Rectangle
+import javax.vecmath.Point2d
+
+object WLNonCardCompositeImage {
+
+  private def d2i(d: Double): Int = d.round.toInt
+
+  private def scale: Int = {
+    Config.WLScale
+    6
+  }
+
+  private def makeBoundingRectangle(nonCard: WLNonCardAnalysis): Rectangle = {
+
+    val edgeSet = nonCard.nonCardEdge.edgeSet
+
+    /** extra space between the image's content and the image's edge. */
+    val border_pix: Int = {
+      val border_mm = 5.0
+      val pix = nonCard.trans.pix2IsoDistX(border_mm).round.toInt
+      pix
+    }
+
+    val xList = edgeSet.intersectList.map(_.x)
+    val yList = edgeSet.intersectList.map(_.y)
+    val x = xList.min - border_pix
+    val y = yList.min - border_pix
+    val width = (xList.max - x) + (border_pix * 2)
+    val height = (yList.max - y) + (border_pix * 2)
+
+    val rectangle = new Rectangle(d2i(x), d2i(y), d2i(width), d2i(height))
+
+    rectangle
+  }
+
+  private def makeInitialBufImage(nonCard: WLNonCardAnalysis): BufferedImage = {
+
+    val dicomImage = new DicomImage(nonCard.al)
+
+    val img1 = dicomImage.toBufferedImage(ImageUtil.rgbColorMap(Color.blue), nonCard.minPixelValue, nonCard.maxPixelValue)
+
+    val img2 = ImageUtil.subImage(img1, makeBoundingRectangle(nonCard))
+
+    val img3 = ImageUtil.magnify(img2, scale)
+    img3
+  }
+
+  private def drawEdgeLines(bufImg: BufferedImage, nonCard: WLNonCardAnalysis): Unit = {
+
+    val edgeSet = nonCard.nonCardEdge.edgeSet
+    val rect = makeBoundingRectangle(nonCard)
+    val si = ScaledImage(Config.WLScale, rect.x, rect.y)
+
+    val gc = ImageUtil.getGraphics(bufImg)
+    gc.setColor(Color.white)
+
+    si.drawLine(gc, edgeSet.x1y1, edgeSet.x1y2)
+    si.drawLine(gc, edgeSet.x1y1, edgeSet.x2y1)
+    si.drawLine(gc, edgeSet.x1y1, edgeSet.x2y2)
+    si.drawLine(gc, edgeSet.x1y2, edgeSet.x2y1)
+    si.drawLine(gc, edgeSet.x1y2, edgeSet.x2y2)
+    si.drawLine(gc, edgeSet.x2y1, edgeSet.x2y2)
+  }
+
+  private def drawBallLines(bufImg: BufferedImage, nonCard: WLNonCardAnalysis): Unit = {
+    val innerRadius_mm = 2.5
+    val outerRadius_mm = innerRadius_mm * 2
+    val innerRadius_pix = nonCard.trans.iso2PixDistX(innerRadius_mm)
+    val outerRadius_pix = nonCard.trans.iso2PixDistX(outerRadius_mm)
+
+    val ballCenter_pix = nonCard.nonCardBall.center_pix
+
+    val gc = ImageUtil.getGraphics(bufImg)
+    gc.setColor(Color.white)
+    val rect = makeBoundingRectangle(nonCard)
+    val si = ScaledImage(scale, rect.x, rect.y)
+
+    si.drawLine(gc, new Point2d(ballCenter_pix.x - outerRadius_pix, ballCenter_pix.y), new Point2d(ballCenter_pix.x + outerRadius_pix, ballCenter_pix.y))
+    si.drawLine(gc, new Point2d(ballCenter_pix.x, ballCenter_pix.y - outerRadius_pix), new Point2d(ballCenter_pix.x, ballCenter_pix.y + outerRadius_pix))
+
+    def makeCircle(radius: Double): Unit = {
+      val x = si.scalePixelX(ballCenter_pix.x - radius)
+      val width = si.scalePixelX(radius * 2)
+
+      val y = si.scalePixelY(ballCenter_pix.y - radius)
+      val height = si.scalePixelY(radius * 2)
+      gc.drawOval(x, y, width, height)
+    }
+
+    makeCircle(innerRadius_pix)
+    gc.setColor(Color.yellow)
+    makeCircle(outerRadius_pix)
+  }
+
+  def makeCompositeImage(nonCard: WLNonCardAnalysis): BufferedImage = {
+
+    val bufImg = makeInitialBufImage(nonCard)
+
+    drawEdgeLines(bufImg, nonCard)
+
+    drawBallLines(bufImg, nonCard)
+
+    if (true) { // TODO rm
+      ImageDisplay.showInMSPaint(bufImg)
+    }
+
+    bufImg
+  }
+}

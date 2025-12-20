@@ -8,6 +8,7 @@ import org.aqa.db.MachineWL
 import org.aqa.web.C3ChartHistory
 import org.aqa.web.WebUtil
 import org.aqa.Util
+import org.aqa.webrun.wl.nonCardinal.WLNonCardAnalysis
 
 import java.awt.Color
 import java.io.File
@@ -15,7 +16,7 @@ import scala.xml.Elem
 
 object WLMainHtml extends Logging {
 
-  def generateGroupHtml(extendedData: ExtendedData, resultList: Seq[WLImageResult], runReq: WLRunReq, monthly: Elem): String = {
+  def generateGroupHtml(extendedData: ExtendedData, resultList: Seq[WLImageResult], nonCardResultList: Seq[WLNonCardAnalysis], runReq: WLRunReq, monthly: Elem): String = {
     val wlParameters = MachineWL.getMachineWLOrDefault(extendedData.machine.machinePK.get)
 
     val passStyle = s"color: #000000; background: #${Config.WLPassColor};"
@@ -27,7 +28,8 @@ object WLMainHtml extends Logging {
 
     def fmtTime(ir: WLImageResult): String = {
       val totalSeconds = (ir.contentTime.getTime - extendedData.output.dataDate.get.getTime) / 1000
-      s"""${totalSeconds / 60}:${(totalSeconds % 60).formatted("%02d")}"""
+      val secondsText = "%02d".format(totalSeconds % 60)
+      s"""${totalSeconds / 60}:$secondsText"""
     }
 
     def csvFileName = {
@@ -42,9 +44,9 @@ object WLMainHtml extends Logging {
     // val readyForEvaluation = if (jobStatus(resultList) == JobStatus.ReadyForEvaluation) "*" else ""
 
     def irTextHtml(ir: WLImageResult): Seq[Elem] = {
-      def fmtDbl(value: Double): String = value.formatted("%6.2f").trim
+      def fmtDbl(value: Double): String = "%6.2f".format(value).trim
 
-      def hiFmtDbl(d: Double): String = d.formatted("%9.6f").trim
+      def hiFmtDbl(d: Double): String = "%9.6f".format(d).trim
 
       // val wl: Option[WinstonLutz] = if (WLImageStatus.hasResult(ir.imageStatus)) Some(ir.toWinstonLutz) else None
 
@@ -126,7 +128,7 @@ object WLMainHtml extends Logging {
     }
 
     def toHtml(color: Color): String = {
-      "#" + (color.getRGB & 0xffffff).formatted("%06x")
+      "#" + "%06x".format(color.getRGB & 0xffffff)
     }
 
     def irThumbImageHtml(ir: WLImageResult): Elem = {
@@ -146,7 +148,7 @@ object WLMainHtml extends Logging {
       def img(name: String): Elem = {
         val title = name match {
           case WLgenHtml.NORMAL_SUMMARY_FILE_NAME => "Summary Image"
-          case WLgenHtml.BRIGHT_SUMMARY_FILE_NAME => "Summary Image Brightened"
+          case WLgenHtml.BRIGHT_SUMMARY_FILE_NAME => ""
           case WLgenHtml.ORIGINAL_FILE_NAME       => "Entire Image"
           case _                                  => "Image"
         }
@@ -222,7 +224,7 @@ object WLMainHtml extends Logging {
             {name}
           </td>
           <td style={style}>
-            {(value.formatted("%6.2f") + "mm").trim}
+            {("%6.2f".format(value) + "mm").trim}
           </td>
           <td style={style}>
             {instr}

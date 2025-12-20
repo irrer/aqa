@@ -135,6 +135,8 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
     new Point2d(x, y)
   }
 
+  val center_pix: Point2d = findCenterOfMass()
+
   def doIt(): Point2d = {
 
     Trace.trace()
