@@ -16,8 +16,8 @@ object WLNonCardCompositeImage {
   private def d2i(d: Double): Int = d.round.toInt
 
   private def scale: Int = {
-    Config.WLScale
     6
+    Config.WLScale
   }
 
   private def makeBoundingRectangle(nonCard: WLNonCardAnalysis): Rectangle = {
@@ -59,7 +59,7 @@ object WLNonCardCompositeImage {
 
     val edgeSet = nonCard.nonCardEdge.edgeSet
     val rect = makeBoundingRectangle(nonCard)
-    val si = ScaledImage(Config.WLScale, rect.x, rect.y)
+    val si = ScaledImage(scale, rect.x, rect.y)
 
     val gc = ImageUtil.getGraphics(bufImg)
     gc.setColor(Color.white)
