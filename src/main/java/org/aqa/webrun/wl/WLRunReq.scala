@@ -3,6 +3,7 @@ package org.aqa.webrun.wl
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.FileUtil
 import org.aqa.db.WinstonLutz
 import org.aqa.run.RunReqClass
 import org.aqa.Util
@@ -18,7 +19,18 @@ case class WLRunReq(epidList: Seq[AttributeList], rtplan: Option[AttributeList])
     epidList.find(epid => wl.rtimageUID.equals(Util.sopOfAl(epid)))
   }
 
+  def indexOf(al: AttributeList): Int = {
+    val uid: String = Util.sopOfAl(al)
+    epidList.indexWhere(e => Util.sopOfAl(e) == uid)
+  }
+
   private val firstImageTimeMs = epidList.map(WLImageUtil.timeOfMs).min
+
+  def subDirName(attrList : AttributeList): String = {
+    val name1 = "%02d".format(indexOf(attrList)) + "-" + imageName(attrList)
+    val name2 = FileUtil.replaceInvalidFileNameCharacters(name1, '_').replaceAll(" " , "_")
+    name2
+  }
 
   /**
     * Make a name for the image that will make sense to the user.

@@ -2,7 +2,6 @@ package org.aqa.webrun.wl
 
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
-import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Util
@@ -10,6 +9,7 @@ import org.aqa.db.WinstonLutz
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.PlannedRectangle
+import org.aqa.db.WinstonLutzNonCardinal
 
 import java.awt.geom.Point2D
 import java.awt.Rectangle
@@ -40,23 +40,23 @@ class Edges(val top: Double, val bottom: Double, val left: Double, val right: Do
 }
 
 case class WLImageResult(
-                          imageStatus: WLImageStatus.ImageStatus,
-                          boxP: Option[Point] = None,
-                          ballP: Option[Point] = None,
-                          edgesUnscaled: Option[Edges] = None,
-                          boxEdgesP: Option[Edges] = None,
-                          edgeSet: Option[WLEdgeSet] = None,
-                          directory: File,
-                          rtimage: AttributeList,
-                          pixels: Option[Array[Array[Float]]] = None,
-                          coarseAoiBounds: Option[Rectangle] = None,
-                          brcX: Option[Double] = None,
-                          brcY: Option[Double] = None,
-                          badPixelList: Seq[WLBadPixel],
-                          marginalPixelList: Seq[WLBadPixel],
-                          extendedData: ExtendedData,
-                          runReq: WLRunReq
-                        ) {
+    imageStatus: WLImageStatus.ImageStatus,
+    boxP: Option[Point] = None,
+    ballP: Option[Point] = None,
+    edgesUnscaled: Option[Edges] = None,
+    boxEdgesP: Option[Edges] = None,
+    edgeSet: Option[WLEdgeSet] = None,
+    directory: File,
+    rtimage: AttributeList,
+    pixels: Option[Array[Array[Float]]] = None,
+    coarseAoiBounds: Option[Rectangle] = None,
+    brcX: Option[Double] = None,
+    brcY: Option[Double] = None,
+    badPixelList: Seq[WLBadPixel],
+    marginalPixelList: Seq[WLBadPixel],
+    extendedData: ExtendedData,
+    runReq: WLRunReq
+) extends WLResult(extendedData, runReq) {
   val ok: Boolean = boxP.isDefined && ballP.isDefined
   val offX: Double = if (ok) boxP.get.x - ballP.get.x else -1
   val offY: Double = if (ok) boxP.get.y - ballP.get.y else -1
@@ -68,53 +68,8 @@ case class WLImageResult(
   val ball: Point = if (ballP.isEmpty) new Point(-1, -1) else ballP.get
   val boxEdges: Edges = if (boxEdgesP.isEmpty) new Edges(-1, -1, -1, -1) else boxEdgesP.get
 
-
-  val contentTime: Date = WLImageUtil.timeOf(rtimage)
-
-
-  /** Elapsed time in ms of this slice since the first slice in the series was captured. */
-  val elapsedTime_ms: Long = {
-    val ms = contentTime.getTime
-    val elapsed_ms = ms - extendedData.output.dataDate.get.getTime
-    elapsed_ms
-  }
-
-  private val gantry_deg: Double = Util.gantryAngle(rtimage)
-  private val collimator_deg: Double = Util.collimatorAngle(rtimage)
-
-  private def angleRoundedTo22_5(angle: Double): Double = (((angle + 3600) / 22.5).round.toInt % 16) * 22.5 // convert to nearest multiple of 22.5 degrees
-
-  val gantryRounded_deg: Int = Util.angleRoundedTo90(gantry_deg)
-  val collimatorRounded_deg: Double = angleRoundedTo22_5(collimator_deg)
-  val tableAngle_deg: Double = rtimage.get(TagByName.PatientSupportAngle).getDoubleValues.head
-
-  val gantryRounded_txt: String = "G" + gantryRounded_deg.formatted("%03d")
-  val collimatorRounded_txt: String = "C" + {
-    if (collimatorRounded_deg.toInt == collimatorRounded_deg)
-      collimatorRounded_deg.toInt.formatted("%03d")
-    else
-      collimatorRounded_deg.formatted("%5.1f")
-  }
-
-  val elapsedTime_txt: String = {
-    val totalSeconds = elapsedTime_ms / 1000
-    (totalSeconds / 60) + ":" + (totalSeconds % 60).formatted("%02d")
-  }
-
-  val imageName: String = gantryRounded_txt + " " + collimatorRounded_txt + " " + elapsedTime_txt
-
-  def subDirName: String = {
-    val min = elapsedTime_ms / (60 * 1000)
-    val sec = (elapsedTime_ms / 1000) % 60
-    val name = min.formatted("%d") + "_" + sec.formatted("%02d") + "__" + gantryRounded_txt + "__" + collimatorRounded_txt
-    name
-  }
-
-  def subDir: File = {
-    val dir = new File(extendedData.output.dir, subDirName)
-    dir.mkdirs()
-    dir
-  }
+  // private val gantry_deg: Double = Util.gantryAngle(rtimage)
+  // private val collimator_deg: Double = Util.collimatorAngle(rtimage)
 
   def attr(tag: AttributeTag): String = {
     DicomUtil.findAllSingle(rtimage, tag).map(_.getSingleStringValueOrEmptyString()).head
@@ -190,13 +145,6 @@ case class WLImageResult(
     ""
   }
 
-  val beamName: Option[String] = {
-    if (runReq.rtplan.isDefined)
-      Util.getBeamNameOfRtimage(runReq.rtplan.get, rtimage)
-    else
-      None
-  }
-
   /**
    * Construct a database object from these results.
    *
@@ -236,4 +184,19 @@ case class WLImageResult(
     )
     wl
   }
+
+  // ----------------------------------------------------------------------------------------
+
+  // support for WLResult
+
+  override def offsetX_pix: Double = offX
+
+  override def offsetY_pix: Double = offY
+
+  override def getImageStatus: WLImageStatus.Value = imageStatus
+
+  override def convertToDB: Either[WinstonLutz, WinstonLutzNonCardinal] = Left(toWinstonLutz)
+
+  override def attrList: AttributeList = rtimage
+
 }

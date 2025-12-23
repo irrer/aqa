@@ -57,7 +57,7 @@ import scala.xml.Elem
  *
  */
 
-case class WinstonLutz2(
+case class WinstonLutzNonCardinal(
                          // @formatter:off
     winstonLutz2PK       : Option[Long]       ,
     outputPK             : Long               ,
@@ -87,8 +87,8 @@ case class WinstonLutz2(
   // @formatter:on
                        ) {
 
-  def insert: WinstonLutz2 = {
-    val insertQuery = WinstonLutz2.query returning WinstonLutz2.query.map(_.winstonLutz2PK) into ((winstonLutz2, winstonLutz2PK) => winstonLutz2.copy(winstonLutz2PK = Some(winstonLutz2PK)))
+  def insert: WinstonLutzNonCardinal = {
+    val insertQuery = WinstonLutzNonCardinal.query returning WinstonLutzNonCardinal.query.map(_.winstonLutz2PK) into ((winstonLutz2, winstonLutz2PK) => winstonLutz2.copy(winstonLutz2PK = Some(winstonLutz2PK)))
     val action = insertQuery += this
     val result = Db.run(action)
     result
@@ -135,7 +135,7 @@ case class WinstonLutz2(
   val collimatorCos: Double = Math.cos(collimatorAngle_radians)
 
 
-  def insertOrUpdate(): Int = Db.run(WinstonLutz2.query.insertOrUpdate(this))
+  def insertOrUpdate(): Int = Db.run(WinstonLutzNonCardinal.query.insertOrUpdate(this))
 
   //noinspection ScalaWeakerAccess
   def boxCenterX_mm: Double = {
@@ -207,10 +207,10 @@ case class WinstonLutz2(
 }
 
 //noinspection ScalaWeakerAccess
-object WinstonLutz2 extends Logging {
+object WinstonLutzNonCardinal extends Logging {
 
   // @formatter:off
-  class WinstonLutz2Table(tag: Tag) extends Table[WinstonLutz2](tag, "winstonLutz2") {
+  class WinstonLutz2Table(tag: Tag) extends Table[WinstonLutzNonCardinal](tag, "winstonLutz2") {
     def winstonLutz2PK        = column[Long]("winstonLutz2PK", O.PrimaryKey, O.AutoInc)
     def outputPK              = column[Long]("outputPK")
     def rtimageUID            = column[String]("rtimageUID")
@@ -256,7 +256,7 @@ object WinstonLutz2 extends Logging {
         plannedOffsetY2_mm    ,
         ballX_mm              ,
         ballY_mm              ,
-      ) <> (WinstonLutz2.apply _ tupled, WinstonLutz2.unapply)
+      ) <> (WinstonLutzNonCardinal.apply _ tupled, WinstonLutzNonCardinal.unapply)
     // @formatter:on
 
     def outputFK = foreignKey("WinstonLutz2_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
@@ -277,9 +277,9 @@ object WinstonLutz2 extends Logging {
     override def toString: String = name + "    isX: " + isX + "    is1: " + bank + "    isJaw: " + isJaw
   }
 
-  def get(winstonLutz2PK: Long): Option[WinstonLutz2] = {
+  def get(winstonLutz2PK: Long): Option[WinstonLutzNonCardinal] = {
     val action = for {
-      inst <- WinstonLutz2.query if inst.winstonLutz2PK === winstonLutz2PK
+      inst <- WinstonLutzNonCardinal.query if inst.winstonLutz2PK === winstonLutz2PK
     } yield inst
     val list = Db.run(action.result)
     list.headOption
@@ -288,9 +288,9 @@ object WinstonLutz2 extends Logging {
   /**
    * Get a list of all WinstonLutz2 for the given output
    */
-  def getByOutput(outputPK: Long): Seq[WinstonLutz2] = {
+  def getByOutput(outputPK: Long): Seq[WinstonLutzNonCardinal] = {
     val action = for {
-      inst <- WinstonLutz2.query if inst.outputPK === outputPK
+      inst <- WinstonLutzNonCardinal.query if inst.outputPK === outputPK
     } yield inst
     val list = Db.run(action.result)
     list.toIndexedSeq
@@ -308,17 +308,17 @@ object WinstonLutz2 extends Logging {
     Db.run(action)
   }
 
-  def xmlToList(elem: Elem, outputPK: Long): Seq[WinstonLutz2] = {
+  def xmlToList(elem: Elem, outputPK: Long): Seq[WinstonLutzNonCardinal] = {
     if (true) throw new RuntimeException("Unsupported function.") // should never be called
     if ((elem == null) || (outputPK == -1)) System.currentTimeMillis // fixes compiler warnings
-    Seq[WinstonLutz2]()
+    Seq[WinstonLutzNonCardinal]()
   }
 
-  def insertSeq(list: Seq[WinstonLutz2]): Unit = {
+  def insertSeq(list: Seq[WinstonLutzNonCardinal]): Unit = {
     list.foreach(_.insertOrUpdate())
   }
 
-  case class WinstonLutz2History(output: Output, winstonLutz2: WinstonLutz2) extends HasOutput {
+  case class WinstonLutz2History(output: Output, winstonLutz2: WinstonLutzNonCardinal) extends HasOutput {
     override def getOutput: Output = output
   }
 
@@ -339,7 +339,7 @@ object WinstonLutz2 extends Logging {
     val search = for {
       machine <- Machine.query.filter(m => m.institutionPK === institutionPK)
       output <- Output.valid.filter(o => (o.dataDate <= timeStamp) && (o.machinePK === machine.machinePK))
-      winstonLutz2 <- WinstonLutz2.query.filter(c => c.outputPK === output.outputPK)
+      winstonLutz2 <- WinstonLutzNonCardinal.query.filter(c => c.outputPK === output.outputPK)
     } yield {
       (output, winstonLutz2)
     }
@@ -368,7 +368,7 @@ object WinstonLutz2 extends Logging {
 
     val search = for {
       output <- Output.valid.filter(o => o.machinePK === machinePK)
-      winstonLutz2 <- WinstonLutz2.query.filter(c => c.outputPK === output.outputPK && c.beamName === beamName)
+      winstonLutz2 <- WinstonLutzNonCardinal.query.filter(c => c.outputPK === output.outputPK && c.beamName === beamName)
     } yield {
       (output, winstonLutz2)
     }
@@ -393,7 +393,7 @@ object WinstonLutz2 extends Logging {
 
     val search = for {
       output <- Output.valid.filter(o => o.machinePK === machinePK)
-      winstonLutz2 <- WinstonLutz2.query.filter(c => c.outputPK === output.outputPK)
+      winstonLutz2 <- WinstonLutzNonCardinal.query.filter(c => c.outputPK === output.outputPK)
     } yield {
       (output, winstonLutz2)
     }
@@ -414,10 +414,10 @@ object WinstonLutz2 extends Logging {
    * @return List of WinstonLutz2 that point to the output set.
    *
    */
-  def listByOutputSet(outputSet: Set[Long]): Seq[WinstonLutz2] = {
+  def listByOutputSet(outputSet: Set[Long]): Seq[WinstonLutzNonCardinal] = {
 
     val search = for {
-      winstonLutz2 <- WinstonLutz2.query.filter(c => c.outputPK.inSet(outputSet))
+      winstonLutz2 <- WinstonLutzNonCardinal.query.filter(c => c.outputPK.inSet(outputSet))
     } yield {
       winstonLutz2
     }

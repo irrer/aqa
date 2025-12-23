@@ -67,10 +67,11 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
     }
   }
 
-  private val enableNonCardinalProcessing: Boolean = true;
+  /** Set to true to enable processing of non-cardinal collimator angles.  If false, all images are assumed to have cardinal angles. */
+  private val enableNonCardinalProcessing: Boolean = false;
 
   private def isCardinalAngle(rtimage: AttributeList): Boolean = {
-    if (enableNonCardinalProcessing) { // TODO set this to true to enable nonCardinal processing
+    if (enableNonCardinalProcessing) {
       val angle = rtimage.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
       WLImageUtil.isCardinalAngle(angle)
     } else {
@@ -81,23 +82,30 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
 
     // Process in parallel for speed.  After that, sort by data time.
-    val results =
-      runReq.epidList.zipWithIndex.filter(alIndex => isCardinalAngle(alIndex._1)).par.map(rtimageIndex => new WLProcessImage(extendedData, rtimageIndex._1, rtimageIndex._2, runReq).process).toList
+    //val results: List[WLImageResult] =
+    val results: List[WLResult] =
+      runReq.epidList.filter(al => isCardinalAngle(al)).par.map(rtimageIndex => new WLProcessImage(extendedData, rtimageIndex, runReq).process).toList
 
     val nonCardResults = runReq.epidList.filterNot(isCardinalAngle).map(rtimage => WLNonCardAnalysis(extendedData, rtimage, runReq, Some(WLMessage(runReq, rtimage))))
 
     Trace.trace(nonCardResults) // TODO rm
 
-    val resultHasData = results.filter(r => WLImageStatus.hasResult(r.imageStatus))
+    val resultHasData = results.filter(r => WLImageStatus.hasResult(r.getImageStatus))
 
-    val dbList = resultHasData.map(_.toWinstonLutz)
-    dbList.map(_.insert)
+    val dbList = resultHasData.map(_.convertToDB)
+
+    val wlList = dbList.filter(_.isLeft).map(_.left.get)
+    val wlNonCardList = dbList.filter(_.isRight).map(_.right.get)
+
+    wlList.foreach(_.insert)
+    wlNonCardList.foreach(_.insert)
+
     logger.info(s"Inserted ${resultHasData.size} WinstonLutz rows into database.")
 
     // If there are images to do a monthly analysis, then do it and add links to the web page
     val monthly: Elem = {
       try {
-        val elem = WLRunIsoCheck.run(extendedData, runReq, dbList)
+        val elem = WLRunIsoCheck.run(extendedData, runReq, wlList)
         elem // This will be a trivial HTML snippet if this data set does not have monthly data.
       } catch {
         case t: Throwable =>
@@ -106,13 +114,13 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
       }
     }
 
-    val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, results, nonCardResults, runReq, monthly)
+    val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, results, runReq, monthly)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, mainHtmlText)
     logger.info("Wrote main HTML file " + file.getAbsolutePath)
 
     // true if all images passed.
-    val allPassed = results.nonEmpty && results.map(r => r.imageStatus.toString).distinct.forall(text => text.equals(WLImageStatus.Passed.toString))
+    val allPassed = results.nonEmpty && results.map(r => r.getImageStatus.toString).distinct.forall(text => text.equals(WLImageStatus.Passed.toString))
 
     WLUpdateRestlet.updateWL()
     val status =

@@ -8,7 +8,6 @@ import org.aqa.db.MachineWL
 import org.aqa.web.C3ChartHistory
 import org.aqa.web.WebUtil
 import org.aqa.Util
-import org.aqa.webrun.wl.nonCardinal.WLNonCardAnalysis
 
 import java.awt.Color
 import java.io.File
@@ -16,7 +15,10 @@ import scala.xml.Elem
 
 object WLMainHtml extends Logging {
 
-  def generateGroupHtml(extendedData: ExtendedData, resultList: Seq[WLImageResult], nonCardResultList: Seq[WLNonCardAnalysis], runReq: WLRunReq, monthly: Elem): String = {
+  def generateGroupHtml(extendedData: ExtendedData, resultList: Seq[WLResult], runReq: WLRunReq, monthly: Elem): String = {
+
+    val wlImageResultList = resultList.filter(_.isInstanceOf[WLImageResult]).map(_.asInstanceOf[WLImageResult])
+
     val wlParameters = MachineWL.getMachineWLOrDefault(extendedData.machine.machinePK.get)
 
     val passStyle = s"color: #000000; background: #${Config.WLPassColor};"
@@ -24,26 +26,27 @@ object WLMainHtml extends Logging {
 
     def relUrl(ir: WLImageResult) = ir.directory.getName
 
-    def canRead(name: String, ir: WLImageResult): Boolean = new File(ir.directory, name).canRead
+    def canRead(name: String, ir: WLResult): Boolean = new File(ir.subDir, name).canRead
 
-    def fmtTime(ir: WLImageResult): String = {
+    def fmtTime(ir: WLResult): String = {
       val totalSeconds = (ir.contentTime.getTime - extendedData.output.dataDate.get.getTime) / 1000
       val secondsText = "%02d".format(totalSeconds % 60)
       s"""${totalSeconds / 60}:$secondsText"""
     }
 
     def csvFileName = {
-      val wlCsv = new WLCsv(resultList, extendedData)
+      val list = resultList.filter(_.isInstanceOf[WLImageResult]).map(_.asInstanceOf[WLImageResult])
+      val wlCsv = new WLCsv(list, extendedData)
       wlCsv.writeCsvFile
     }
 
     // val timeOf = new ImageMetaDataGroup(resultList.map(r => r.imageMetaData)).timeOf
 
-    val laserCorrectionList = WLLaserCorrection.setList(resultList)
+    val laserCorrectionList = WLLaserCorrection.setList(wlImageResultList)
 
     // val readyForEvaluation = if (jobStatus(resultList) == JobStatus.ReadyForEvaluation) "*" else ""
 
-    def irTextHtml(ir: WLImageResult): Seq[Elem] = {
+    def irTextHtml(ir: WLResult): Seq[Elem] = {
       def fmtDbl(value: Double): String = "%6.2f".format(value).trim
 
       def hiFmtDbl(d: Double): String = "%9.6f".format(d).trim
@@ -53,19 +56,19 @@ object WLMainHtml extends Logging {
       val diagnostics: Elem = {
         val elem =
           if (canRead(WLgenHtml.DIAGNOSTICS_HTML_FILE_NAME, ir))
-            <a href={relUrl(ir) + "/" + WLgenHtml.DIAGNOSTICS_HTML_FILE_NAME}>Diagnostics</a>
+            <a href={ir.getDirectory.getName + "/" + WLgenHtml.DIAGNOSTICS_HTML_FILE_NAME}>Diagnostics</a>
           else {
-            <a href={s"${relUrl(ir)}/${Util.sopOfAl(ir.rtimage)}.txt"}>View DICOM Metadata</a>
+            <a href={s"${ir.getDirectory.getName}/${Util.sopOfAl(ir.attrList)}.txt"}>View DICOM Metadata</a>
           }
         elem
       }
 
       val badPixels: Elem = {
-        if ((ir.badPixelList == null) || ir.badPixelList.isEmpty)
+        if ((ir.getBadPixelList == null) || ir.getBadPixelList.isEmpty)
           <span></span>
         else {
           <span>
-            {ir.badPixelList.size}
+            {ir.getBadPixelList.size}
           </span>
         }
       }
@@ -73,18 +76,18 @@ object WLMainHtml extends Logging {
       val laserIsDefined = WLLaserCorrection.getCorrectionOfImage(laserCorrectionList, ir).isDefined
       val laserHtml: Option[Elem] = if (laserIsDefined) Some(<td/>) else None
 
-      def getNameHtml(ir: WLImageResult): Elem = {
+      def getNameHtml(ir: WLResult): Elem = {
         <b>
           {s"G${Util.angleRoundedTo1(ir.gantryRounded_deg)} C${Util.angleRoundedTo1(ir.collimatorRounded_deg)} T${Util.angleRoundedTo1(ir.tableAngle_deg)} ${fmtTime(ir)}"}
         </b>
       }
 
-      def passedText(ir: WLImageResult): Elem = {
-        if (ir.imageStatus == WLImageStatus.Passed)
+      def passedText(ir: WLResult): Elem = {
+        if (ir.getImageStatus == WLImageStatus.Passed)
           <span style={"color:black; background:" + Config.WLPassColor}>PASSED</span>
         else
           <span style={"color:black; background:" + Config.WLFailColor}>
-            {ir.imageStatus}
+            {ir.getImageStatus}
           </span>
       }
 
@@ -97,22 +100,20 @@ object WLMainHtml extends Logging {
               </b>
             </h3>
             <p>
-              {
-          if (ir.beamName.isDefined) {
-            "Beam " + ir.beamName.get
-          } else
-            ""
-        }
+              {if (ir.beamName.isDefined) {
+              "Beam " + ir.beamName.get
+            } else
+              ""}
             </p>
-            <p title={hiFmtDbl(ir.offX) + ", " + hiFmtDbl(ir.offY)}>
+            <p title={hiFmtDbl(ir.offsetX_pix) + ", " + hiFmtDbl(ir.offsetY_pix)}>
               Offset in mm X =
-              {fmtDbl(ir.offX)}
+              {fmtDbl(ir.offsetX_pix)}
               Y =
-              {fmtDbl(ir.offY)}
+              {fmtDbl(ir.offsetY_pix)}
             </p>
-            <p title={hiFmtDbl(ir.offXY)}>
+            <p title={hiFmtDbl(ir.offsetXY_pix)}>
               R =
-              {fmtDbl(ir.offXY)}{passedText(ir)}
+              {fmtDbl(ir.offsetXY_pix)}{passedText(ir)}
             </p>
             <p>
               {diagnostics}
@@ -131,29 +132,29 @@ object WLMainHtml extends Logging {
       "#" + "%06x".format(color.getRGB & 0xffffff)
     }
 
-    def irThumbImageHtml(ir: WLImageResult): Elem = {
-      val color = if (ir.imageStatus == WLImageStatus.Passed) toHtml(Config.WLPassColor) else toHtml(Config.WLFailColor)
+    def irThumbImageHtml(sts: WLImageStatus.ImageStatus): Elem = {
+      val color = if (sts == WLImageStatus.Passed) toHtml(Config.WLPassColor) else toHtml(Config.WLFailColor)
       <td height="20" width="20" style={s"background:$color;foreground:$color;"}></td>
     }
 
     def irThumbImageListHtml: Elem = {
       <table border="0" style="border-collapse:separate; border-spacing:0.5em;">
         <tr>
-          {resultList.map(irThumbImageHtml)}
+          {resultList.map(wl => irThumbImageHtml(wl.getImageStatus))}
         </tr>
       </table>
     }
 
-    def irImageHtml(ir: WLImageResult): Seq[Elem] = {
+    def irImageHtml(ir: WLResult): Seq[Elem] = {
       def img(name: String): Elem = {
         val title = name match {
           case WLgenHtml.NORMAL_SUMMARY_FILE_NAME => "Summary Image"
           case WLgenHtml.BRIGHT_SUMMARY_FILE_NAME => ""
-          case WLgenHtml.ORIGINAL_FILE_NAME       => "Entire Image"
-          case _                                  => "Image"
+          case WLgenHtml.ORIGINAL_FILE_NAME => "Entire Image"
+          case _ => "Image"
         }
-        val id: String = ir.subDirName
-        val url = relUrl(ir) + "/" + name
+        val id: String = ir.subDir.getName
+        val url = ir.getDirectory.getName + "/" + name
         val script = s"""$$(document).ready(function(){ $$('#$id').zoom(); });""".replaceAllLiterally("\"", WebUtil.singleQuote)
 
         <div>
@@ -184,8 +185,7 @@ object WLMainHtml extends Logging {
       val imageHtml = {
         <td>
           <center>
-            {
-          0 match {
+            {0 match {
             case _ if canRead(WLgenHtml.BRIGHT_SUMMARY_FILE_NAME, ir) => img(WLgenHtml.BRIGHT_SUMMARY_FILE_NAME)
 
             case _ if canRead(WLgenHtml.NORMAL_SUMMARY_FILE_NAME, ir) => img(WLgenHtml.NORMAL_SUMMARY_FILE_NAME)
@@ -193,8 +193,7 @@ object WLMainHtml extends Logging {
             case _ if canRead(WLgenHtml.ORIGINAL_FILE_NAME, ir) => img(WLgenHtml.ORIGINAL_FILE_NAME)
 
             case _ => <span>No Image Available</span>
-          }
-        }
+          }}
           </center>
         </td>
       }
@@ -245,22 +244,20 @@ object WLMainHtml extends Logging {
           <td style={style}>Offset</td>
           <td style={style}>Correct by moving</td>
           <td style={style}>Status</td>
-        </tr>{row("Longitudinal", correction.longitudinal, new Instruction("away from gantry", "toward gantry"))}{
-        row("Lateral", correction.lateral, new Instruction("towards left when facing gantry", "towards right when facing gantry"))
-      }{row("Vertical", correction.vertical, new Instruction("towards floor", "towards ceiling"))}
+        </tr>{row("Longitudinal", correction.longitudinal, new Instruction("away from gantry", "toward gantry"))}{row("Lateral", correction.lateral, new Instruction("towards left when facing gantry", "towards right when facing gantry"))}{row("Vertical", correction.vertical, new Instruction("towards floor", "towards ceiling"))}
       </table>
       </center>
     }
 
     def csvLink(): Elem = {
-      if (!resultList.exists(r => WLImageStatus.hasResult(r.imageStatus))) {
+      if (!resultList.exists(r => WLImageStatus.hasResult(r.getImageStatus))) {
         <span>No Results</span>
       } else {
         <a title="Results as spreadsheet/CSV" href={csvFileName}>Results</a>
       }
     }
 
-    def html(resultList: Seq[WLImageResult]): String = {
+    def html(resultList: Seq[WLResult]): String = {
 
       val offsets: Elem = {
         <table border='0' style="border-collapse:separate; border-spacing:0.5em;">
@@ -325,9 +322,9 @@ object WLMainHtml extends Logging {
           </h1>
         }
 
-        resultList.find(r => r.imageStatus != WLImageStatus.Passed) match {
+        resultList.find(r => r.getImageStatus != WLImageStatus.Passed) match {
           case Some(result) =>
-            makeElem(result.imageStatus.toString, Config.WLFailColor)
+            makeElem(result.getImageStatus.toString, Config.WLFailColor)
           case _ =>
             if (resultList.isEmpty)
               makeElem("FAILED", Config.WLFailColor)

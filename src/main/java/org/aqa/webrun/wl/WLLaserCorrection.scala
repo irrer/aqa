@@ -47,8 +47,8 @@ class WLLaserCorrection(val resultList: Seq[WLImageResult]) extends Logging {
     "longitudinal: " + longitudinal + "    lateral: " + lateral + "    vertical: " + vertical
   }
 
-  private def isFirstInList(imageResult: WLImageResult): Boolean = {
-    Util.sopOfAl(imageResult.rtimage).equals(Util.sopOfAl(resultList.head.rtimage))
+  private def isFirstInList(result: WLResult): Boolean = {
+    Util.sopOfAl(result.attrList).equals(Util.sopOfAl(resultList.head.attrList))
   }
 }
 
@@ -79,7 +79,7 @@ object WLLaserCorrection {
   }
    */
 
-  def getCorrectionOfImage(laserCorrectionList: Seq[WLLaserCorrection], imageResult: WLImageResult): Option[WLLaserCorrection] = {
+  def getCorrectionOfImage(laserCorrectionList: Seq[WLLaserCorrection], imageResult: WLResult): Option[WLLaserCorrection] = {
     val lcList = laserCorrectionList.filter(lc => lc.isFirstInList(imageResult))
     lcList.headOption
   }

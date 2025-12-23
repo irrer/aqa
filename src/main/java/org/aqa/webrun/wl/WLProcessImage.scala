@@ -1,17 +1,14 @@
 package org.aqa.webrun.wl
 
 import com.pixelmed.dicom.AttributeList
-import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.FileUtil
 import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.MachineWL
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
-import org.aqa.webrun.wl.nonCardinal.WLNonCardAnalysis
 import org.opensourcephysics.numerics.CubicSpline
 
 import java.awt.image.BufferedImage
@@ -19,7 +16,7 @@ import java.awt.Color
 import java.awt.Rectangle
 import java.io.File
 
-class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: Int, runReq: WLRunReq) extends Logging {
+class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq: WLRunReq) extends Logging {
 
   import org.aqa.webrun.wl.WLProcessImage.toPngScaled
 
@@ -81,12 +78,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
   }
 
   private val subDir: File = {
-    val name = {
-      val n = "%02d".format(index) + "-" + wlMsg.imageName
-      FileUtil.replaceInvalidFileNameCharacters(n, '_').replaceAllLiterally(" ", "_")
-    }
-
-    val dir = new File(extendedData.output.dir, name)
+    val dir = new File(extendedData.output.dir, runReq.subDirName(rtimage))
     dir.mkdirs()
     dir
   }
@@ -264,11 +256,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
     })
   }
 
-  private val isCardinalAngle: Boolean = {
-    val angle = rtimage.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
-    WLImageUtil.isCardinalAngle(angle)
-  }
-
   def process: WLImageResult = {
     wlMsg.info("Start constructing ProcessImage for " + Util.sopOfAl(rtimage))
     //noinspection RegExpRepeatedSpace,RegExpSimplifiable
@@ -297,12 +284,6 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, index: 
           saveWLBadPixelImage(pixels, badPixels.badPixelsCorrected, badPixels.marginalPixelsCorrected)
 
         val coarseAoiBounds = WLCoarseBox(new DicomImage(pixels), trans, Some(wlMsg)).locate()
-
-        // jjjjjjjjjjjjjjjjjjjjjjjjjjj ------------------------------------------------------
-        if (!isCardinalAngle) { // TODO rm
-          val  wlNonCardAnalysis = WLNonCardAnalysis(extendedData, rtimage, runReq, Some(wlMsg))
-        }
-        // jjjjjjjjjjjjjjjjjjjjjjjjjjj ------------------------------------------------------
 
         val coarseAoi: DicomImage = preprocessImage.preprocessedImage.getSubimage(coarseAoiBounds)
 

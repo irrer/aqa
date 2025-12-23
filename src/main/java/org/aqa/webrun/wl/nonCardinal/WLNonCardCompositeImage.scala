@@ -22,15 +22,14 @@ object WLNonCardCompositeImage {
 
   private def makeBoundingRectangle(nonCard: WLNonCardAnalysis): Rectangle = {
 
-    val edgeSet = nonCard.nonCardEdge.edgeSet
-
     /** extra space between the image's content and the image's edge. */
     val border_pix: Int = {
       val border_mm = 5.0
-      val pix = nonCard.trans.pix2IsoDistX(border_mm).round.toInt
+      val pix = nonCard.trans.iso2PixDistX(border_mm).round.toInt
       pix
     }
 
+    val edgeSet = nonCard.nonCardEdge.edgeSet
     val xList = edgeSet.intersectList.map(_.x)
     val yList = edgeSet.intersectList.map(_.y)
     val x = xList.min - border_pix
@@ -43,18 +42,32 @@ object WLNonCardCompositeImage {
     rectangle
   }
 
+  /**
+   * Make a zoomed image containing only the area of interest.
+   * @param nonCard Ressults of analysis.
+   * @return Zoomed AOI.
+   */
   private def makeInitialBufImage(nonCard: WLNonCardAnalysis): BufferedImage = {
 
+    // convert to image
     val dicomImage = new DicomImage(nonCard.al)
 
+    // convert to buffered image, using the central part of the ball as the brightest pixels.
     val img1 = dicomImage.toBufferedImage(ImageUtil.rgbColorMap(Color.blue), nonCard.minPixelValue, nonCard.maxPixelValue)
 
+    // restrict the image to the AOI
     val img2 = ImageUtil.subImage(img1, makeBoundingRectangle(nonCard))
 
+    // make AOI bigger.
     val img3 = ImageUtil.magnify(img2, scale)
     img3
   }
 
+  /**
+   * Draw a line indicating where each edge is, and also crossing lines that shows where the center of the edges is.
+   * @param bufImg Write on this image.
+   * @param nonCard The data.
+   */
   private def drawEdgeLines(bufImg: BufferedImage, nonCard: WLNonCardAnalysis): Unit = {
 
     val edgeSet = nonCard.nonCardEdge.edgeSet
@@ -110,7 +123,7 @@ object WLNonCardCompositeImage {
 
     drawBallLines(bufImg, nonCard)
 
-    if (true) { // TODO rm
+    if (false) { // TODO rm
       ImageDisplay.showInMSPaint(bufImg)
     }
 
