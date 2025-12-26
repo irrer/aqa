@@ -1,8 +1,12 @@
 package org.aqa.webrun.wl.nonCardinal
 
+import com.pixelmed.dicom.Attribute
 import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.SequenceAttribute
+import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.wl.WLRunReq
 import org.aqa.webrun.ExtendedData
@@ -11,12 +15,18 @@ import org.aqa.BiCubicImage
 import org.aqa.db.Output
 import org.aqa.Config
 import org.aqa.DicomFile
+import org.aqa.db.WinstonLutz
+import org.aqa.db.WinstonLutzNonCardinal
+import org.aqa.webrun.wl.WLImageStatus
 import org.aqa.webrun.wl.WLMessage
+import org.aqa.webrun.wl.WLResult
+import org.aqa.Util
+import org.checkerframework.checker.units.qual.s
 
 import java.awt.image.BufferedImage
 import java.io.File
 
-case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLRunReq, wlMessage: Option[WLMessage]) {
+case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLRunReq, wlMessage: Option[WLMessage]) extends WLResult {
 
   // Invert the pixels if necessary.
   private val preprocessedImage = WLPreprocessImage(al, None).preprocessedImage
@@ -54,6 +64,116 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
 
   Trace.trace(s"""validator.errorList:size: ${validator.errorList.size}\n ${validator.errorList.mkString("\n")}""")
 
+  private def makeWinstonLutzNonCardinal: WinstonLutzNonCardinal = {
+    val beamName: Option[String] = {
+      if (wlRunReq.rtplan.isDefined)
+        Util.getBeamNameOfRtimage(wlRunReq.rtplan.get, al)
+      else
+        None
+    }
+
+    case class MLC(mlcType: String, leafList: Seq[Double], boundaries: Seq[Double]) {
+
+      private val leafCount = leafList.size
+
+      private val pairCount = leafCount / 2
+
+      private case class LeafPair(l1: Double, l2: Double) {
+        val gap: Double = l2 - l1
+      }
+
+      private val pairList: Seq[LeafPair] = leafList.take(pairCount).zip(leafList.takeRight(pairCount)).map(pair => LeafPair(pair._1, pair._2))
+
+      private val gapList = pairList.map(_.gap)
+
+
+      val gap: Double = gapList.max
+
+      private val gappingPair = pairList.find(_.gap == gap).get
+
+      private val first: Int = gapList.indexWhere(_ == gap)
+      private val last: Int = gapList.lastIndexWhere(_ == gap)
+
+      val top: Double = boundaries(first)
+      val bottom: Double = boundaries(last + 1)
+      val left: Double = gappingPair.l1
+      val right: Double = gappingPair.l1
+
+    }
+
+    val tableAngle_deg: Double = DicomUtil.findAllSingle(al, TagByName.PatientSupportAngle).head.getDoubleValues.head
+
+    val mlcList = if (wlRunReq.rtplan.isDefined) {
+
+      val beam = Util.getBeamOfRtimage(wlRunReq.rtplan.get, al).get
+
+
+      def makeMLC(attr: Attribute): Option[MLC] = {
+        try {
+          val seqAttr = attr.asInstanceOf[SequenceAttribute]
+          val attrList = DicomUtil.alOfSeq(seqAttr).head
+          val leafPairCount = attrList.get(TagByName.NumberOfLeafJawPairs).getIntegerValues.head
+          val mlcType = DicomUtil.findAllSingle(attrList, TagByName.RTBeamLimitingDeviceType).head.getSingleStringValueOrEmptyString
+          val leafBoundaryList = DicomUtil.findAllSingle(attrList, TagByName.RTBeamLimitingDeviceType).head.getDoubleValues
+
+          if ((leafPairCount > 1) && (mlcType.startsWith("MLC")))
+            Some(MLC(mlcType, leafPairCount, leafBoundaryList))
+          else
+            None
+        }
+        catch {
+          case _: Throwable => None
+        }
+      }
+
+      val mlcList = DicomUtil.findAllSingle(beam, TagByName.RTBeamLimitingDeviceType).flatMap(makeMLC)
+
+      mlcList
+    }
+    else
+      None
+
+    val wlNonCard = WinstonLutzNonCardinal(
+      // @formatter:off
+      winstonLutz2PK       = Option[Long]              ,
+      outputPK             = extendedData.outputPK               ,
+      rtimageUID           = Util.sopOfAl(al)             ,
+      beamName             = beamName                 ,
+      gantryAngle_deg      = Util.gantryAngle(al)            ,
+      collimatorAngle_deg  = Util.collimatorAngle(al)            ,
+      tableAngle_deg       = tableAngle_deg              ,
+      //
+      X1x_mm               = Some(nonCardEdge.edgeSet.X1.edgeLine.centerX)    ,
+      X1y_mm               = Some(nonCardEdge.edgeSet.X1.edgeLine.centerY)    ,
+      X2x_mm               = Some(nonCardEdge.edgeSet.X2.edgeLine.centerX)    ,
+      X2y_mm               = Some(nonCardEdge.edgeSet.X2.edgeLine.centerY)    ,
+      Y1x_mm               = Some(nonCardEdge.edgeSet.Y1.edgeLine.centerX)    ,
+      Y1y_mm               = Some(nonCardEdge.edgeSet.Y1.edgeLine.centerY)    ,
+      Y2x_mm               = Some(nonCardEdge.edgeSet.Y2.edgeLine.centerX)   ,
+      Y2y_mm               = Some(nonCardEdge.edgeSet.Y2.edgeLine.centerY)    ,
+      //
+      plannedOffsetX1_mm   = Option[Double]     ,
+      plannedOffsetX2_mm   = Option[Double]     ,
+      plannedOffsetY1_mm   = Option[Double]     ,
+      plannedOffsetY2_mm   = Option[Double]     ,
+      //
+      ballX_mm             = Double             ,
+      ballY_mm             = Double               // Y coordinate of center of ball in mm
+
+      // @formatter:on
+    )
+    ???
+  }
+
+  override def offsetX_pix: Double = nonCardEdge.edgeSet.center_pix.getX - nonCardBall.center_pix.getX
+
+  override def offsetY_pix: Double = nonCardEdge.edgeSet.center_pix.getY - nonCardBall.center_pix.getY
+
+  override def getImageStatus: WLImageStatus.Value = if (validator.errorList.isEmpty) WLImageStatus.Passed else WLImageStatus.OffsetLimitExceeded // TODO be more specific
+
+  override def convertToDB: Either[WinstonLutz, WinstonLutzNonCardinal] = Right(makeWinstonLutzNonCardinal)
+
+  override def attrList: AttributeList = al
 }
 
 object WLNonCardAnalysis {
