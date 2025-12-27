@@ -33,62 +33,55 @@ import scala.xml.Elem
  * a pair of Y1 and Y2 MLCs or Jaws.  If only one edge is measured, then only one set of
  * values will be valid (non-null).
  *
- * @param winstonLutz2PK      primary key
- * @param outputPK            output primary key
- * @param rtimageUID          SOP series instance UID of EPID image
- * @param beamName            Name of beam in RTPLAN (if available)
- * @param gantryAngle_deg     Angle of gantry in degrees.  This is the raw value from the RTIMAGE and is not rounded.
- * @param collimatorAngle_deg Angle of collimator in degrees.  This is the raw value from the RTIMAGE and is not rounded.
- * @param tableAngle_deg      Angle of table (couch) in degrees.  This is the raw value PatientSupportAngle from the RTIMAGE and is not rounded.
- * @param X1x_mm              X coordinate of point on X1 that is closest to the origin.  Not defined for some cardinal angles.
- * @param X1y_mm              Y coordinate of point on X1 that is closest to the origin.  Not defined for some cardinal angles.
- * @param X2x_mm              X coordinate of point on X2 that is closest to the origin.  Not defined for some cardinal angles.
- * @param X2y_mm              Y coordinate of point on X2 that is closest to the origin.  Not defined for some cardinal angles.
- * @param Y1x_mm              X coordinate of point on Y1 that is closest to the origin.  Not defined for some cardinal angles.
- * @param Y1y_mm              Y coordinate of point on Y1 that is closest to the origin.  Not defined for some cardinal angles.
- * @param Y2x_mm              X coordinate of point on Y2 that is closest to the origin.  Not defined for some cardinal angles.
- * @param Y2y_mm              Y coordinate of point on Y2 that is closest to the origin.  Not defined for some cardinal angles.
- * @param plannedOffsetX1_mm  planned collimator or jaw leaf offset from center in mm of the X1 edge
- * @param plannedOffsetX2_mm  planned collimator or jaw leaf offset from center in mm of the X1 edge
- * @param plannedOffsetY1_mm  planned collimator or jaw leaf offset from center in mm of the X1 edge
- * @param plannedOffsetY2_mm  planned collimator or jaw leaf offset from center in mm of the X1 edge
- * @param ballX_mm            X coordinate of center of ball in mm
- * @param ballY_mm            Y coordinate of center of ball in mm
+ * @param winstonLutzNonCardinalPK primary key
+ * @param outputPK                 output primary key
+ * @param rtimageUID               SOP series instance UID of EPID image
+ * @param beamName                 Name of beam in RTPLAN (if available)
+ * @param gantryAngle_deg          Angle of gantry in degrees.  This is the raw value from the RTIMAGE and is not rounded.
+ * @param collimatorAngle_deg      Angle of collimator in degrees.  This is the raw value from the RTIMAGE and is not rounded.
+ * @param tableAngle_deg           Angle of table (couch) in degrees.  This is the raw value PatientSupportAngle from the RTIMAGE and is not rounded.
+ * @param boxX_mm                  X coordinate of center of box in mm
+ * @param boxY_mm                  Y coordinate of center of box in mm
+ * @param ballX_mm                 X coordinate of center of ball in mm
+ * @param ballY_mm                 Y coordinate of center of ball in mm
+ * @param XSize_mm                 Size of the field between X1 and X2 in mm.
+ * @param YSize_mm                 Size of the field between Y1 and Y2 in mm.
+ * @param plannedOffsetX1_mm       planned collimator or jaw leaf offset from center in mm of the X1 edge
+ * @param plannedOffsetX2_mm       planned collimator or jaw leaf offset from center in mm of the X1 edge
+ * @param plannedOffsetY1_mm       planned collimator or jaw leaf offset from center in mm of the X1 edge
+ * @param plannedOffsetY2_mm       planned collimator or jaw leaf offset from center in mm of the X1 edge
  *
  */
 
 case class WinstonLutzNonCardinal(
-                         // @formatter:off
-    winstonLutz2PK       : Option[Long]       ,
-    outputPK             : Long               ,
-    rtimageUID           : String             ,
-    beamName             : Option[String]     ,
-    gantryAngle_deg      : Double             ,
-    collimatorAngle_deg  : Double             ,
-    tableAngle_deg       : Double             ,
+                                   // @formatter:off
+    winstonLutzNonCardinalPK : Option[Long]       ,
+    outputPK                 : Long               ,
+    rtimageUID               : String             ,
+    beamName                 : Option[String]     ,
+    gantryAngle_deg          : Double             ,
+    collimatorAngle_deg      : Double             ,
+    tableAngle_deg           : Double             ,
     //
-    X1x_mm               : Option[Double]     ,
-    X1y_mm               : Option[Double]     ,
-    X2x_mm               : Option[Double]     ,
-    X2y_mm               : Option[Double]     ,
-    Y1x_mm               : Option[Double]     ,
-    Y1y_mm               : Option[Double]     ,
-    Y2x_mm               : Option[Double]     ,
-    Y2y_mm               : Option[Double]     ,
+    boxX_mm                  : Double             ,
+    boxY_mm                  : Double             ,
+    ballX_mm                 : Double             ,
+    ballY_mm                 : Double             ,
     //
-    plannedOffsetX1_mm   : Option[Double]     ,
-    plannedOffsetX2_mm   : Option[Double]     ,
-    plannedOffsetY1_mm   : Option[Double]     ,
-    plannedOffsetY2_mm   : Option[Double]     ,
+    XSize_mm                 : Double             ,
+    YSize_mm                 : Double             ,
     //
-    ballX_mm             : Double             ,
-    ballY_mm             : Double               // Y coordinate of center of ball in mm
-
+    plannedOffsetX1_mm       : Option[Double]     ,
+    plannedOffsetX2_mm       : Option[Double]     ,
+    plannedOffsetY1_mm       : Option[Double]     ,
+    plannedOffsetY2_mm       : Option[Double]
   // @formatter:on
-                       ) {
+                                 ) {
 
   def insert: WinstonLutzNonCardinal = {
-    val insertQuery = WinstonLutzNonCardinal.query returning WinstonLutzNonCardinal.query.map(_.winstonLutz2PK) into ((winstonLutz2, winstonLutz2PK) => winstonLutz2.copy(winstonLutz2PK = Some(winstonLutz2PK)))
+    val insertQuery = WinstonLutzNonCardinal.query returning
+      WinstonLutzNonCardinal.query.map(_.winstonLutzNonCardinalPK) into
+      ((winstonLutz, winstonLutzNonCardinalPK) => winstonLutz.copy(winstonLutzNonCardinalPK = Some(winstonLutzNonCardinalPK)))
     val action = insertQuery += this
     val result = Db.run(action)
     result
@@ -138,22 +131,10 @@ case class WinstonLutzNonCardinal(
   def insertOrUpdate(): Int = Db.run(WinstonLutzNonCardinal.query.insertOrUpdate(this))
 
   //noinspection ScalaWeakerAccess
-  def boxCenterX_mm: Double = {
-    val list = Seq(X1x_mm, X2x_mm, Y1x_mm, Y2x_mm).flatten
-    list.sum / list.size
-  }
+  val errorX_mm: Double = boxX_mm - ballX_mm
 
   //noinspection ScalaWeakerAccess
-  def boxCenterY_mm: Double = {
-    val list = Seq(X1y_mm, X2y_mm, Y1y_mm, Y2y_mm).flatten
-    list.sum / list.size
-  }
-
-  //noinspection ScalaWeakerAccess
-  val errorX_mm: Double = boxCenterX_mm - ballX_mm
-
-  //noinspection ScalaWeakerAccess
-  val errorY_mm: Double = boxCenterY_mm - ballY_mm
+  val errorY_mm: Double = boxY_mm - ballY_mm
 
   val errorXY_mm: Double = Math.sqrt((errorX_mm * errorX_mm) + (errorY_mm * errorY_mm))
 
@@ -186,7 +167,7 @@ case class WinstonLutzNonCardinal(
 
   override def toString: String = {
     // @formatter:off
-      s"""    winstonLutz2PK       : $winstonLutz2PK\n"""                                +
+      s"""    winstonLutzNonCardinalPK       : $winstonLutzNonCardinalPK\n"""                                +
       s"""    outputPK             : $outputPK\n"""                                      +
       s"""    rtimageUID           : $rtimageUID\n"""                                    +
       s"""    beamName             : $beamName\n"""                                      +
@@ -197,8 +178,8 @@ case class WinstonLutzNonCardinal(
       s"""    collimatorAngle_deg  : ${Util.angleRoundedTo90(collimatorAngle_deg)}\n"""  +
       s"""    ballX_mm             : $ballX_mm\n"""                                      +
       s"""    ballY_mm             : $ballY_mm\n"""                                      +
-      s"""    boxCenterX_mm        : $boxCenterX_mm\n"""                                 +
-      s"""    boxCenterY_mm        : $boxCenterY_mm\n"""                                 +
+      s"""    boxX_mm              : $boxX_mm\n"""                                       +
+      s"""    boxY_mm              : $boxY_mm\n"""                                       +
       s"""    errorX_mm            : $errorX_mm\n"""                                     +
       s"""    errorY_mm            : $errorY_mm\n"""                                     +
       s"""    errorXY_mm           : $errorXY_mm\n"""
@@ -210,59 +191,51 @@ case class WinstonLutzNonCardinal(
 object WinstonLutzNonCardinal extends Logging {
 
   // @formatter:off
-  class WinstonLutz2Table(tag: Tag) extends Table[WinstonLutzNonCardinal](tag, "winstonLutz2") {
-    def winstonLutz2PK        = column[Long]("winstonLutz2PK", O.PrimaryKey, O.AutoInc)
-    def outputPK              = column[Long]("outputPK")
-    def rtimageUID            = column[String]("rtimageUID")
-    def beamName              = column[Option[String]]("beamName")
-    def gantryAngle_deg       = column[Double]("gantryAngle_deg")
-    def collimatorAngle_deg   = column[Double]("collimatorAngle_deg")
-    def tableAngle_deg        = column[Double]("tableAngle_deg")
-    def X1x_mm                = column[Option[Double]]("X1x_mm")
-    def X1y_mm                = column[Option[Double]]("X1y_mm")
-    def X2x_mm                = column[Option[Double]]("X2x_mm")
-    def X2y_mm                = column[Option[Double]]("X2y_mm")
-    def Y1x_mm                = column[Option[Double]]("Y1x_mm")
-    def Y1y_mm                = column[Option[Double]]("Y1y_mm")
-    def Y2x_mm                = column[Option[Double]]("Y2x_mm")
-    def Y2y_mm                = column[Option[Double]]("Y2y_mm")
-    def plannedOffsetX1_mm    = column[Option[Double]]("plannedOffsetX1_mm")
-    def plannedOffsetX2_mm    = column[Option[Double]]("plannedOffsetX2_mm")
-    def plannedOffsetY1_mm    = column[Option[Double]]("plannedOffsetY1_mm")
-    def plannedOffsetY2_mm    = column[Option[Double]]("plannedOffsetY2_mm")
-    def ballX_mm              = column[Double]("ballX_mm")
-    def ballY_mm              = column[Double]("ballY_mm")
+  class WinstonLutzNonCardinalTable(tag: Tag) extends Table[WinstonLutzNonCardinal](tag, "winstonLutzNonCardinalPK") {
+    def winstonLutzNonCardinalPK = column[Long]("winstonLutzNonCardinalPK", O.PrimaryKey, O.AutoInc)
+    def outputPK                 = column[Long]("outputPK")
+    def rtimageUID               = column[String]("rtimageUID")
+    def beamName                 = column[Option[String]]("beamName")
+    def gantryAngle_deg          = column[Double]("gantryAngle_deg")
+    def collimatorAngle_deg      = column[Double]("collimatorAngle_deg")
+    def tableAngle_deg           = column[Double]("tableAngle_deg")
+    def boxX_mm                  = column[Double]("boxX_mm")
+    def boxY_mm                  = column[Double]("boxY_mm")
+    def ballX_mm                 = column[Double]("ballX_mm")
+    def ballY_mm                 = column[Double]("ballY_mm")
+    def XSize_mm                 = column[Double]("XSize_mm")
+    def YSize_mm                 = column[Double]("YSize_mm")
+    def plannedOffsetX1_mm       = column[Option[Double]]("plannedOffsetX1_mm")
+    def plannedOffsetX2_mm       = column[Option[Double]]("plannedOffsetX2_mm")
+    def plannedOffsetY1_mm       = column[Option[Double]]("plannedOffsetY1_mm")
+    def plannedOffsetY2_mm       = column[Option[Double]]("plannedOffsetY2_mm")
 
     def * =
       (
-        winstonLutz2PK.?, //
+        winstonLutzNonCardinalPK.?, //
         outputPK              ,
         rtimageUID            ,
         beamName              ,
         gantryAngle_deg       ,
         collimatorAngle_deg   ,
         tableAngle_deg        ,
-        X1x_mm                ,
-        X1y_mm                ,
-        X2x_mm                ,
-        X2y_mm                ,
-        Y1x_mm                ,
-        Y1y_mm                ,
-        Y2x_mm                ,
-        Y2y_mm                ,
+        boxX_mm               ,
+        boxY_mm               ,
+        ballX_mm              ,
+        ballY_mm              ,
+        XSize_mm              ,
+        YSize_mm              ,
         plannedOffsetX1_mm    ,
         plannedOffsetX2_mm    ,
         plannedOffsetY1_mm    ,
-        plannedOffsetY2_mm    ,
-        ballX_mm              ,
-        ballY_mm              ,
+        plannedOffsetY2_mm
       ) <> (WinstonLutzNonCardinal.apply _ tupled, WinstonLutzNonCardinal.unapply)
     // @formatter:on
 
-    def outputFK = foreignKey("WinstonLutz2_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
+    def outputFK = foreignKey("WinstonLutzNonCardinal_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
 
-  val query = TableQuery[WinstonLutz2Table]
+  val query = TableQuery[WinstonLutzNonCardinalTable]
 
   case class EdgeType(isX: Boolean, bank: Int, isJaw: Boolean, isHorz: Boolean) {
     val name: String = {
@@ -277,16 +250,16 @@ object WinstonLutzNonCardinal extends Logging {
     override def toString: String = name + "    isX: " + isX + "    is1: " + bank + "    isJaw: " + isJaw
   }
 
-  def get(winstonLutz2PK: Long): Option[WinstonLutzNonCardinal] = {
+  def get(winstonLutzNonCardinalPK: Long): Option[WinstonLutzNonCardinal] = {
     val action = for {
-      inst <- WinstonLutzNonCardinal.query if inst.winstonLutz2PK === winstonLutz2PK
+      inst <- WinstonLutzNonCardinal.query if inst.winstonLutzNonCardinalPK === winstonLutzNonCardinalPK
     } yield inst
     val list = Db.run(action.result)
     list.headOption
   }
 
   /**
-   * Get a list of all WinstonLutz2 for the given output
+   * Get a list of all WinstonLutzNonCardinal for the given output
    */
   def getByOutput(outputPK: Long): Seq[WinstonLutzNonCardinal] = {
     val action = for {
@@ -296,8 +269,8 @@ object WinstonLutzNonCardinal extends Logging {
     list.toIndexedSeq
   }
 
-  def delete(winstonLutz2PK: Long): Int = {
-    val q = query.filter(_.winstonLutz2PK === winstonLutz2PK)
+  def delete(winstonLutzNonCardinalPK: Long): Int = {
+    val q = query.filter(_.winstonLutzNonCardinalPK === winstonLutzNonCardinalPK)
     val action = q.delete
     Db.run(action)
   }
@@ -318,13 +291,13 @@ object WinstonLutzNonCardinal extends Logging {
     list.foreach(_.insertOrUpdate())
   }
 
-  case class WinstonLutz2History(output: Output, winstonLutz2: WinstonLutzNonCardinal) extends HasOutput {
+  case class WinstonLutzNonCardinalHistory(output: Output, winstonLutzNonCardinal: WinstonLutzNonCardinal) extends HasOutput {
     override def getOutput: Output = output
   }
 
 
   /**
-   * Get a given number of history of WinstonLutz2 results that are on or earlier than the given date.
+   * Get a given number of history of WinstonLutzNonCardinal results that are on or earlier than the given date.
    *
    * @param date          : At or earlier than this date
    * @param count         : Return up to this many results
@@ -332,16 +305,16 @@ object WinstonLutzNonCardinal extends Logging {
    * @return Chunk of history sorted by date.
    *
    */
-  def historyByDate(date: Date, count: Int, institutionPK: Long): Seq[WinstonLutz2History] = {
+  def historyByDate(date: Date, count: Int, institutionPK: Long): Seq[WinstonLutzNonCardinalHistory] = {
 
     val timeStamp = new Timestamp(date.getTime)
 
     val search = for {
       machine <- Machine.query.filter(m => m.institutionPK === institutionPK)
       output <- Output.valid.filter(o => (o.dataDate <= timeStamp) && (o.machinePK === machine.machinePK))
-      winstonLutz2 <- WinstonLutzNonCardinal.query.filter(c => c.outputPK === output.outputPK)
+      winstonLutzNonCardinal <- WinstonLutzNonCardinal.query.filter(c => c.outputPK === output.outputPK)
     } yield {
-      (output, winstonLutz2)
+      (output, winstonLutzNonCardinal)
     }
 
     val sortedSearch = search.sortBy(_._1.dataDate.desc).take(count)
@@ -350,76 +323,76 @@ object WinstonLutzNonCardinal extends Logging {
     // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
     // throw an exception.
     val sr = sortedSearch.result
-    val tsList = Db.run(sr).map(os => WinstonLutz2History(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
+    val tsList = Db.run(sr).map(os => WinstonLutzNonCardinalHistory(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
 
     tsList.toIndexedSeq
   }
 
 
   /**
-   * Get the history of WinstonLutz2 results.
+   * Get the history of WinstonLutzNonCardinal results.
    *
    * @param machinePK : For this machine
    * @param beamName  : For this beam
    * @return Complete history with baselines sorted by date.
    *
    */
-  def historyByBeam(machinePK: Long, beamName: String): Seq[WinstonLutz2History] = {
+  def historyByBeam(machinePK: Long, beamName: String): Seq[WinstonLutzNonCardinalHistory] = {
 
     val search = for {
       output <- Output.valid.filter(o => o.machinePK === machinePK)
-      winstonLutz2 <- WinstonLutzNonCardinal.query.filter(c => c.outputPK === output.outputPK && c.beamName === beamName)
+      winstonLutzNonCardinal <- WinstonLutzNonCardinal.query.filter(c => c.outputPK === output.outputPK && c.beamName === beamName)
     } yield {
-      (output, winstonLutz2)
+      (output, winstonLutzNonCardinal)
     }
 
     // Fetch entire history from the database.  Also sort by dataDate.  This sorting also has the
     // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
     // throw an exception.
     val sr = search.result
-    val tsList = Db.run(sr).map(os => WinstonLutz2History(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
+    val tsList = Db.run(sr).map(os => WinstonLutzNonCardinalHistory(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
 
     tsList.toIndexedSeq
   }
 
   /**
-   * Get the history of WinstonLutz2 results.
+   * Get the history of WinstonLutzNonCardinal results.
    *
    * @param machinePK : For this machine
    * @return Complete history sorted by date.
    *
    */
-  def historyByMachine(machinePK: Long): Seq[WinstonLutz2History] = {
+  def historyByMachine(machinePK: Long): Seq[WinstonLutzNonCardinalHistory] = {
 
     val search = for {
       output <- Output.valid.filter(o => o.machinePK === machinePK)
-      winstonLutz2 <- WinstonLutzNonCardinal.query.filter(c => c.outputPK === output.outputPK)
+      winstonLutzNonCardinal <- WinstonLutzNonCardinal.query.filter(c => c.outputPK === output.outputPK)
     } yield {
-      (output, winstonLutz2)
+      (output, winstonLutzNonCardinal)
     }
 
     // Fetch entire history from the database.  Also sort by dataDate.  This sorting also has the
     // side effect of ensuring that the dataDate is defined.  If it is not defined, this will
     // throw an exception.
     val sr = search.result
-    val tsList = Db.run(sr).map(os => WinstonLutz2History(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
+    val tsList = Db.run(sr).map(os => WinstonLutzNonCardinalHistory(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime)
 
     tsList.toIndexedSeq
   }
 
   /**
-   * Get all WinstonLutz2 results.
+   * Get all WinstonLutzNonCardinal results.
    *
-   * @param outputSet List of output PKs.  Each WinstonLutz2 must point to one of the items in this set.
-   * @return List of WinstonLutz2 that point to the output set.
+   * @param outputSet List of output PKs.  Each WinstonLutzNonCardinal must point to one of the items in this set.
+   * @return List of WinstonLutzNonCardinal that point to the output set.
    *
    */
   def listByOutputSet(outputSet: Set[Long]): Seq[WinstonLutzNonCardinal] = {
 
     val search = for {
-      winstonLutz2 <- WinstonLutzNonCardinal.query.filter(c => c.outputPK.inSet(outputSet))
+      winstonLutzNonCardinal <- WinstonLutzNonCardinal.query.filter(c => c.outputPK.inSet(outputSet))
     } yield {
-      winstonLutz2
+      winstonLutzNonCardinal
     }
 
     val tsList = Db.run(search.result)
