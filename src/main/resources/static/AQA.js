@@ -84,7 +84,7 @@ jsonhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       aliasToRealList = JSON.parse(this.responseText);
       translateAliases();
-      showOutputHeader();
+      setTimeout(showOutputHeader, 250);
       updateFloatingPrecision();
   }
 };
@@ -689,21 +689,26 @@ function MRclose(id) {
 
 var currentLocation = window.location;
 
+var showOutputHeaderRetry = 5;
+
 function showOutputHeader() {
   var attrName = "headerOutputPK";
   var headerData = document.getElementById(attrName);
 
-  if ((headerData != null) && headerData.hasAttribute(attrName)) {
+  if ((headerData != null) && headerData.hasAttribute(attrName) && (showOutputHeaderRetry > 0) && (headerData.innerHTML.length < 10)) {
     // headerData.setAttribute("returnUrl", currentLocation);
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         headerData.innerHTML = this.responseText;
+        translateAliases();
       }
     };
     var url = headerData.getAttribute(attrName) + "&returnUrl=" + window.location;
     xhttp.open("GET", url, true);
     xhttp.send();
+    showOutputHeaderRetry = showOutputHeaderRetry - 1;
+    setTimeout(showOutputHeader, 1000);
   }
 }
 
