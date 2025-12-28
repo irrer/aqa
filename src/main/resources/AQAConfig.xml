@@ -1264,6 +1264,15 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
+    <!-- Define the policy for how Winston Lutz images should be processed.
+    FYI - a 'cardinal' image is one that has a collimator angle of 0, 90, 180, or 270 degrees, +-1 degree.  An angle of 90.7
+    degrees is considered to be a cardinal angle.
+    -->
+    <WLPolicyCardinalDoesCardinal>true</WLPolicyCardinalDoesCardinal>              <!--     cardinal processing does     cardinal images.  Default: true   -->
+    <WLPolicyCardinalDoesNonCardinal>true</WLPolicyCardinalDoesNonCardinal>        <!--     cardinal processing does non-cardinal images.  Default: false  -->
+    <WLPolicyNonCardinalDoesCardinal>true</WLPolicyNonCardinalDoesCardinal>        <!-- non-cardinal processing does     cardinal images.  Default: false  -->
+    <WLPolicyNonCardinalDoesNonCardinal>true</WLPolicyNonCardinalDoesNonCardinal>  <!-- non-cardinal processing does non-cardinal images.  Default: true   -->
+
     <!-- For Winston-Lutz non-cardinal processing, it is important that some validation be performed to
     ensure that it is valid.  There have been cases where non-WL images have been processed, and these
     checks to protect against misinterpreting them as real data.

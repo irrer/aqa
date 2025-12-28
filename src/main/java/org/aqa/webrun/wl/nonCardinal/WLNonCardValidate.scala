@@ -9,16 +9,43 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.wl.WLMessage
 import org.aqa.Config
 import org.aqa.Util
-
-import java.awt.Color
+import org.aqa.db.MachineWL
+import org.aqa.webrun.wl.WLImageStatus
 
 case class WLNonCardValidate( //
     nonCardEdge: WLNonCardEdgeAnalysis,
     nonCardBall: WLNonCardBall,
+    machineWL: MachineWL,
     wlMessage: Option[WLMessage]
 ) {
 
   val preprocessedImage: DicomImage = nonCardEdge.preprocessedImage
+
+  private case class WLError(status: WLImageStatus.Value, msg: String) {}
+
+  private var wlNonCardStatus: Option[WLError] = None
+
+  private def setError(sts: WLImageStatus.Value, msg: String): Unit = {
+    if (sts.toString.equals(WLImageStatus.Passed.toString))
+      wlMessage.foreach(_.info(msg))
+    else
+      wlMessage.foreach(_.warn(msg))
+
+    wlNonCardStatus.synchronized {
+      if (wlNonCardStatus.isEmpty)
+        wlNonCardStatus = Some(WLError(sts, msg))
+    }
+  }
+
+  def getStatus(): Option[WLImageStatus.Value] =
+    wlNonCardStatus.synchronized {
+      wlNonCardStatus.map(_.status)
+    }
+
+  def getErrorMessage(): Option[String] =
+    wlNonCardStatus.synchronized {
+      wlNonCardStatus.map(_.msg)
+    }
 
   private val ballAOI: DicomImage = {
     val ball = WLNonCardBallAOIBounds.makeBallAOI(nonCardEdge.edgeSet, preprocessedImage)
@@ -26,9 +53,7 @@ case class WLNonCardValidate( //
     normalized
   }
 
-  if (false) { // TODO rm
-    ImageDisplay.showInMSPaint(ballAOI.toBufferedImage(Color.blue))
-  }
+  // ImageDisplay.showInMSPaint(ballAOI.toBufferedImage(Color.blue))
 
   /** Establish a threshold for the min-to-max pixel range.  An edge must have at least this amount of change in pixel value to be considered valid. */
   private val wholeImagePixelValueRangeThreshold_cu: Double = {
@@ -68,7 +93,7 @@ case class WLNonCardValidate( //
     } else {
       val msg =
         s"Edge for ${edge.name} has insufficient contrast of ${Util.fmtDbl(edge.range)} ($measuredPctText)  when it should be at least ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WLNonCardEdgePercentChange}%)"
-      wlMessage.foreach(_.warn(msg))
+      setError(WLImageStatus.BoxNotFound, msg)
       Seq(msg)
     }
   }
@@ -79,7 +104,7 @@ case class WLNonCardValidate( //
       Seq()
     else {
       val msg = s"DICOM file delivered with (insufficient) $kvp energy, when it should be at least (${Config.WLNonCardKVPLimit})"
-      wlMessage.foreach(_.warn(msg))
+      setError(WLImageStatus.LowEnergy, msg)
       Seq(msg)
     }
   }
@@ -157,7 +182,7 @@ case class WLNonCardValidate( //
     } else {
       val msg = s"profile difference in symmetry: $totalDiff is too large, indicating that the object found is non-spherical," +
         s" and therefor an invalid phantom.  It must be lower than ${Config.WLNonCardSymmetryLimit} to be valid."
-      wlMessage.foreach(_.info(msg))
+      setError(WLImageStatus.BallMalformed, msg)
       Seq(msg)
     }
 
@@ -178,28 +203,42 @@ case class WLNonCardValidate( //
 
     if (stdDev < Config.WLNonCardMinStdDev) {
       val msg = s"Ball are has a standard deviation of $stdDev, which is below the required ${Config.WLNonCardMinStdDev}.  Probably due to no phantom."
-      wlMessage.foreach(_.warn(msg))
+      setError(WLImageStatus.BallMissing, msg)
       Seq(msg)
     } else
       Seq()
 
   }
 
-  /**
-    * Make a list of error messages
-    *
-    * @return List of errors.  If empty, then everything is ok.
-    */
-  private def makeErrorList(): Seq[String] = {
-    val list = Seq( //
-      edgesHaveSufficientContrast(),
-      beamEnergyIsHighEnough(),
-      ballIsSufficientlyLarge(),
-      ballIsSymmetrical()
-    ).flatten
-    list
+  private def withinTolerance(): Unit = {
+
+    val errX_mm = nonCardEdge.trans.pix2IsoDistX(nonCardEdge.edgeSet.center_pix.getX - nonCardBall.center_pix.getX)
+    val errY_mm = nonCardEdge.trans.pix2IsoDistY(nonCardEdge.edgeSet.center_pix.getY - nonCardBall.center_pix.getY)
+
+    val error_mm = Math.sqrt((errX_mm * errX_mm) + (errY_mm * errY_mm))
+
+    0 match {
+      case _ if (error_mm <= machineWL.passLimit_mm) && getStatus().isEmpty =>
+        val msg = s"Passed.  Error: $error_mm   Pass limit: ${machineWL.passLimit_mm}"
+        setError(WLImageStatus.Passed, msg)
+        Seq()
+      case _ if (error_mm > machineWL.passLimit_mm) && getStatus().isEmpty =>
+        val msg = s"Failed.  Error: $error_mm   Pass limit: ${machineWL.passLimit_mm}"
+        setError(WLImageStatus.OffsetLimitExceeded, msg)
+        Seq()
+
+      case _ =>
+        Seq()
+    }
+
   }
 
-  /** List of errors found.  Empty means no errors. */
-  val errorList: Seq[String] = makeErrorList()
+  edgesHaveSufficientContrast()
+  beamEnergyIsHighEnough()
+  ballIsSufficientlyLarge()
+  ballIsSymmetrical()
+  withinTolerance()
+  if (getStatus().isEmpty)
+    setError(WLImageStatus.UnexpectedError, "Unexpected error") // this should never happen
+
 }

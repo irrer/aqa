@@ -20,11 +20,12 @@ import org.aqa.webrun.wl.WLMessage
 import org.aqa.webrun.wl.WLResult
 import org.aqa.PlannedRectangle
 import org.aqa.Util
+import org.aqa.db.MachineWL
 
 import java.awt.image.BufferedImage
 import java.io.File
 
-case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLRunReq, wlMessage: Option[WLMessage]) extends WLResult(extendedData, wlRunReq) {
+case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLRunReq, machineWL: MachineWL, wlMessage: Option[WLMessage]) extends WLResult(extendedData, wlRunReq) {
 
   // Invert the pixels if necessary.
   private val preprocessedImage = WLPreprocessImage(al, None).preprocessedImage
@@ -55,12 +56,16 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
   val approxImg: BufferedImage = WLNonCardEdgeSetImage.makeImage(nonCardEdge.approximateEdgeSet, 3, al, border = 3, minPixelValue, maxPixelValue)
   val img: BufferedImage = WLNonCardEdgeSetImage.makeImage(nonCardEdge.edgeSet, 3, al, border = 3, minPixelValue, maxPixelValue)
 
-  // ImageDisplay.showInMSPaint(approxImg) // TODO rm
-  // ImageDisplay.showInMSPaint(img) // TODO rm
+  // ImageDisplay.showInMSPaint(approxImg)
+  // ImageDisplay.showInMSPaint(img)
 
-  val validator: WLNonCardValidate = WLNonCardValidate(nonCardEdge, nonCardBall, wlMessage)
+  val validator: WLNonCardValidate = WLNonCardValidate(nonCardEdge, nonCardBall, machineWL, wlMessage)
 
-  Trace.trace(s"""validator.errorList:size: ${validator.errorList.size}\n ${validator.errorList.mkString("\n")}""")
+  val status: WLImageStatus.Value = validator.getStatus().get
+
+  private val statusMessage: String = validator.getErrorMessage().get
+
+  wlMessage.foreach(_.info(s"Status: $status : $statusMessage"))
 
   private def makeWinstonLutzNonCardinal: WinstonLutzNonCardinal = {
     val beamName: Option[String] = {
@@ -79,9 +84,9 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
         None
     }
 
-    val XSize_mm: Double = nonCardEdge.edgeSet.X1.edgeLine.centerPoint.distance(nonCardEdge.edgeSet.X2.edgeLine.centerPoint)
+    val XOffset_mm: Double = nonCardEdge.edgeSet.X1.edgeLine.centerPoint.distance(nonCardEdge.edgeSet.X2.edgeLine.centerPoint) / 2
 
-    val YSize_mm: Double = nonCardEdge.edgeSet.Y1.edgeLine.centerPoint.distance(nonCardEdge.edgeSet.Y2.edgeLine.centerPoint)
+    val YOffset_mm: Double = nonCardEdge.edgeSet.Y1.edgeLine.centerPoint.distance(nonCardEdge.edgeSet.Y2.edgeLine.centerPoint) / 2
 
     val wlNonCard = WinstonLutzNonCardinal(
       // @formatter:off
@@ -97,8 +102,8 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
       boxY_mm                  = nonCardEdge.edgeSet.center_pix.getY           ,
       ballX_mm                 = nonCardBall.center_pix.getX                   ,
       ballY_mm                 = nonCardBall.center_pix.getY                   ,
-      XSize_mm                 = XSize_mm                             ,
-      YSize_mm                 = YSize_mm                                      ,
+      XOffset_mm               = XOffset_mm                                      ,
+      YOffset_mm               = YOffset_mm                                      ,
       //
       plannedOffsetX1_mm       = plannedRectangle.map(_.x1)                    ,
       plannedOffsetX2_mm       = plannedRectangle.map(_.x2)                    ,
@@ -116,13 +121,17 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
 
   override def offsetY_pix: Double = nonCardEdge.edgeSet.center_pix.getY - nonCardBall.center_pix.getY
 
-  override def getImageStatus: WLImageStatus.Value = if (validator.errorList.isEmpty) WLImageStatus.Passed else WLImageStatus.OffsetLimitExceeded // TODO be more specific
+  override def getImageStatus: WLImageStatus.Value = {
+    val ok = (validator.getStatus().size == 1) && validator.getStatus().head.toString.equals(WLImageStatus.Passed.toString)
+    if (ok) WLImageStatus.Passed else WLImageStatus.OffsetLimitExceeded
+  } // TODO be more specific
 
   override def convertToDB: Either[WinstonLutz, WinstonLutzNonCardinal] = Right(makeWinstonLutzNonCardinal)
 
   override def attrList: AttributeList = al
 }
 
+//noinspection SpellCheckingInspection
 object WLNonCardAnalysis {
 
   // val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""")
@@ -136,11 +145,11 @@ object WLNonCardAnalysis {
     val ext = ExtendedData.get(output)
     val al = new DicomFile(file).attributeList.get
     val runReq = WLRunReq(Seq(al), None)
-
     val wlMessage: WLMessage = WLMessage(runReq, al)
-
-    val wlNonCardAnalysis = WLNonCardAnalysis(ext, al, runReq, Some(wlMessage))
-    Trace.trace("List of errors: " + wlNonCardAnalysis.validator.errorList.mkString("\n"))
+    val machineWL = MachineWL.getMachineWLOrDefault(ext.machine.machinePK.get)
+    val wlNonCardAnalysis = WLNonCardAnalysis(ext, al, runReq, machineWL, Some(wlMessage))
+    Trace.trace("status: " + wlNonCardAnalysis.validator.getStatus())
+    Trace.trace("error message: " + wlNonCardAnalysis.validator.getErrorMessage())
 
     WLNonCardCompositeImage.makeCompositeImage(wlNonCardAnalysis)
 

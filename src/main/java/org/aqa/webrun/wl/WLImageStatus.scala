@@ -10,6 +10,8 @@ object WLImageStatus extends Enumeration {
   val OffsetLimitExceeded: wl.WLImageStatus.Value = Value("Failed: Offset Limit Exceeded")
   val BallMissing: wl.WLImageStatus.Value = Value("Failed: No ball in box")
   val BallAreaNoisy: wl.WLImageStatus.Value = Value("Failed: Ball image area is noisy")
+  val BallMalformed: wl.WLImageStatus.Value = Value("Failed: Ball is not symmetrical.")
+  val LowEnergy: wl.WLImageStatus.Value = Value("Failed: Image delivered with too low of an energy.")
   val EdgeExtentsNotFound: wl.WLImageStatus.Value = Value("Failed: Extents of edges not found")
   val UnknownTreatmentMachine: wl.WLImageStatus.Value = Value("Failed: Unknown treatment machine")
   val UnexpectedError: wl.WLImageStatus.Value = Value("Failed: Unexpected Error")

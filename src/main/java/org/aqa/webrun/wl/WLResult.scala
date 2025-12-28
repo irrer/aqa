@@ -46,8 +46,10 @@ abstract class WLResult(extendedData: ExtendedData, runReq: WLRunReq) {
 
   def indexOf: Int = runReq.indexOf(attrList)
 
+  private def thisType = if (this.isInstanceOf[WLImageResult]) "Cardinal" else "NonCardinal"
+
   def subDir: File = {
-    val dir = new File(extendedData.output.dir, runReq.subDirName(attrList))
+    val dir = new File(extendedData.output.dir, runReq.subDirName(attrList, thisType))
     dir.mkdirs()
     dir
   }
@@ -64,9 +66,9 @@ abstract class WLResult(extendedData: ExtendedData, runReq: WLRunReq) {
       None
   }
 
-  def getDirectory: File = subDir // TODO resolve
+  def getDirectory: File = subDir
 
-  def getBadPixelList: Seq[WLBadPixel] = Seq() // TODO resolve
+  def getBadPixelList: Seq[WLBadPixel] = Seq()
 
 }
 

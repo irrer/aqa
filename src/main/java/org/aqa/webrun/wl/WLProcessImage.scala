@@ -78,7 +78,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
   }
 
   private val subDir: File = {
-    val dir = new File(extendedData.output.dir, runReq.subDirName(rtimage))
+    val dir = new File(extendedData.output.dir, runReq.subDirName(rtimage, "Cardinal"))
     dir.mkdirs()
     dir
   }

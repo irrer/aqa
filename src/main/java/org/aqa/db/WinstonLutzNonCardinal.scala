@@ -44,8 +44,8 @@ import scala.xml.Elem
  * @param boxY_mm                  Y coordinate of center of box in mm
  * @param ballX_mm                 X coordinate of center of ball in mm
  * @param ballY_mm                 Y coordinate of center of ball in mm
- * @param XSize_mm                 Size of the field between X1 and X2 in mm.
- * @param YSize_mm                 Size of the field between Y1 and Y2 in mm.
+ * @param XOffset_mm               Distance between either X1 or X2 to center of box in mm.
+ * @param YOffset_mm               Distance between either Y1 or Y2 to center of box in mm.
  * @param plannedOffsetX1_mm       planned collimator or jaw leaf offset from center in mm of the X1 edge
  * @param plannedOffsetX2_mm       planned collimator or jaw leaf offset from center in mm of the X1 edge
  * @param plannedOffsetY1_mm       planned collimator or jaw leaf offset from center in mm of the X1 edge
@@ -68,8 +68,8 @@ case class WinstonLutzNonCardinal(
     ballX_mm                 : Double             ,
     ballY_mm                 : Double             ,
     //
-    XSize_mm                 : Double             ,
-    YSize_mm                 : Double             ,
+    XOffset_mm               : Double             ,
+    YOffset_mm               : Double             ,
     //
     plannedOffsetX1_mm       : Option[Double]     ,
     plannedOffsetX2_mm       : Option[Double]     ,
@@ -82,9 +82,12 @@ case class WinstonLutzNonCardinal(
     val insertQuery = WinstonLutzNonCardinal.query returning
       WinstonLutzNonCardinal.query.map(_.winstonLutzNonCardinalPK) into
       ((winstonLutz, winstonLutzNonCardinalPK) => winstonLutz.copy(winstonLutzNonCardinalPK = Some(winstonLutzNonCardinalPK)))
-    val action = insertQuery += this
-    val result = Db.run(action)
-    result
+    if (false) { // TODO put back
+      val action = insertQuery += this
+      val result = Db.run(action)
+      result
+    }
+    this
   }
 
   val gantryAngleRounded: Int = Util.angleRoundedTo90(gantryAngle_deg)
@@ -203,8 +206,8 @@ object WinstonLutzNonCardinal extends Logging {
     def boxY_mm                  = column[Double]("boxY_mm")
     def ballX_mm                 = column[Double]("ballX_mm")
     def ballY_mm                 = column[Double]("ballY_mm")
-    def XSize_mm                 = column[Double]("XSize_mm")
-    def YSize_mm                 = column[Double]("YSize_mm")
+    def XOffset_mm               = column[Double]("XOffset_mm")
+    def YOffset_mm               = column[Double]("YOffset_mm")
     def plannedOffsetX1_mm       = column[Option[Double]]("plannedOffsetX1_mm")
     def plannedOffsetX2_mm       = column[Option[Double]]("plannedOffsetX2_mm")
     def plannedOffsetY1_mm       = column[Option[Double]]("plannedOffsetY1_mm")
@@ -223,8 +226,8 @@ object WinstonLutzNonCardinal extends Logging {
         boxY_mm               ,
         ballX_mm              ,
         ballY_mm              ,
-        XSize_mm              ,
-        YSize_mm              ,
+        XOffset_mm            ,
+        YOffset_mm            ,
         plannedOffsetX1_mm    ,
         plannedOffsetX2_mm    ,
         plannedOffsetY1_mm    ,

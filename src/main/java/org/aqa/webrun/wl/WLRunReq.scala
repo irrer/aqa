@@ -26,9 +26,9 @@ case class WLRunReq(epidList: Seq[AttributeList], rtplan: Option[AttributeList])
 
   private val firstImageTimeMs = epidList.map(WLImageUtil.timeOfMs).min
 
-  def subDirName(attrList : AttributeList): String = {
-    val name1 = "%02d".format(indexOf(attrList)) + "-" + imageName(attrList)
-    val name2 = FileUtil.replaceInvalidFileNameCharacters(name1, '_').replaceAll(" " , "_")
+  def subDirName(attrList: AttributeList, processing: String): String = {
+    val name1 = "%02d".format(indexOf(attrList)) + s"-$processing-" + imageName(attrList)
+    val name2 = FileUtil.replaceInvalidFileNameCharacters(name1, '_').replaceAll(" ", "_")
     name2
   }
 
@@ -58,7 +58,7 @@ case class WLRunReq(epidList: Seq[AttributeList], rtplan: Option[AttributeList])
     val elapsedTime_txt = {
       val min = elapsedTime_ms / (60 * 1000)
       val sec = (elapsedTime_ms / 1000) % 60
-      min.formatted("%d") + ":" + sec.formatted("%02d")
+      "%d".format(min) + ":" + "%02d".format(sec)
     }
 
     gantryAngle_txt + " " + collimatorAngle_txt + " " + elapsedTime_txt

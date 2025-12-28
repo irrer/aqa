@@ -2,7 +2,6 @@ package org.aqa.webrun.wl
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
-import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.run.ProcedureStatus
@@ -23,6 +22,7 @@ import org.aqa.AnonymizeUtil
 import org.aqa.web.WebServer
 import org.aqa.AQAEventNetClient
 import org.aqa.Config
+import org.aqa.db.MachineWL
 import org.aqa.webrun.wl.nonCardinal.WLNonCardAnalysis
 import org.restlet.Request
 import org.restlet.Response
@@ -68,7 +68,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
   }
 
   /** Set to true to enable processing of non-cardinal collimator angles.  If false, all images are assumed to have cardinal angles. */
-  private val enableNonCardinalProcessing: Boolean = false;
+  private val enableNonCardinalProcessing: Boolean = false
 
   private def isCardinalAngle(rtimage: AttributeList): Boolean = {
     if (enableNonCardinalProcessing) {
@@ -81,16 +81,35 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
 
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
 
-    // Process in parallel for speed.  After that, sort by data time.
-    //val results: List[WLImageResult] =
-    val results: List[WLResult] =
-      runReq.epidList.filter(al => isCardinalAngle(al)).par.map(rtimageIndex => new WLProcessImage(extendedData, rtimageIndex, runReq).process).toList
+    val cardinalAlList = runReq.epidList.filter(al => isCardinalAngle(al))
+    val nonCardinalAlList = runReq.epidList.filterNot(al => isCardinalAngle(al))
 
-    val nonCardResults = runReq.epidList.filterNot(isCardinalAngle).map(rtimage => WLNonCardAnalysis(extendedData, rtimage, runReq, Some(WLMessage(runReq, rtimage))))
+    val machineWL = MachineWL.getMachineWLOrDefault(extendedData.machine.machinePK.get)
 
-    Trace.trace(nonCardResults) // TODO rm
+    // the list of functions that process images with cardinal (older) processing
+    val cardinalFunctionList = {
+      val cList: Seq[AttributeList] = if (Config.WLPolicyCardinalDoesCardinal) cardinalAlList else Seq()
+      val nList: Seq[AttributeList] = if (Config.WLPolicyCardinalDoesNonCardinal) nonCardinalAlList else Seq()
+      val functionList = (cList ++ nList).map(rtimage => () => new WLProcessImage(extendedData, rtimage, runReq).process.asInstanceOf[WLResult])
+      functionList
+    }
 
-    val resultHasData = results.filter(r => WLImageStatus.hasResult(r.getImageStatus))
+    // the list of functions that process images with non-cardinal (newer) processing
+    val nonCardinalFunctionList = {
+      val cList: Seq[AttributeList] = if (Config.WLPolicyNonCardinalDoesCardinal) cardinalAlList else Seq()
+      val nList: Seq[AttributeList] = if (Config.WLPolicyNonCardinalDoesNonCardinal) nonCardinalAlList else Seq()
+      val functionList = (cList ++ nList).map(rtimage => () => WLNonCardAnalysis(extendedData, rtimage, runReq, machineWL, Some(WLMessage(runReq, rtimage))).asInstanceOf[WLResult])
+      functionList
+    }
+
+    // Perform processing in parallel for speed
+    val resultList =
+      if (true) // TODO remove when ready to go parallel
+        (cardinalFunctionList ++ nonCardinalFunctionList).map(f => f()).toList
+      else
+        (cardinalFunctionList ++ nonCardinalFunctionList).par.map(f => f()).toList // TODO put back
+
+    val resultHasData = resultList.filter(r => WLImageStatus.hasResult(r.getImageStatus))
 
     val dbList = resultHasData.map(_.convertToDB)
 
@@ -114,13 +133,13 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
       }
     }
 
-    val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, results, runReq, monthly)
+    val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, resultList, runReq, monthly)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, mainHtmlText)
     logger.info("Wrote main HTML file " + file.getAbsolutePath)
 
     // true if all images passed.
-    val allPassed = results.nonEmpty && results.map(r => r.getImageStatus.toString).distinct.forall(text => text.equals(WLImageStatus.Passed.toString))
+    val allPassed = resultList.nonEmpty && resultList.map(r => r.getImageStatus.toString).distinct.forall(text => text.equals(WLImageStatus.Passed.toString))
 
     WLUpdateRestlet.updateWL()
     val status =
@@ -129,7 +148,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
       else
         ProcedureStatus.fail
 
-    sendEvent(extendedData, runReq, status, results.size)
+    sendEvent(extendedData, runReq, status, resultList.size)
 
     status
   }

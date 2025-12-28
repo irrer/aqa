@@ -411,7 +411,7 @@ object Config extends Logging {
 
   val jarFile: File = getThisJarFile
 
-  /** Number of minutes into a 24 hour day at which time service should be restarted. */
+  /** Number of minutes into a 24-hour day at which time service should be restarted. */
   val RestartTime: Long = {
     val dateFormat = new SimpleDateFormat("HH:mm")
     val milliseconds =
@@ -673,7 +673,7 @@ object Config extends Logging {
         DicomUtil.dictionary.getTagFromName(name)
       } catch {
         case _: java.lang.Throwable =>
-          val msg = "Unable to find ToBeAnonymized name in Pixelmed library: " + name
+          val msg = "Unable to find ToBeAnonymized name in PixelMed library: " + name
           logger.error(msg)
           throw new RuntimeException(msg)
       }
@@ -775,7 +775,7 @@ object Config extends Logging {
       //     The installation might not require this rtplan anyway, so there is no point in
       //         having the configuration fail for something the user does not need.
       //
-      //     If the user needs and it is not defined, then this makes the problem clear to
+      //     If the user needs, and it is not defined, then this makes the problem clear to
       //         the user and allows them to do something about it.
       pfc
     }
@@ -801,6 +801,7 @@ object Config extends Logging {
   val PrototypeCustomBeamName: String = logMainText("PrototypeCustomBeamName", "J18G0-6X")
   val PrefixForMachineDependentBeamName: String = logMainText("PrefixForMachineDependentBeamName", "J18G0-")
 
+  //noinspection SpellCheckingInspection
   val CollimatorCenteringTolerence_mm: Double = logMainText("CollimatorCenteringTolerence_mm", "2.0").toDouble
   private val CollimatorCentering090BeamName: String = logMainText("CollimatorCentering090BeamName", "J10G0C90-6X")
   private val CollimatorCentering270BeamName: String = logMainText("CollimatorCentering270BeamName", "J10G0C270-6X")
@@ -865,7 +866,7 @@ object Config extends Logging {
   requireReadableDirectory("tmpDirFile", tmpDirFile)
   requireReadableDirectory("machineConfigurationDirFile", machineConfigurationDirFile)
 
-  val CenterDoseDiameter_mm: Double = logMainText("CenterDoseDiameter_mm", "10.0").toDouble
+  private val CenterDoseDiameter_mm: Double = logMainText("CenterDoseDiameter_mm", "10.0").toDouble
   val CenterDoseRadius_mm: Double = CenterDoseDiameter_mm / 2
   val CenterDoseHistoryRange: Int = logMainText("CenterDoseHistoryRange", "1000000").toInt
 
@@ -933,6 +934,7 @@ object Config extends Logging {
   val DailyQAMaxChartHistory: Int = logMainText("DailyQAMaxChartHistory", "300").toInt
   val CBCTBBPenumbra_mm: Double = logMainText("CBCTBBPenumbra_mm", "2.5").toDouble
   val CBCTZoomSize_mm: Double = logMainText("CBCTZoomSize_mm", "40.0").toDouble
+  //noinspection SpellCheckingInspection
   val CBCTImageColor: Color = Util.hexToColor(logMainText("CBCTImageColor", "FFFFFF"))
   // val BBbyCBCTHistoryRange: Int = logMainText("BBbyCBCTHistoryRange", "1000000").toInt
   val BBPreHistory: Int = logMainText("BBPreHistory", "90").toInt
@@ -941,6 +943,7 @@ object Config extends Logging {
   val BBbyEPIDSearchDistance_mm: Double = logMainText("BBbyEPIDSearchDistance_mm", "10.0").toDouble
   val EPIDBBPenumbra_mm: Double = logMainText("EPIDBBPenumbra_mm", "2.0").toDouble
   val EPIDBBMinimumStandardDeviation: Double = logMainText("EPIDBBMinimumStandardDeviation", "2.25").toDouble
+  //noinspection SpellCheckingInspection
   val EPIDImageColor: Color = Util.hexToColor(logMainText("EPIDImageColor", "FFFFFF"))
   val EPIDZoomSize_mm: Double = logMainText("EPIDZoomSize_mm", "90.0").toDouble
   val BBbyEPIDHistoryRange: Int = logMainText("BBbyEPIDHistoryRange", "1000000").toInt
@@ -999,8 +1002,10 @@ object Config extends Logging {
   val WLWLImageColor: Color = toColor(logMainText("WLWLImageColor", "000001"))
   val WLBoxColor: Color = toColor(logMainText("WLBoxColor", "00ff00"))
   val WLBoxColorCorrected: Color = toColor(logMainText("WLBoxColorCorrected", "d0d0d0"))
+  //noinspection SpellCheckingInspection
   val WLBallColor: Color = toColor(logMainText("WLBallColor", "ffff00"))
   val WLOffsetColor: Color = toColor(logMainText("WLOffsetColor", "ff0000"))
+  //noinspection SpellCheckingInspection
   val WLSplineColor: Color = toColor(logMainText("WLSplineColor", "ffff00"))
   val WLTextColor: Color = toColor(logMainText("WLTextColor", "000000"))
   val WLPassColor: Color = toColor(logMainText("WLPassColor", "1dc32b"))
@@ -1009,14 +1014,20 @@ object Config extends Logging {
   val WLTextPointSize: Int = logMainText("WLTextPointSize", "30").toInt
   val WLNumberOfCircles: Int = logMainText("WLNumberOfCircles", "2").toInt
   val WLSummarySize: Int = logMainText("WLSummarySize", "350").toInt
+  //noinspection SpellCheckingInspection
   val WLAmqpExchange: String = logMainText("WLAmqpExchange", "gbtopic")
   val WLAmqpRoutingKey: String = logMainText("WLSummarySize", "Aria.Event.EventWLQASRSDone")
   val WLEdgeCoefficientOfVariationMax: Double = logMainText("WLEdgeCoefficientOfVariationMax", "0.007").toDouble
 
+  val WLPolicyCardinalDoesCardinal: Boolean = logMainText("WLPolicyCardinalDoesCardinal", "true").toBoolean
+  val WLPolicyCardinalDoesNonCardinal: Boolean = logMainText("WLPolicyCardinalDoesNonCardinal", "false").toBoolean
+  val WLPolicyNonCardinalDoesCardinal: Boolean = logMainText("WLPolicyNonCardinalDoesCardinal", "false").toBoolean
+  val WLPolicyNonCardinalDoesNonCardinal: Boolean = logMainText("WLPolicyNonCardinalDoesNonCardinal", "true").toBoolean
+
   val WLNonCardEdgePercentChange: Double = logMainText("WLNonCardEdgePercentChange", "98.0").toDouble
   val WLNonCardMinStdDev: Double = logMainText("WLNonCardMinStdDev", "0.1").toDouble
-  val WLNonCardSymmetryLimit : Double = logMainText("WLNonCardSymmetryLimit", "0.4").toDouble
-  val WLNonCardKVPLimit : Double = logMainText("WLNonCardKVPLimit", "0.0").toDouble
+  val WLNonCardSymmetryLimit: Double = logMainText("WLNonCardSymmetryLimit", "0.4").toDouble
+  val WLNonCardKVPLimit: Double = logMainText("WLNonCardKVPLimit", "0.0").toDouble
 
   val WLTreatmentMachineList: List[WLTreatmentMachine] = {
     val list = (document \ "WLTreatmentMachineList" \ "WLTreatmentMachine").toList.map(e => new WLTreatmentMachine(e))
@@ -1041,7 +1052,7 @@ object Config extends Logging {
   // =================================================================================
 
   val PSMWholeDetectorBeamNamePattern: String = logMainText("PSMWholeDetectorBeamNamePattern", ".*whole.*")
-  val PSMDiameter_mm: Double = logMainText("PSMDiameter_mm", "10.0").toDouble
+  private val PSMDiameter_mm: Double = logMainText("PSMDiameter_mm", "10.0").toDouble
   val PSMRadius_mm: Double = PSMDiameter_mm / 2
 
   private val PSMMaxFloodFieldAge_day: Double = logMainText("PSMMaxFloodFieldAge_day", "732.0").toDouble
@@ -1067,6 +1078,7 @@ object Config extends Logging {
 
   /**
     * Self test.
+    *
     * @param args Not used.
     */
   def main(args: Array[String]): Unit = {
