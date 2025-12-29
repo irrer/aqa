@@ -105,15 +105,15 @@ object WLMainHtml extends Logging {
             } else
               ""}
             </p>
-            <p title={hiFmtDbl(ir.offsetX_pix) + ", " + hiFmtDbl(ir.offsetY_pix)}>
+            <p title={hiFmtDbl(ir.offsetX_mm) + ", " + hiFmtDbl(ir.offsetY_mm)}>
               Offset in mm X =
-              {WebUtil.setPrecisionAttr(<span></span>, ir.offsetX_pix)}
+              {WebUtil.setPrecisionAttr(<span></span>, ir.offsetX_mm)}
               Y =
-              {WebUtil.setPrecisionAttr(<span></span>, ir.offsetY_pix)}
+              {WebUtil.setPrecisionAttr(<span></span>, ir.offsetY_mm)}
             </p>
-            <p title={hiFmtDbl(ir.offsetXY_pix)}>
+            <p title={hiFmtDbl(ir.offsetXY_mm)}>
               R =
-              {WebUtil.setPrecisionAttr(<span></span>, ir.offsetXY_pix)}{passedText(ir)}
+              {WebUtil.setPrecisionAttr(<span></span>, ir.offsetXY_mm)}{passedText(ir)}
             </p>
             <p>
               {diagnostics}

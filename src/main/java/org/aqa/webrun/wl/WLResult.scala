@@ -12,10 +12,10 @@ import java.util.Date
 
 abstract class WLResult(extendedData: ExtendedData, runReq: WLRunReq) {
 
-  def offsetX_pix: Double
-  def offsetY_pix: Double
+  def offsetX_mm: Double
+  def offsetY_mm: Double
 
-  def offsetXY_pix = Math.sqrt((offsetX_pix * offsetX_pix) + (offsetY_pix * offsetY_pix))
+  def offsetXY_mm: Double = Math.sqrt((offsetX_mm * offsetX_mm) + (offsetY_mm * offsetY_mm))
 
   def getImageStatus: WLImageStatus.Value
 

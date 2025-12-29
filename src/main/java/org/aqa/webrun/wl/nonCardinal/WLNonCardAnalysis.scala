@@ -117,9 +117,9 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
     wlNonCard
   }
 
-  override def offsetX_pix: Double = nonCardEdge.edgeSet.center_pix.getX - nonCardBall.center_pix.getX
+  override def offsetX_mm: Double = trans.pix2IsoDistX(nonCardEdge.edgeSet.center_pix.getX - nonCardBall.center_pix.getX)
 
-  override def offsetY_pix: Double = nonCardEdge.edgeSet.center_pix.getY - nonCardBall.center_pix.getY
+  override def offsetY_mm: Double = trans.pix2IsoDistY(nonCardEdge.edgeSet.center_pix.getY - nonCardBall.center_pix.getY)
 
   override def getImageStatus: WLImageStatus.Value = {
     val ok = (validator.getStatus().size == 1) && validator.getStatus().head.toString.equals(WLImageStatus.Passed.toString)

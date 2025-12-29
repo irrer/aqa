@@ -117,11 +117,11 @@ case class WLImageResult(
 
   private def boxCenter_mm: Point2D.Double = trans.pix2Iso(boxCenterX_pix, boxCenterY_pix)
 
-  private def offsetX_mm: Double = boxCenter_mm.getX - ballCenter_mm.getX
+  private def offsetX_mm_def: Double = boxCenter_mm.getX - ballCenter_mm.getX
 
-  private def offsetY_mm: Double = boxCenter_mm.getY - ballCenter_mm.getY
+  private def offsetY_mm_def: Double = boxCenter_mm.getY - ballCenter_mm.getY
 
-  private def offset_mm: Double = Math.sqrt((offsetX_mm * offsetX_mm) + (offsetY_mm * offsetY_mm))
+  private def offset_mm: Double = Math.sqrt((offsetX_mm_def * offsetX_mm_def) + (offsetY_mm_def * offsetY_mm_def))
 
   override def toString: String = {
 
@@ -203,9 +203,9 @@ case class WLImageResult(
 
   // support for WLResult
 
-  override def offsetX_pix: Double = offX_mm
+  override def offsetX_mm: Double = offX_mm
 
-  override def offsetY_pix: Double = offY_mm
+  override def offsetY_mm: Double = offY_mm
 
   override def getImageStatus: WLImageStatus.Value = imageStatus
 
