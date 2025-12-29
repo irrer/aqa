@@ -16,18 +16,12 @@ import java.awt.Rectangle
 import java.io.File
 import java.sql.Timestamp
 import java.util.Date
-
-class Point(val x: Double, val y: Double) {
-  override def toString: String = {
-    "X: " + x.formatted("%8.5f") + "    " +
-      "Y: " + y.formatted("%8.5f")
-  }
-}
+import javax.vecmath.Point2d
 
 /** Describe the edges of a box. */
 class Edges(val top: Double, val bottom: Double, val left: Double, val right: Double) {
   override def toString: String = {
-    def prt(name: String, value: Double) = "    " + name + value.formatted("%7.4f\n")
+    def prt(name: String, value: Double) = "    " + name + "%7.4f\n".format(value)
 
     prt("Edge top     : ", top) +
       prt("Edge bottom  : ", bottom) +
@@ -39,17 +33,37 @@ class Edges(val top: Double, val bottom: Double, val left: Double, val right: Do
   }
 }
 
+/**
+  * Encapsulate the results of the measurements for one image.
+  *
+  * @param imageStatus Pass, fail, etc.
+  * @param boxRelativeToBounds_mm Center of box relative to coarse bounds.
+  * @param ballRelativeToBounds_mm Center of ball relative to coarse bounds.
+  * @param edgesUnscaled unused
+  * @param boxEdgesP unknown
+  * @param edgeSet all edge in information, including AOI for each edge.  Measurements are relative to each edge's bounding box.
+  * @param directory HTML directory for this image
+  * @param rtimage DICOM image
+  * @param pixels unknown
+  * @param coarseAoiBounds_pix Bounding box in pixels around entire box.
+  * @param brcX X offset from coarseAoiBounds_pix to center of ball in pixels
+  * @param brcY Y offset from coarseAoiBounds_pix to center of ball in pixels
+  * @param badPixelList List of bad pixels.
+  * @param marginalPixelList List of marginal pixels.
+  * @param extendedData Metadata
+  * @param runReq all input data
+  */
 case class WLImageResult(
     imageStatus: WLImageStatus.ImageStatus,
-    boxP: Option[Point] = None,
-    ballP: Option[Point] = None,
+    boxRelativeToBounds_mm: Option[Point2d] = None,
+    ballRelativeToBounds_mm: Option[Point2d] = None,
     edgesUnscaled: Option[Edges] = None,
     boxEdgesP: Option[Edges] = None,
     edgeSet: Option[WLEdgeSet] = None,
     directory: File,
     rtimage: AttributeList,
     pixels: Option[Array[Array[Float]]] = None,
-    coarseAoiBounds: Option[Rectangle] = None,
+    coarseAoiBounds_pix: Option[Rectangle] = None,
     brcX: Option[Double] = None,
     brcY: Option[Double] = None,
     badPixelList: Seq[WLBadPixel],
@@ -57,15 +71,15 @@ case class WLImageResult(
     extendedData: ExtendedData,
     runReq: WLRunReq
 ) extends WLResult(extendedData, runReq) {
-  val ok: Boolean = boxP.isDefined && ballP.isDefined
-  val offX: Double = if (ok) boxP.get.x - ballP.get.x else -1
-  val offY: Double = if (ok) boxP.get.y - ballP.get.y else -1
-  val offXY: Double = if (ok) Math.sqrt((offX * offX) + (offY * offY)) else -1
+  val ok: Boolean = boxRelativeToBounds_mm.isDefined && ballRelativeToBounds_mm.isDefined
+  val offX_mm: Double = if (ok) boxRelativeToBounds_mm.get.x - ballRelativeToBounds_mm.get.x else -1
+  val offY_mm: Double = if (ok) boxRelativeToBounds_mm.get.y - ballRelativeToBounds_mm.get.y else -1
+  val offXY_mm: Double = if (ok) Math.sqrt((offX_mm * offX_mm) + (offY_mm * offY_mm)) else -1
   val date = new Date
   private val trans = new IsoImagePlaneTranslator(rtimage)
 
-  val box: Point = if (boxP.isEmpty) new Point(-1, -1) else boxP.get
-  val ball: Point = if (ballP.isEmpty) new Point(-1, -1) else ballP.get
+  val box: Point2d = if (boxRelativeToBounds_mm.isEmpty) new Point2d(-1, -1) else boxRelativeToBounds_mm.get
+  val ball: Point2d = if (ballRelativeToBounds_mm.isEmpty) new Point2d(-1, -1) else ballRelativeToBounds_mm.get
   val boxEdges: Edges = if (boxEdgesP.isEmpty) new Edges(-1, -1, -1, -1) else boxEdgesP.get
 
   // private val gantry_deg: Double = Util.gantryAngle(rtimage)
@@ -91,9 +105,9 @@ case class WLImageResult(
 
   private def bottom_mm: Double = trans.pix2IsoCoordY(bottom_pix)
 
-  private def ballX_pix: Double = brcX.get + coarseAoiBounds.get.x
+  private def ballX_pix: Double = brcX.get + coarseAoiBounds_pix.get.x
 
-  private def ballY_pix: Double = brcY.get + coarseAoiBounds.get.y
+  private def ballY_pix: Double = brcY.get + coarseAoiBounds_pix.get.y
 
   private def ballCenter_mm: Point2D.Double = trans.pix2Iso(ballX_pix, ballY_pix)
 
@@ -189,9 +203,9 @@ case class WLImageResult(
 
   // support for WLResult
 
-  override def offsetX_pix: Double = offX
+  override def offsetX_pix: Double = offX_mm
 
-  override def offsetY_pix: Double = offY
+  override def offsetY_pix: Double = offY_mm
 
   override def getImageStatus: WLImageStatus.Value = imageStatus
 

@@ -10,6 +10,7 @@ import org.aqa.Util
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
+import javax.vecmath.Point2d
 
 class WLCsv(resultList: Seq[WLImageResult], extendedData: ExtendedData) extends Logging {
 
@@ -24,14 +25,14 @@ class WLCsv(resultList: Seq[WLImageResult], extendedData: ExtendedData) extends 
       val value: String = if (ok) noc(v) else "NA"
       val name: String = noc(n)
 
-      def this(v: Double, n: String) = this(v.formatted("%16.12f").trim, n)
+      def this(v: Double, n: String) = this("%16.12f".format(v).trim, n)
     }
 
     def listToCsv(textList: Seq[String]): String = textList.foldLeft("")((l, t) => if (l.isEmpty) t else l + ',' + t) + "\n"
 
     def ir2csv(ir: WLImageResult): Seq[Dp] = {
 
-      val tongueAndGrooveOffset = new Point(0, 0)
+      val tongueAndGrooveOffset = new Point2d(0, 0)
 
       val fieldName = ir.gantryRounded_txt + " " + ir.collimatorRounded_txt + " " + ir.elapsedTime_txt
 
@@ -50,7 +51,7 @@ class WLCsv(resultList: Seq[WLImageResult], extendedData: ExtendedData) extends 
           "NA"
       }
 
-      val ok = ir.offXY >= 0
+      val ok = ir.offXY_mm >= 0
 
       Seq(
         Dp(extendedData.machine.getRealId, "machine id"),
@@ -59,9 +60,9 @@ class WLCsv(resultList: Seq[WLImageResult], extendedData: ExtendedData) extends 
         Dp(ir.attr(TagByName.PatientSupportAngle), "table angle"),
         Dp(ir.attr(TagByName.GantryAngle), "gantry angle"),
         Dp(ir.attr(TagByName.BeamLimitingDeviceAngle), "coll angle"),
-        new Dp(ir.offX, "X offset corrected box-ball", ok),
-        new Dp(ir.offY, "Y offset corrected box-ball", ok),
-        new Dp(ir.offXY, "XY offset corrected", ok),
+        new Dp(ir.offX_mm, "X offset corrected box-ball", ok),
+        new Dp(ir.offY_mm, "Y offset corrected box-ball", ok),
+        new Dp(ir.offXY_mm, "XY offset corrected", ok),
         new Dp(ir.box.x, "X box center corrected", ok),
         new Dp(ir.box.y, "Y box center corrected", ok),
         new Dp(tongueAndGrooveOffset.x, "X tongue and groove correction"),
@@ -97,6 +98,7 @@ class WLCsv(resultList: Seq[WLImageResult], extendedData: ExtendedData) extends 
   }
 
   def writeCsvFile: String = {
+    //noinspection SpellCheckingInspection
     val fileDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss")
     val fileName = fileDateFormat.format(extendedData.output.dataDate.get) + ".csv"
     val text = generateCsvText

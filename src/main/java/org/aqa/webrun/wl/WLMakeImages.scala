@@ -12,6 +12,7 @@ import java.awt.Graphics2D
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
 import java.io.File
+import javax.vecmath.Point2d
 
 case class WLMakeImages(
     rtimage: AttributeList,
@@ -30,7 +31,7 @@ case class WLMakeImages(
 
   private val annotate = new WLAnnotate(SCALE, BALL_RADIUS)
 
-  private def fmt(d: Double): String = d.formatted("%10.5f")
+  private def fmt(d: Double): String = "%10.5f".format(d)
 
   private def toPng(pix: IndexedSeq[IndexedSeq[Float]]): BufferedImage = toPngScaled(pix, SCALE)
 
@@ -186,8 +187,8 @@ case class WLMakeImages(
     Util.writePng(brightPng, new File(subDir, WLgenHtml.BRIGHT_SUMMARY_FILE_NAME))
     wlMsg.info("Done constructing ProcessImage for " + imageName)
 
-    val boxPoint = new Point(boxCenterScaledX, boxCenterScaledY)
-    val ballPoint = new Point(ballCenterScaledX, ballCenterScaledY)
+    val boxPoint = new Point2d(boxCenterScaledX, boxCenterScaledY)
+    val ballPoint = new Point2d(ballCenterScaledX, ballCenterScaledY)
     val edgesScaled = new Edges(
       edgeSet.top.pos_pix * ResolutionY,
       edgeSet.bottom.pos_pix * ResolutionY,
@@ -206,15 +207,15 @@ case class WLMakeImages(
 
     val imageResult = WLImageResult(
       imageStatus = passed,
-      boxP = Some(boxPoint),
-      ballP = Some(ballPoint),
+      boxRelativeToBounds_mm = Some(boxPoint),
+      ballRelativeToBounds_mm = Some(ballPoint),
       edgesUnscaled = None,
       boxEdgesP = Some(edgesScaled),
       edgeSet = Some(edgeSet),
       directory = subDir,
       rtimage = attributeList,
       pixels = Some(pixelData),
-      coarseAoiBounds = Some(coarseAoiBounds),
+      coarseAoiBounds_pix = Some(coarseAoiBounds),
       Some(brcX),
       Some(brcY),
       badPixelList = badPixelList,
@@ -227,7 +228,7 @@ case class WLMakeImages(
 
     val wl = imageResult.toWinstonLutz
     wlMsg.info(s"Box  X center iso mm: ${wl.boxCenterX_mm}")
-    wlMsg.info(s"Box  Y center iso mm: ${wl.boxCenterX_mm}")
+    wlMsg.info(s"Box  Y center iso mm: ${wl.boxCenterY_mm}")
     wlMsg.info(s"Ball X center iso mm: ${wl.ballX_mm}")
     wlMsg.info(s"Ball Y center iso mm: ${wl.ballY_mm}")
     wlMsg.info(s"Box top       iso mm: ${wl.topEdge_mm}")

@@ -20,8 +20,8 @@ class WLLaserCorrection(val resultList: Seq[WLImageResult]) extends Logging {
 
   private def find(g: Int): WLImageResult = resultList.filter(ir => ir.gantryRounded_deg == g).head
 
-  private def offX(g: Int): Double = find(g).offX
-  private def offY(g: Int): Double = find(g).offY
+  private def offX(g: Int): Double = find(g).offX_mm
+  private def offY(g: Int): Double = find(g).offY_mm
 
   val longitudinal: Double = (offY(180) + offY(0)) / 2
 
@@ -37,7 +37,7 @@ class WLLaserCorrection(val resultList: Seq[WLImageResult]) extends Logging {
   val logValues: Unit = {
     def show(g: Int): String = {
       val ir = resultList.filter(ir => ir.gantryRounded_deg == g).head
-      "    " + ir.collimatorRounded_txt + "    " + ir.gantryRounded_txt + "    xOff: " + ir.offX + "    yOff: " + ir.offY
+      "    " + ir.collimatorRounded_txt + "    " + ir.gantryRounded_txt + "    xOff: " + ir.offX_mm + "    yOff: " + ir.offY_mm
     }
     val text = (0 to 270 by 90).map(g => show(g)).foldLeft("")((t, r) => t + "\n" + r)
     logger.info("Values used for correction:" + text)
