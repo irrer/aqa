@@ -16,8 +16,8 @@ object WLNonCardCompositeImage {
   private def d2i(d: Double): Int = d.round.toInt
 
   private def scale: Int = {
-    6
     Config.WLScale
+    7
   }
 
   private def makeBoundingRectangle(nonCard: WLNonCardAnalysis): Rectangle = {
@@ -34,8 +34,8 @@ object WLNonCardCompositeImage {
     val yList = edgeSet.intersectList.map(_.y)
     val x = xList.min - border_pix
     val y = yList.min - border_pix
-    val width = (xList.max - x) + (border_pix * 2)
-    val height = (yList.max - y) + (border_pix * 2)
+    val width = (xList.max - xList.min) + (border_pix * 2)
+    val height = (yList.max - yList.min) + (border_pix * 2)
 
     val rectangle = new Rectangle(d2i(x), d2i(y), d2i(width), d2i(height))
 
@@ -43,17 +43,39 @@ object WLNonCardCompositeImage {
   }
 
   /**
-   * Make a zoomed image containing only the area of interest.
-   * @param nonCard Ressults of analysis.
-   * @return Zoomed AOI.
-   */
+    * Make a zoomed image containing only the area of interest.
+    * @param nonCard Ressults of analysis.
+    * @return Zoomed AOI.
+    */
   private def makeInitialBufImage(nonCard: WLNonCardAnalysis): BufferedImage = {
 
     // convert to image
     val dicomImage = new DicomImage(nonCard.al)
 
+    val sorted = dicomImage.pixelData.flatten.sorted
+
+    val di2 = {
+      val min = sorted.slice(5, 15).sum / 10
+      val max = sorted.dropRight(5).takeRight(10).sum / 10
+      dicomImage.fun1(p => ((max - p) + min).round)
+    }
+
+    val maxPix = {
+      val centerX = nonCard.nonCardBall.center_pix.getX.round.toInt
+      val centerY = nonCard.nonCardBall.center_pix.getY.round.toInt
+      val range = -2 until 3
+      val list = for (x <- range; y <- range) yield di2.get(x + centerX, y + centerY)
+      list.sum / list.size
+    }
+    val minPix = di2.pixelData.flatten.sorted.slice(5, 15).sum / 10
+
     // convert to buffered image, using the central part of the ball as the brightest pixels.
-    val img1 = dicomImage.toBufferedImage(ImageUtil.rgbColorMap(Color.blue), nonCard.minPixelValue, nonCard.maxPixelValue)
+    val img1 = di2.toBufferedImage(ImageUtil.rgbColorMap(Color.blue), minPix, maxPix)
+
+    if (false) { // TODO rm
+      edu.umro.ScalaUtil.Util.showTextInGVim(di2.pixelsToText)
+      ImageDisplay.showInMSPaint(img1)
+    }
 
     // restrict the image to the AOI
     val img2 = ImageUtil.subImage(img1, makeBoundingRectangle(nonCard))
@@ -64,10 +86,10 @@ object WLNonCardCompositeImage {
   }
 
   /**
-   * Draw a line indicating where each edge is, and also crossing lines that shows where the center of the edges is.
-   * @param bufImg Write on this image.
-   * @param nonCard The data.
-   */
+    * Draw a line indicating where each edge is, and also crossing lines that shows where the center of the edges is.
+    * @param bufImg Write on this image.
+    * @param nonCard The data.
+    */
   private def drawEdgeLines(bufImg: BufferedImage, nonCard: WLNonCardAnalysis): Unit = {
 
     val edgeSet = nonCard.nonCardEdge.edgeSet
@@ -102,17 +124,21 @@ object WLNonCardCompositeImage {
     si.drawLine(gc, new Point2d(ballCenter_pix.x, ballCenter_pix.y - outerRadius_pix), new Point2d(ballCenter_pix.x, ballCenter_pix.y + outerRadius_pix))
 
     def makeCircle(radius: Double): Unit = {
-      val x = si.scalePixelX(ballCenter_pix.x - radius)
-      val width = si.scalePixelX(radius * 2)
+      val x = ballCenter_pix.x - radius
+      val width = radius * 2
 
-      val y = si.scalePixelY(ballCenter_pix.y - radius)
-      val height = si.scalePixelY(radius * 2)
-      gc.drawOval(x, y, width, height)
+      val y = ballCenter_pix.y - radius
+      val height = radius * 2
+      si.drawOval(gc, x, y, width, height)
     }
 
     makeCircle(innerRadius_pix)
     gc.setColor(Color.yellow)
     makeCircle(outerRadius_pix)
+
+    gc.setColor(Color.red)
+    ImageUtil.setLineThickness(gc, 2.0)
+    si.drawLine(gc, ballCenter_pix, nonCard.nonCardEdge.edgeSet.center_pix)
   }
 
   def makeCompositeImage(nonCard: WLNonCardAnalysis): BufferedImage = {

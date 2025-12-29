@@ -27,7 +27,7 @@ case class WLRunReq(epidList: Seq[AttributeList], rtplan: Option[AttributeList])
   private val firstImageTimeMs = epidList.map(WLImageUtil.timeOfMs).min
 
   def subDirName(attrList: AttributeList, processing: String): String = {
-    val name1 = "%02d".format(indexOf(attrList)) + s"-$processing-" + imageName(attrList)
+    val name1 = "%02d".format(indexOf(attrList)) + "-" + imageName(attrList) + s"-$processing"
     val name2 = FileUtil.replaceInvalidFileNameCharacters(name1, '_').replaceAll(" ", "_")
     name2
   }

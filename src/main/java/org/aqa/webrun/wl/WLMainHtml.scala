@@ -107,13 +107,13 @@ object WLMainHtml extends Logging {
             </p>
             <p title={hiFmtDbl(ir.offsetX_pix) + ", " + hiFmtDbl(ir.offsetY_pix)}>
               Offset in mm X =
-              {fmtDbl(ir.offsetX_pix)}
+              {WebUtil.setPrecisionAttr(<span></span>, ir.offsetX_pix)}
               Y =
-              {fmtDbl(ir.offsetY_pix)}
+              {WebUtil.setPrecisionAttr(<span></span>, ir.offsetY_pix)}
             </p>
             <p title={hiFmtDbl(ir.offsetXY_pix)}>
               R =
-              {fmtDbl(ir.offsetXY_pix)}{passedText(ir)}
+              {WebUtil.setPrecisionAttr(<span></span>, ir.offsetXY_pix)}{passedText(ir)}
             </p>
             <p>
               {diagnostics}
@@ -264,12 +264,14 @@ object WLMainHtml extends Logging {
           <tr>
             <td>Tongue
               &amp;
-              Groove Offsets dX = 0.0 dY = 0.0</td>
+              Groove Offsets dX = 0.0 dY = 0.0
+            </td>
           </tr>
           <tr>
             <td>Radial Offset Tolerance, Rtol =
               {wlParameters.passLimit_mm}
-              mm</td>
+              mm
+            </td>
           </tr>
         </table>
       }
@@ -288,7 +290,9 @@ object WLMainHtml extends Logging {
       val headTable1: Elem = {
         <table border='0' style="border-collapse:separate; border-spacing:0.5em;">
           <tr>
-            <td></td>
+            <td>
+              {WebUtil.showPrecision}
+            </td>
             <td>
               {offsets}
             </td>

@@ -105,9 +105,9 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
     // Perform processing in parallel for speed
     val resultList =
       if (true) // TODO remove when ready to go parallel
-        (cardinalFunctionList ++ nonCardinalFunctionList).map(f => f()).toList
+        (cardinalFunctionList ++ nonCardinalFunctionList).map(f => f()).toList.sortBy(_.subDir.getName)
       else
-        (cardinalFunctionList ++ nonCardinalFunctionList).par.map(f => f()).toList // TODO put back
+        (cardinalFunctionList ++ nonCardinalFunctionList).par.map(f => f()).toList.sortBy(_.subDir.getName) // TODO put back
 
     val resultHasData = resultList.filter(r => WLImageStatus.hasResult(r.getImageStatus))
 
@@ -132,7 +132,6 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
           <span> </span>
       }
     }
-
     val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, resultList, runReq, monthly)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, mainHtmlText)

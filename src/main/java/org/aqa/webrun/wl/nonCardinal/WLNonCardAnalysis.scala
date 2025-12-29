@@ -129,6 +129,9 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
   override def convertToDB: Either[WinstonLutz, WinstonLutzNonCardinal] = Right(makeWinstonLutzNonCardinal)
 
   override def attrList: AttributeList = al
+
+  private val htmlMaker = WLNonCardinalHTML(this, wlMessage)
+  htmlMaker.generate()
 }
 
 //noinspection SpellCheckingInspection
