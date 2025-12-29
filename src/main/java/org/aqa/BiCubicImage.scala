@@ -23,7 +23,7 @@ case class BiCubicImage(dicomImage: DicomImage, bufImg: Option[BufferedImage] = 
 
   private val interpolator = new PiecewiseBicubicSplineInterpolator()
 
-  private val function: PiecewiseBicubicSplineInterpolatingFunction = interpolator.interpolate(xCoordinateList, yCoordinateList, valueMatrix)
+  private val function: PiecewiseBicubicSplineInterpolatingFunction = interpolator.interpolate(yCoordinateList, xCoordinateList, valueMatrix)
 
   /**
     * Get the value at the given coordinates.  If this is outside the bounds of the image, then an exception will be thrown.
