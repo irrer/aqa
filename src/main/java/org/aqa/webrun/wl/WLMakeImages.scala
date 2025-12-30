@@ -1,6 +1,7 @@
 package org.aqa.webrun.wl
 
 import com.pixelmed.dicom.AttributeList
+import edu.umro.ImageUtil.ImageUtil
 import org.aqa.Config
 import org.aqa.PlannedRectangle
 import org.aqa.Util
@@ -102,10 +103,11 @@ case class WLMakeImages(
     val brightPng = toPng(thresholdLimitedAreaOfInterest)
     val blackPng = toBlackPng(coarseAoi)
 
-    // draw edge of box
-    val normalGraphics = normalPng.getGraphics.asInstanceOf[Graphics2D]
-    val brightGraphics = brightPng.getGraphics.asInstanceOf[Graphics2D]
-    val blackGraphics = blackPng.getGraphics.asInstanceOf[Graphics2D]
+    // draw edges of box
+
+    val normalGraphics = ImageUtil.getGraphics(normalPng)
+    val brightGraphics = ImageUtil.getGraphics(brightPng)
+    val blackGraphics = ImageUtil.getGraphics(blackPng)
 
     annotate.drawBallGraphics(normalGraphics, ballCenterX, ballCenterY)
     annotate.drawBallGraphics(brightGraphics, ballCenterX, ballCenterY)
