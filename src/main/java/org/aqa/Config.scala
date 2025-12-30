@@ -1000,7 +1000,7 @@ object Config extends Logging {
   val WLBallAreaFlatnessRatioLowerLimit: Double = logMainText("WLBallAreaFlatnessRatioLowerLimit", "5.0").toDouble
   val WLBallHeightPercentForeground: Double = logMainText("WLBallHeightPercentForeground", "50.0").toDouble
   val WLWLImageColor: Color = toColor(logMainText("WLWLImageColor", "000001"))
-  val WLBoxColor: Color = toColor(logMainText("WLBoxColor", "00ff00"))
+  // val WLBoxColor: Color = toColor(logMainText("WLBoxColor", "00ff00")) // deprecated.  hard-coded to green
   val WLBoxColorCorrected: Color = toColor(logMainText("WLBoxColorCorrected", "d0d0d0"))
   //noinspection SpellCheckingInspection
   val WLBallColor: Color = toColor(logMainText("WLBallColor", "ffff00"))

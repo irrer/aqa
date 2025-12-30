@@ -1222,7 +1222,7 @@ Note that when building a package for release, the Maven build process uses the 
     <WLImageColor>000001</WLImageColor>
 
     <!-- Color of graphics drawn on box. -->
-    <WLBoxColor>00ff00</WLBoxColor>
+    <!-- <WLBoxColor>00ff00</WLBoxColor> deprecated.  Hard-coded to green. -->
 
     <!-- Color of graphics drawn on box whose position has been corrected for tongue and groove and collimator leaf ends. -->
     <WLBoxColorCorrected>d0d0d0</WLBoxColorCorrected>

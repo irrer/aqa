@@ -11,7 +11,7 @@ import java.awt.RenderingHints
 class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
 
   /**
-    * Translate a source image coordinate into a the coordinate system used to draw graphics.
+    * Translate a source image coordinate into the coordinate system used to draw graphics.
     * Add the 0.5 to get to the center of the displayed pixel.
     */
   private def coordinate(x: Double): Int = {
@@ -88,7 +88,7 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
     badPixelList.foreach(b => highlightWLBadPixel(b))
   }
 
-  def saveFineLocatedImage(aoi: IndexedSeq[IndexedSeq[Float]], xPosn: SearchRange, yPosn: SearchRange): BufferedImage = {
+  def saveFineLocatedImage(aoi: IndexedSeq[IndexedSeq[Float]], xPosition: SearchRange, yPosition: SearchRange): BufferedImage = {
     val rSpline = toCubicSpline(unitize(rowSum(aoi)).map(x => (x * .5).toFloat))
     val cSpline = toCubicSpline(unitize(colSum(aoi)).map(x => (x * .5).toFloat))
 
@@ -111,17 +111,17 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
     val graphics = png.getGraphics.asInstanceOf[Graphics2D]
     graphics.setColor(Config.WLBallColor)
 
-    drawCross(graphics, xPosn.center, yPosn.center, 20)
+    drawCross(graphics, xPosition.center, yPosition.center, 20)
 
-    drawCircles(graphics, xPosn.center, yPosn.center)
-
-    graphics.setColor(Config.WLSplineColor)
-    graphics.drawLine(coordinate(xPosn.lo), 0, coordinate(xPosn.lo), coordinate(height))
-    graphics.drawLine(coordinate(xPosn.hi), 0, coordinate(xPosn.hi), coordinate(height))
+    drawCircles(graphics, xPosition.center, yPosition.center)
 
     graphics.setColor(Config.WLSplineColor)
-    graphics.drawLine(0, coordinate(yPosn.lo), coordinate(width), coordinate(yPosn.lo))
-    graphics.drawLine(0, coordinate(yPosn.hi), coordinate(width), coordinate(yPosn.hi))
+    graphics.drawLine(coordinate(xPosition.lo), 0, coordinate(xPosition.lo), coordinate(height))
+    graphics.drawLine(coordinate(xPosition.hi), 0, coordinate(xPosition.hi), coordinate(height))
+
+    graphics.setColor(Config.WLSplineColor)
+    graphics.drawLine(0, coordinate(yPosition.lo), coordinate(width), coordinate(yPosition.lo))
+    graphics.drawLine(0, coordinate(yPosition.hi), coordinate(width), coordinate(yPosition.hi))
 
     png
   }
@@ -140,59 +140,15 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
   /**
     * Draw the lines that show where the box has been located.
     */
-  def drawBoxGraphics(graphics: Graphics2D, top: Double, bottom: Double, left: Double, right: Double, color: Color, inside: Double, outside: Double): Unit = {
-    graphics.setColor(color)
+  def drawBoxGraphics(graphics: Graphics2D, top: Double, bottom: Double, left: Double, right: Double): Unit = {
+    graphics.setColor(Color.green)
     graphics.drawLine(coordinate(left), coordinate(top), coordinate(left), coordinate(bottom)) // vertical line left
     graphics.drawLine(coordinate(right), coordinate(top), coordinate(right), coordinate(bottom)) // vertical line right
     graphics.drawLine(coordinate(left), coordinate(top), coordinate(right), coordinate(top)) // horizontal line top
     graphics.drawLine(coordinate(left), coordinate(bottom), coordinate(right), coordinate(bottom)) // horizontal line bottom
 
-    // draw outer box
-    {
-      val m = (top - bottom) / (left - right)
-      val b = top - (left * m)
-      val x1 = left - outside
-      val y1 = (m * x1) + b
-
-      if (inside >= 0) {
-        val x2 = left + inside
-        val y2 = (m * x2) + b
-        graphics.drawLine(coordinate(x1), coordinate(y1), coordinate(x2), coordinate(y2))
-
-        val x3 = right - inside
-        val y3 = m * x3 + b
-        val x4 = right + outside
-        val y4 = m * x4 + b
-        graphics.drawLine(coordinate(x3), coordinate(y3), coordinate(x4), coordinate(y4))
-      } else {
-        val x2 = right
-        val y2 = bottom
-        graphics.drawLine(coordinate(x1), coordinate(y1), coordinate(x2), coordinate(y2))
-      }
-    }
-
-    // draw inner box
-    {
-      val m = (top - bottom) / (right - left)
-      val b = top - (right * m)
-      val x1 = right + outside
-      val y1 = (m * x1) + b
-      if (inside >= 0) {
-        val x2 = right - inside
-        val y2 = (m * x2) + b
-        graphics.drawLine(coordinate(x1), coordinate(y1), coordinate(x2), coordinate(y2))
-
-        val x3 = left - outside
-        val y3 = m * x3 + b
-        val x4 = left + inside
-        val y4 = m * x4 + b
-        graphics.drawLine(coordinate(x3), coordinate(y3), coordinate(x4), coordinate(y4))
-      } else {
-        val x2 = left
-        val y2 = bottom
-        graphics.drawLine(coordinate(x1), coordinate(y1), coordinate(x2), coordinate(y2))
-      }
-    }
+    graphics.drawLine(coordinate(left), coordinate(top), coordinate(right), coordinate(bottom)) // diagonal left-top to right-bottom
+    graphics.drawLine(coordinate(right), coordinate(top), coordinate(left), coordinate(bottom)) // diagonal right-top to left-bottom
   }
 
   /**
@@ -208,7 +164,7 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
       imageName: String,
       passLimit_mm: Double
   ): WLImageStatus.Value = {
-    def fmt(d: Double) = d.formatted("%6.2f").replaceAll(" ", "")
+    def fmt(d: Double): String = "%6.2f".format(d).trim
 
     graphics.setColor(Config.WLTextColor)
 
@@ -220,9 +176,9 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
     val text1 = "Offset in mm:    X = " + fmt(errorScaledX) + spacer + " Y = " + fmt(errorScaledY) + spacer
     val frc = GraphicFont.getFontRenderContext
     val stringRectangle1 = font.getStringBounds(text1, frc)
-    val xPosn1 = (png.getWidth - stringRectangle1.getWidth) / 2
-    val yPosn1 = stringRectangle1.getHeight
-    graphics.drawString(text1, xPosn1.toInt, yPosn1.toInt)
+    val xPosition1 = (png.getWidth - stringRectangle1.getWidth) / 2
+    val yPosition1 = stringRectangle1.getHeight
+    graphics.drawString(text1, xPosition1.toInt, yPosition1.toInt)
 
     val combinedXY = "R = " + fmt(errorScaledXYCombined)
     val passed = if (errorScaledXYCombined <= passLimit_mm) WLImageStatus.Passed else WLImageStatus.OffsetLimitExceeded
@@ -234,21 +190,21 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
     graphics.setBackground(statusColor)
     val text2 = combinedXY + spacer + statusText
     val stringRectangle2 = font.getStringBounds(text2, frc)
-    val xPosn2 = (png.getWidth - font.getStringBounds(text2, frc).getWidth) / 2
-    val yPosn2 = stringRectangle1.getHeight + stringRectangle2.getHeight
+    val xPosition2 = (png.getWidth - font.getStringBounds(text2, frc).getWidth) / 2
+    val yPosition2 = stringRectangle1.getHeight + stringRectangle2.getHeight
     val stringRectangleStatus = font.getStringBounds(statusText, frc)
 
     val statusWidth = stringRectangleStatus.getWidth.toInt
     val statusHeight = graphics.getFontMetrics.getMaxAscent
-    val statusX = (xPosn2 + stringRectangle2.getWidth - stringRectangleStatus.getWidth).toInt
-    val statusY = yPosn2 - stringRectangleStatus.getHeight + ((graphics.getFontMetrics.getHeight - graphics.getFontMetrics.getAscent) * 1.5 - 1)
+    val statusX = (xPosition2 + stringRectangle2.getWidth - stringRectangleStatus.getWidth).toInt
+    val statusY = yPosition2 - stringRectangleStatus.getHeight + ((graphics.getFontMetrics.getHeight - graphics.getFontMetrics.getAscent) * 1.5 - 1)
     if (background) graphics.clearRect(statusX, statusY.toInt, statusWidth, statusHeight)
-    graphics.drawString(text2, xPosn2.toInt, yPosn2.toInt)
+    graphics.drawString(text2, xPosition2.toInt, yPosition2.toInt)
 
     val stringRectangle3 = font.getStringBounds(imageName, frc)
-    val xPosn3 = (png.getWidth - stringRectangle3.getWidth) / 2
-    val yPosn3 = png.getHeight - stringRectangle3.getHeight
-    graphics.drawString(imageName, xPosn3.toInt, yPosn3.toInt)
+    val xPosition3 = (png.getWidth - stringRectangle3.getWidth) / 2
+    val yPosition3 = png.getHeight - stringRectangle3.getHeight
+    graphics.drawString(imageName, xPosition3.toInt, yPosition3.toInt)
 
     passed
   }

@@ -117,48 +117,13 @@ case class WLMakeImages(
     annotate.highlightWLBadPixelList(badPixelList, brightGraphics)
     annotate.highlightWLBadPixelList(badPixelList, blackGraphics)
 
-    val bin = 6
-    val bout = 6
-
     def annotateBox(gc: Graphics2D): Unit = {
-      annotate.drawBoxGraphics(gc, edgeSet.unTop, edgeSet.unBottom, edgeSet.unLeft, edgeSet.unRight, Config.WLBoxColor, inside = bin, outside = bout)
+      annotate.drawBoxGraphics(gc, edgeSet.unTop, edgeSet.unBottom, edgeSet.unLeft, edgeSet.unRight)
     }
 
     annotateBox(normalGraphics)
     annotateBox(brightGraphics)
     annotateBox(blackGraphics)
-
-    val boxShrink = 5
-    annotate.drawBoxGraphics(
-      normalGraphics,
-      edgeSet.unTop + boxShrink,
-      edgeSet.unBottom - boxShrink,
-      edgeSet.unLeft + boxShrink,
-      edgeSet.unRight - boxShrink,
-      Config.WLBoxColorCorrected,
-      inside = -1,
-      outside = 0
-    )
-    annotate.drawBoxGraphics(
-      brightGraphics,
-      edgeSet.unTop + boxShrink,
-      edgeSet.unBottom - boxShrink,
-      edgeSet.unLeft + boxShrink,
-      edgeSet.unRight - boxShrink,
-      Config.WLBoxColorCorrected,
-      inside = -1,
-      outside = 0
-    )
-    annotate.drawBoxGraphics(
-      blackGraphics,
-      edgeSet.unTop + boxShrink,
-      edgeSet.unBottom - boxShrink,
-      edgeSet.unLeft + boxShrink,
-      edgeSet.unRight - boxShrink,
-      Config.WLBoxColorCorrected,
-      inside = -1,
-      outside = 0
-    )
 
     annotate.drawBoxBallOffset(normalGraphics, (ballCenterX, ballCenterY), ((edgeSet.unLeft + edgeSet.unRight) / 2, (edgeSet.unTop + edgeSet.unBottom) / 2))
     annotate.drawBoxBallOffset(brightGraphics, (ballCenterX, ballCenterY), ((edgeSet.unLeft + edgeSet.unRight) / 2, (edgeSet.unTop + edgeSet.unBottom) / 2))
