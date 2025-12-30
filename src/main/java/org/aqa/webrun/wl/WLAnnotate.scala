@@ -42,7 +42,7 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
   }
 
   private def drawCircles(graphics: Graphics2D, x: Double, y: Double): Unit = {
-    graphics.setColor(Config.WLBallColor)
+    graphics.setColor(Color.yellow)
     val NUM_CIRCLE = Config.WLNumberOfCircles
 
     def graphicDistance(d: Double): Int = (d * SCALE + .5).toInt
@@ -109,7 +109,7 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
     }
 
     val graphics = png.getGraphics.asInstanceOf[Graphics2D]
-    graphics.setColor(Config.WLBallColor)
+    graphics.setColor(Color.yellow)
 
     drawCross(graphics, xPosition.center, yPosition.center, 20)
 
@@ -131,7 +131,7 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
     * Draw outline of ball and diagonal cross-hairs at center of ball
     */
   def drawBallGraphics(graphics: Graphics2D, ballCenterX: Double, ballCenterY: Double): Unit = {
-    graphics.setColor(Config.WLBallColor)
+    graphics.setColor(Color.yellow)
 
     drawCircles(graphics, ballCenterX, ballCenterY)
     drawCross(graphics, ballCenterX, ballCenterY, BALL_RADIUS)

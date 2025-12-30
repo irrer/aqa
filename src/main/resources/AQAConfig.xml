@@ -1228,7 +1228,7 @@ Note that when building a package for release, the Maven build process uses the 
     <WLBoxColorCorrected>d0d0d0</WLBoxColorCorrected>
 
     <!-- Color of graphics drawn on ball. -->
-    <WLBallColor>ffff00</WLBallColor>
+    <!-- <WLBallColor>ffff00</WLBallColor>  deprecated.  Hard coded to yellow. -->
 
     <!-- Color of graphics drawn to show offset between centers. -->
     <WLOffsetColor>ff0000</WLOffsetColor>

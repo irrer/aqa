@@ -1003,7 +1003,7 @@ object Config extends Logging {
   // val WLBoxColor: Color = toColor(logMainText("WLBoxColor", "00ff00")) // deprecated.  hard-coded to green
   val WLBoxColorCorrected: Color = toColor(logMainText("WLBoxColorCorrected", "d0d0d0"))
   //noinspection SpellCheckingInspection
-  val WLBallColor: Color = toColor(logMainText("WLBallColor", "ffff00"))
+  // val WLBallColor: Color = toColor(logMainText("WLBallColor", "ffff00")) // deprecated.  hard-coded to yellow
   val WLOffsetColor: Color = toColor(logMainText("WLOffsetColor", "ff0000"))
   //noinspection SpellCheckingInspection
   val WLSplineColor: Color = toColor(logMainText("WLSplineColor", "ffff00"))
