@@ -22,6 +22,7 @@ import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 
 import java.awt.geom.Point2D
+import javax.vecmath.Point2d
 
 /**
   * Utilities for rotating points to match collimator rotation.
@@ -69,4 +70,33 @@ case class WLRotator(rtimage: AttributeList) {
 
     new Point2D.Double(xFinal, yFinal)
   }
+}
+
+object WLRotator {
+
+  /**
+   * Rotate the given point around the given center by the given angle.
+   *
+   * @param point The point to rotate
+   * @param center The center to rotate around
+   * @param degrees Angle in degrees
+   * @return The rotated point.
+   */
+  def rotatePoint(point: Point2d, center: Point2d, degrees: Double): Point2d = {
+    val radians = Math.toRadians(degrees) // Convert angle to radians
+    // offest by center
+    val dx = point.getX - center.getX
+    val dy = point.getY - center.getY
+
+    // Perform rotation
+    val rotatedX = dx * Math.cos(radians) - dy * Math.sin(radians)
+    val rotatedY = dx * Math.sin(radians) + dy * Math.cos(radians)
+
+    // Translate back
+    val finalX = rotatedX + center.getX
+    val finalY = rotatedY + center.getY
+
+    new Point2d(finalX, finalY)
+  }
+
 }

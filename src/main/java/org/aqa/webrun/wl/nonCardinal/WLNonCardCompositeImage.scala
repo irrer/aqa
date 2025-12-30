@@ -1,6 +1,5 @@
 package org.aqa.webrun.wl.nonCardinal
 
-import edu.umro.ImageUtil.ImageDisplay
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.ScaledImage
 import org.aqa.webrun.wl.WLImageUtil
@@ -86,7 +85,7 @@ object WLNonCardCompositeImage {
     val si = ScaledImage(scale, rect.x, rect.y)
 
     val gc = ImageUtil.getGraphics(bufImg)
-    gc.setColor(Color.white)
+    gc.setColor(Color.green)
 
     si.drawLine(gc, edgeSet.x1y1, edgeSet.x1y2)
     si.drawLine(gc, edgeSet.x1y1, edgeSet.x2y1)
@@ -96,6 +95,13 @@ object WLNonCardCompositeImage {
     si.drawLine(gc, edgeSet.x2y1, edgeSet.x2y2)
   }
 
+  /**
+    * Draw circles centered around the center of the ball, and lines that intersect at the center.  Rotate
+    * the lines by the collimator angle so that they don't coincide with the edge lines.
+    * @param bufImg Draw on this image
+    * @param nonCard Data
+    * @param scale Magnify the image by this factor.
+    */
   private def drawBallLines(bufImg: BufferedImage, nonCard: WLNonCardAnalysis, scale: Int): Unit = {
 
     val outerRadius_pix: Int = nonCard.trans.iso2PixDistX(nonCard.machineWL.ballDiameter_mm).round.toInt
@@ -104,12 +110,36 @@ object WLNonCardCompositeImage {
     val ballCenter_pix = nonCard.nonCardBall.center_pix
 
     val gc = ImageUtil.getGraphics(bufImg)
-    gc.setColor(Color.white)
+    gc.setColor(Color.yellow)
     val rect = makeBoundingRectangle(nonCard)
     val si = ScaledImage(scale, rect.x, rect.y)
 
-    si.drawLine(gc, new Point2d(ballCenter_pix.x - outerRadius_pix, ballCenter_pix.y), new Point2d(ballCenter_pix.x + outerRadius_pix, ballCenter_pix.y))
-    si.drawLine(gc, new Point2d(ballCenter_pix.x, ballCenter_pix.y - outerRadius_pix), new Point2d(ballCenter_pix.x, ballCenter_pix.y + outerRadius_pix))
+    val angle = nonCard.collimator_deg
+    val center = nonCard.nonCardBall.center_pix
+
+    {
+      val x1 = ballCenter_pix.x - outerRadius_pix
+      val y1 = ballCenter_pix.y
+      val x2 = ballCenter_pix.x + outerRadius_pix
+      val y2 = ballCenter_pix.y
+
+      val point1 = WLRotator.rotatePoint(new Point2d(x1, y1), center, angle)
+      val point2 = WLRotator.rotatePoint(new Point2d(x2, y2), center, angle)
+
+      si.drawLine(gc, point1, point2)
+    }
+
+    {
+      val x1 = ballCenter_pix.x
+      val y1 = ballCenter_pix.y - outerRadius_pix
+      val x2 = ballCenter_pix.x
+      val y2 = ballCenter_pix.y + outerRadius_pix
+
+      val point1 = WLRotator.rotatePoint(new Point2d(x1, y1), center, angle)
+      val point2 = WLRotator.rotatePoint(new Point2d(x2, y2), center, angle)
+
+      si.drawLine(gc, point1, point2)
+    }
 
     def makeCircle(radius: Double): Unit = {
       val x = ballCenter_pix.x - radius
@@ -121,7 +151,6 @@ object WLNonCardCompositeImage {
     }
 
     makeCircle(innerRadius_pix)
-    gc.setColor(Color.yellow)
     makeCircle(outerRadius_pix)
 
     gc.setColor(Color.red)
@@ -138,10 +167,6 @@ object WLNonCardCompositeImage {
     drawEdgeLines(bufImg, nonCard, scale)
 
     drawBallLines(bufImg, nonCard, scale)
-
-    if (false) { // TODO rm
-      ImageDisplay.showInMSPaint(bufImg)
-    }
 
     bufImg
   }
