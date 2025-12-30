@@ -2,6 +2,7 @@ package org.aqa.webrun.wl.nonCardinal
 
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.ScaledImage
+import org.aqa.webrun.wl.WLAnnotate
 import org.aqa.webrun.wl.WLImageUtil
 import org.aqa.webrun.wl.WLPreprocessImage
 
@@ -158,6 +159,11 @@ object WLNonCardCompositeImage {
     si.drawLine(gc, ballCenter_pix, nonCard.nonCardEdge.edgeSet.center_pix)
   }
 
+  /**
+   * Make a closeup image showing the centers of the edges and the ball.
+   * @param nonCard Data driving image.
+   * @return An annotated image.
+   */
   def makeCompositeImage(nonCard: WLNonCardAnalysis): BufferedImage = {
 
     val scale = WLImageUtil.calculateCloseupScale(nonCard.al)
@@ -167,6 +173,19 @@ object WLNonCardCompositeImage {
     drawEdgeLines(bufImg, nonCard, scale)
 
     drawBallLines(bufImg, nonCard, scale)
+
+    val annotate = new WLAnnotate(scale, 5)
+
+    annotate.annotateImage( //
+      png = bufImg,
+      graphics = ImageUtil.getGraphics(bufImg),
+      errorScaledX = nonCard.offsetX_mm,
+      errorScaledY = nonCard.offsetY_mm,
+      errorScaledXYCombined = nonCard.offsetXY_mm,
+      background = true,
+      imageName = nonCard.imageName,
+      passLimit_mm = nonCard.machineWL.passLimit_mm
+    )
 
     bufImg
   }
