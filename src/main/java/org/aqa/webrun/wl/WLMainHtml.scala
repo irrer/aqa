@@ -8,6 +8,7 @@ import org.aqa.db.MachineWL
 import org.aqa.web.C3ChartHistory
 import org.aqa.web.WebUtil
 import org.aqa.Util
+import org.aqa.web.C3Chart
 
 import java.awt.Color
 import java.io.File
@@ -153,7 +154,8 @@ object WLMainHtml extends Logging {
           case WLgenHtml.ORIGINAL_FILE_NAME => "Entire Image"
           case _ => "Image"
         }
-        val id: String = ir.subDir.getName
+
+        val id: String = C3Chart.makeUniqueChartIdTag
         val url = ir.getDirectory.getName + "/" + name
         val script = s"""$$(document).ready(function(){ $$('#$id').zoom(); });""".replaceAllLiterally("\"", WebUtil.singleQuote)
 
