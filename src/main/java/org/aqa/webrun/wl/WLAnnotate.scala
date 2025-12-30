@@ -198,7 +198,7 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
     val statusHeight = graphics.getFontMetrics.getMaxAscent
     val statusX = (xPosition2 + stringRectangle2.getWidth - stringRectangleStatus.getWidth).toInt
     val statusY = yPosition2 - stringRectangleStatus.getHeight + ((graphics.getFontMetrics.getHeight - graphics.getFontMetrics.getAscent) * 1.5 - 1)
-    if (background) graphics.clearRect(statusX, statusY.toInt, statusWidth, statusHeight)
+    if (background) graphics.clearRect(statusX-5, statusY.toInt, statusWidth + 10, statusHeight)
     graphics.drawString(text2, xPosition2.toInt, yPosition2.toInt)
 
     val stringRectangle3 = font.getStringBounds(imageName, frc)
