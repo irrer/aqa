@@ -2,6 +2,7 @@ package org.aqa.webrun.wl
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.Config
 import org.aqa.Util
 
@@ -105,4 +106,14 @@ object WLImageUtil {
 
     ok
   }
+
+  def calculateCloseupScale(rtimage: AttributeList): Int = {
+    val trans = new IsoImagePlaneTranslator(rtimage)
+    val ResolutionX = trans.pix2IsoDistX(1)
+    val ResolutionY = trans.pix2IsoDistY(1)
+    val scale: Int = ((Config.WLScale / 0.526) * ((ResolutionX + ResolutionY) / 2.0)).round.toInt
+    scale
+
+  }
+
 }

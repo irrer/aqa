@@ -1,10 +1,10 @@
 package org.aqa.webrun.wl.nonCardinal
 
-import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageDisplay
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.ScaledImage
-import org.aqa.Config
+import org.aqa.webrun.wl.WLImageUtil
+import org.aqa.webrun.wl.WLPreprocessImage
 
 import java.awt.image.BufferedImage
 import java.awt.Color
@@ -15,10 +15,12 @@ object WLNonCardCompositeImage {
 
   private def d2i(d: Double): Int = d.round.toInt
 
+  /*
   private def scale: Int = {
     Config.WLScale
     7
   }
+   */
 
   private def makeBoundingRectangle(nonCard: WLNonCardAnalysis): Rectangle = {
 
@@ -44,38 +46,25 @@ object WLNonCardCompositeImage {
 
   /**
     * Make a zoomed image containing only the area of interest.
-    * @param nonCard Ressults of analysis.
+    * @param nonCard Results of analysis.
     * @return Zoomed AOI.
     */
-  private def makeInitialBufImage(nonCard: WLNonCardAnalysis): BufferedImage = {
+  private def makeInitialBufImage(nonCard: WLNonCardAnalysis, scale: Int): BufferedImage = {
 
     // convert to image
-    val dicomImage = new DicomImage(nonCard.al)
-
-    val sorted = dicomImage.pixelData.flatten.sorted
-
-    val di2 = {
-      val min = sorted.slice(5, 15).sum / 10
-      val max = sorted.dropRight(5).takeRight(10).sum / 10
-      dicomImage.fun1(p => ((max - p) + min).round)
-    }
+    val preprocessedImage = WLPreprocessImage(nonCard.al, None).preprocessedImage //  new DicomImage(nonCard.al)
 
     val maxPix = {
       val centerX = nonCard.nonCardBall.center_pix.getX.round.toInt
       val centerY = nonCard.nonCardBall.center_pix.getY.round.toInt
       val range = -2 until 3
-      val list = for (x <- range; y <- range) yield di2.get(x + centerX, y + centerY)
+      val list = for (x <- range; y <- range) yield preprocessedImage.get(x + centerX, y + centerY)
       list.sum / list.size
     }
-    val minPix = di2.pixelData.flatten.sorted.slice(5, 15).sum / 10
+    val minPix = preprocessedImage.pixelData.flatten.sorted.slice(5, 15).sum / 10
 
     // convert to buffered image, using the central part of the ball as the brightest pixels.
-    val img1 = di2.toBufferedImage(ImageUtil.rgbColorMap(Color.blue), minPix, maxPix)
-
-    if (false) { // TODO rm
-      edu.umro.ScalaUtil.Util.showTextInGVim(di2.pixelsToText)
-      ImageDisplay.showInMSPaint(img1)
-    }
+    val img1 = preprocessedImage.toBufferedImage(ImageUtil.rgbColorMap(Color.blue), minPix, maxPix)
 
     // restrict the image to the AOI
     val img2 = ImageUtil.subImage(img1, makeBoundingRectangle(nonCard))
@@ -90,7 +79,7 @@ object WLNonCardCompositeImage {
     * @param bufImg Write on this image.
     * @param nonCard The data.
     */
-  private def drawEdgeLines(bufImg: BufferedImage, nonCard: WLNonCardAnalysis): Unit = {
+  private def drawEdgeLines(bufImg: BufferedImage, nonCard: WLNonCardAnalysis, scale: Int): Unit = {
 
     val edgeSet = nonCard.nonCardEdge.edgeSet
     val rect = makeBoundingRectangle(nonCard)
@@ -107,11 +96,10 @@ object WLNonCardCompositeImage {
     si.drawLine(gc, edgeSet.x2y1, edgeSet.x2y2)
   }
 
-  private def drawBallLines(bufImg: BufferedImage, nonCard: WLNonCardAnalysis): Unit = {
-    val innerRadius_mm = 2.5
-    val outerRadius_mm = innerRadius_mm * 2
-    val innerRadius_pix = nonCard.trans.iso2PixDistX(innerRadius_mm)
-    val outerRadius_pix = nonCard.trans.iso2PixDistX(outerRadius_mm)
+  private def drawBallLines(bufImg: BufferedImage, nonCard: WLNonCardAnalysis, scale: Int): Unit = {
+
+    val outerRadius_pix: Int = nonCard.trans.iso2PixDistX(nonCard.machineWL.ballDiameter_mm).round.toInt
+    val innerRadius_pix = outerRadius_pix / 2
 
     val ballCenter_pix = nonCard.nonCardBall.center_pix
 
@@ -143,11 +131,13 @@ object WLNonCardCompositeImage {
 
   def makeCompositeImage(nonCard: WLNonCardAnalysis): BufferedImage = {
 
-    val bufImg = makeInitialBufImage(nonCard)
+    val scale = WLImageUtil.calculateCloseupScale(nonCard.al)
 
-    drawEdgeLines(bufImg, nonCard)
+    val bufImg = makeInitialBufImage(nonCard, scale)
 
-    drawBallLines(bufImg, nonCard)
+    drawEdgeLines(bufImg, nonCard, scale)
+
+    drawBallLines(bufImg, nonCard, scale)
 
     if (false) { // TODO rm
       ImageDisplay.showInMSPaint(bufImg)

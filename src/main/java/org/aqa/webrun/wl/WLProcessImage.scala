@@ -125,7 +125,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
   }
 
   /** Scaling for drawing images. */
-  private val SCALE: Int = ((Config.WLScale / 0.526) * ((ResolutionX + ResolutionY) / 2.0)).round.toInt
+  private val SCALE: Int = WLImageUtil.calculateCloseupScale(rtimage)
 
   private def toPng(pix: IndexedSeq[IndexedSeq[Float]]): BufferedImage = toPngScaled(pix, SCALE)
 

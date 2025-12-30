@@ -38,8 +38,10 @@ case class WLMessage(runReq: WLRunReq, rtimage: AttributeList) extends Logging {
     put("ERROR", text)
   }
 
+  override def toString: String = textBuffer.toString
+
   def save(dir: File): Unit = {
-    Util.writeFile(new File(dir, DIAGNOSTICS_TEXT_FILE_NAME), textBuffer.toString)
+    Util.writeFile(new File(dir, DIAGNOSTICS_TEXT_FILE_NAME), this.toString)
   }
 
 }

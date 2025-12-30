@@ -104,7 +104,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
 
     // Perform processing in parallel for speed
     val resultList =
-      if (true) // TODO remove when ready to go parallel
+      if (false) // TODO remove when ready to go parallel
         (cardinalFunctionList ++ nonCardinalFunctionList).map(f => f()).toList.sortBy(_.subDir.getName)
       else
         (cardinalFunctionList ++ nonCardinalFunctionList).par.map(f => f()).toList.sortBy(_.subDir.getName) // TODO put back

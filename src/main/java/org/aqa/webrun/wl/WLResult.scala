@@ -35,12 +35,19 @@ abstract class WLResult(extendedData: ExtendedData, runReq: WLRunReq) {
   val gantry_deg: Double = Util.gantryAngle(attrList)
   val collimator_deg: Double = Util.collimatorAngle(attrList)
 
-  val gantryRounded_deg: Int = Util.angleRoundedTo90(gantry_deg)
-  val collimatorRounded_deg: Int = collimator_deg.round.toInt
+  val gantryRounded_deg: Int = Util.angleRoundedTo1(gantry_deg)
+  val collimatorRounded_deg: Double = {
+    Util.angleRoundedToTenthExceptCardinal(collimator_deg)
+  }
   val tableAngle_deg: Double = attrList.get(TagByName.PatientSupportAngle).getDoubleValues.head
 
   val gantryRounded_txt: String = "G" + "%03d".format(gantryRounded_deg)
-  val collimatorRounded_txt: String = "C" + "%03d".format(collimatorRounded_deg)
+  val collimatorRounded_txt: String = "C" + {
+    if (collimatorRounded_deg == collimatorRounded_deg.round)
+      "%03d".format(collimatorRounded_deg.round)
+    else
+      "%05.1f".format(collimatorRounded_deg)
+  }
 
   def imageName: String = gantryRounded_txt + " " + collimatorRounded_txt + " " + elapsedTime_txt
 

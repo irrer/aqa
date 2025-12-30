@@ -118,18 +118,18 @@ object Util extends Logging {
   }
 
   /**
-    * Global lock for synchronizing all file writes so that only one write is being done at
-    * a time (as opposed to being done in parallel).
-    */
+   * Global lock for synchronizing all file writes so that only one write is being done at
+   * a time (as opposed to being done in parallel).
+   */
   private val fileSystemWriteSync = "sync"
 
   /**
-    * Delete the given file, retrying if necessary.  Also check to make sure that delete was successful.
-    *
-    * If it can not be deleted within 2 seconds, then give up and log an error.
-    *
-    * @param file File to delete.
-    */
+   * Delete the given file, retrying if necessary.  Also check to make sure that delete was successful.
+   *
+   * If it can not be deleted within 2 seconds, then give up and log an error.
+   *
+   * @param file File to delete.
+   */
   private def deleteFile(file: File): Unit = {
     val timeout = System.currentTimeMillis() + 2000
 
@@ -164,12 +164,12 @@ object Util extends Logging {
   def writeFile(file: File, text: String): Unit = writeBinaryFile(file, text.getBytes)
 
   /**
-    * Write the given attribute list to the given file, wrapping it in a synchronized to
-    * prevent file write operations being doing in parallel from colliding.
-    *
-    * @param attributeList DICOM to be written.
-    * @param file          Destination file.  If the file already exists it will first be deleted.
-    */
+   * Write the given attribute list to the given file, wrapping it in a synchronized to
+   * prevent file write operations being doing in parallel from colliding.
+   *
+   * @param attributeList DICOM to be written.
+   * @param file          Destination file.  If the file already exists it will first be deleted.
+   */
   def writeAttributeListToFile(attributeList: AttributeList, file: File, sourceApplication: String = "AQA"): Unit = {
     fileSystemWriteSync.synchronized({
       deleteFile(file)
@@ -178,12 +178,12 @@ object Util extends Logging {
   }
 
   /**
-    * Wrapper for <code>File.mkdirs</code> (which makes a directory and all of
-    * the necessary parent directories) that is thread safe.
-    *
-    * @param dir Make this directory if it does not already exist.
-    * @return True if the directory was created.
-    */
+   * Wrapper for <code>File.mkdirs</code> (which makes a directory and all of
+   * the necessary parent directories) that is thread safe.
+   *
+   * @param dir Make this directory if it does not already exist.
+   * @return True if the directory was created.
+   */
   def mkdirs(dir: File): Boolean = fileSystemWriteSync.synchronized(dir.mkdirs())
 
   def readBinaryFile(file: File): Either[Throwable, Array[Byte]] = {
@@ -205,8 +205,8 @@ object Util extends Logging {
   }
 
   /**
-    * Read a DICOM file.
-    */
+   * Read a DICOM file.
+   */
   def readDicomFile(file: File): Either[Throwable, AttributeList] = {
     try {
       val al = new AttributeList
@@ -246,40 +246,40 @@ object Util extends Logging {
   }
 
   /**
-    * Get the SOPInstanceUID of an attribute list.
-    */
+   * Get the SOPInstanceUID of an attribute list.
+   */
   def sopOfAl(al: AttributeList): String = {
     val at = al.get(TagByName.SOPInstanceUID)
     if (at == null) "" else al.get(TagByName.SOPInstanceUID).getSingleStringValueOrEmptyString
   }
 
   /**
-    * Get the SeriesInstanceUID of an attribute list.
-    */
+   * Get the SeriesInstanceUID of an attribute list.
+   */
   def serInstOfAl(al: AttributeList): String = {
     val at = al.get(TagByName.SeriesInstanceUID)
     if (at == null) "" else al.get(TagByName.SeriesInstanceUID).getSingleStringValueOrEmptyString
   }
 
   /**
-    * Get the StudyInstanceUID of an attribute list.
-    */
+   * Get the StudyInstanceUID of an attribute list.
+   */
   def studyInstOfAl(al: AttributeList): String = {
     val at = al.get(TagByName.StudyInstanceUID)
     if (at == null) "" else al.get(TagByName.StudyInstanceUID).getSingleStringValueOrEmptyString
   }
 
   /**
-    * Get the PatientID of an attribute list.
-    */
+   * Get the PatientID of an attribute list.
+   */
   def patientIdOfAl(al: AttributeList): String = {
     val at = al.get(TagByName.PatientID)
     if (at == null) "" else al.get(TagByName.PatientID).getSingleStringValueOrEmptyString
   }
 
   /**
-    * Get the Modality of an attribute list.
-    */
+   * Get the Modality of an attribute list.
+   */
   def modalityOfAl(al: AttributeList): String = {
     val at = al.get(TagByName.Modality)
     if (at == null) "" else al.get(TagByName.Modality).getSingleStringValueOrEmptyString
@@ -317,8 +317,8 @@ object Util extends Logging {
   }
 
   /**
-    * Get dates and patient ID from attribute list.
-    */
+   * Get dates and patient ID from attribute list.
+   */
   def extractDateTimeAndPatientIdFromDicomAl(attributeList: AttributeList): (Seq[Date], Option[String]) = {
 
     val PatientID = getAttrValue(attributeList, TagByName.PatientID)
@@ -341,8 +341,8 @@ object Util extends Logging {
   }
 
   /**
-    * Sort a list attribute lists in ascending order by date-time.
-    */
+   * Sort a list attribute lists in ascending order by date-time.
+   */
   def sortByDateTime(alList: Seq[AttributeList]): Seq[AttributeList] = {
 
     def compareTo(a: AttributeList, b: AttributeList): Boolean = {
@@ -355,8 +355,8 @@ object Util extends Logging {
   }
 
   /**
-    * Get the date and time for building an Output.
-    */
+   * Get the date and time for building an Output.
+   */
   def getOutputDateTime(alList: Seq[AttributeList]): Option[Long] = {
     val dateTimeTags = Seq(
       (TagByName.AcquisitionDate, TagByName.AcquisitionTime),
@@ -375,8 +375,8 @@ object Util extends Logging {
   }
 
   /**
-    * Get the patient ID for building an Output.
-    */
+   * Get the patient ID for building an Output.
+   */
   def getOutputPatientId(al: AttributeList): Option[String] = {
     val at = al.get(TagByName.PatientID)
     if ((at != null) && (at.getSingleStringValueOrNull != null))
@@ -386,30 +386,30 @@ object Util extends Logging {
   }
 
   /**
-    * Given a DICOM date/time, adjust it by the local time zone amount.
-    */
+   * Given a DICOM date/time, adjust it by the local time zone amount.
+   */
   def adjustDicomDateByLocalTimeZone(date: Date): Date = {
     new Date(date.getTime - TimeZone.getDefault.getRawOffset)
   }
 
   /**
-    * Given a DICOM date/time, adjust it by the local time zone amount.
-    */
+   * Given a DICOM date/time, adjust it by the local time zone amount.
+   */
   def adjustDicomDateByLocalTimeZone(ms: Long): Long = {
     ms - TimeZone.getDefault.getRawOffset
   }
 
   /**
-    * Get the jar file that contains this class.
-    */
+   * Get the jar file that contains this class.
+   */
   lazy val thisJarFile: File = {
     val clss = this.getClass // Pick current jar.  For a different jar pick a class from that jar.
     new File(clss.getProtectionDomain.getCodeSource.getLocation.toURI)
   }
 
   /**
-    * Get a Long from a string if possible
-    */
+   * Get a Long from a string if possible
+   */
   def stringToLong(text: String): Option[Long] = {
     try {
       val l: Long = text.toLong
@@ -420,12 +420,12 @@ object Util extends Logging {
   }
 
   /**
-    * Get a Long from a string if possible
-    */
+   * Get a Long from a string if possible
+   */
   def stringToLong(text: Option[String]): Option[Long] = {
     text match {
       case Some(t) => stringToLong(t)
-      case _       => None
+      case _ => None
     }
   }
 
@@ -480,8 +480,8 @@ object Util extends Logging {
   }
 
   /**
-    * Safely get the list of files in a directory.
-    */
+   * Safely get the list of files in a directory.
+   */
   def listDirFiles(dir: File): Seq[File] = {
     val list =
       try {
@@ -506,18 +506,18 @@ object Util extends Logging {
   }
 
   /**
-    * Get the file name without the extension, as in:   foo.bar ==> foo
-    */
+   * Get the file name without the extension, as in:   foo.bar ==> foo
+   */
   def fileBaseName(file: File): String = {
     file.getName match {
       case name if name.contains('.') => name.substring(0, name.lastIndexOf('.'))
-      case name                       => name
+      case name => name
     }
   }
 
   /**
-    * Given the text for a single CVS cell, return the properly formatted text for CSV.
-    */
+   * Given the text for a single CVS cell, return the properly formatted text for CSV.
+   */
   def textToCsv(text: String): String = {
     if (text.contains('"') || text.contains(',')) {
       '"' + text.replaceAll("\"", "\"\"") + '"'
@@ -525,13 +525,13 @@ object Util extends Logging {
   }
 
   /**
-    * Given CSV content, convert it to a single dimensional array of text strings.
-    *
-    * If the CSV is incorrectly formatted, then this will throw an exception.
-    *
-    * @param csv CSV content.  May have multiple lines.
-    * @return Array o text strings ordered as they were in the input.
-    */
+   * Given CSV content, convert it to a single dimensional array of text strings.
+   *
+   * If the CSV is incorrectly formatted, then this will throw an exception.
+   *
+   * @param csv CSV content.  May have multiple lines.
+   * @return Array o text strings ordered as they were in the input.
+   */
   def csvToText(csv: String): Seq[String] =
     // Do this synchronized because it is not certain that the library is thread safe.
     CSVFormat.DEFAULT.synchronized {
@@ -544,20 +544,20 @@ object Util extends Logging {
     }
 
   /**
-    * Make a new file reference, putting the given file in the given directory.
-    */
+   * Make a new file reference, putting the given file in the given directory.
+   */
   def reDir(file: File, dir: File): File = {
     new File(dir, file.getName)
   }
 
   /**
-    * Remove the suffix from the given file name.  Examples:
-    *
-    * foo.TXT -> foo
-    * bar.    -> bar
-    * bar..   -> bar.
-    * goo.foo.roo -> goo.foo
-    */
+   * Remove the suffix from the given file name.  Examples:
+   *
+   * foo.TXT -> foo
+   * bar.    -> bar
+   * bar..   -> bar.
+   * goo.foo.roo -> goo.foo
+   */
   //noinspection RegExpRedundantEscape
   def removeFileNameSuffix(fileName: String): String = fileName.replaceAll("\\.[^\\.]*$", "")
 
@@ -566,13 +566,13 @@ object Util extends Logging {
   //  }
 
   /**
-    * Specified by 300A,00B8  RTBeamLimitingDeviceType.
-    */
+   * Specified by 300A,00B8  RTBeamLimitingDeviceType.
+   */
   val xOrientation: Seq[String] = Seq("X", "ASYMX", "MLCX", "MLCX1", "MLCX2")
 
   /**
-    * Specified by 300A,00B8  RTBeamLimitingDeviceType.
-    */
+   * Specified by 300A,00B8  RTBeamLimitingDeviceType.
+   */
   val yOrientation: Seq[String] = Seq("Y", "ASYMY", "MLCY")
 
   def specifiesX(devType: String): Boolean = xOrientation.contains(devType.toUpperCase)
@@ -580,12 +580,12 @@ object Util extends Logging {
   def specifiesY(devType: String): Boolean = yOrientation.contains(devType.toUpperCase)
 
   /**
-    * Write a PNG file in a thread safe way.
-    *
-    * First render the image into a byte array.  This can take time and is thread safe, so it does not
-    * need to be done in a synchronized way.  Then write the byte array to a file, which does need to
-    * be done in a synchronized way.
-    */
+   * Write a PNG file in a thread safe way.
+   *
+   * First render the image into a byte array.  This can take time and is thread safe, so it does not
+   * need to be done in a synchronized way.  Then write the byte array to a file, which does need to
+   * be done in a synchronized way.
+   */
   def writePng(im: RenderedImage, pngFile: File): Unit = {
     try {
       val baos = new ByteArrayOutputStream
@@ -599,65 +599,83 @@ object Util extends Logging {
   }
 
   /**
-    * Round the angle to the closest 90 degree angle.
-    *
-    * @param angleInDegrees Angle to round off.
-    */
+   * Round the angle to the closest 90 degree angle.
+   *
+   * @param angleInDegrees Angle to round off.
+   */
   def angleRoundedTo90(angleInDegrees: Double): Int = {
     ((((angleInDegrees % 360.0) + 360.0) / 90.0).round.toInt % 4) * 90
   }
 
   /**
-    * Round the angle to the closest 1 degree angle.
-    *
-    * @param angleInDegrees Angle to round off.
-    */
+   * Round the angle to the closest 1-degree angle.
+   *
+   * @param angleInDegrees Angle to round off.
+   */
   //noinspection ScalaWeakerAccess
   def angleRoundedTo1(angleInDegrees: Double): Int = {
     (angleInDegrees + 720).round.toInt % 360
   }
 
   /**
-    * Round the angle to the closest 2 degree angle.
-    *
-    * @param angleInDegrees Angle to round off.
-    */
+   * Round the angle to the closest 2-degree angle.
+   *
+   * @param angleInDegrees Angle to round off.
+   */
   //noinspection ScalaWeakerAccess
   def angleRoundedTo2(angleInDegrees: Double): Int = {
     (((angleInDegrees + 720) / 2).round.toInt * 2) % 360
   }
 
   /**
-    * Round the angle to the closest 2 degree angle.
-    *
-    * @param angleInDegrees Angle to round off.
-    */
+   * Round the angle to the closest 5-degree angle.
+   *
+   * @param angleInDegrees Angle to round off.
+   */
   //noinspection ScalaWeakerAccess
   def angleRoundedTo5(angleInDegrees: Double): Int = {
     (((angleInDegrees + 720) / 5).round.toInt * 5) % 360
   }
 
+
   /**
-    * Convert arbitrary angle in degrees to a number 360 < degrees >= 0
-    */
+   * Round the angle to the closest 0.1-degree angle, except for when it is within 1 degree of a
+   * cardinal angle, in which case return the value rounded to the nearest 90 degrees.
+   *
+   * @param angleInDegrees Angle to round off.
+   */
+  //noinspection ScalaWeakerAccess
+  def angleRoundedToTenthExceptCardinal(angleInDegrees: Double): Double = {
+    val r = angleRoundedTo90(angleInDegrees)
+    if (((r - angleInDegrees).abs < 1) || (angleInDegrees > 359))
+      r // angle is within 1 degree of cardinal
+    else {
+      val a = (((angleInDegrees + 720) / 0.1).round.toInt % 3600) * 0.1
+      a
+    }
+  }
+
+  /**
+   * Convert arbitrary angle in degrees to a number 360 < degrees >= 0
+   */
   def modulo360(degrees: Double): Double = {
     ((degrees % 360.0) + 360.0) % 360.0
   }
 
   /**
-    * Negate an angle
-    *
-    * @param angle around 0 degrees.  e.g. 10 degrees becomes 350, 0 becomes 0.
-    * @return Flipped angle.
-    */
+   * Negate an angle
+   *
+   * @param angle around 0 degrees.  e.g. 10 degrees becomes 350, 0 becomes 0.
+   * @return Flipped angle.
+   */
   def negateAngle(angle: Int): Int = {
     val a = (angle + 3600) % 360 // make sure angle is 0-359
     (360 - a) % 360
   }
 
   /**
-    * Add graticules to the given image.
-    */
+   * Add graticules to the given image.
+   */
   def addGraticules(image: BufferedImage, x2Pix: Double => Double, y2Pix: Double => Double, pix2X: Double => Double, pix2Y: Double => Double, graticuleColor: Color): Unit = {
 
     val graphics = ImageUtil.getGraphics(image)
@@ -762,8 +780,8 @@ object Util extends Logging {
   }
 
   /**
-    * Add graticules to the given image.
-    */
+   * Add graticules to the given image.
+   */
   def addGraticules(image: BufferedImage, translator: IsoImagePlaneTranslator, color: Color): Unit = {
 
     def x2Pix(xIso: Double) = translator.iso2Pix(xIso, 0).getX.round.toInt
@@ -778,8 +796,8 @@ object Util extends Logging {
   }
 
   /**
-    * Add graticules to the given image, reversing the Y-axis.
-    */
+   * Add graticules to the given image, reversing the Y-axis.
+   */
   def addGraticulesNegY(image: BufferedImage, translator: IsoImagePlaneTranslator, color: Color): Unit = {
 
     def x2Pix(xIso: Double) = translator.iso2Pix(xIso, 0).getX.round.toInt
@@ -794,12 +812,12 @@ object Util extends Logging {
   }
 
   /**
-    * Number f pixels from edge to put axis arrows.
-    */
+   * Number f pixels from edge to put axis arrows.
+   */
   private val axisOffsetFromEdge = 40
 
   private def addAxisLabels(image: BufferedImage, horzLabel: String, vertLabel: String, color: Color, top: Boolean = true, bottom: Boolean = true, left: Boolean = true, right: Boolean = true)
-      : Unit = {
+  : Unit = {
 
     val lineThickness: Float = 3
     val arrowLength = 5
@@ -869,8 +887,8 @@ object Util extends Logging {
   }
 
   /**
-    * Convert the given DICOM to a byte array (aka: serialize) and return the byte array.  If there is an error return a string describing it.
-    */
+   * Convert the given DICOM to a byte array (aka: serialize) and return the byte array.  If there is an error return a string describing it.
+   */
   def dicomToBytes(attributeList: AttributeList): Either[String, Array[Byte]] = {
     try {
       // val j = Util.DEFAULT_TRANSFER_SYNTAX
@@ -897,9 +915,9 @@ object Util extends Logging {
   }
 
   /**
-    * Given two colors and a palette size, return a list of colors of the
-    * given size that steps between the given colors.
-    */
+   * Given two colors and a palette size, return a list of colors of the
+   * given size that steps between the given colors.
+   */
   def colorPallette(colorA: Color, colorB: Color, size: Int): IndexedSeq[Color] = {
     val step = {
       if (size == 1) 1.0 else (size - 1).toDouble
@@ -912,9 +930,9 @@ object Util extends Logging {
     def toColor(c: Double): Int = {
       val ci = c.round.toInt
       ci match {
-        case _ if ci < 0    => 0
+        case _ if ci < 0 => 0
         case _ if ci > 0xff => 0xff
-        case _              => ci
+        case _ => ci
       }
     }
 
@@ -927,9 +945,9 @@ object Util extends Logging {
   }
 
   /**
-    * Format a double with enough precision for most needs and not using the exponential format.  This works for numbers in
-    * of the magnitude range of e+8 to e-8.  Beyond that and they start to be annoyingly long strings.
-    */
+   * Format a double with enough precision for most needs and not using the exponential format.  This works for numbers in
+   * of the magnitude range of e+8 to e-8.  Beyond that and they start to be annoyingly long strings.
+   */
   def fmtDbl(dbl: Double): String = {
     val text = dbl.formatted("%6.3e").toDouble.formatted("%32.16f").replaceAll("0*$", "").trim
     if (text.endsWith(".")) text + "0" else text
@@ -952,8 +970,8 @@ object Util extends Logging {
   //  }
 
   /**
-    * Remove a possible artificial beam prefix.
-    */
+   * Remove a possible artificial beam prefix.
+   */
   def normalizeBeamName(name: String): String = {
     val norm =
       if (name.matches("^[0-9][0-9]:.*"))
@@ -968,17 +986,17 @@ object Util extends Logging {
   }
 
   /**
-    * Get the normalized beam name from the given attribute list.  Beam names are sometimes prefixed with "NN:", where NN is
-    * a pair of digits that cause the beams to be sorted by the Eclipse planning system in the preferred delivery order.
-    */
+   * Get the normalized beam name from the given attribute list.  Beam names are sometimes prefixed with "NN:", where NN is
+   * a pair of digits that cause the beams to be sorted by the Eclipse planning system in the preferred delivery order.
+   */
   def normalizedBeamName(al: AttributeList): String = {
     normalizeBeamName(al.get(TagByName.BeamName).getSingleStringValueOrEmptyString)
   }
 
   /**
-    * Determine if two beam names are equal.  Both do normalization and consider that one or both were truncated.  Some
-    * treatment planning systems truncates them from 16 characters to 13.
-    */
+   * Determine if two beam names are equal.  Both do normalization and consider that one or both were truncated.  Some
+   * treatment planning systems truncates them from 16 characters to 13.
+   */
   def beamNamesEqual(a: String, b: String): Boolean = {
     val aa = normalizeBeamName(a)
     val bb = normalizeBeamName(b)
@@ -990,19 +1008,19 @@ object Util extends Logging {
   }
 
   /**
-    * Get the number of the beam referenced by the given RTIMAGE.
-    *
-    * If there is no referenced beam, then this will throw an exception.
-    *
-    * @param rtImage DICOM RTIMAGE.
-    * @return Beam number.
-    */
+   * Get the number of the beam referenced by the given RTIMAGE.
+   *
+   * If there is no referenced beam, then this will throw an exception.
+   *
+   * @param rtImage DICOM RTIMAGE.
+   * @return Beam number.
+   */
   def beamNumber(rtImage: AttributeList): Int =
     DicomUtil.findAllSingle(rtImage, TagByName.ReferencedBeamNumber).head.getIntegerValues.head
 
   /**
-    * Show which jar file is being used to ensure that we have the right version of the software.
-    */
+   * Show which jar file is being used to ensure that we have the right version of the software.
+   */
   def showJarFile(any: Any): Unit = {
 
     def description(file: File): String = {
