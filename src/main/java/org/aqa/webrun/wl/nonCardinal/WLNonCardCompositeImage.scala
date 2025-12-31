@@ -4,7 +4,6 @@ import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.ScaledImage
 import org.aqa.webrun.wl.WLAnnotate
 import org.aqa.webrun.wl.WLImageUtil
-import org.aqa.webrun.wl.WLPreprocessImage
 
 import java.awt.image.BufferedImage
 import java.awt.Color
@@ -51,8 +50,7 @@ object WLNonCardCompositeImage {
     */
   private def makeInitialBufImage(nonCard: WLNonCardAnalysis, scale: Int): BufferedImage = {
 
-    // convert to image
-    val preprocessedImage = WLPreprocessImage(nonCard.al, None).preprocessedImage //  new DicomImage(nonCard.al)
+    val preprocessedImage = nonCard.nonCardEdge.preprocessedImage
 
     val maxPix = {
       val centerX = nonCard.nonCardBall.center_pix.getX.round.toInt
