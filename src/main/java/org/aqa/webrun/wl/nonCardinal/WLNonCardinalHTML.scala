@@ -65,6 +65,18 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
   private def makeDiagnosticsHtml(): Unit = {
 
+    val coarseEdgeImageUrl = {
+      val file = new File(analysis.subDir, "coarseEdge.png")
+      Util.writePng(analysis.approxImg, file)
+      file.getName
+    }
+
+    val fineEdgeImageUrl = {
+      val file = new File(analysis.subDir, "fineEdge.png")
+      Util.writePng(analysis.img, file)
+      file.getName
+    }
+
     val content = {
       <div class="col-md-10 col-md-offset-1">
         <div class="row">
@@ -73,7 +85,12 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
           {showWlMessage()}
         </div>
         <div>
-         <h1>More stuff to come. { /* TODO */ }</h1>
+          <h3>Coarse Edge</h3>
+          <img src={coarseEdgeImageUrl}/>
+        </div>
+        <div>
+          <h3>Fine Edge</h3>
+          <img src={fineEdgeImageUrl}/>
         </div>
       </div>
     }
