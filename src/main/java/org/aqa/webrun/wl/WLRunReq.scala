@@ -46,7 +46,7 @@ case class WLRunReq(epidList: Seq[AttributeList], rtplan: Option[AttributeList])
       if (WLImageUtil.isCardinalAngle(angle))
         "%03d".format(Util.angleRoundedTo90(angle))
       else {
-        "%6.2f".format(Util.modulo360(angle))
+        "%6.1f".format(Util.modulo360(angle)).trim.replaceAll(".0$", "")
       }
     }
 

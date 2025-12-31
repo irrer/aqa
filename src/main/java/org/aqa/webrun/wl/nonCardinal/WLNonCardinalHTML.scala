@@ -30,21 +30,20 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     }
   }
 
+  private val beamName = {
+    val n1 = { if (analysis.beamName.isDefined) analysis.beamName.get + " " else "" }.trim
+    val n2 = { if (wlMessage.isDefined) " " + wlMessage.get.imageName else "" }.trim
+    (n1 + " " + n2).trim
+  }
+
   private def dicomAsText(): Elem = {
     val file = new File(analysis.subDir, "dicom.html")
-
-    val beamText = {
-      if (analysis.beamName.isDefined)
-        s"Beam {analysis.beamName} DICOM Metadata"
-      else
-        s"DICOM Metadata"
-    }
 
     val content = {
 
       <div class="col-md-10 col-md-offset-1">
         <div class="row">
-          <h2>{beamText}</h2>
+          <h2>DICOM for {beamName}</h2>
           <pre style="background: #eeeeee; font-size: small">
             {DicomUtil.attributeListToString(analysis.al)}
           </pre>
@@ -54,7 +53,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
     val text = WebUtil.wrapBody( //
       content = ExtendedData.wrapExtendedData(analysis.extendedData, content),
-      pageTitle = beamText,
+      pageTitle = beamName,
       runScript = None
     )
 
@@ -69,7 +68,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     val content = {
       <div class="col-md-10 col-md-offset-1">
         <div class="row">
-          <h2>Details for Beam {analysis.beamName}</h2>
+          <h2>Details for Beam {beamName}</h2>
           {dicomAsText()}
           {showWlMessage()}
         </div>
