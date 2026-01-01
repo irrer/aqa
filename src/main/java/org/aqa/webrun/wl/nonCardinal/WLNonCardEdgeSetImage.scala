@@ -5,7 +5,6 @@ import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.ScaledImage
-import edu.umro.ScalaUtil.Trace
 
 import java.awt.image.BufferedImage
 import java.awt.Color
@@ -14,30 +13,13 @@ import javax.vecmath.Point2d
 
 object WLNonCardEdgeSetImage {
 
-  def makeImage(edgeSet: WLNonCardEdgeSet, scale: Int, al: AttributeList, border: Int, minPixelValue: Double, maxPixelValue: Double): BufferedImage = {
+  def makeImage(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, scale: Int, al: AttributeList, border: Int, minPixelValue: Double, maxPixelValue: Double): BufferedImage = {
     val dicomImage: DicomImage = new DicomImage(al)
 
     /** A buffered image using the ball pixels as the brightest pixels. This makes the ball stand out more.  */
-    val bufImg = {
-
-      val maxPixelValue = {
-        val offsetList = (-2 until 3)
-        val valueList = for (x <- offsetList; y <- offsetList) yield dicomImage.get(edgeSet.center_pix.x.toInt + x, edgeSet.center_pix.y.toInt + y)
-        val mean = valueList.sum / valueList.size
-        mean
-      }
-
-      val minPixelValue = {
-        val sortedPixels = dicomImage.pixelData.flatten.sorted
-        sortedPixels.take(10).sum / 10
-      }
-
-      dicomImage.toBufferedImage(ImageUtil.rgbColorMap(Color.blue), minPixelValue, maxPixelValue)
-    }
+    val bufImg = WLBlankImage.make(preprocessedImage, edgeSet)
 
     val scaledImage = ImageUtil.magnify(bufImg, 1)
-
-    val imgScale = 1
 
     def listCoordinates(edge: WLNonCardEdge): Seq[Point2d] = {
       Seq(
@@ -61,12 +43,11 @@ object WLNonCardEdgeSetImage {
 
     val boundingRectangle = new Rectangle(minX, minY, width, height)
 
-    val si = ScaledImage(imgScale, minX, minY)
+    val si = ScaledImage(scale, minX, minY)
 
-    val aoi: BufferedImage = ImageUtil.magnify(ImageUtil.subImage(scaledImage, boundingRectangle), imgScale)
+    val aoi: BufferedImage = ImageUtil.magnify(ImageUtil.subImage(scaledImage, boundingRectangle), scale)
 
     // val buf = si.magnify(origImage)
-    Trace.trace("making big image")
     def drawAoi(edgeSet: WLNonCardEdgeSet, aoi: BufferedImage): Unit = {
 
       val gc = ImageUtil.getGraphics(aoi)

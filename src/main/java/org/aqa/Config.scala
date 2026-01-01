@@ -1028,6 +1028,8 @@ object Config extends Logging {
   val WLNonCardMinStdDev: Double = logMainText("WLNonCardMinStdDev", "0.1").toDouble
   val WLNonCardSymmetryLimit: Double = logMainText("WLNonCardSymmetryLimit", "0.4").toDouble
   val WLNonCardKVPLimit: Double = logMainText("WLNonCardKVPLimit", "0.0").toDouble
+  val WLNonCardEdgePixelResolution: Double = logMainText("WLNonCardEdgePixelResolution", "0.1").toDouble
+  val WLNonCardBallPixelResolution: Double = logMainText("WLNonCardBallPixelResolution", "0.1").toDouble
 
   val WLTreatmentMachineList: List[WLTreatmentMachine] = {
     val list = (document \ "WLTreatmentMachineList" \ "WLTreatmentMachine").toList.map(e => new WLTreatmentMachine(e))

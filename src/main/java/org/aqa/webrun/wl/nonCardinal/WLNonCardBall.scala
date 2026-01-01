@@ -23,6 +23,7 @@ import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.Trace
 import org.aqa.BiCubicImage
+import org.aqa.Config
 import org.aqa.Logging
 
 import java.awt.Color
@@ -38,31 +39,12 @@ import javax.vecmath.Point2d
   */
 case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, biCubicImage: BiCubicImage, al: AttributeList) extends Logging {
 
-  // private val trans = new IsoImagePlaneTranslator(al)
-
   /**
-    * Determine whether a point is within the AOI of the ball.  The AOI is defined by those points that
-    * are between both X edges and Y edges.
-    * @param point Check this point
-    * @return True if point is in AOI.
+    * Represent a point in the image and its value. Saving the value is more efficient because the
+    * value does not have to be re-calculated.
+    * @param x X coordinate.
+    * @param y Y coordinate.
     */
-  private def pointIsInBallAoi(point: Point2d): Boolean = {
-    edgeSet.X1.loLine.pointIsBetween(point, edgeSet.X2.loLine) &&
-    edgeSet.Y1.loLine.pointIsBetween(point, edgeSet.Y2.loLine)
-  }
-
-  private def calculateRadiusToNearestEdge(point: Point2d): Double = {
-
-    val radius_pix = Seq( //
-      edgeSet.X1.loLine.distanceToPoint(point),
-      edgeSet.X2.loLine.distanceToPoint(point),
-      edgeSet.Y1.loLine.distanceToPoint(point),
-      edgeSet.Y2.loLine.distanceToPoint(point)
-    ).min
-
-    radius_pix
-  }
-
   private case class Pt(x: Double, y: Double) {
     def this(point: Point2d) = this(point.getX, point.getY)
 
@@ -71,6 +53,11 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
     val value: Double = biCubicImage.get(x, y)
   }
 
+  /**
+    * Represent a point in the image and its value, when the value has already been calculated.
+    * @param x X coordinate.
+    * @param y Y coordinate.
+    */
   private case class PtSynthetic(x: Double, y: Double, value: Double) {}
 
   private def makeArray(resolution_pix: Double): Seq[PtSynthetic] = {
@@ -105,7 +92,7 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
     }
 
     val ptListFinal = ptListInitial.map(pt => {
-      val value = if (pointIsInBallAoi(pt.point2d)) pt.value else minValue
+      val value = if (edgeSet.pointIsInBallAoi(pt.point2d)) pt.value else minValue
 
       PtSynthetic(pt.x, pt.y, value)
     })
@@ -118,7 +105,7 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
     * @return
     */
   private def findCenterOfMass(): Point2d = {
-    val resolution_pix = 0.2
+    val resolution_pix = Config.WLNonCardBallPixelResolution
 
     val pointList = makeArray(resolution_pix)
 
@@ -136,6 +123,32 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
   }
 
   val center_pix: Point2d = findCenterOfMass()
+
+  private case class MinMax(min: Float, max: Float) {}
+
+  /**
+    * Find the largest value in the ball area.  This is used for setting the brightness of rendered images, so high
+    * precision is not required.
+    *
+    * @return The approximate maximum. value
+    */
+  private def calculateMinAndMaxMaxPixelValue(): MinMax = {
+    val valueList = for (x <- 0 until preprocessedImage.width; y <- 0 until preprocessedImage.height; if edgeSet.pointIsInBallAoi(new Point2d(x, y))) yield preprocessedImage.get(x, y)
+    val sorted = valueList.sorted
+    val min = sorted.slice(5, 15).sum / 10
+    val max = sorted.dropRight(5).takeRight(10).sum / 10
+    MinMax(min, max)
+  }
+
+  private val minMaxPixelValues = calculateMinAndMaxMaxPixelValue()
+
+  /** the approximate min pixel value of the ball. Useful for rendering images. */
+  val approximateMinPixelValueOfBall: Float = minMaxPixelValues.min
+
+  /** the approximate max pixel value of the ball. Useful for rendering images. */
+  val approximateMaxPixelValueOfBall: Float = minMaxPixelValues.max
+
+  // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
   def doIt(): Point2d = {
 

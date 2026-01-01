@@ -1306,6 +1306,28 @@ Note that when building a package for release, the Maven build process uses the 
     Specified as a positive floating point positive number.  Default is  0.0  -->
     <WLNonCardKVPLimit>0.0</WLNonCardKVPLimit>
 
+    <!-- When the non-cardinal algorithm is calculating the center of the opposing edges, the bicubic image
+    is sampled at sub-pixel intervals.  This number defines what that sample should be.  For example, a
+    value of 0.2 means that there will be 25 readings taken for each pixel.
+
+    The smaller this number is, the higher the resolution, which improves the accuracy. However, higher
+    resolutions also incur more compute time, and at a point it becomes questionable whether it yields a
+    more accurate result.
+
+    Specified as a positive floating point positive number in pixels.  Default is  0.1  -->
+    <WLNonCardEdgePixelResolution>0.1</WLNonCardEdgePixelResolution>
+
+    <!-- When the non-cardinal algorithm is calculating the center of mass for the ball, the bicubic image
+    is sampled at sub-pixel intervals.  This number defines what that sample should be.  For example, a
+    value of 0.2 means that there will be 25 readings taken for each pixel.
+
+    The smaller this number is, the higher the resolution, which improves the accuracy. However, higher
+    resolutions also incur more compute time, and at a point it becomes questionable whether it yields a
+    more accurate result.
+
+    Specified as a positive floating point positive number in pixels.  Default is  0.1  -->
+    <WLNonCardBallPixelResolution>0.1</WLNonCardBallPixelResolution>
+
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
     <!-- Name of XLSX files in the static dir to be used as a template for making the WL monthly

@@ -167,7 +167,7 @@ object WLMainHtml extends Logging {
             {script}
           </script>
           <a href={url}>
-            j<div class='zoom' id={id}>
+            <div class='zoom' id={id}>
               <img width={Config.WLSummarySize.toString} src={url}/>
             </div>
           </a>

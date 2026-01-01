@@ -21,6 +21,7 @@ import org.aqa.webrun.wl.WLResult
 import org.aqa.PlannedRectangle
 import org.aqa.Util
 import org.aqa.db.MachineWL
+import org.aqa.webrun.wl.WLImageUtil
 
 import java.awt.image.BufferedImage
 import java.io.File
@@ -28,7 +29,7 @@ import java.io.File
 case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLRunReq, machineWL: MachineWL, wlMessage: Option[WLMessage]) extends WLResult(extendedData, wlRunReq) {
 
   // Invert the pixels if necessary.
-  private val preprocessedImage = WLPreprocessImage(al, None).preprocessedImage
+  val preprocessedImage: DicomImage = WLPreprocessImage(al, None).preprocessedImage
 
   private val biCubicImage = BiCubicImage(preprocessedImage)
   val nonCardEdge = new WLNonCardEdgeAnalysis(preprocessedImage, al, biCubicImage, wlMessage)
@@ -53,8 +54,10 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
     sortedPixels.slice(drop, drop + take).sum / 10
   }
 
-  val approxImg: BufferedImage = WLNonCardEdgeSetImage.makeImage(nonCardEdge.approximateEdgeSet, 3, al, border = 3, minPixelValue, maxPixelValue)
-  val img: BufferedImage = WLNonCardEdgeSetImage.makeImage(nonCardEdge.edgeSet, 3, al, border = 3, minPixelValue, maxPixelValue)
+  val approxImg: BufferedImage = WLNonCardEdgeSetImage.makeImage(nonCardEdge.approximateEdgeSet, preprocessedImage, scale = 3, al, border = 3, minPixelValue, maxPixelValue)
+
+  val scale = WLImageUtil.calculateCloseupScale(al)
+  val img: BufferedImage = WLNonCardEdgeSetImage.makeImage(nonCardEdge.edgeSet, preprocessedImage, scale = scale, al, border = 3, minPixelValue, maxPixelValue)
 
   // ImageDisplay.showInMSPaint(approxImg)
   // ImageDisplay.showInMSPaint(img)
@@ -102,8 +105,8 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
       boxY_mm                  = nonCardEdge.edgeSet.center_pix.getY           ,
       ballX_mm                 = nonCardBall.center_pix.getX                   ,
       ballY_mm                 = nonCardBall.center_pix.getY                   ,
-      XOffset_mm               = XOffset_mm                                      ,
-      YOffset_mm               = YOffset_mm                                      ,
+      XOffset_mm               = XOffset_mm                                    ,
+      YOffset_mm               = YOffset_mm                                    ,
       //
       plannedOffsetX1_mm       = plannedRectangle.map(_.x1)                    ,
       plannedOffsetX2_mm       = plannedRectangle.map(_.x2)                    ,

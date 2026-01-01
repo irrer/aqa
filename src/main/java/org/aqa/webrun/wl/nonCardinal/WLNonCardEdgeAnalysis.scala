@@ -23,6 +23,7 @@ import edu.umro.ImageUtil.ImageDisplay
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.ScaledImage
 import edu.umro.ScalaUtil.Trace
 import org.aqa.AQALine
 import org.aqa.BiCubicImage
@@ -36,13 +37,14 @@ import org.aqa.webrun.wl.WLPreprocessImage
 import org.aqa.webrun.wl.WLRunReq
 
 import java.awt.Color
+import java.awt.image.BufferedImage
 import java.io.File
 import javax.vecmath.Point2d
 
 case class WLNonCardEdgeAnalysis( //
     preprocessedImage: DicomImage,
     al: AttributeList,
-    biCubicImage : BiCubicImage,
+    biCubicImage: BiCubicImage,
     wlMessage: Option[WLMessage]
 ) extends Logging {
 
@@ -50,12 +52,10 @@ case class WLNonCardEdgeAnalysis( //
 
   val trans = new IsoImagePlaneTranslator(al)
 
+  private val coarseRectangle = WLCoarseBox(preprocessedImage, trans, wlMessage).locate()
+
   /** The center of the edges as calculated by finding the center of mass.  This should be accurate to within 3 pixels. */
-  private def locateCoarseCenter(): Point2d = {
-    val rect = WLCoarseBox(preprocessedImage, trans, wlMsg = None).locate()
-    new Point2d(rect.getCenterX, rect.getCenterY)
-    new Point2d(rect.getCenterX + 5, rect.getCenterY - 8)
-  }
+  def locateCoarseCenter(): Point2d = new Point2d(coarseRectangle.getCenterX, coarseRectangle.getCenterY)
 
   /**
     * Determine the maximum offset for the given line such that the edge AOI will still be within the bounds of the image.
@@ -97,6 +97,69 @@ case class WLNonCardEdgeAnalysis( //
   }
 
   /**
+   * Make an image that represents the coarse finding of the edges.
+   * @return Image showing coarse rectangle.
+   */
+  def coarseImage(): BufferedImage = {
+    val img1 = preprocessedImage.toBufferedImage(Color.blue)
+
+    val border = 10
+
+    val cr = coarseRectangle
+
+    /*
+    val border2 = border * 2
+
+    val x = Math.max(0, cr.x - border)
+    val y = Math.max(0, cr.y - border)
+
+    val width = {
+      val w = cr.width + border2
+      if ((x + w) >= preprocessedImage.width)
+        preprocessedImage.width - x
+      else
+        w
+    }
+
+    val height = {
+      val w = cr.height + border2
+      if ((x + w) >= preprocessedImage.height)
+        preprocessedImage.height - x
+      else
+        w
+    }
+
+
+    val enclosingRectangle = new Rectangle(x, y, width, height)
+
+    val img2 = ImageUtil.subImage(img1, enclosingRectangle)
+    */
+
+    val coarseScale = 2
+
+    // make AOI bigger.
+    val bufImg = ImageUtil.magnify(img1, coarseScale)
+
+    val si = ScaledImage(coarseScale, 0, 0)
+
+    val gc = ImageUtil.getGraphics(bufImg)
+    gc.setColor(Color.yellow)
+    ImageUtil.setLineThickness(gc, 2)
+
+    val top = cr.y
+    val bottom = cr.y + cr.height
+    val left = cr.x
+    val right = cr.x + cr.width
+
+    si.drawLine(gc, left, top, right, top)
+    si.drawLine(gc, left, top, left, bottom)
+    si.drawLine(gc, right, top, right, bottom)
+    si.drawLine(gc, right, bottom, left, bottom)
+
+    bufImg
+  }
+
+  /**
     * Find the approximate positions of the 4 edges by projecting a band of points in each of the 4 directions
     * from the coarse center.  These are parallel and perpendicular to the coarse center.
     *
@@ -126,11 +189,9 @@ case class WLNonCardEdgeAnalysis( //
     val y2 = WLNonCardEdge("Y2", yLine, 0, y2MaxLen, biCubicImage, pixBandWidth, approximateResolution)
 
     val edgeSetApproximate: WLNonCardEdgeSet = WLNonCardEdgeSet(x1, x2, y1, y2)
+
     /*
-
-    val coarseImage = WLNonCardEdgeSetImage.makeImage(edgeSetApproximate, scale = 3, al, border = 3)
     ImageDisplay.showInMSPaint(coarseImage)
-
     wlMessage.foreach(_.info(s"approximate center iso X: ${trans.pix2IsoCoordX(edgeSetApproximate.center_pix.getX)}"))
     wlMessage.foreach(_.info(s"approximate center iso Y: ${trans.pix2IsoCoordY(edgeSetApproximate.center_pix.getY)}"))
      */
@@ -151,7 +212,7 @@ case class WLNonCardEdgeAnalysis( //
     val yLine = xLine.perpendicular
 
     // use this granularity of pixels to get initial location of edges.
-    val preciseResolution = 0.1
+    val preciseResolution = Config.WLNonCardEdgePixelResolution
 
     val penumbra_pix = trans.iso2PixDistX(Config.PenumbraThickness_mm) / 2
 
@@ -176,40 +237,6 @@ case class WLNonCardEdgeAnalysis( //
     edgeSetPrecise
   }
 
-  /*
-   * Calculate the rectangle to enclose the region of the image that contains all the areas of interest
-   * that were used for edge measurement.
-   *
-   * @param border_pix Number of extra pixels to serve as a border separating the AOIs from the image edge.
-   * @return Bounding rectangle.
-   */
-  /*
-  def calcAoiBounds(border_pix: Int): Rectangle = {
-    def listCoordinates(edge: WLNonCardEdge): Seq[Point2d] = {
-      Seq(
-        edge.loLoAoi, //
-        edge.loHiAoi, //
-        edge.hiLoAoi, //
-        edge.hiHiAoi
-      )
-    }
-
-    val coordinateList = edgeSet.edgeList.flatMap(listCoordinates)
-
-    val minX = (coordinateList.map(_.getX).min - border_pix).round.toInt
-    val maxX = (coordinateList.map(_.getX).max + border_pix).round.toInt
-    val minY = (coordinateList.map(_.getY).min - border_pix).round.toInt
-    val maxY = (coordinateList.map(_.getY).max + border_pix).round.toInt
-
-    val width = maxX - minX
-    val height = maxY - minY
-
-    val boundingRectangle = new Rectangle(minX, minY, width, height)
-
-    boundingRectangle
-  }
-   */
-
   // main processing comprised of three steps
 
   // Find the coarse center using center of mass.
@@ -221,6 +248,7 @@ case class WLNonCardEdgeAnalysis( //
   private val preciseEdgeLocations = preciseLocationOfEdges(approximateEdgeSet)
 
   val edgeSet: WLNonCardEdgeSet = preciseEdgeLocations
+
 }
 
 /**

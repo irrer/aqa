@@ -86,4 +86,16 @@ case class WLNonCardEdgeSet(
       "\nY2: " + fmtE(Y2) +
       "\nCenter: " + fmt(center_pix.getX) + ", " + fmt(center_pix.getY)
   }
+
+  /**
+    * Determine whether a point is within the AOI of the ball.  The AOI is defined by those points that
+    * are between both X edges and Y edges.
+    * @param point Check this point
+    * @return True if point is in AOI.
+    */
+  def pointIsInBallAoi(point: Point2d): Boolean = {
+    X1.loLine.pointIsBetween(point, X2.loLine) &&
+    Y1.loLine.pointIsBetween(point, Y2.loLine)
+  }
+
 }
