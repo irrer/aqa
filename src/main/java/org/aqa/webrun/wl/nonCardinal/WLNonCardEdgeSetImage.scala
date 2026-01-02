@@ -5,13 +5,40 @@ import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.ScaledImage
+import edu.umro.ScalaUtil.Trace
 
 import java.awt.image.BufferedImage
 import java.awt.Color
+import java.awt.Graphics2D
 import java.awt.Rectangle
 import javax.vecmath.Point2d
 
 object WLNonCardEdgeSetImage {
+
+  private def labelEdge(edge: WLNonCardEdge, gc: Graphics2D, si: ScaledImage): Unit = {
+
+    gc.setColor(Color.yellow)
+    val textPoint = {
+      val distance = {
+        val d = edge.loLine.centerPoint.distance(edge.edgeLine.centerPoint) + ImageText.getFontHeight(gc)
+
+        val pos = edge.line.pointOn(d)
+        val neg = edge.line.pointOn(-d)
+
+        val direction =
+          if (edge.edgeLine.centerPoint.distance(pos) < edge.edgeLine.centerPoint.distance(neg))
+            1
+          else
+            -1
+        d * direction
+      }
+      edge.line.pointOn(distance)
+
+    }
+    Trace.trace(s"%%%%% Experiment ${edge.name} : $textPoint")
+    si.drawTextCenteredAt(gc, textPoint.x.toInt, textPoint.y.toInt, edge.name)
+
+  }
 
   def makeImage(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, scale: Int, al: AttributeList): BufferedImage = {
     val dicomImage: DicomImage = new DicomImage(al)
@@ -63,33 +90,9 @@ object WLNonCardEdgeSetImage {
       gc.setColor(Color.white)
 
       def drawEdge(edge: WLNonCardEdge, color: Color): Unit = {
+        labelEdge(edge, gc, si)
 
-        if (false) { // TODO
-          gc.setColor(Color.yellow)
-          val textPoint = {
-            val distance = {
-              val d = edge.loLine.centerPoint.distance(edge.edgeLine.centerPoint) + (ImageText.getFontHeight(gc) * 3)
-
-              val pos = edge.line.pointOn(d)
-              val neg = edge.line.pointOn(-d)
-
-              val direction =
-                if (edge.edgeLine.centerPoint.distance(pos) < edge.edgeLine.centerPoint.distance(neg))
-                  1
-                else
-                  -1
-              d * direction
-            }
-            edge.line.pointOn(distance)
-
-          }
-          si.drawTextCenteredAt(gc, textPoint.x.toInt, textPoint.y.toInt, edge.name)
-
-        } else {
-          gc.setColor(Color.white)
-          si.drawTextCenteredAt(gc, (edge.loLoAoi.getX + edge.hiHiAoi.getX) / 2, (edge.loLoAoi.getY + edge.hiHiAoi.getY) / 2, edge.name)
-        }
-
+        gc.setColor(Color.white)
         si.drawLine(gc, edge.loLoAoi, edge.loHiAoi)
         si.drawLine(gc, edge.hiLoAoi, edge.hiHiAoi)
         si.drawLine(gc, edge.loLoAoi, edge.hiLoAoi)
