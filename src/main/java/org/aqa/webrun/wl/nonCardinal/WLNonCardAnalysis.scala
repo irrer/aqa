@@ -54,10 +54,11 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
     sortedPixels.slice(drop, drop + take).sum / 10
   }
 
-  val approxImg: BufferedImage = WLNonCardEdgeSetImage.makeImage(nonCardEdge.approximateEdgeSet, preprocessedImage, scale = 3, al, border = 3, minPixelValue, maxPixelValue)
+  val approxImg: BufferedImage = WLNonCardEdgeSetImage.makeImage(nonCardEdge.approximateEdgeSet, preprocessedImage, scale = 3, al)
 
-  val scale = WLImageUtil.calculateCloseupScale(al)
-  val img: BufferedImage = WLNonCardEdgeSetImage.makeImage(nonCardEdge.edgeSet, preprocessedImage, scale = scale, al, border = 3, minPixelValue, maxPixelValue)
+  /** Scale (magnification factor) that images should be drawn at. */
+  val scale: Int = WLImageUtil.calculateCloseupScale(al)
+  val img: BufferedImage = WLNonCardEdgeSetImage.makeImage(nonCardEdge.edgeSet, preprocessedImage, scale = scale, al)
 
   // ImageDisplay.showInMSPaint(approxImg)
   // ImageDisplay.showInMSPaint(img)
@@ -150,7 +151,7 @@ object WLNonCardAnalysis {
     Trace.trace("Starting test ----------------------------------------------------------------------------------")
     val ext = ExtendedData.get(output)
     val al = new DicomFile(file).attributeList.get
-    val runReq = WLRunReq(Seq(al), None)
+    val runReq = WLRunReq(Seq(al).toList, None)
     val wlMessage: WLMessage = WLMessage(runReq, al)
     val machineWL = MachineWL.getMachineWLOrDefault(ext.machine.machinePK.get)
     val wlNonCardAnalysis = WLNonCardAnalysis(ext, al, runReq, machineWL, Some(wlMessage))

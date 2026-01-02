@@ -1,5 +1,6 @@
 package org.aqa.webrun.wl.nonCardinal
 
+import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.webrun.wl.WLgenHtml
 import org.aqa.Util
@@ -9,6 +10,8 @@ import org.aqa.webrun.wl.WLMessage
 import org.aqa.Logging
 import org.aqa.web.C3Chart
 
+import java.awt.Color
+import java.awt.Rectangle
 import java.io.File
 import javax.vecmath.Point2d
 import scala.xml.Elem
@@ -209,6 +212,55 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     }
 
     content
+  }
+
+  /**
+    * Make an image of the given edge.  Write the image to a file and return an element to display it.
+    * @param edge For this edge
+    * @return Element to display image.
+    */
+  def edgeImage(edge: WLNonCardEdge): Elem = {
+
+    val pointList = Seq( ///
+      edge.loHiAoi,
+      edge.loLoAoi,
+      edge.hiHiAoi,
+      edge.hiLoAoi
+    )
+
+    val minX = pointList.map(_.x).min.round.toInt
+    val maxX = pointList.map(_.x).max.round.toInt
+    val minY = pointList.map(_.y).min.round.toInt
+    val maxY = pointList.map(_.y).max.round.toInt
+
+    // number of pixels to leave around the area.
+    val border = 5
+
+    val area = new Rectangle(minX, minY, maxX - minX, maxY - minY)
+
+    val dicomImage = analysis.preprocessedImage
+
+    val areaWithBorder = new Rectangle( //
+      Math.min(minX - border, 0),
+      Math.min(minY - border, 0),
+      Math.max(maxX - minX + (border * 2), dicomImage.width - 1),
+      Math.max(maxY - minY + (border * 2), dicomImage.height - 1)
+    )
+
+    val bufImg = WLBlankImage.make(dicomImage, analysis.nonCardEdge.edgeSet)
+
+    val gc = ImageUtil.getGraphics(bufImg)
+    gc.setColor(Color.yellow)
+
+    ???
+
+  }
+
+  private def edgeHTML(): Elem = {
+
+    val e = analysis.nonCardEdge.edgeSet.X1
+    analysis.nonCardEdge.edgeSet.X1.profile
+    ???
   }
 
   private def makeDiagnosticsHtml(): Unit = {

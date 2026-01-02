@@ -13,7 +13,7 @@ import javax.vecmath.Point2d
 
 object WLNonCardEdgeSetImage {
 
-  def makeImage(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, scale: Int, al: AttributeList, border: Int, minPixelValue: Double, maxPixelValue: Double): BufferedImage = {
+  def makeImage(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, scale: Int, al: AttributeList): BufferedImage = {
     val dicomImage: DicomImage = new DicomImage(al)
 
     /** A buffered image using the ball pixels as the brightest pixels. This makes the ball stand out more.  */
@@ -51,12 +51,20 @@ object WLNonCardEdgeSetImage {
     def drawAoi(edgeSet: WLNonCardEdgeSet, aoi: BufferedImage): Unit = {
 
       val gc = ImageUtil.getGraphics(aoi)
+      // scale the font to match the scale of the image.
+      val typePointSize: Int = {
+        val font = gc.getFont
+        val s = font.getSize
+        val s2: Int = (s * scale * 0.75).round.toInt
+        s2
+      }
+      ImageText.setFont(gc, ImageText.DefaultFont, typePointSize)
 
       gc.setColor(Color.white)
 
       def drawEdge(edge: WLNonCardEdge, color: Color): Unit = {
 
-        if (true) { // TODO
+        if (false) { // TODO
           gc.setColor(Color.yellow)
           val textPoint = {
             val distance = {
@@ -76,6 +84,7 @@ object WLNonCardEdgeSetImage {
 
           }
           si.drawTextCenteredAt(gc, textPoint.x.toInt, textPoint.y.toInt, edge.name)
+
         } else {
           gc.setColor(Color.white)
           si.drawTextCenteredAt(gc, (edge.loLoAoi.getX + edge.hiHiAoi.getX) / 2, (edge.loLoAoi.getY + edge.hiHiAoi.getY) / 2, edge.name)
