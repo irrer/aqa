@@ -54,7 +54,7 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
     sortedPixels.slice(drop, drop + take).sum / 10
   }
 
-  val approxImg: BufferedImage = WLNonCardEdgeSetImage.makeImage(nonCardEdge.approximateEdgeSet, preprocessedImage, scale = 3, al)
+  val approxImg: BufferedImage = WLNonCardEdgeSetImage.makeImage(nonCardEdge.approximateEdgeSet, preprocessedImage, scale = 1, al)
 
   /** Scale (magnification factor) that images should be drawn at. */
   val scale: Int = WLImageUtil.calculateCloseupScale(al)

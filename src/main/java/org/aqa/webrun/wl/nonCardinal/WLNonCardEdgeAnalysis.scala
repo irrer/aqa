@@ -37,6 +37,7 @@ import org.aqa.webrun.wl.WLPreprocessImage
 import org.aqa.webrun.wl.WLRunReq
 
 import java.awt.Color
+import java.awt.geom.Point2D
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.vecmath.Point2d
@@ -97,9 +98,9 @@ case class WLNonCardEdgeAnalysis( //
   }
 
   /**
-   * Make an image that represents the coarse finding of the edges.
-   * @return Image showing coarse rectangle.
-   */
+    * Make an image that represents the coarse finding of the edges.
+    * @return Image showing coarse rectangle.
+    */
   def coarseImage(): BufferedImage = {
     val img1 = preprocessedImage.toBufferedImage(Color.blue)
 
@@ -107,35 +108,7 @@ case class WLNonCardEdgeAnalysis( //
 
     val cr = coarseRectangle
 
-    /*
-    val border2 = border * 2
-
-    val x = Math.max(0, cr.x - border)
-    val y = Math.max(0, cr.y - border)
-
-    val width = {
-      val w = cr.width + border2
-      if ((x + w) >= preprocessedImage.width)
-        preprocessedImage.width - x
-      else
-        w
-    }
-
-    val height = {
-      val w = cr.height + border2
-      if ((x + w) >= preprocessedImage.height)
-        preprocessedImage.height - x
-      else
-        w
-    }
-
-
-    val enclosingRectangle = new Rectangle(x, y, width, height)
-
-    val img2 = ImageUtil.subImage(img1, enclosingRectangle)
-    */
-
-    val coarseScale = 2
+    val coarseScale = 1
 
     // make AOI bigger.
     val bufImg = ImageUtil.magnify(img1, coarseScale)
@@ -183,10 +156,10 @@ case class WLNonCardEdgeAnalysis( //
     val y1MaxLen = maxOffset(yLine, -1, pixBandWidth, approximateResolution)
     val y2MaxLen = maxOffset(yLine, 1, pixBandWidth, approximateResolution)
 
-    val x1 = WLNonCardEdge("X1", xLine, 0, x1MaxLen, biCubicImage, pixBandWidth, approximateResolution)
-    val x2 = WLNonCardEdge("X2", xLine, 0, x2MaxLen, biCubicImage, pixBandWidth, approximateResolution)
-    val y1 = WLNonCardEdge("Y1", yLine, 0, y1MaxLen, biCubicImage, pixBandWidth, approximateResolution)
-    val y2 = WLNonCardEdge("Y2", yLine, 0, y2MaxLen, biCubicImage, pixBandWidth, approximateResolution)
+    val x1 = WLNonCardEdge("X1", xLine, 0, x1MaxLen, biCubicImage, al, pixBandWidth, approximateResolution)
+    val x2 = WLNonCardEdge("X2", xLine, 0, x2MaxLen, biCubicImage, al, pixBandWidth, approximateResolution)
+    val y1 = WLNonCardEdge("Y1", yLine, 0, y1MaxLen, biCubicImage, al, pixBandWidth, approximateResolution)
+    val y2 = WLNonCardEdge("Y2", yLine, 0, y2MaxLen, biCubicImage, al, pixBandWidth, approximateResolution)
 
     val edgeSetApproximate: WLNonCardEdgeSet = WLNonCardEdgeSet(x1, x2, y1, y2)
 
@@ -200,6 +173,29 @@ case class WLNonCardEdgeAnalysis( //
   }
 
   case class AnnotatedEdgeAoi(line: AQALine, offsetStart: Double, offsetFinish: Double, width: Double, position: Double) {}
+
+  /**
+    * Log statistics for this edge.
+    * @param edge Show this one.
+    * @param center_pix Final precise center in pixels.
+    */
+  private def showEdge(edge: WLNonCardEdge, center_pix: Point2d): Unit = {
+
+    val point_mm = {
+      val line = AQALine(centerPoint = center_pix, angle_deg = edge.line.angle_deg)
+      val point = line.intersection(edge.edgeLine)
+      trans.pix2Iso(point.x, point.y)
+    }
+
+    def fmt(d: Double): String = "%12.6f".format(d)
+
+    val x = fmt(point_mm.getX)
+    val y = fmt(point_mm.getY)
+
+    val d = fmt(point_mm.distance(new Point2D.Double(0, 0)))
+    wlMessage.foreach(_.info(s"Edge ${edge.name} edge center (mm): $x, $y    distance to center (mm): $d"))
+
+  }
 
   /**
     * Precisely locate the four edges using a larger number of pixels and a higher sampling resolution.
@@ -224,15 +220,22 @@ case class WLNonCardEdgeAnalysis( //
     val xWidth = ael.Y1.edgeCenter.distance(ael.Y2.edgeCenter) - penumbra_pix
     val yWidth = ael.X1.edgeCenter.distance(ael.X2.edgeCenter) - penumbra_pix
 
-    val x1 = WLNonCardEdge("X1", xLine, 0, distanceX, biCubicImage, xWidth, preciseResolution)
-    val x2 = WLNonCardEdge("X2", xLine, 0, -distanceX, biCubicImage, xWidth, preciseResolution)
-    val y1 = WLNonCardEdge("Y1", yLine, 0, -distanceY, biCubicImage, yWidth, preciseResolution)
-    val y2 = WLNonCardEdge("Y2", yLine, 0, distanceY, biCubicImage, yWidth, preciseResolution)
+    val x1 = WLNonCardEdge("X1", xLine, 0, distanceX, biCubicImage, al, xWidth, preciseResolution)
+    val x2 = WLNonCardEdge("X2", xLine, 0, -distanceX, biCubicImage, al, xWidth, preciseResolution)
+    val y1 = WLNonCardEdge("Y1", yLine, 0, -distanceY, biCubicImage, al, yWidth, preciseResolution)
+    val y2 = WLNonCardEdge("Y2", yLine, 0, distanceY, biCubicImage, al, yWidth, preciseResolution)
 
     val edgeSetPrecise: WLNonCardEdgeSet = WLNonCardEdgeSet(x1, x2, y1, y2)
 
-    wlMessage.foreach(_.info(s"precise center iso X: ${trans.pix2IsoCoordX(edgeSetPrecise.center_pix.getX)}"))
-    wlMessage.foreach(_.info(s"precise center iso Y: ${trans.pix2IsoCoordY(edgeSetPrecise.center_pix.getY)}"))
+    val center_pix = edgeSetPrecise.center_pix
+
+    wlMessage.foreach(_.info(s"precise center of edges mm X: ${trans.pix2IsoCoordX(edgeSetPrecise.center_pix.getX)}"))
+    wlMessage.foreach(_.info(s"precise center of edges mm Y: ${trans.pix2IsoCoordY(edgeSetPrecise.center_pix.getY)}"))
+
+    showEdge(x1, center_pix)
+    showEdge(x2, center_pix)
+    showEdge(y1, center_pix)
+    showEdge(y2, center_pix)
 
     edgeSetPrecise
   }

@@ -87,7 +87,7 @@ case class WLNonCardValidate( //
     }
 
     if (edge.range >= wholeImagePixelValueRangeThreshold_cu) {
-      val msg = s"Edge for ${edge.name} has sufficient contrast of ${Util.fmtDbl(edge.range)} $measuredPctText . Threshold: ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)}"
+      val msg = s"Edge for ${edge.name} has sufficient contrast of ${Util.fmtDbl(edge.range)} $measuredPctText . Threshold: ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WLNonCardEdgePercentChange}%)"
       wlMessage.foreach(_.info(msg))
       Seq()
     } else {

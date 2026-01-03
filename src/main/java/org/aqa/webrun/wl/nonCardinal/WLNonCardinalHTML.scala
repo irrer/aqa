@@ -27,9 +27,12 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
   private def showWlMessage(): Elem = {
     if (wlMessage.isDefined) {
-      <pre style="background: #eeeeee; font-size: small">
-        {wlMessage.get.toString}
-      </pre>
+      <div>
+        <h3>Log Messages</h3>
+        <pre style="background: #eeeeee; font-size: small">
+          {WebUtil.nl + wlMessage.get.toString}
+        </pre>
+      </div>
     } else {
       <span></span>
     }
@@ -93,19 +96,37 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
     val center = analysis.nonCardEdge.locateCoarseCenter()
 
-    val content = {
+    val textElem = {
       <div>
-        <h3>Coarse Location</h3>
+        <h3>Coarse Location of Field</h3>
         Center: {fmtPoint(center)}
         <br>Box encloses the general location of the edges, with the center being a coarse estimate.</br>
-        <br>Profiles in the X and Y axis were used find this.</br>
-        <p></p>
+        <p>Profiles in the X and Y axis were used find this.</p>
+        <p>Hover mouse over image to zoom, click image for full sized image.</p>
+      </div>
+    }
+
+    val imageElem = {
+      <div>
         <script> {js} </script>
         <a href={url}>
-          <div class='zoom' id={id}>
-            <img width="512" src={url}/>
+            <div style="border: 1px solid lightgrey;">
+              <div class='zoom' id={id} style="margin: 20px;">
+                <img class="img-responsive fit-image" src={url}/>
+              </div>
           </div>
         </a>
+      </div>
+    }
+
+    val content = {
+      <div class="row">
+        <div class="col-md-4" >
+          {textElem}
+        </div>
+        <div class="col-md-5" >
+          {imageElem}
+        </div>
       </div>
     }
 
@@ -130,42 +151,110 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
       new Point2d(approximate.x - center.x, approximate.y - center.y)
     }
 
-    val content = {
+    val textElem: Elem = {
       <div>
         <h3>Approximate Center of Edges</h3>
-        Center: {fmtPoint(center)}
-        <br>Change from coarse measurement: {fmtPoint(change)}</br>
-        <br>Total XY change: {fmt.format(change.distance(new Point2d()))}</br>
-        <br>The four boxes show the areas that were used to make an edge gradient. The line inside each box</br>
-        <br>Shows where the edge was found.</br>
-        <p></p>
-        <br>Each small line near the center of the image shows the halfway point between the opposing edges.</br>
-        <br>The point where these lines (would) intersect is the center found in this phase of the analysis.</br>
-        <p></p>
-        <br>In this step, to create four AOIs radiating from the coarse center are created, using the collimator</br>
-        <br>angle to orient them in the proper direction. The AOIs are narrow so that they are narrower than the</br>
-        <br>field.  They are also extended to the edges of the image because it is not known at this point how big</br>
-        <br>the field is.
-        <br>The edge of each AOI that is closest to the center is determined by finding the minimum pixel brightness</br>
-        <br>Between the center and the AOI.</br>
-        </br>
-        <br>Hover mouse over image to zoom.</br>
+        <p>Center: {fmtPoint(center)}</p>
+        <p>Change from coarse measurement: {fmtPoint(change)}</p>
+        <p>Total XY change: {fmt.format(change.distance(new Point2d()))}</p>
+        <p>The four boxes show the areas that were used to make an edge gradient. The line inside each box shows where the edge was found.</p>
+        <p>Each small line near the center of the image shows the halfway point between the opposing edges. The point where
+          these lines (would) cross is the center found in this phase of the analysis.</p>
+        <p>In this step, to create four AOIs radiating from the coarse center are created, using the collimator angle to orient them in
+          the proper direction. The AOIs are narrow so that they are narrower than the</p>
+        <p>field.  They are also extended to the edges of the image because it is not known at this point how big the field is.</p>
+        <p>The edge of each AOI that is closest to the center is determined by finding the minimum pixel brightness Between the center and the AOI.</p>
+        <p>Hover mouse over image to zoom, click for full image.</p>
+      </div>
+    }
+
+    val imageElem: Elem = {
+      <div>
         <script> {js} </script>
         <a href={url}>
-          <div class='zoom' id={id}>
-            <img width="512" src={url}/>
+          <div style="border: 1px solid lightgrey;">
+            <div class='zoom' id={id} style="margin: 20px;">
+              <img class="img-responsive fit-image" src={url}/>
+            </div>
           </div>
         </a>
+      </div>
+
+    }
+
+    val content = {
+      <div class="row">
+        <div class="col-md-4" >
+          {textElem}
+        </div>
+        <div class="col-md-5" >
+          {imageElem}
+        </div>
       </div>
     }
 
     content
   }
 
-  private def preciseEdgeHTML(): Elem = {
+  private case class ElemJS(elem: Elem, js: String) {}
+
+  /**
+    * Create an HTML representation of the edge's profile.
+    * @param edge For this edge.
+    * @return Chart showing the profile.
+    */
+  private def edgeProfile(edge: WLNonCardEdge): ElemJS = {
+
+    // limit the profile to the part that is used for edge measurement
+    val edgeProfile = {
+      val loIndex = edge.profile.indexOf(edge.profile.min)
+      edge.profile.drop(loIndex)
+    }
+
+    // sampling distance
+    val increment_mm = {
+      val length_mm = analysis.trans.pix2IsoDistX(edge.loLoAoi.distance(edge.hiLoAoi))
+      length_mm / edge.profile.size
+    }
+
+    val xValueList = edgeProfile.indices.map(_ * increment_mm)
+
+    val chart = new C3Chart(
+      // height // default: Option[Int] = None,
+      xAxisLabel = "CU",
+      xDataLabel = "CU",
+      xValueList = xValueList,
+      // xFormat // default:  String = ".4g",
+      yAxisLabels = Seq("Offset (mm)"),
+      yDataLabel = "Offset (mm)",
+      yValues = Seq(edgeProfile)
+      // yFormat // default: String = ".4g",
+      // yColorList // default: Seq[Color] = Seq(),
+      // regionList // default: Seq[C3Chart.Region] = Seq()
+    )
+
+    val content: Elem = {
+      <div>
+        <h4>Profile for {edge.name}</h4>
+        {chart.html}
+      </div>
+    }
+
+    ElemJS(content, chart.javascript)
+  }
+
+  private def edgeGradient(edge: WLNonCardEdge): Elem = {
+    ???
+  }
+
+  /**
+    * Show the HTML for the results of the precise edge location.
+    * @return HTML and JS
+    */
+  private def preciseEdgeHTML(): ElemJS = {
     val id: String = C3Chart.makeUniqueChartIdTag
 
-    val js = s"""$$(document).ready(function(){ $$('#$id').zoom(); });""".replaceAllLiterally("\"", WebUtil.singleQuote)
+    val zoomJs = s"""$$(document).ready(function(){ $$('#$id').zoom(); });""".replaceAllLiterally("\"", WebUtil.singleQuote)
 
     val url = {
       val file = new File(analysis.subDir, "preciseEdge.png")
@@ -180,38 +269,66 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
       new Point2d(approximate.x - center.x, approximate.y - center.y)
     }
 
-    val content = {
+    val textElem: Elem = {
       <div>
         <h3>Precise Center of Edges</h3>
         Center: {fmtPoint(center)}
-        <br>Change from approximate measurement: {fmtPoint(change)}</br>
-        <br>Total XY change: {fmt.format(change.distance(new Point2d()))}</br>
+        <p>Change from approximate measurement: {fmtPoint(change)}</p>
+        <p>Total XY change: {fmt.format(change.distance(new Point2d()))}</p>
         <p></p>
-        <br>The four boxes show the areas that were used to make an edge gradient. The line inside each box</br>
-        <br>Shows where the edge was found.</br>
-        <p></p>
-        <br>Each small line near the center of the image shows the halfway point between the opposing edges.</br>
-        <br>The point where these lines (would) intersect is the center found in this phase of the analysis.</br>
-        <br>Hover mouse over image to zoom.</br>
-        <p></p>
-        <br>In this step, again four AOIs are created.  This time they are wider to use a larger number of pixels</br>
-        <br>for better accuracy.  The width of each AOI is limited by the separation of the edges found in the previous</br>
-        <br>step.  The length of the boxes is long enough to extend beyond the edges, but not to the edge of the image.</br>
-        <br>If they were longer it would increase computation time and yield the same results.  Note that the image in</br>
-        <br>This phase is being sampled at a high resolution, so keeping the AOI smaller saves time.</br>
-        <br>The edge of each AOI that is closest to the center is determined by finding the minimum pixel brightness</br>
-        <br>Between the center and the AOI.</br>
-        <br></br>
-        <script> {js} </script>
+        <p>The four boxes show the areas that were used to make an edge gradient. The line inside each box shows where
+          the edge was found.</p>
+        <p>Each small line near the center of the image shows the halfway point between the opposing edges. The point
+        where these lines (would) cross is the center found in this phase of the analysis.</p>
+        <p> In this step, again four AOIs are created.  This time they are wider to use a larger number of pixels
+        for better accuracy.  The width of each AOI is limited by the separation of the edges found in the previous
+        step.  The length of the boxes is long enough to extend beyond the edges, but not to the edge of the image.
+        If they were longer it would increase computation time and yield the same results.  Note that the image in
+        This phase is being sampled at a high resolution, so keeping the AOI smaller saves time.</p>
+        <p>The edge of each AOI that is closest to the center is determined by finding the minimum pixel brightness
+        Between the center and the AOI.</p>
+        
+        <p>Hover mouse over image to zoom, click for full image.</p>
+      </div>
+    }
+
+    val imageElem = {
+      <div>
         <a href={url}>
-          <div class='zoom' id={id}>
-            <img width="512" src={url}/>
+          <div style="border: 1px solid lightgrey;">
+            <div class='zoom' id={id} style="margin: 20px;">
+              <img class="img-responsive fit-image" src={url}/>
+            </div>
           </div>
         </a>
       </div>
     }
 
-    content
+    val profileList = analysis.nonCardEdge.edgeSet.edgeList.map(edgeProfile)
+
+    val content = {
+      <div class="row">
+        <div class="row">
+          <div class="col-md-4" >
+            {textElem}
+          </div>
+          <div class="col-md-5" >
+            {imageElem}
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-8" >
+          </div>
+          {profileList.map(_.elem)}
+        </div>
+      </div>
+    }
+
+    val profileJs = profileList.map(_.js).mkString("\n")
+
+    val js = s"$zoomJs\n$profileJs"
+
+    ElemJS(content, js)
   }
 
   /**
@@ -256,20 +373,30 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
   }
 
-  private def edgeHTML(): Elem = {
-
+  private def ballHTML(): Elem = {
     val e = analysis.nonCardEdge.edgeSet.X1
     analysis.nonCardEdge.edgeSet.X1.profile
-    ???
+    <span> </span>
   }
 
   private def makeDiagnosticsHtml(): Unit = {
 
+    val preciseEdge = preciseEdgeHTML()
+
+    val js = s"<script>\n${preciseEdge.js}\n</script>"
+
     val content = {
       <div class="col-md-10 col-md-offset-1">
         <div class="row">
-          <h2>Details for Beam {beamName}</h2>
-          {dicomAsText()}
+          <div class="row">
+            <div class="col-md-5">
+              <h2>Details for Beam {beamName}</h2>
+            </div>
+            <div class="col-md-2">
+              {dicomAsText()}
+            </div>
+          </div>
+          <hr/>
           {showWlMessage()}
         </div>
         <div>
@@ -282,19 +409,21 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
         </div>
         <div>
           <hr/>
-          {preciseEdgeHTML()}
+          {preciseEdge.elem}
         </div>
-        <div style="margin:50px;"></div>
+        <div>
+          <hr/>
+          {ballHTML()}
+        </div>
+        <p style="margin:256px;"> </p>
       </div>
     }
-
-    val runScript = "" // TODO  zoom needed?
 
     val text = WebUtil.wrapBody( //
       content = ExtendedData.wrapExtendedData(analysis.extendedData, content),
       pageTitle = s"Beam ${beamName}",
       c3 = true,
-      runScript = Some(runScript)
+      runScript = Some(js)
     )
 
     val htmlFile = new File(analysis.subDir, WLgenHtml.DIAGNOSTICS_HTML_FILE_NAME)

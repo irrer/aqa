@@ -16,6 +16,8 @@
 
 package org.aqa.webrun.wl.nonCardinal
 
+import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.LocateEdge
 import org.aqa.AQALine
 import org.aqa.BiCubicImage
@@ -30,6 +32,7 @@ import scala.annotation.tailrec
   * @param offsetStart Starting offset of profile from the line's center point.
   * @param offsetFinish  Finishing offset of profile from the line's center point.
   * @param biCubicImage Bicubic version of image.
+  * @param al Attribute list
   * @param width Width of sampling band in pixels.
   * @param resolution Resolution in pixels. 1 means same size as pixels, .5 means splitting pixels into 4 parts.
   */
@@ -39,6 +42,7 @@ case class WLNonCardEdge( //
     offsetStart: Double,
     offsetFinish: Double,
     biCubicImage: BiCubicImage,
+    al: AttributeList,
     width: Double,
     resolution: Double
 ) {
@@ -48,6 +52,18 @@ case class WLNonCardEdge( //
   private val increment = if (positive) resolution else -resolution
 
   private val widthRounded: Int = (width / resolution).round.toInt
+
+  private val RescaleSlope = al.get(TagByName.RescaleSlope).getDoubleValues.head
+  private val RescaleIntercept = al.get(TagByName.RescaleIntercept).getDoubleValues.head
+
+  /**
+    * Convert a raw pixel value to CU.
+    * @param pixelValue Value of pixel.
+    * @return Value in CU.
+    */
+  private def toCu(pixelValue: Double): Double = {
+    (pixelValue * RescaleSlope) + RescaleIntercept
+  }
 
   /**
     * Make profile of the sum of values along the line.
@@ -67,7 +83,7 @@ case class WLNonCardEdge( //
       val pointList = (0 until widthRounded).map(i => perpendicularLine.pointOn((i * resolution) - (width / 2)))
       val sum =
         try {
-          val mean = pointList.map(biCubicImage.get).sum / pointList.size
+          val mean = toCu(pointList.map(biCubicImage.get).sum / pointList.size)
           Some(mean)
         } catch {
           case _: org.apache.commons.math3.exception.OutOfRangeException =>
@@ -130,4 +146,9 @@ case class WLNonCardEdge( //
 
   val edgeHi: Point2d = edgeLine.pointOn(width / 2)
 
+  private def makeGradient(): Seq[Double] = {
+    ???
+  }
+
+  // val gradiant: Seq[Double] = makeGradient()
 }
