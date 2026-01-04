@@ -9,6 +9,7 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.WLMessage
 import org.aqa.Logging
 import org.aqa.web.C3Chart
+import org.aqa.Config
 
 import java.awt.Color
 import java.awt.Rectangle
@@ -205,29 +206,20 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     */
   private def edgeProfile(edge: WLNonCardEdge): ElemJS = {
 
-    // limit the profile to the part that is used for edge measurement
-    val edgeProfile = {
-      val loIndex = edge.profile.indexOf(edge.profile.min)
-      edge.profile.drop(loIndex)
-    }
+    // sampling distance in mm
+    val increment_mm = analysis.trans.pix2IsoDistX(Config.WLNonCardEdgePixelResolution)
 
-    // sampling distance
-    val increment_mm = {
-      val length_mm = analysis.trans.pix2IsoDistX(edge.loLoAoi.distance(edge.hiLoAoi))
-      length_mm / edge.profile.size
-    }
-
-    val xValueList = edgeProfile.indices.map(_ * increment_mm)
+    val xValueList = edge.edgeProfile.indices.map(_ * increment_mm)
 
     val chart = new C3Chart(
-      // height // default: Option[Int] = None,
-      xAxisLabel = "CU",
+      height = Some(200),
+      xAxisLabel = "mm",
       xDataLabel = "CU",
       xValueList = xValueList,
       // xFormat // default:  String = ".4g",
       yAxisLabels = Seq("Offset (mm)"),
       yDataLabel = "Offset (mm)",
-      yValues = Seq(edgeProfile)
+      yValues = Seq(edge.edgeProfile)
       // yFormat // default: String = ".4g",
       // yColorList // default: Seq[Color] = Seq(),
       // regionList // default: Seq[C3Chart.Region] = Seq()
@@ -243,8 +235,40 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     ElemJS(content, chart.javascript)
   }
 
-  private def edgeGradient(edge: WLNonCardEdge): Elem = {
-    ???
+  /**
+    * Create an HTML representation of the edge's gradient.
+    * @param edge For this edge.
+    * @return Chart showing the profile.
+    */
+  private def edgeGradient(edge: WLNonCardEdge): ElemJS = {
+
+    // sampling distance in mm
+    val increment_mm = analysis.trans.pix2IsoDistX(Config.WLNonCardEdgePixelResolution)
+
+    val xValueList = edge.gradient.indices.map(_ * increment_mm)
+
+    val chart = new C3Chart(
+      height = Some(200),
+      xAxisLabel = "CU",
+      xDataLabel = "mm",
+      xValueList = xValueList,
+      // xFormat // default:  String = ".4g",
+      yAxisLabels = Seq("Offset (mm)"),
+      yDataLabel = "Offset (mm)",
+      yValues = Seq(edge.gradient)
+      // yFormat // default: String = ".4g",
+      // yColorList // default: Seq[Color] = Seq(),
+      // regionList // default: Seq[C3Chart.Region] = Seq()
+    )
+
+    val content: Elem = {
+      <div>
+        <h4 title="This shows how straight the edge is.">Gradient for {edge.name}</h4>
+        {chart.html}
+      </div>
+    }
+
+    ElemJS(content, chart.javascript)
   }
 
   /**
@@ -305,6 +329,45 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     }
 
     val profileList = analysis.nonCardEdge.edgeSet.edgeList.map(edgeProfile)
+    val gradientList = analysis.nonCardEdge.edgeSet.edgeList.map(edgeGradient)
+
+    val profileElem = {
+      <div class="row">
+        <div class="col-md-6" >
+          {profileList.head.elem}
+        </div>
+        <div class="col-md-6" >
+          {profileList(1).elem}
+        </div>
+      </div>
+        <div class="row">
+          <div class="col-md-6" >
+            {profileList(2).elem}
+          </div>
+          <div class="col-md-6" >
+            {profileList(3).elem}
+          </div>
+        </div>
+    }
+
+    val gradientElem = {
+      <div class="row">
+        <div class="col-md-6" >
+          {gradientList.head.elem}
+        </div>
+        <div class="col-md-6" >
+          {gradientList(1).elem}
+        </div>
+      </div>
+        <div class="row">
+          <div class="col-md-6" >
+            {gradientList(2).elem}
+          </div>
+          <div class="col-md-6" >
+            {gradientList(3).elem}
+          </div>
+        </div>
+    }
 
     val content = {
       <div class="row">
@@ -316,17 +379,15 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
             {imageElem}
           </div>
         </div>
-        <div class="row">
-          <div class="col-md-8" >
-          </div>
-          {profileList.map(_.elem)}
-        </div>
+        {profileElem}
+        {gradientElem}
       </div>
     }
 
     val profileJs = profileList.map(_.js).mkString("\n")
+    val gradientJs = gradientList.map(_.js).mkString("\n")
 
-    val js = s"$zoomJs\n$profileJs"
+    val js = s"$zoomJs\n$profileJs\n$gradientJs"
 
     ElemJS(content, js)
   }
@@ -375,7 +436,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
   private def ballHTML(): Elem = {
     val e = analysis.nonCardEdge.edgeSet.X1
-    analysis.nonCardEdge.edgeSet.X1.profile
+    // analysis.nonCardEdge.edgeSet.X1.centerToHiProfile
     <span> </span>
   }
 

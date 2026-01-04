@@ -34,7 +34,7 @@ case class BiCubicImage(dicomImage: DicomImage, bufImg: Option[BufferedImage] = 
   def get(x: Double, y: Double): Double = {
     if (bufImg.isDefined) {
       try {
-        bufImg.get.setRGB(x.round.toInt, y.round.toInt, 255)
+        bufImg.get.setRGB(x.round.toInt, y.round.toInt, 0xffffff)
       } catch {
         case _: Throwable =>
           Trace.trace("x,y: " + x + ", " + y)

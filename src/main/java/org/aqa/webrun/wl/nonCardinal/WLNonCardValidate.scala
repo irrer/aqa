@@ -82,17 +82,17 @@ case class WLNonCardValidate( //
 
     val measuredPctText: String = {
       val max = wholeImagePixelValueRangeThreshold_cu / (Config.WLNonCardEdgePercentChange / 100)
-      val pct = (edge.range / max) * 100
+      val pct = (edge.pixelValueRange / max) * 100
       Util.fmtDbl(pct) + "%"
     }
 
-    if (edge.range >= wholeImagePixelValueRangeThreshold_cu) {
-      val msg = s"Edge for ${edge.name} has sufficient contrast of ${Util.fmtDbl(edge.range)} $measuredPctText . Threshold: ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WLNonCardEdgePercentChange}%)"
+    if (edge.pixelValueRange >= wholeImagePixelValueRangeThreshold_cu) {
+      val msg = s"Edge for ${edge.name} has sufficient contrast of ${Util.fmtDbl(edge.pixelValueRange)} $measuredPctText . Threshold: ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WLNonCardEdgePercentChange}%)"
       wlMessage.foreach(_.info(msg))
       Seq()
     } else {
       val msg =
-        s"Edge for ${edge.name} has insufficient contrast of ${Util.fmtDbl(edge.range)} ($measuredPctText)  when it should be at least ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WLNonCardEdgePercentChange}%)"
+        s"Edge for ${edge.name} has insufficient contrast of ${Util.fmtDbl(edge.pixelValueRange)} ($measuredPctText)  when it should be at least ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WLNonCardEdgePercentChange}%)"
       setError(WLImageStatus.BoxNotFound, msg)
       Seq(msg)
     }

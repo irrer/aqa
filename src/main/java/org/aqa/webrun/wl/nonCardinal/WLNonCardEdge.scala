@@ -83,7 +83,7 @@ case class WLNonCardEdge( //
       val pointList = (0 until widthRounded).map(i => perpendicularLine.pointOn((i * resolution) - (width / 2)))
       val sum =
         try {
-          val mean = toCu(pointList.map(biCubicImage.get).sum / pointList.size)
+          val mean = pointList.map(biCubicImage.get).sum / pointList.size
           Some(mean)
         } catch {
           case _: org.apache.commons.math3.exception.OutOfRangeException =>
@@ -97,26 +97,31 @@ case class WLNonCardEdge( //
       prof
   }
 
-  val profile: Seq[Double] = appendToProfile(offsetStart, Seq())
+  /** the profile from the center (starting point) to the defined end of the AOI */
+  private val centerToHiProfile: Seq[Double] = appendToProfile(offsetStart, Seq())
 
   /** Min profile value. */
-  val min: Double = profile.min
+  private val centerToHiMin: Double = centerToHiProfile.min
 
   /** Max profile value. */
-  val max: Double = profile.max
+  private val centerToHiMax: Double = centerToHiProfile.max
 
   /** Difference between max and min.  This is useful for gauging the validity of the edge.  This number should be
     * close to the overall range of the image.  If not, then this is probably not a Winston Lutz image.
     */
-  val range: Double = max - min
+  val pixelValueRange: Double = centerToHiMax - centerToHiMin
 
   // Use this to define one edge of the AOI
-  private val indexOfMin = profile.indexOf(min)
+  private val indexOfMin = centerToHiProfile.indexOf(centerToHiMin)
 
-  private val edge = profile.dropRight(indexOfMin)
+  /** List of pixel values from one end of the edge, through the transition, to the other end. */
+  val edgeProfile: Seq[Double] = centerToHiProfile.drop(indexOfMin)
+  // ImageDisplay.showChart(edgeProfile, yName = name + " edgeProfile")
+  // ImageDisplay.showChart(centerToHiProfile, yName = name + " centerToHiProfile")
+  private val edgeProfileMedian = (edgeProfile.min + edgeProfile.max) / 2
 
   /** Distance from the point to the edge. */
-  val position: Double = LocateEdge.locateEdge(edge.map(_.toFloat).toIndexedSeq, (min + edge.max) / 2) * resolution
+  val position: Double = (LocateEdge.locateEdge(edgeProfile.map(_.toFloat).toIndexedSeq, edgeProfileMedian) + indexOfMin) * resolution
 
   /** Point where the WL edge  */
   val edgeCenter: Point2d = line.pointOn(if (offsetFinish > 0) position else -position)
@@ -147,8 +152,40 @@ case class WLNonCardEdge( //
   val edgeHi: Point2d = edgeLine.pointOn(width / 2)
 
   private def makeGradient(): Seq[Double] = {
-    ???
+
+    val gradientResolution = 0.5
+
+    val sign = if (positive) 1 else -1
+
+    def make1Column(point: Point2d): Option[Double] = {
+      try {
+        val col = AQALine(point, line.angle_deg)
+
+        val count = (loLine.centerPoint.distance(hiLine.centerPoint) / gradientResolution).round.toInt
+
+        val valueList = (0 until count).map(i => {
+          val p = col.pointOn(i * gradientResolution * sign)
+          biCubicImage.get(p)
+          // jBiCub.get(p)
+        })
+
+        Some(valueList.sum / valueList.size)
+      } catch {
+        case _: Throwable =>
+          None
+      }
+    }
+
+    val colCount = (width / gradientResolution).round.toInt
+
+    val offset = -width / 2
+
+    val gr = (0 until colCount).flatMap(col => make1Column(loLine.pointOn(offset + (col * gradientResolution))))
+
+    gr
   }
 
-  // val gradiant: Seq[Double] = makeGradient()
+  /** Gradient showing how straight the edge is.  This can be thought of as a profile at a right angle to the edge's profile. */
+  val gradient: Seq[Double] = makeGradient()
+
 }
