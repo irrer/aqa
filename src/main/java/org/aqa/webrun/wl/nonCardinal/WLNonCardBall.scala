@@ -91,33 +91,33 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
       sorted.slice(5, 15).sum / 10
     }
 
+    // Make a list of all points with their values.  Subtract the minimum value from each so that
+    // background noise around the ball will not change the center of mass calculation.
     val ptListFinal = ptListInitial.map(pt => {
-      val value = if (edgeSet.pointIsInBallAoi(pt.point2d)) pt.value else minValue
-
+      val value: Double = if (edgeSet.pointIsInBallAoi(pt.point2d)) pt.value - minValue else 0
       PtSynthetic(pt.x, pt.y, value)
     })
     ptListFinal
 
   }
 
+  private val pointList: Seq[PtSynthetic] = makeArray(Config.WLNonCardBallPixelResolution)
+
+  val xProfile: Seq[Double] = pointList.groupBy(_.x).values.toSeq.sortBy(_.head.x).map(group => group.map(_.value).sum / group.size)
+
+  val yProfile: Seq[Double] = pointList.groupBy(_.y).values.toSeq.sortBy(_.head.y).map(group => group.map(_.value).sum / group.size)
+
   /**
     * Get the approximate center of mass.
     * @return
     */
   private def findCenterOfMass(): Point2d = {
-    val resolution_pix = Config.WLNonCardBallPixelResolution
-
-    val pointList = makeArray(resolution_pix)
-
-    val xProfile = pointList.groupBy(_.x).values.toSeq.sortBy(_.head.x).map(group => group.map(_.value).sum / group.size)
-
-    val yProfile = pointList.groupBy(_.y).values.toSeq.sortBy(_.head.y).map(group => group.map(_.value).sum / group.size)
 
     val xMinCoordinate = pointList.minBy(_.x).x
     val yMinCoordinate = pointList.minBy(_.y).y
 
-    val x = (ImageUtil.centerOfMass(xProfile.map(_.toFloat).toIndexedSeq) * resolution_pix) + xMinCoordinate
-    val y = (ImageUtil.centerOfMass(yProfile.map(_.toFloat).toIndexedSeq) * resolution_pix) + yMinCoordinate
+    val x = (ImageUtil.centerOfMass(xProfile.map(_.toFloat).toIndexedSeq) * Config.WLNonCardBallPixelResolution) + xMinCoordinate
+    val y = (ImageUtil.centerOfMass(yProfile.map(_.toFloat).toIndexedSeq) * Config.WLNonCardBallPixelResolution) + yMinCoordinate
 
     new Point2d(x, y)
   }

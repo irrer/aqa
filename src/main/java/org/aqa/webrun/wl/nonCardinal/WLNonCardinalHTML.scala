@@ -1,6 +1,5 @@
 package org.aqa.webrun.wl.nonCardinal
 
-import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.webrun.wl.WLgenHtml
 import org.aqa.Util
@@ -11,13 +10,48 @@ import org.aqa.Logging
 import org.aqa.web.C3Chart
 import org.aqa.Config
 
-import java.awt.Color
-import java.awt.Rectangle
+import java.awt.geom.Point2D
+import java.awt.image.BufferedImage
 import java.io.File
 import javax.vecmath.Point2d
 import scala.xml.Elem
 
 case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMessage]) extends Logging {
+
+  /**
+    * For returning HTML and js from functions.
+    * @param elem HTML
+    * @param js Javascript.
+    */
+  private case class ElemJS(elem: Elem, js: String) {}
+
+  private def makeImageHTML(bufImg: BufferedImage, fileName: String, caption: String): ElemJS = {
+    val id: String = C3Chart.makeUniqueChartIdTag
+    val js: String = s"""$$(document).ready(function(){ $$('#$id').zoom(); });""".replaceAllLiterally("\"", WebUtil.singleQuote)
+
+    val url = {
+      val file = new File(analysis.subDir, fileName)
+      Util.writePng(bufImg, file)
+      file.getName
+    }
+
+    val content = {
+      <div title="Click image for full-sized image.">
+        <a href={url}>
+          <div style="border: 1px solid lightgrey;">
+            <div class='zoom' id={id} style="margin: 20px;">
+              <img class="img-responsive fit-image" src={url}/>
+            </div>
+          </div>
+       </a>
+        <div style="text-align:center;">
+          <i>{caption}</i>
+        </div>
+    </div>
+    }
+
+    ElemJS(content, js)
+  }
 
   private def makeCloseupImage(): Unit = {
     val pngFile = new File(analysis.subDir, WLgenHtml.BRIGHT_SUMMARY_FILE_NAME)
@@ -84,16 +118,13 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     s"${fd(p.x)}, ${fd(p.y)}"
   }
 
-  private def coarseLocationHTML(): Elem = {
-    val id: String = C3Chart.makeUniqueChartIdTag
+  private def fmtPoint(p: Point2D.Double): String = {
+    fmtPoint(new Point2d(p.x, p.y))
+  }
 
-    val js = s"""$$(document).ready(function(){ $$('#$id').zoom(); });""".replaceAllLiterally("\"", WebUtil.singleQuote)
+  private def coarseLocationHTML(): ElemJS = {
 
-    val url = {
-      val file = new File(analysis.subDir, "coarseLocation.png")
-      Util.writePng(analysis.nonCardEdge.coarseImage(), file)
-      file.getName
-    }
+    val imageHTML = makeImageHTML(analysis.nonCardEdge.coarseImage(), "coarseLocation.png", "First step is to get the coarse location of the entire field.")
 
     val center = analysis.nonCardEdge.locateCoarseCenter()
 
@@ -107,43 +138,23 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
       </div>
     }
 
-    val imageElem = {
-      <div>
-        <script> {js} </script>
-        <a href={url}>
-            <div style="border: 1px solid lightgrey;">
-              <div class='zoom' id={id} style="margin: 20px;">
-                <img class="img-responsive fit-image" src={url}/>
-              </div>
-          </div>
-        </a>
-      </div>
-    }
-
     val content = {
       <div class="row">
         <div class="col-md-4" >
           {textElem}
         </div>
         <div class="col-md-5" >
-          {imageElem}
+          {imageHTML.elem}
         </div>
       </div>
     }
 
-    content
+    ElemJS(content, imageHTML.js)
   }
 
-  private def approximateEdgeHTML(): Elem = {
-    val id: String = C3Chart.makeUniqueChartIdTag
+  private def approximateEdgeHTML(): ElemJS = {
 
-    val js = s"""$$(document).ready(function(){ $$('#$id').zoom(); });""".replaceAllLiterally("\"", WebUtil.singleQuote)
-
-    val url = {
-      val file = new File(analysis.subDir, "approximateEdge.png")
-      Util.writePng(analysis.approxImg, file)
-      file.getName
-    }
+    val imageHTML = makeImageHTML(analysis.approxImg, "approximateEdge.png", "Locate the approximate position of the edges.")
 
     val center = analysis.nonCardEdge.approximateEdgeSet.center_pix
 
@@ -169,35 +180,19 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
       </div>
     }
 
-    val imageElem: Elem = {
-      <div>
-        <script> {js} </script>
-        <a href={url}>
-          <div style="border: 1px solid lightgrey;">
-            <div class='zoom' id={id} style="margin: 20px;">
-              <img class="img-responsive fit-image" src={url}/>
-            </div>
-          </div>
-        </a>
-      </div>
-
-    }
-
     val content = {
       <div class="row">
         <div class="col-md-4" >
           {textElem}
         </div>
         <div class="col-md-5" >
-          {imageElem}
+          {imageHTML.elem}
         </div>
       </div>
     }
 
-    content
+    ElemJS(content, imageHTML.js)
   }
-
-  private case class ElemJS(elem: Elem, js: String) {}
 
   /**
     * Create an HTML representation of the edge's profile.
@@ -227,7 +222,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
     val content: Elem = {
       <div>
-        <h4>Profile for {edge.name}</h4>
+        <h4>{edge.name} Penumbra Profile</h4>
         {chart.html}
       </div>
     }
@@ -263,7 +258,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
     val content: Elem = {
       <div>
-        <h4 title="This shows how straight the edge is.">Gradient for {edge.name}</h4>
+        <h4 title="This shows how straight the edge is.">{edge.name} Gradient (leaf end profile) </h4>
         {chart.html}
       </div>
     }
@@ -276,15 +271,8 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     * @return HTML and JS
     */
   private def preciseEdgeHTML(): ElemJS = {
-    val id: String = C3Chart.makeUniqueChartIdTag
 
-    val zoomJs = s"""$$(document).ready(function(){ $$('#$id').zoom(); });""".replaceAllLiterally("\"", WebUtil.singleQuote)
-
-    val url = {
-      val file = new File(analysis.subDir, "preciseEdge.png")
-      Util.writePng(analysis.img, file)
-      file.getName
-    }
+    val imageHTML = makeImageHTML(analysis.img, "preciseEdge.png", "Measure precise location of edges using wider AOIs")
 
     val center = analysis.nonCardEdge.edgeSet.center_pix
 
@@ -313,18 +301,6 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
         Between the center and the AOI.</p>
         
         <p>Hover mouse over image to zoom, click for full image.</p>
-      </div>
-    }
-
-    val imageElem = {
-      <div>
-        <a href={url}>
-          <div style="border: 1px solid lightgrey;">
-            <div class='zoom' id={id} style="margin: 20px;">
-              <img class="img-responsive fit-image" src={url}/>
-            </div>
-          </div>
-        </a>
       </div>
     }
 
@@ -376,7 +352,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
             {textElem}
           </div>
           <div class="col-md-5" >
-            {imageElem}
+            {imageHTML.elem}
           </div>
         </div>
         {profileElem}
@@ -387,64 +363,113 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     val profileJs = profileList.map(_.js).mkString("\n")
     val gradientJs = gradientList.map(_.js).mkString("\n")
 
-    val js = s"$zoomJs\n$profileJs\n$gradientJs"
+    val js = s"${imageHTML.js}\n$profileJs\n$gradientJs"
 
     ElemJS(content, js)
   }
 
-  /**
-    * Make an image of the given edge.  Write the image to a file and return an element to display it.
-    * @param edge For this edge
-    * @return Element to display image.
-    */
-  def edgeImage(edge: WLNonCardEdge): Elem = {
+  private val wlBallImage = WLBallImage(analysis)
 
-    val pointList = Seq( ///
-      edge.loHiAoi,
-      edge.loLoAoi,
-      edge.hiHiAoi,
-      edge.hiLoAoi
+  private val xBallProfilesHTML: ElemJS = {
+
+    val yValueList = analysis.nonCardBall.xProfile
+    val increment = analysis.trans.pix2IsoDistX(Config.WLNonCardBallPixelResolution)
+    val xValueList = yValueList.indices.map(_ * increment)
+
+    val xProfile = new C3Chart(
+      height = Some(200),
+      xAxisLabel = "mm",
+      xDataLabel = "CU",
+      xValueList = xValueList,
+      yAxisLabels = Seq("Offset (mm)"),
+      yDataLabel = "Offset (mm)",
+      yValues = Seq(yValueList)
     )
 
-    val minX = pointList.map(_.x).min.round.toInt
-    val maxX = pointList.map(_.x).max.round.toInt
-    val minY = pointList.map(_.y).min.round.toInt
-    val maxY = pointList.map(_.y).max.round.toInt
-
-    // number of pixels to leave around the area.
-    val border = 5
-
-    val area = new Rectangle(minX, minY, maxX - minX, maxY - minY)
-
-    val dicomImage = analysis.preprocessedImage
-
-    val areaWithBorder = new Rectangle( //
-      Math.min(minX - border, 0),
-      Math.min(minY - border, 0),
-      Math.max(maxX - minX + (border * 2), dicomImage.width - 1),
-      Math.max(maxY - minY + (border * 2), dicomImage.height - 1)
-    )
-
-    val bufImg = WLBlankImage.make(dicomImage, analysis.nonCardEdge.edgeSet)
-
-    val gc = ImageUtil.getGraphics(bufImg)
-    gc.setColor(Color.yellow)
-
-    ???
-
+    ElemJS(xProfile.html, xProfile.javascript)
   }
 
-  private def ballHTML(): Elem = {
-    val e = analysis.nonCardEdge.edgeSet.X1
-    // analysis.nonCardEdge.edgeSet.X1.centerToHiProfile
-    <span> </span>
+  /**
+    * Make a profile for the ball.
+    * @param yValueList Profile values.
+    * @return
+    */
+  private def makeBallProfile(yValueList: Seq[Double]): ElemJS = {
+
+    val increment = analysis.trans.pix2IsoDistX(Config.WLNonCardBallPixelResolution)
+    val xValueList = yValueList.indices.map(_ * increment)
+
+    val xProfile = new C3Chart(
+      height = Some(200),
+      xAxisLabel = "mm",
+      xDataLabel = "CU",
+      xValueList = xValueList,
+      yAxisLabels = Seq("Offset (mm)"),
+      yDataLabel = "Offset (mm)",
+      yValues = Seq(yValueList)
+    )
+
+    ElemJS(xProfile.html, xProfile.javascript)
+  }
+
+  private def ballHTML(): ElemJS = {
+
+    val center = {
+      val pix = analysis.nonCardBall.center_pix
+      analysis.trans.pix2Iso(pix.x, pix.y)
+    }
+
+    val textElem = {
+      <div>
+        <h3>Ball</h3>
+        Center: {fmtPoint(center)}
+        <br>The ball.  Add gooder text.</br>
+      </div>
+    }
+
+    val foreground = makeImageHTML(wlBallImage.ballImage(), "ball.png", "Ball with center marked.")
+    val background = makeImageHTML(wlBallImage.ballBackgroundImage(), "ballBackground.png", "Background of ball to show effects of stem.")
+    val xProfile = makeBallProfile(analysis.nonCardBall.xProfile)
+    val yProfile = makeBallProfile(analysis.nonCardBall.yProfile)
+
+    val content = {
+      <div class="row">
+        <div class="row">
+          <div class="col-md-4" >
+            {textElem}
+          </div>
+          <div class="col-md-4" >
+            {foreground.elem}
+          </div>
+          <div class="col-md-4" >
+            {background.elem}
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6" >
+            {xProfile.elem}
+          </div>
+          <div class="col-md-6" >
+            {yProfile.elem}
+          </div>
+        </div>
+      </div>
+    }
+
+    val allJS = Seq(foreground, background, xProfile, yProfile).map(_.js).mkString("\n")
+
+    ElemJS(content, allJS)
   }
 
   private def makeDiagnosticsHtml(): Unit = {
-
+    val coarseHTML = coarseLocationHTML()
+    val approximate = approximateEdgeHTML()
     val preciseEdge = preciseEdgeHTML()
+    val ball = ballHTML()
 
-    val js = s"<script>\n${preciseEdge.js}\n</script>"
+    val allJS = Seq(coarseHTML, approximate, preciseEdge, ball).map(_.js).mkString("\n")
+
+    val js = s"<script>\n$allJS\n</script>"
 
     val content = {
       <div class="col-md-10 col-md-offset-1">
@@ -462,11 +487,11 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
         </div>
         <div>
           <hr/>
-          {coarseLocationHTML()}
+          {coarseHTML.elem}
         </div>
         <div>
           <hr/>
-          {approximateEdgeHTML()}
+          {approximate.elem}
         </div>
         <div>
           <hr/>
@@ -474,7 +499,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
         </div>
         <div>
           <hr/>
-          {ballHTML()}
+          {ball.elem}
         </div>
         <p style="margin:256px;"> </p>
       </div>
@@ -482,7 +507,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
     val text = WebUtil.wrapBody( //
       content = ExtendedData.wrapExtendedData(analysis.extendedData, content),
-      pageTitle = s"Beam ${beamName}",
+      pageTitle = s"Beam $beamName",
       c3 = true,
       runScript = Some(js)
     )
