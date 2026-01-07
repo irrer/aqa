@@ -53,10 +53,12 @@ case class WLNonCardEdgeAnalysis( //
 
   val trans = new IsoImagePlaneTranslator(al)
 
-  private val coarseRectangle = WLCoarseBox(preprocessedImage, trans, wlMessage).locate()
+  val coarseBox: WLCoarseBox = WLCoarseBox(preprocessedImage, trans, wlMessage)
+
+  private val coarseRectangle = coarseBox.rectangle
 
   /** The center of the edges as calculated by finding the center of mass.  This should be accurate to within 3 pixels. */
-  def locateCoarseCenter(): Point2d = new Point2d(coarseRectangle.getCenterX, coarseRectangle.getCenterY)
+  val locateCoarseCenter: Point2d = new Point2d(coarseRectangle.getCenterX, coarseRectangle.getCenterY)
 
   /**
     * Determine the maximum offset for the given line such that the edge AOI will still be within the bounds of the image.
@@ -243,7 +245,7 @@ case class WLNonCardEdgeAnalysis( //
   // main processing comprised of three steps
 
   // Find the coarse center using center of mass.
-  private val coarseCenter: Point2d = locateCoarseCenter()
+  private val coarseCenter: Point2d = locateCoarseCenter
 
   /** Approximate position of the 4 edges.  Testing shows that this is accurate to about 0.05 pixels.  But we can do better! */
   val approximateEdgeSet: WLNonCardEdgeSet = approximateLocationOfEdges(coarseCenter)

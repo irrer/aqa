@@ -10,7 +10,8 @@ import java.awt.Rectangle
 
 case class WLCoarseBox(image: DicomImage, trans: IsoImagePlaneTranslator, wlMsg: Option[WLMessage]) extends Logging {
 
-  // def this(rtimage: AttributeList) = this(new DicomImage(rtimage), new IsoImagePlaneTranslator(rtimage), wlMsg)
+  val columnSums: IndexedSeq[Float] = image.columnSums
+  val rowSums: IndexedSeq[Float] = image.rowSums
 
   private case class StartAndLen(start: Int, len: Int) {}
 
@@ -39,22 +40,32 @@ case class WLCoarseBox(image: DicomImage, trans: IsoImagePlaneTranslator, wlMsg:
     * Define a rectangle around the box that includes an extra border for the penumbra.
     * @return Bounds for area of interest.
     */
-  def locate(): Rectangle = {
+  private def locate(): Rectangle = {
     val xStartLen = coarseBoxLocate(image.columnSums, trans.iso2PixDistX)
     val yStartLen = coarseBoxLocate(image.rowSums, trans.iso2PixDistY)
 
     val rect = new Rectangle(xStartLen.start, yStartLen.start, xStartLen.len, yStartLen.len)
 
-    if (wlMsg.isDefined)
+    if (wlMsg.isDefined) {
+
       wlMsg.get.info(
         "Rectangle defining coarse box location in mm: " +
-          "    x: " + Util.fmtDbl(trans.pix2IsoCoordX(rect.x)) +
-          "    y: " + Util.fmtDbl(trans.pix2IsoCoordY(rect.y)) +
+          "    left: " + Util.fmtDbl(trans.pix2IsoCoordX(rect.x)) +
+          "    top " + Util.fmtDbl(trans.pix2IsoCoordY(rect.y)) +
           "    width: " + Util.fmtDbl(trans.pix2IsoDistX(rect.width)) +
           "    height: " + Util.fmtDbl(trans.pix2IsoDistY(rect.height))
       )
 
+      wlMsg.get.info(
+        "Rectangle defining coarse box center in mm: " +
+          "    x: " + Util.fmtDbl(trans.pix2IsoCoordX(rect.x + (rect.width / 2))) +
+          "    y: " + Util.fmtDbl(trans.pix2IsoCoordY(rect.y + (rect.height / 2)))
+      )
+    }
+
     rect
   }
+
+  val rectangle: Rectangle = locate()
 
 }

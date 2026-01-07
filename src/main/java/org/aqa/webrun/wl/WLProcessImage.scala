@@ -283,7 +283,7 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
         if (badPixels.badPixelsCorrected.nonEmpty || badPixels.marginalPixelsCorrected.nonEmpty)
           saveWLBadPixelImage(pixels, badPixels.badPixelsCorrected, badPixels.marginalPixelsCorrected)
 
-        val coarseAoiBounds = WLCoarseBox(new DicomImage(pixels), trans, Some(wlMsg)).locate()
+        val coarseAoiBounds = WLCoarseBox(new DicomImage(pixels), trans, Some(wlMsg)).rectangle
 
         val coarseAoi: DicomImage = preprocessImage.preprocessedImage.getSubimage(coarseAoiBounds)
 

@@ -27,7 +27,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
   private def makeImageHTML(bufImg: BufferedImage, fileName: String, caption: String): ElemJS = {
     val id: String = C3Chart.makeUniqueChartIdTag
-    val js: String = s"""$$(document).ready(function(){ $$('#$id').zoom(); });""".replaceAllLiterally("\"", WebUtil.singleQuote)
+    val js: String = "" // s"""$$(document).ready(function(){ $$('#$id').zoom(); });""".replaceAllLiterally("\"", WebUtil.singleQuote)
 
     val url = {
       val file = new File(analysis.subDir, fileName)
@@ -39,14 +39,12 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
       <div title="Click image for full-sized image.">
         <a href={url}>
           <div style="border: 1px solid lightgrey;">
-            <div class='zoom' id={id} style="margin: 20px;">
+            <div id={id} style="margin: 20px;">
               <img class="img-responsive fit-image" src={url}/>
             </div>
           </div>
        </a>
-        <div style="text-align:center;">
-          <i>{caption}</i>
-        </div>
+        <p style="text-align:center;font-style: italic;"> {caption} </p>
     </div>
     }
 
@@ -122,51 +120,103 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     fmtPoint(new Point2d(p.x, p.y))
   }
 
+  private def coarseChart(profile: IndexedSeq[Float]): C3Chart = {
+
+    new C3Chart(
+      height = Some(200),
+      xAxisLabel = "pixel",
+      xDataLabel = "CU",
+      xValueList = profile.indices.map(_.doubleValue),
+      yAxisLabels = Seq(""),
+      yDataLabel = "",
+      yValues = Seq(profile.map(_.doubleValue()))
+    )
+  }
+
   private def coarseLocationHTML(): ElemJS = {
 
     val imageHTML = makeImageHTML(analysis.nonCardEdge.coarseImage(), "coarseLocation.png", "First step is to get the coarse location of the entire field.")
 
-    val center = analysis.nonCardEdge.locateCoarseCenter()
+    val center = {
+      val c = analysis.nonCardEdge.locateCoarseCenter
+      analysis.trans.pix2Iso(c.x, c.y)
+    }
 
     val textElem = {
       <div>
-        <h3>Coarse Location of Field</h3>
+        <h3>Step 1: Coarse Location of Field</h3>
         Center: {fmtPoint(center)}
-        <br>Box encloses the general location of the edges, with the center being a coarse estimate.</br>
+        <p>Box encloses the general location of the edges, with the center being a coarse estimate.</p>
         <p>Profiles in the X and Y axis were used find this.</p>
         <p>Hover mouse over image to zoom, click image for full sized image.</p>
       </div>
     }
 
+    val xProfile = coarseChart(analysis.nonCardEdge.coarseBox.columnSums)
+    val yProfile = coarseChart(analysis.nonCardEdge.coarseBox.rowSums)
+
+    val js = Seq(imageHTML.js, xProfile.javascript, yProfile.javascript).mkString("\n")
+
     val content = {
+
       <div class="row">
-        <div class="col-md-4" >
-          {textElem}
+        <div class="row">
+          <div class="col-md-4" >
+            {textElem}
+          </div>
+          <div class="col-md-5" >
+            {imageHTML.elem}
+          </div>
         </div>
-        <div class="col-md-5" >
-          {imageHTML.elem}
+        <div class="row">
+          <h5>
+            <p style="text-align:center; margin:20px;">
+              The profiles below are of the entire image.  The 50% level that occurs twice on each profile
+              is used to establish the approximate bounds of the field vertically and horizontally.  The
+              result is a bounding rectangle shown in the image above.
+            </p>
+          </h5>
+        </div>
+        <div class="row">
+          <div class="col-md-6"  style="text-align:center;font-style: italic;">
+            X Profile of Entire Image
+            {xProfile.html}
+          </div>
+          <div class="col-md-6"  style="text-align:center;font-style: italic;">
+            Y Profile of Entire Image
+            {yProfile.html}
+          </div>
         </div>
       </div>
+
     }
 
-    ElemJS(content, imageHTML.js)
+    ElemJS(content, js)
   }
 
   private def approximateEdgeHTML(): ElemJS = {
 
     val imageHTML = makeImageHTML(analysis.approxImg, "approximateEdge.png", "Locate the approximate position of the edges.")
 
-    val center = analysis.nonCardEdge.approximateEdgeSet.center_pix
+    val center_pix = analysis.nonCardEdge.approximateEdgeSet.center_pix
+
+    val center_iso = {
+      val c = analysis.nonCardEdge.approximateEdgeSet.center_pix
+      analysis.trans.pix2Iso(c.x, c.y)
+    }
 
     val change = {
-      val approximate = analysis.nonCardEdge.locateCoarseCenter()
-      new Point2d(approximate.x - center.x, approximate.y - center.y)
+      val approximate = analysis.nonCardEdge.locateCoarseCenter
+      new Point2d( //
+        analysis.trans.pix2IsoDistX(approximate.x - center_pix.x),
+        analysis.trans.pix2IsoDistY(approximate.y - center_pix.y)
+      )
     }
 
     val textElem: Elem = {
       <div>
-        <h3>Approximate Center of Edges</h3>
-        <p>Center: {fmtPoint(center)}</p>
+        <h3>Step 2: Approximate Center of Edges</h3>
+        <p>Center: {fmtPoint(center_iso)}</p>
         <p>Change from coarse measurement: {fmtPoint(change)}</p>
         <p>Total XY change: {fmt.format(change.distance(new Point2d()))}</p>
         <p>The four boxes show the areas that were used to make an edge gradient. The line inside each box shows where the edge was found.</p>
@@ -221,8 +271,8 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     )
 
     val content: Elem = {
-      <div>
-        <h4>{edge.name} Penumbra Profile</h4>
+      <div title="Profile showing the effects of the penumbra of the edge from dark to light.">
+        <h4>{edge.name} AOI Profile</h4>
         {chart.html}
       </div>
     }
@@ -274,17 +324,22 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
     val imageHTML = makeImageHTML(analysis.img, "preciseEdge.png", "Measure precise location of edges using wider AOIs")
 
-    val center = analysis.nonCardEdge.edgeSet.center_pix
+    val center_pix = analysis.nonCardEdge.edgeSet.center_pix
+
+    val center_iso = analysis.trans.pix2Iso(center_pix.x, center_pix.y)
 
     val change = {
-      val approximate = analysis.nonCardEdge.approximateEdgeSet.center_pix
-      new Point2d(approximate.x - center.x, approximate.y - center.y)
+      val approximate_pix = analysis.nonCardEdge.approximateEdgeSet.center_pix
+      new Point2d( //
+        analysis.trans.iso2PixDistX(approximate_pix.x - center_pix.x),
+        analysis.trans.iso2PixDistY(approximate_pix.y - center_pix.y)
+      )
     }
 
     val textElem: Elem = {
       <div>
-        <h3>Precise Center of Edges</h3>
-        Center: {fmtPoint(center)}
+        <h3>Step 3: Precise Center of Edges</h3>
+        Center: {fmtPoint(center_iso)}
         <p>Change from approximate measurement: {fmtPoint(change)}</p>
         <p>Total XY change: {fmt.format(change.distance(new Point2d()))}</p>
         <p></p>
@@ -307,15 +362,21 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     val profileList = analysis.nonCardEdge.edgeSet.edgeList.map(edgeProfile)
     val gradientList = analysis.nonCardEdge.edgeSet.edgeList.map(edgeGradient)
 
-    val profileElem = {
+    val profileElem: Elem = {
       <div class="row">
-        <div class="col-md-6" >
-          {profileList.head.elem}
+        <div class="row">
+          The edge profiles are calculated by finding the sum of the pixels across the width of the four areas of interest.
+          This typically result in a sort of S curve that is charactaristic of a penumbra.  The 50% point for each of these
+          charts is marked in the image above in the four areas of interest by the line indicating the location of the edge.
         </div>
-        <div class="col-md-6" >
-          {profileList(1).elem}
+        <div class="row">
+          <div class="col-md-6" >
+            {profileList.head.elem}
+          </div>
+          <div class="col-md-6" >
+            {profileList(1).elem}
+          </div>
         </div>
-      </div>
         <div class="row">
           <div class="col-md-6" >
             {profileList(2).elem}
@@ -324,17 +385,26 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
             {profileList(3).elem}
           </div>
         </div>
+      </div>
     }
 
-    val gradientElem = {
+    val gradientElem: Elem = {
       <div class="row">
-        <div class="col-md-6" >
-          {gradientList.head.elem}
+        <div class="row">
+          The following gradient charts show how straight the edges are. A wavy profile
+          usually means that the edge was defined by multiple leaf ends.  A straight
+          line usually is defined by a jaw or the side of a leaf.  A line with a dip
+          usually means that the edge was formed by the sides of the collimator leaves,
+          but with the tips meeting in the middle of the edge (the leakage makes the dip).
         </div>
-        <div class="col-md-6" >
-          {gradientList(1).elem}
+        <div class="row">
+          <div class="col-md-6" >
+            {gradientList.head.elem}
+          </div>
+          <div class="col-md-6" >
+            {gradientList(1).elem}
+          </div>
         </div>
-      </div>
         <div class="row">
           <div class="col-md-6" >
             {gradientList(2).elem}
@@ -343,6 +413,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
             {gradientList(3).elem}
           </div>
         </div>
+      </div>
     }
 
     val content = {
@@ -421,9 +492,34 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
     val textElem = {
       <div>
-        <h3>Ball</h3>
+        <h3>Step 4: Locating Ball</h3>
         Center: {fmtPoint(center)}
-        <br>The ball.  Add gooder text.</br>
+        <p>The image on the left shows the ball area, and is marked with the center of the ball.</p>
+        <p>The ball area is delimited by the dimmest region between the ball and the edges.</p>
+        <p>A background compenstation is done, by finding the lowest pixel value and then subtracting that
+        value from every pixel in the ball area.  Then, a center of mass algorithm is used to find
+        the precise center of the ball.</p>
+        <p>The image on the right is also the ball area can be used to view the effects of the stem that
+        supports the ball. The ball itself is darkened, and the surrounding pixels brightened.  A
+        particularly bright area on one side indicates the stem. </p>
+        <p>The charts below show the profile of the ball area in X and Y.  Two tests are performed to
+        validate the ball:</p>
+        <ol>
+          <li>Calculate standard deviation of the pixels and check it against a configured value.
+          If there is no ball (area is flat), then the standard deviation will be small.</li>
+          <li>Determine the symmetry of the ball by comparing (subtract) the right and left profiles from
+          each profile from each other.  The difference should be small, and if not, the test will fail.
+            Each of these differences is performed:
+            <ul>
+              <li>Horz left - Horz right</li>
+              <li>Horz left - Vert left</li>
+              <li>Horz left - Vert right</li>
+              <li>Horz right - Vert left</li>
+              <li>Horz right - Vert right</li>
+              <li>Vert left - Vert right</li>
+            </ul>
+          </li>
+        </ol>
       </div>
     }
 
@@ -447,9 +543,11 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
         </div>
         <div class="row">
           <div class="col-md-6" >
+            <p style="text-align:center;font-style: italic;"> X Profile of ball area (sums of pixel columns) </p>
             {xProfile.elem}
           </div>
           <div class="col-md-6" >
+            <p style="text-align:center;font-style: italic;"> Y Profile of ball area (sums of pixel rows) </p>
             {yProfile.elem}
           </div>
         </div>
