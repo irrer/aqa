@@ -272,7 +272,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
     val content: Elem = {
       <div title="Profile showing the effects of the penumbra of the edge from dark to light.">
-        <h4>{edge.name} AOI Profile</h4>
+        <h4>{edge.name} Profile across length of AOI</h4>
         {chart.html}
       </div>
     }
@@ -308,7 +308,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
     val content: Elem = {
       <div>
-        <h4 title="This shows how straight the edge is.">{edge.name} Gradient (leaf end profile) </h4>
+        <h4 title="This shows how straight the edge is.">{edge.name} Edge Profile across width of AOI </h4>
         {chart.html}
       </div>
     }
