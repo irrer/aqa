@@ -508,8 +508,9 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
           <li>Calculate standard deviation of the pixels and check it against a configured value.
           If there is no ball (area is flat), then the standard deviation will be small.</li>
           <li>Determine the symmetry of the ball by comparing (subtract) the right and left profiles from
-          each profile from each other.  The difference should be small, and if not, the test will fail.
-            Each of these differences is performed:
+          each profile from each other.  Profiles are halved by using the measured center of the ball.
+          The difference should be small, and if not, the test will fail. Each of these differences is
+          performed:
             <ul>
               <li>Horz left - Horz right</li>
               <li>Horz left - Vert left</li>
