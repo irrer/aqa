@@ -37,12 +37,12 @@ case class WLNonCardValidate( //
     }
   }
 
-  def getStatus(): Option[WLImageStatus.Value] =
+  def getStatus: Option[WLImageStatus.Value] =
     wlNonCardStatus.synchronized {
       wlNonCardStatus.map(_.status)
     }
 
-  def getErrorMessage(): Option[String] =
+  def getErrorMessage: Option[String] =
     wlNonCardStatus.synchronized {
       wlNonCardStatus.map(_.msg)
     }
@@ -218,11 +218,11 @@ case class WLNonCardValidate( //
     val error_mm = Math.sqrt((errX_mm * errX_mm) + (errY_mm * errY_mm))
 
     0 match {
-      case _ if (error_mm <= machineWL.passLimit_mm) && getStatus().isEmpty =>
+      case _ if (error_mm <= machineWL.passLimit_mm) && getStatus.isEmpty =>
         val msg = s"Passed.  Error: $error_mm   Pass limit: ${machineWL.passLimit_mm}"
         setError(WLImageStatus.Passed, msg)
         Seq()
-      case _ if (error_mm > machineWL.passLimit_mm) && getStatus().isEmpty =>
+      case _ if (error_mm > machineWL.passLimit_mm) && getStatus.isEmpty =>
         val msg = s"Failed.  Error: $error_mm   Pass limit: ${machineWL.passLimit_mm}"
         setError(WLImageStatus.OffsetLimitExceeded, msg)
         Seq()
@@ -238,7 +238,7 @@ case class WLNonCardValidate( //
   ballIsSufficientlyLarge()
   ballIsSymmetrical()
   withinTolerance()
-  if (getStatus().isEmpty)
+  if (getStatus.isEmpty)
     setError(WLImageStatus.UnexpectedError, "Unexpected error") // this should never happen
 
 }

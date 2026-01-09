@@ -30,12 +30,12 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
 
   // Invert the pixels if necessary.
   val preprocessedImage: DicomImage = WLPreprocessImage(al, None).preprocessedImage
+  val trans = new IsoImagePlaneTranslator(al)
 
   private val biCubicImage = BiCubicImage(preprocessedImage)
   val nonCardEdge = new WLNonCardEdgeAnalysis(preprocessedImage, al, biCubicImage, wlMessage)
-  val nonCardBall = WLNonCardBall(nonCardEdge.edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, biCubicImage: BiCubicImage, al)
+  val nonCardBall = WLNonCardBall(nonCardEdge.edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, biCubicImage: BiCubicImage, trans, al, wlMessage)
 
-  val trans = new IsoImagePlaneTranslator(al)
 
   /** Take the mean of the pixels that are in the center of the ball and use those to establish the point in the brightest color level. */
   val maxPixelValue: Float = {
@@ -65,9 +65,9 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
 
   val validator: WLNonCardValidate = WLNonCardValidate(nonCardEdge, nonCardBall, machineWL, wlMessage)
 
-  val status: WLImageStatus.Value = validator.getStatus().get
+  val status: WLImageStatus.Value = validator.getStatus.get
 
-  private val statusMessage: String = validator.getErrorMessage().get
+  private val statusMessage: String = validator.getErrorMessage.get
 
   wlMessage.foreach(_.info(s"Status: $status : $statusMessage"))
 
@@ -126,8 +126,15 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
   override def offsetY_mm: Double = trans.pix2IsoDistY(nonCardEdge.edgeSet.center_pix.getY - nonCardBall.center_pix.getY)
 
   override def getImageStatus: WLImageStatus.Value = {
-    val ok = (validator.getStatus().size == 1) && validator.getStatus().head.toString.equals(WLImageStatus.Passed.toString)
-    if (ok) WLImageStatus.Passed else WLImageStatus.OffsetLimitExceeded
+    val ok = (validator.getStatus.isDefined) && validator.getStatus.head.toString.equals(WLImageStatus.Passed.toString)
+    if (ok)
+      WLImageStatus.Passed
+    else {
+      if (validator.getStatus.isDefined)
+        validator.getStatus.get
+      else
+        WLImageStatus.UnexpectedError
+    }
   } // TODO be more specific
 
   override def convertToDB: Either[WinstonLutz, WinstonLutzNonCardinal] = Right(makeWinstonLutzNonCardinal)
@@ -155,8 +162,8 @@ object WLNonCardAnalysis {
     val wlMessage: WLMessage = WLMessage(runReq, al)
     val machineWL = MachineWL.getMachineWLOrDefault(ext.machine.machinePK.get)
     val wlNonCardAnalysis = WLNonCardAnalysis(ext, al, runReq, machineWL, Some(wlMessage))
-    Trace.trace("status: " + wlNonCardAnalysis.validator.getStatus())
-    Trace.trace("error message: " + wlNonCardAnalysis.validator.getErrorMessage())
+    Trace.trace("status: " + wlNonCardAnalysis.validator.getStatus)
+    Trace.trace("error message: " + wlNonCardAnalysis.validator.getErrorMessage)
 
     WLNonCardCompositeImage.makeCompositeImage(wlNonCardAnalysis)
 

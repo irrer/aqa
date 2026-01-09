@@ -25,6 +25,7 @@ import edu.umro.ScalaUtil.Trace
 import org.aqa.BiCubicImage
 import org.aqa.Config
 import org.aqa.Logging
+import org.aqa.webrun.wl.WLMessage
 
 import java.awt.Color
 import javax.vecmath.Point2d
@@ -37,7 +38,8 @@ import javax.vecmath.Point2d
   * @param biCubicImage Interpolated version of preprocessedImage.
   * @param al Original DICOM.
   */
-case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, biCubicImage: BiCubicImage, al: AttributeList) extends Logging {
+case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, biCubicImage: BiCubicImage, trans: IsoImagePlaneTranslator, al: AttributeList, wlMessage: Option[WLMessage])
+    extends Logging {
 
   /**
     * Represent a point in the image and its value. Saving the value is more efficient because the
@@ -103,9 +105,11 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
 
   private val pointList: Seq[PtSynthetic] = makeArray(Config.WLNonCardBallPixelResolution)
 
-  val xProfile: Seq[Double] = pointList.groupBy(_.x).values.toSeq.sortBy(_.head.x).map(group => group.map(_.value).sum / group.size)
+  /** Horizontal profile of ball in pixel values. */
+  val xProfile: Seq[Double] = pointList.groupBy(_.x).values.toSeq.sortBy(_.head.x).map(group => group.map(_.value).sum / group.size).toIndexedSeq
 
-  val yProfile: Seq[Double] = pointList.groupBy(_.y).values.toSeq.sortBy(_.head.y).map(group => group.map(_.value).sum / group.size)
+  /** Vertical profile of ball in pixel values. */
+  val yProfile: Seq[Double] = pointList.groupBy(_.y).values.toSeq.sortBy(_.head.y).map(group => group.map(_.value).sum / group.size).toIndexedSeq
 
   /**
     * Get the approximate center of mass.
@@ -122,7 +126,10 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
     new Point2d(x, y)
   }
 
+  /** Center of ball in pixel coordinates. */
   val center_pix: Point2d = findCenterOfMass()
+
+  wlMessage.foreach(_.info(s"Center of ball: ${trans.pix2Iso(center_pix)}"))
 
   private case class MinMax(min: Float, max: Float) {}
 
@@ -143,10 +150,18 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
   private val minMaxPixelValues = calculateMinAndMaxMaxPixelValue()
 
   /** the approximate min pixel value of the ball. Useful for rendering images. */
+  //noinspection ScalaWeakerAccess
   val approximateMinPixelValueOfBall: Float = minMaxPixelValues.min
 
   /** the approximate max pixel value of the ball. Useful for rendering images. */
+  //noinspection ScalaWeakerAccess
   val approximateMaxPixelValueOfBall: Float = minMaxPixelValues.max
+
+  wlMessage.foreach(
+    _.info(
+      s"Ball approximate min pixel value: $approximateMinPixelValueOfBall  approximate max pixel value: $approximateMaxPixelValueOfBall    range: ${approximateMaxPixelValueOfBall - approximateMinPixelValueOfBall}"
+    )
+  )
 
   // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
