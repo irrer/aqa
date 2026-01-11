@@ -25,6 +25,7 @@ import org.aqa.webrun.wl.WLImageUtil
 
 import java.awt.image.BufferedImage
 import java.io.File
+import javax.vecmath.Point2d
 
 case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLRunReq, machineWL: MachineWL, wlMessage: Option[WLMessage]) extends WLResult(extendedData, wlRunReq) {
 
@@ -32,10 +33,26 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
   val preprocessedImage: DicomImage = WLPreprocessImage(al, None).preprocessedImage
   val trans = new IsoImagePlaneTranslator(al)
 
-  private val biCubicImage = BiCubicImage(preprocessedImage)
-  val nonCardEdge = new WLNonCardEdgeAnalysis(preprocessedImage, al, biCubicImage, wlMessage)
-  val nonCardBall = WLNonCardBall(nonCardEdge.edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, biCubicImage: BiCubicImage, trans, al, wlMessage)
+  /** The beam center.  Usually 0,0, but might be offset.  If it is offset, then the plan must
+    * be available to know what it is.  If not available, then it defaults to 0,0
+    */
+  val beamCenter_mm: Point2d = {
+    try {
+      val planBeam = Util.getBeamOfRtimage(wlRunReq.rtplan.get, al)
+      val RTImagePosition = DicomUtil.findAllSingle(planBeam.get, TagByName.RTImagePosition).head.getDoubleValues
 
+      val x = RTImagePosition.head / trans.beamExpansionRatio
+      val y = RTImagePosition(1) / trans.beamExpansionRatio
+      new Point2d(-x, y)
+    } catch {
+      case _: Throwable =>
+        new Point2d(0, 0)
+    }
+  }
+
+  private val biCubicImage = BiCubicImage(preprocessedImage)
+  val nonCardEdge = new WLNonCardEdgeAnalysis(preprocessedImage, al, biCubicImage, wlRunReq, wlMessage, trans, beamCenter_mm)
+  val nonCardBall = WLNonCardBall(nonCardEdge.edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, biCubicImage: BiCubicImage, trans, al, wlMessage, beamCenter_mm)
 
   /** Take the mean of the pixels that are in the center of the ball and use those to establish the point in the brightest color level. */
   val maxPixelValue: Float = {

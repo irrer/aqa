@@ -12,6 +12,7 @@ import org.aqa.Config
 
 import java.awt.geom.Point2D
 import java.awt.image.BufferedImage
+import java.awt.Color
 import java.io.File
 import javax.vecmath.Point2d
 import scala.xml.Elem
@@ -31,6 +32,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
     val url = {
       val file = new File(analysis.subDir, fileName)
+      Util.addGraticules(bufImg, analysis.trans, Color.lightGray)
       Config.applyWatermark(bufImg)
       Util.writePng(bufImg, file)
       file.getName
@@ -82,11 +84,22 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
   private def dicomAsText(): Elem = {
     val file = new File(analysis.subDir, "dicom.html")
 
-    val content = {
+    val imageUrl = {
+      val imageFile = new File(analysis.subDir, "fullImage.png")
+      val bufImg = WLBlankImage.make(analysis.preprocessedImage, analysis.nonCardEdge.edgeSet)
+      Util.addGraticules(bufImg, analysis.trans, Color.lightGray)
+      Config.applyWatermark(bufImg)
+      Util.writePng(bufImg, imageFile)
+      imageFile.getName
+    }
 
+    val content = {
       <div class="col-md-10 col-md-offset-1">
         <div class="row">
           <h2>DICOM for {beamName}</h2>
+          <a href={imageUrl} title="Click for full-sized image.">
+            <img src={imageUrl} height="250" style="margin:20px;"/>
+          </a>
           <pre style="background: #eeeeee; font-size: small">
             {DicomUtil.attributeListToString(analysis.al)}
           </pre>
@@ -103,7 +116,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     Util.writeFile(file, text)
     logger.info(s"Wrote DICOM metadata file ${file.getAbsolutePath}")
 
-    <a href={file.getName}>DICOM Metadata</a>
+    <a href={file.getName}>DICOM as Text</a>
   }
 
   private val fmt: String = "%20.6f"
@@ -294,28 +307,37 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
     val xValueList = edge.gradient.indices.map(_ * increment_mm)
 
-    val chart = new C3Chart(
-      height = Some(200),
-      xAxisLabel = "CU",
-      xDataLabel = "mm",
-      xValueList = xValueList,
-      // xFormat // default:  String = ".4g",
-      yAxisLabels = Seq("Offset (mm)"),
-      yDataLabel = "Offset (mm)",
-      yValues = Seq(edge.gradient)
-      // yFormat // default: String = ".4g",
-      // yColorList // default: Seq[Color] = Seq(),
-      // regionList // default: Seq[C3Chart.Region] = Seq()
-    )
+    if (edge.gradient.isEmpty) {
+      val content = {
+        <div>
+        <h4>Error: Edge Gradient not available.</h4>
+      </div>
+      }
+      ElemJS(content, "")
+    } else {
+      val chart = new C3Chart(
+        height = Some(200),
+        xAxisLabel = "CU",
+        xDataLabel = "mm",
+        xValueList = xValueList,
+        // xFormat // default:  String = ".4g",
+        yAxisLabels = Seq("Offset (mm)"),
+        yDataLabel = "Offset (mm)",
+        yValues = Seq(edge.gradient)
+        // yFormat // default: String = ".4g",
+        // yColorList // default: Seq[Color] = Seq(),
+        // regionList // default: Seq[C3Chart.Region] = Seq()
+      )
 
-    val content: Elem = {
-      <div>
+      val content: Elem = {
+        <div>
         <h4 title="This shows how straight the edge is.">{edge.name} Edge Profile across width of AOI </h4>
         {chart.html}
       </div>
-    }
+      }
 
-    ElemJS(content, chart.javascript)
+      ElemJS(content, chart.javascript)
+    }
   }
 
   /**
@@ -576,11 +598,13 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
       <div class="col-md-10 col-md-offset-1">
         <div class="row">
           <div class="row">
-            <div class="col-md-5">
+            <div class="col-md-6">
               <h2>Details for Beam {beamName}</h2>
             </div>
-            <div class="col-md-2">
-              {dicomAsText()}
+            <div class="col-md-3">
+              <div style=" display: grid; place-items: center; height: 68px; ">
+                {dicomAsText()}
+              </div>
             </div>
           </div>
           <hr/>

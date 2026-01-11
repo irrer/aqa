@@ -18,16 +18,13 @@ package org.aqa.webrun.wl.nonCardinal
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageDisplay
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import edu.umro.ScalaUtil.Trace
 import org.aqa.BiCubicImage
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.webrun.wl.WLMessage
 
-import java.awt.Color
 import javax.vecmath.Point2d
 
 /**
@@ -36,10 +33,22 @@ import javax.vecmath.Point2d
   * @param edgeSet Surrounding edges.
   * @param preprocessedImage Image containing ball.
   * @param biCubicImage Interpolated version of preprocessedImage.
+  * @param trans For translating to and from mm / pixel.
   * @param al Original DICOM.
+  * @param wlMessage Log messages here
+  * @param beamCenter_mm planned center of beam in isoplane
   */
-case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, biCubicImage: BiCubicImage, trans: IsoImagePlaneTranslator, al: AttributeList, wlMessage: Option[WLMessage])
-    extends Logging {
+case class WLNonCardBall( //
+    edgeSet: WLNonCardEdgeSet,
+    preprocessedImage: DicomImage,
+    biCubicImage: BiCubicImage,
+    trans: IsoImagePlaneTranslator,
+    al: AttributeList,
+    wlMessage: Option[WLMessage],
+    beamCenter_mm: Point2d
+) extends Logging {
+
+  private def fmt(d: Double): String = "%10.6f".format(d)
 
   /**
     * Represent a point in the image and its value. Saving the value is more efficient because the
@@ -128,8 +137,9 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
 
   /** Center of ball in pixel coordinates. */
   val center_pix: Point2d = findCenterOfMass()
+  val center_iso: Point2d = trans.pix2Iso(center_pix)
 
-  wlMessage.foreach(_.info(s"Center of ball: ${trans.pix2Iso(center_pix)}"))
+  wlMessage.foreach(_.info(s"Center of ball: ${fmt(center_iso.x)}, ${fmt(center_iso.y)}  Distance to center: ${fmt(center_iso.distance(beamCenter_mm))}"))
 
   private case class MinMax(min: Float, max: Float) {}
 
@@ -159,73 +169,8 @@ case class WLNonCardBall(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImag
 
   wlMessage.foreach(
     _.info(
-      s"Ball approximate min pixel value: $approximateMinPixelValueOfBall  approximate max pixel value: $approximateMaxPixelValueOfBall    range: ${approximateMaxPixelValueOfBall - approximateMinPixelValueOfBall}"
+      s"Ball approximate min pixel value: ${fmt(approximateMinPixelValueOfBall)}  approximate max pixel value: ${fmt(approximateMaxPixelValueOfBall)}    range: ${fmt(approximateMaxPixelValueOfBall - approximateMinPixelValueOfBall)}"
     )
   )
 
-  // ------------------------------------------------------------------------------------------------------------------------------------------------------
-
-  def doIt(): Point2d = {
-
-    Trace.trace()
-    val start = System.currentTimeMillis()
-    val center = findCenterOfMass()
-    val elapsed = System.currentTimeMillis() - start
-    Trace.trace(s"Elapsed ms for findCenterOfMass: $elapsed")
-    Trace.trace(s"center: $center")
-    if (false) { // TODO rm Show the ball area used for center of mass, as well as the center.
-      val img = preprocessedImage.toDeepColorBufferedImage(0.01)
-      img.setRGB(center.x.toInt, center.y.toInt, Color.white.getRGB)
-      ImageDisplay.showInMSPaint(img)
-    }
-
-    val trans = new IsoImagePlaneTranslator(al)
-    val distance_pix = center.distance(edgeSet.center_pix)
-    Trace.trace(s"ball center: $center      edge center: ${edgeSet.center_pix}     distance in pix: $distance_pix distance in mm: ${trans.pix2IsoDistX(distance_pix)}")
-
-    Trace.trace(s"right  Y2   in mm: ${trans.pix2IsoCoordY(edgeSet.Y2.line.centerY)}")
-    Trace.trace(s"left   Y1   in mm: ${trans.pix2IsoCoordY(edgeSet.Y1.line.centerY)}")
-    Trace.trace(s"top    X1   in mm: ${trans.pix2IsoCoordX(edgeSet.X1.line.centerX)}")
-    Trace.trace(s"bottom X2   in mm: ${trans.pix2IsoCoordX(edgeSet.X2.line.centerX)}")
-
-    Trace.trace(s"edge top    in mm+ ${trans.pix2IsoCoordX(edgeSet.Y2.line.centerX)}")
-    Trace.trace(s"edge bottom in mm+ ${trans.pix2IsoCoordX(edgeSet.Y1.line.centerX)}")
-    Trace.trace(s"edge left   in mm+ ${trans.pix2IsoCoordY(edgeSet.X1.line.centerY)}")
-    Trace.trace(s"edge right  in mm+ ${trans.pix2IsoCoordY(edgeSet.X2.line.centerY)}")
-
-    Trace.trace(s"edge center in mm: ${trans.pix2IsoCoordX(edgeSet.center_pix.x)}  ${trans.pix2IsoCoordY(edgeSet.center_pix.y)}")
-    Trace.trace(s"ball center in mm: ${trans.pix2IsoCoordX(center.x)}  ${trans.pix2IsoCoordY(center.y)}")
-
-    // TODO this edge calculation is correct
-    val cX = (edgeSet.Y2.edgeCenter.x + edgeSet.Y1.edgeCenter.x) / 2
-    val cY = (edgeSet.X2.edgeCenter.y + edgeSet.X1.edgeCenter.y) / 2
-    val cPoint = new Point2d(cX, cY)
-    Trace.trace(s"real edge center in pix: $cX  $cY")
-    Trace.trace(s"real edge center in mm : ${trans.pix2IsoCoordX(cX)}  ${trans.pix2IsoCoordY(cY)}")
-    val dist_pix = cPoint.distance(center)
-    Trace.trace(s"dist_pix: $dist_pix")
-    val dist_mm = trans.pix2IsoDistX(dist_pix)
-    Trace.trace(s"dist_mm: $dist_mm")
-
-    if (false) { // TODO rm
-      val img = preprocessedImage.toDeepColorBufferedImage(0.01)
-      img.setRGB(center.x.toInt, center.y.toInt, Color.black.getRGB)
-
-      val gc = ImageUtil.getGraphics(img)
-
-      gc.setColor(Color.white)
-      gc.drawLine(0, edgeSet.X2.edgeLo.y.toInt, preprocessedImage.width - 1, edgeSet.X2.edgeLo.y.toInt)
-
-      // gc.setColor(Color.black)
-      // gc.drawLine(0, edgeSet.X1.line.centerY.toInt, preprocessedImage.width - 1, edgeSet.X1.line.centerY.toInt)
-
-      // gc.setColor(Color.orange)
-      // gc.drawLine(0, edgeSet.X1.line.centerY.toInt, preprocessedImage.width - 1, edgeSet.X1.line.centerY.toInt)
-
-      ImageDisplay.showInMSPaint(img)
-    }
-
-    Thread.sleep(2000)
-    center
-  }
 }

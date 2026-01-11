@@ -17,41 +17,41 @@
 package org.aqa.webrun.wl.nonCardinal
 
 import com.pixelmed.dicom.AttributeList
-import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageDisplay
-import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ImageUtil.ScaledImage
-import edu.umro.ScalaUtil.Trace
 import org.aqa.AQALine
 import org.aqa.BiCubicImage
 import org.aqa.Config
-import org.aqa.DicomFile
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.webrun.wl.WLCoarseBox
 import org.aqa.webrun.wl.WLMessage
-import org.aqa.webrun.wl.WLPreprocessImage
 import org.aqa.webrun.wl.WLRunReq
 
 import java.awt.Color
-import java.awt.geom.Point2D
 import java.awt.image.BufferedImage
-import java.io.File
 import javax.vecmath.Point2d
 
 case class WLNonCardEdgeAnalysis( //
     preprocessedImage: DicomImage,
     al: AttributeList,
     biCubicImage: BiCubicImage,
-    wlMessage: Option[WLMessage]
+    wlRunReq: WLRunReq,
+    wlMessage: Option[WLMessage],
+    trans: IsoImagePlaneTranslator,
+    beamCenter_mm: Point2d
 ) extends Logging {
+
+  def fmt(d: Double): String = "%12.6f".format(d)
+
+  wlMessage.foreach(_.info(s"beam center mm: ${fmt(beamCenter_mm.x)}  ${fmt(beamCenter_mm.y)}"))
 
   private val collAngle = Util.collimatorAngle(al)
 
-  val trans = new IsoImagePlaneTranslator(al)
+  wlMessage.foreach(_.info(s"beamCenter pixels: ${trans.iso2Pix(beamCenter_mm)}"))
+  wlMessage.foreach(_.info(s"image center pixels: ${trans.iso2Pix(0, 0)}"))
 
   val coarseBox: WLCoarseBox = WLCoarseBox(preprocessedImage, trans, wlMessage)
 
@@ -183,20 +183,19 @@ case class WLNonCardEdgeAnalysis( //
     */
   private def showEdge(edge: WLNonCardEdge, center_pix: Point2d): Unit = {
 
-    val point_mm = {
+    val point_mm: Point2d = {
       val line = AQALine(centerPoint = center_pix, angle_deg = edge.line.angle_deg)
       val point = line.intersection(edge.edgeLine)
-      trans.pix2Iso(point.x, point.y)
+      trans.pix2Iso(new Point2d(point.x, point.y))
     }
-
-    def fmt(d: Double): String = "%12.6f".format(d)
 
     val x = fmt(point_mm.getX)
     val y = fmt(point_mm.getY)
 
-    val d = fmt(point_mm.distance(new Point2D.Double(0, 0)))
+    val d = fmt(point_mm.distance(beamCenter_mm))
     wlMessage.foreach(_.info(s"Edge ${edge.name} edge center (mm): $x, $y    distance to center (mm): $d"))
 
+    wlMessage.foreach(_.info(s"edgeCenter pixels: ${trans.iso2Pix(point_mm)}"))
   }
 
   /**
@@ -231,8 +230,11 @@ case class WLNonCardEdgeAnalysis( //
 
     val center_pix = edgeSetPrecise.center_pix
 
-    wlMessage.foreach(_.info(s"precise center of edges mm X: ${trans.pix2IsoCoordX(edgeSetPrecise.center_pix.getX)}"))
-    wlMessage.foreach(_.info(s"precise center of edges mm Y: ${trans.pix2IsoCoordY(edgeSetPrecise.center_pix.getY)}"))
+    wlMessage.foreach(_.info(s"precise center of edges mm X: ${fmt(trans.pix2IsoCoordX(edgeSetPrecise.center_pix.getX))}"))
+    wlMessage.foreach(_.info(s"precise center of edges mm Y: ${fmt(trans.pix2IsoCoordY(edgeSetPrecise.center_pix.getY))}"))
+
+    wlMessage.foreach(_.info(s"precise center of edges pix X: ${fmt(edgeSetPrecise.center_pix.getX)}"))
+    wlMessage.foreach(_.info(s"precise center of edges pix Y: ${fmt(edgeSetPrecise.center_pix.getY)}"))
 
     showEdge(x1, center_pix)
     showEdge(x2, center_pix)
@@ -253,157 +255,5 @@ case class WLNonCardEdgeAnalysis( //
   private val preciseEdgeLocations = preciseLocationOfEdges(approximateEdgeSet)
 
   val edgeSet: WLNonCardEdgeSet = preciseEdgeLocations
-
-}
-
-/**
-  * Quick program to show the center raw pixel values from DICOM files.
-  */
-object WLNonCardEdgeAnalysis {
-
-  def main(args: Array[String]): Unit = {
-
-    Trace.trace
-
-    // val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""")
-    // val file = new File("""D:/tmp/wl/nonorth/WLNonCardNon45_20250625_Peyton/20250625_G180C30T0.dcm""")
-    val file = new File("""D:/tmp/wl/nonorth/ClinicalWinstonLutz_0.1_TB5_2025-12-12T06_34_56/RTIMAGE1.dcm""") // UM Production
-    // val file = new File("""D:/tmp/wl/nonorth/1/0002.dcm""")
-    // val file = new File("""D:/tmp/wl/nonorth/1/0006.dcm""")
-    // val file = new File("""D:/tmp/wl/nonorth/0010.dcm""")
-    // val file = new File("""D:/tmp/wl/nonorth/1/0002.dcm""")
-    // val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""") // rotated 315
-    // val file = new File("""D:/tmp/wl/nonorth/1/0006.dcm""") // rotated 45
-
-    // val file = new File("""D:/tmp/wl/nonorth/1/0001.dcm""")
-
-    // val file = new File("""D:/tmp/wl/nonorth/psm/0018.dcm""")
-    // val file = new File("""D:/tmp/wl/nonorth/TB5_Aug_20/0002.dcm""")
-    // val file = new File("""D:/tmp/wl/nonorth/BR1_Phase2/0014.dcm""")
-
-    val al = new DicomFile(file).attributeList.get
-
-    if (true) {
-      val trans = new IsoImagePlaneTranslator(al)
-      Trace.trace(s"5 iso == ${trans.iso2PixDistX(5.0)} pix")
-      Trace.trace(s"210 pix == ${trans.pix2IsoDistX(210.0)} iso")
-    }
-
-    val colAngle = al.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
-
-    val dicomImage = {
-      // Invert the pixels if necessary.
-      WLPreprocessImage(al, None).preprocessedImage
-    }
-
-    Trace.trace()
-    val runReq = WLRunReq(Seq(al), None)
-    val wlMessage = WLMessage(runReq, al)
-    val biCubicImage = BiCubicImage(dicomImage)
-    val nonCardinal = new WLNonCardEdgeAnalysis(dicomImage, al, biCubicImage, Some(wlMessage))
-    Trace.trace()
-    Trace.trace(nonCardinal)
-
-    Trace.trace()
-
-    val bufImg = {
-      val sortedPixels = dicomImage.pixelData.flatten.sorted
-      val minPixelValue = sortedPixels(10)
-      val maxPixelValue = sortedPixels.dropRight(10).last
-      dicomImage.toBufferedImage(ImageUtil.rgbColorMap(Color.blue), minPixelValue, maxPixelValue)
-    }
-
-    val trans = new IsoImagePlaneTranslator(al)
-
-    val gc = ImageUtil.getGraphics(bufImg)
-
-    gc.setColor(Color.white)
-
-    if (true) {
-      val text = "Collimator Angle: " + Util.fmtDbl(colAngle)
-      ImageText.drawTextCenteredAt(gc, dicomImage.width / 2, 40, text)
-    }
-
-    def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit = {
-      // Trace.trace(Util.d2i(x1) + " : " + Util.d2i(y1) + " : " + Util.d2i(x2) + " : " + Util.d2i(y2))
-      gc.drawLine(Util.d2i(x1), Util.d2i(y1), Util.d2i(x2), Util.d2i(y2))
-    }
-
-    // ------------------------------------------------------------------------------------
-
-    /*
-    val j = WLNonCardEdgeSetImage.makeImage(nonCardinal.edgeSet, scale = 3, al, border = 3)
-    ImageDisplay.showInMSPaint(j)
-
-    Trace.trace()
-    val nonCardBall = WLNonCardBall(nonCardinal.edgeSet, dicomImage, BiCubicImage(dicomImage), al)
-    Trace.trace()
-    nonCardBall.doIt()
-    Trace.trace()
-
-    Trace.trace("Center of four edges as pixels: " + nonCardinal.edgeSet.center_pix)
-    Trace.trace("Center of four edges as iso: " + trans.pix2IsoCoordX(nonCardinal.edgeSet.center_pix.getX) + ", " + trans.pix2IsoCoordY(nonCardinal.edgeSet.center_pix.getY))
-     */
-
-    // ------------------------------------------------------------------------------------
-
-    /*
-     * Label the collimator edge
-     * @param name Edge name.
-     * @param point1 One end.
-     * @param point2 The other end.
-     */
-    /*
-    def labelEdge(name: String, point1: Point2D.Double, point2: Point2D.Double): Unit = {
-      val centerX = (point1.getX + point2.getX) / 2
-      val centerY = (point1.getY + point2.getY) / 2
-      ImageText.drawTextCenteredAt(gc, centerX, centerY, name)
-    }
-     */
-
-    // ------------------------------------------------------------------------------------
-
-    /*
-    val rot = WLRotator(al)
-
-    val X1Y1 = rot.trans.iso2Pix(rot.rot(new Point2D.Double(rot.jawsXLeft, rot.jawsYTop)))
-    val X2Y1 = rot.trans.iso2Pix(rot.rot(new Point2D.Double(rot.jawsXRight, rot.jawsYTop)))
-
-    val X1Y2 = rot.trans.iso2Pix(rot.rot(new Point2D.Double(rot.jawsXLeft, rot.jawsYBottom)))
-    val X2Y2 = rot.trans.iso2Pix(rot.rot(new Point2D.Double(rot.jawsXRight, rot.jawsYBottom)))
-
-    Trace.trace(s"jawsYTop   : ${rot.jawsYTop.round}")
-    Trace.trace(s"jawsYBottom: ${rot.jawsYBottom.round}")
-    Trace.trace(s"jawsXLeft  : ${rot.jawsXLeft.round}")
-    Trace.trace(s"jawsXRight : ${rot.jawsXRight.round}")
-
-    Trace.trace(s"\n    topLeft: $X1Y2\n    topRight: $X2Y2\n    bottomLeft: $X1Y1\n    bottomRight: $X2Y1")
-
-    drawLine(X1Y2.getX, X1Y2.getY, X2Y2.getX, X2Y2.getY)
-    drawLine(X1Y2.getX, X1Y2.getY, X1Y1.getX, X1Y1.getY)
-    drawLine(X2Y1.getX, X2Y1.getY, X1Y1.getX, X1Y1.getY)
-    drawLine(X2Y2.getX, X2Y2.getY, X2Y1.getX, X2Y1.getY)
-
-    labelEdge("X1", X1Y2, X1Y1)
-    labelEdge("X2", X2Y2, X2Y1)
-    labelEdge("Y1", X1Y1, X2Y1)
-    labelEdge("Y2", X1Y2, X2Y2)
-     */
-
-    /*
-    val pngFile = new File(file.getParent, file.getName.replace("dcm", "png"))
-    Util.writePng(bufImg, pngFile)
-    ImageDisplay.showInMSPaint(bufImg)
-    Trace.trace(s"wrote $pngFile")
-     */
-
-    ImageDisplay.showInMSPaint(WLNonCardCoarseImage.makeImage(al, dicomImage))
-
-    val txtFile = new File(file.getParent, file.getName.replace(".dcm", "_.txt"))
-    Util.writeFile(txtFile, dicomImage.pixelsToText)
-
-    Thread.sleep(2000)
-    System.exit(0)
-  }
 
 }
