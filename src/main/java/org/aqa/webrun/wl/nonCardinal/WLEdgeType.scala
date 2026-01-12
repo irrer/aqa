@@ -50,9 +50,9 @@ object WLEdgeType extends Enumeration with Logging {
 }
 
 /**
- * Determine whether the jaw or MLC are defining the edge of a Winston Lutz field.
- * @param beam Part of the plan that defines beam delivery.
- */
+  * Determine whether the jaw or MLC are defining the edge of a Winston Lutz field.
+  * @param beam Part of the plan that defines beam delivery.
+  */
 case class WLEdgeType(beam: AttributeList) {
   def this(rtplan: AttributeList, rtimage: AttributeList) = this(Util.getBeamOfRtimage(rtplan, rtimage).get)
 
@@ -92,9 +92,9 @@ case class WLEdgeType(beam: AttributeList) {
     // Trace.trace(s"edgeList:\n" + edgeList.mkString("\n"))
   }
 
-  private val JawX = edgeList.find(e => e.name.equals("X"))
+  private val JawX = edgeList.find(e => e.name.equals("X") || e.name.equals("ASYMX"))
   private val MLCX = edgeList.find(e => e.name.equals("MLCX"))
-  private val JawY = edgeList.find(e => e.name.equals("Y"))
+  private val JawY = edgeList.find(e => e.name.equals("Y") || e.name.equals("ASYMY"))
   private val MLCY = edgeList.find(e => e.name.equals("MLCY"))
 
   // TODO : account for the leaf sides.  Use: 300a,00be LeafPositionBoundaries
