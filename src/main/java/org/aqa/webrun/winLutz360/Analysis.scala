@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl.winLutz360
+package org.aqa.webrun.winLutz360
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName

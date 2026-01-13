@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl.winLutz360
+package org.aqa.webrun.winLutz360
 
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.ScaledImage

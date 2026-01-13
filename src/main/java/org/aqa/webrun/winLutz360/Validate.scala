@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl.winLutz360
+package org.aqa.webrun.winLutz360
 
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
