@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.aqa.webrun.wl.nonCardinal
+package org.aqa.webrun.wl.winLutz360
 
 import org.aqa.AQALine
 
@@ -27,11 +27,11 @@ import javax.vecmath.Point2d
   * @param Y1 Y1 edge
   * @param Y2 Y2 edge
   */
-case class WLNonCardEdgeSet(
-    X1: WLNonCardEdge,
-    X2: WLNonCardEdge,
-    Y1: WLNonCardEdge,
-    Y2: WLNonCardEdge
+case class EdgeSet(
+                             X1: Edge,
+                             X2: Edge,
+                             Y1: Edge,
+                             Y2: Edge
 ) {
 
   /**
@@ -40,7 +40,7 @@ case class WLNonCardEdgeSet(
    * @param edge2 The other line.
    * @return A line parallel to and halfway between the given lines.
    */
-  private def meanLineOf(edge1: WLNonCardEdge, edge2: WLNonCardEdge): AQALine = {
+  private def meanLineOf(edge1: Edge, edge2: Edge): AQALine = {
     val center1 = edge1.edgeLine.centerPoint
     val center2 = edge2.edgeLine.centerPoint
 
@@ -64,7 +64,7 @@ case class WLNonCardEdgeSet(
     c
   }
 
-  val edgeList: Seq[WLNonCardEdge] = Seq(X1, X2, Y1, Y2)
+  val edgeList: Seq[Edge] = Seq(X1, X2, Y1, Y2)
 
   /** Where lines intersect. */
   val x1y1: Point2d = X1.edgeLine.intersection(Y1.edgeLine)
@@ -84,7 +84,7 @@ case class WLNonCardEdgeSet(
   override def toString: String = {
     def fmt(d: Double) = "%20.10f".format(d).trim
     def fmtP(p: Point2d) = fmt(p.getX) + ", " + fmt(p.getY)
-    def fmtE(e: WLNonCardEdge) = fmtP(e.edgeCenter)
+    def fmtE(e: Edge) = fmtP(e.edgeCenter)
 
     "\nX1: " + fmtE(X1) +
       "\nX2: " + fmtE(X2) +

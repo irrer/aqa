@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.aqa.webrun.wl.nonCardinal
+package org.aqa.webrun.wl.winLutz360
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
@@ -38,14 +38,14 @@ import javax.vecmath.Point2d
   * @param wlMessage Log messages here
   * @param beamCenter_mm planned center of beam in isoplane
   */
-case class WLNonCardBall( //
-    edgeSet: WLNonCardEdgeSet,
-    preprocessedImage: DicomImage,
-    biCubicImage: BiCubicImage,
-    trans: IsoImagePlaneTranslator,
-    al: AttributeList,
-    wlMessage: Option[WLMessage],
-    beamCenter_mm: Point2d
+case class Ball( //
+                 edgeSet: EdgeSet,
+                 preprocessedImage: DicomImage,
+                 biCubicImage: BiCubicImage,
+                 trans: IsoImagePlaneTranslator,
+                 al: AttributeList,
+                 wlMessage: Option[WLMessage],
+                 beamCenter_mm: Point2d
 ) extends Logging {
 
   private def fmt(d: Double): String = "%10.6f".format(d)
@@ -112,7 +112,7 @@ case class WLNonCardBall( //
 
   }
 
-  private val pointList: Seq[PtSynthetic] = makeArray(Config.WLNonCardBallPixelResolution)
+  private val pointList: Seq[PtSynthetic] = makeArray(Config.WinLutz360BallPixelResolution)
 
   /** Horizontal profile of ball in pixel values. */
   val xProfile: Seq[Double] = pointList.groupBy(_.x).values.toSeq.sortBy(_.head.x).map(group => group.map(_.value).sum / group.size).toIndexedSeq
@@ -129,8 +129,8 @@ case class WLNonCardBall( //
     val xMinCoordinate = pointList.minBy(_.x).x
     val yMinCoordinate = pointList.minBy(_.y).y
 
-    val x = (ImageUtil.centerOfMass(xProfile.map(_.toFloat).toIndexedSeq) * Config.WLNonCardBallPixelResolution) + xMinCoordinate
-    val y = (ImageUtil.centerOfMass(yProfile.map(_.toFloat).toIndexedSeq) * Config.WLNonCardBallPixelResolution) + yMinCoordinate
+    val x = (ImageUtil.centerOfMass(xProfile.map(_.toFloat).toIndexedSeq) * Config.WinLutz360BallPixelResolution) + xMinCoordinate
+    val y = (ImageUtil.centerOfMass(yProfile.map(_.toFloat).toIndexedSeq) * Config.WinLutz360BallPixelResolution) + yMinCoordinate
 
     new Point2d(x, y)
   }

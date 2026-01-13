@@ -1285,13 +1285,13 @@ Note that when building a package for release, the Maven build process uses the 
     to be considered valid.
 
     Floating point value.  Default is 98.0 -->
-    <WLNonCardEdgePercentChange>92.0</WLNonCardEdgePercentChange>
+    <WinLutz360EdgePercentChange>92.0</WinLutz360EdgePercentChange>
 
     <!-- For non-cardinal ball verification, the standard deviation of the normalized ball area is
     calculated, and must be above this value for the ball to be considered valid.  This check guards
     against an image being 'flat' probably because of no phantom.  Specified as a positive floating
     point value. Default is 0.1 -->
-    <WLNonCardMinStdDev>0.1</WLNonCardMinStdDev>
+    <WinLutz360MinStdDev>0.1</WinLutz360MinStdDev>
 
     <!-- Symmetry limit for non-cardinal WL.  To validate that a ball is found, and not just a random
     shape, the normalized vertical and horizontal profiles of the ball are extracted.  Each half of each
@@ -1299,12 +1299,12 @@ Note that when building a package for release, the Maven build process uses the 
     but other shapes will not.  If the result of the subtraction is less than this value, then it
     is considered to be valid.  The limit chosen was found by calculating the value for a variety of
     data sets.    Specified as a positive floating point positive number.  Default is  8.0  -->
-    <WLNonCardSymmetryLimit>8.0</WLNonCardSymmetryLimit>
+    <WinLutz360SymmetryLimit>8.0</WinLutz360SymmetryLimit>
 
     <!-- WL non-cardinal DICOM files must have at least this energy level to be considered valid.  This is
     a check in case the user submits a CT image.
     Specified as a positive floating point positive number.  Default is  0.0  -->
-    <WLNonCardKVPLimit>0.0</WLNonCardKVPLimit>
+    <WinLutz360KVPLimit>0.0</WinLutz360KVPLimit>
 
     <!-- When the non-cardinal algorithm is calculating the center of the opposing edges, the bicubic image
     is sampled at sub-pixel intervals.  This number defines what that sample should be.  For example, a
@@ -1315,7 +1315,7 @@ Note that when building a package for release, the Maven build process uses the 
     more accurate result.
 
     Specified as a positive floating point positive number in pixels.  Default is  0.1  -->
-    <WLNonCardEdgePixelResolution>0.1</WLNonCardEdgePixelResolution>
+    <WinLutz360EdgePixelResolution>0.1</WinLutz360EdgePixelResolution>
 
     <!-- When the non-cardinal algorithm is calculating the center of mass for the ball, the bicubic image
     is sampled at sub-pixel intervals.  This number defines what that sample should be.  For example, a
@@ -1326,7 +1326,7 @@ Note that when building a package for release, the Maven build process uses the 
     more accurate result.
 
     Specified as a positive floating point positive number in pixels.  Default is  0.1  -->
-    <WLNonCardBallPixelResolution>0.1</WLNonCardBallPixelResolution>
+    <WinLutz360BallPixelResolution>0.1</WinLutz360BallPixelResolution>
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 

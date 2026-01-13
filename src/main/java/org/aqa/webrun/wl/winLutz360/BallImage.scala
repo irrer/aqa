@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl.nonCardinal
+package org.aqa.webrun.wl.winLutz360
 
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.ScaledImage
@@ -14,7 +14,7 @@ import javax.vecmath.Point2i
   *
   * @param analysis Results of WL analysis.
   */
-case class WLBallImage(analysis: WLNonCardAnalysis) {
+case class BallImage(analysis: Analysis) {
 
   /**
     * Make a list of whole pixels that are within the ball AOI.
@@ -25,7 +25,7 @@ case class WLBallImage(analysis: WLNonCardAnalysis) {
       for ( //
         x <- 0 until analysis.preprocessedImage.width;
         y <- 0 until analysis.preprocessedImage.height;
-        if analysis.nonCardEdge.edgeSet.pointIsInBallAoi(new Point2d(x, y))
+        if analysis.edge.edgeSet.pointIsInBallAoi(new Point2d(x, y))
       )
         yield new Point2i(x, y)
 
@@ -53,7 +53,7 @@ case class WLBallImage(analysis: WLNonCardAnalysis) {
   private def annotateScaledBallImage(ballImage: BufferedImage): Unit = {
     val si = ScaledImage(ballScale, ballRectangle.x, ballRectangle.y)
 
-    val center_pix = analysis.nonCardBall.center_pix
+    val center_pix = analysis.ball.center_pix
 
     val lineLength_pix = 5
 
@@ -72,7 +72,7 @@ case class WLBallImage(analysis: WLNonCardAnalysis) {
   def ballImage(): BufferedImage = {
 
     val bufImg: BufferedImage = {
-      val fullImage = WLBlankImage.make(analysis.preprocessedImage, analysis.nonCardEdge.edgeSet)
+      val fullImage = BlankImage.make(analysis.preprocessedImage, analysis.edge.edgeSet)
       val subImage = ImageUtil.subImage(fullImage, ballRectangle)
       val scaledImage = ImageUtil.magnify(subImage, ballScale)
       scaledImage

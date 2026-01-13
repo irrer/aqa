@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl.nonCardinal
+package org.aqa.webrun.wl.winLutz360
 
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.webrun.wl.WLgenHtml
@@ -17,7 +17,7 @@ import java.io.File
 import javax.vecmath.Point2d
 import scala.xml.Elem
 
-case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMessage]) extends Logging {
+case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Logging {
 
   /**
     * For returning HTML and js from functions.
@@ -56,7 +56,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
   private def makeCloseupImage(): Unit = {
     val pngFile = new File(analysis.subDir, WLgenHtml.BRIGHT_SUMMARY_FILE_NAME)
-    val bufImg = WLNonCardCompositeImage.makeCompositeImage(analysis)
+    val bufImg = CompositeImage.makeCompositeImage(analysis)
     Config.applyWatermark(bufImg)
     Util.writePng(bufImg, pngFile)
     wlMessage.foreach(_.info(s"Wrote file $pngFile"))
@@ -86,7 +86,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
     val imageUrl = {
       val imageFile = new File(analysis.subDir, "fullImage.png")
-      val bufImg = WLBlankImage.make(analysis.preprocessedImage, analysis.nonCardEdge.edgeSet)
+      val bufImg = BlankImage.make(analysis.preprocessedImage, analysis.edge.edgeSet)
       Util.addGraticules(bufImg, analysis.trans, Color.lightGray)
       Config.applyWatermark(bufImg)
       Util.writePng(bufImg, imageFile)
@@ -150,10 +150,10 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
   private def coarseLocationHTML(): ElemJS = {
 
-    val imageHTML = makeImageHTML(analysis.nonCardEdge.coarseImage(), "coarseLocation.png", "First step is to get the coarse location of the entire field.")
+    val imageHTML = makeImageHTML(analysis.edge.coarseImage(), "coarseLocation.png", "First step is to get the coarse location of the entire field.")
 
     val center = {
-      val c = analysis.nonCardEdge.locateCoarseCenter
+      val c = analysis.edge.locateCoarseCenter
       analysis.trans.pix2Iso(c.x, c.y)
     }
 
@@ -167,8 +167,8 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
       </div>
     }
 
-    val xProfile = coarseChart(analysis.nonCardEdge.coarseBox.columnSums)
-    val yProfile = coarseChart(analysis.nonCardEdge.coarseBox.rowSums)
+    val xProfile = coarseChart(analysis.edge.coarseBox.columnSums)
+    val yProfile = coarseChart(analysis.edge.coarseBox.rowSums)
 
     val js = Seq(imageHTML.js, xProfile.javascript, yProfile.javascript).mkString("\n")
 
@@ -213,15 +213,15 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
     val imageHTML = makeImageHTML(analysis.approxImg, "approximateEdge.png", "Locate the approximate position of the edges.")
 
-    val center_pix = analysis.nonCardEdge.approximateEdgeSet.center_pix
+    val center_pix = analysis.edge.approximateEdgeSet.center_pix
 
     val center_iso = {
-      val c = analysis.nonCardEdge.approximateEdgeSet.center_pix
+      val c = analysis.edge.approximateEdgeSet.center_pix
       analysis.trans.pix2Iso(c.x, c.y)
     }
 
     val change = {
-      val approximate = analysis.nonCardEdge.locateCoarseCenter
+      val approximate = analysis.edge.locateCoarseCenter
       new Point2d( //
         analysis.trans.pix2IsoDistX(approximate.x - center_pix.x),
         analysis.trans.pix2IsoDistY(approximate.y - center_pix.y)
@@ -264,10 +264,10 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     * @param edge For this edge.
     * @return Chart showing the profile.
     */
-  private def edgeProfile(edge: WLNonCardEdge): ElemJS = {
+  private def edgeProfile(edge: Edge): ElemJS = {
 
     // sampling distance in mm
-    val increment_mm = analysis.trans.pix2IsoDistX(Config.WLNonCardEdgePixelResolution)
+    val increment_mm = analysis.trans.pix2IsoDistX(Config.WinLutz360EdgePixelResolution)
 
     val xValueList = edge.edgeProfile.indices.map(_ * increment_mm)
 
@@ -300,10 +300,10 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     * @param edge For this edge.
     * @return Chart showing the profile.
     */
-  private def edgeGradient(edge: WLNonCardEdge): ElemJS = {
+  private def edgeGradient(edge: Edge): ElemJS = {
 
     // sampling distance in mm
-    val increment_mm = analysis.trans.pix2IsoDistX(Config.WLNonCardEdgePixelResolution)
+    val increment_mm = analysis.trans.pix2IsoDistX(Config.WinLutz360EdgePixelResolution)
 
     val xValueList = edge.gradient.indices.map(_ * increment_mm)
 
@@ -348,12 +348,12 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
     val imageHTML = makeImageHTML(analysis.img, "preciseEdge.png", "Measure precise location of edges using wider AOIs")
 
-    val center_pix = analysis.nonCardEdge.edgeSet.center_pix
+    val center_pix = analysis.edge.edgeSet.center_pix
 
     val center_iso = analysis.trans.pix2Iso(center_pix.x, center_pix.y)
 
     val change = {
-      val approximate_pix = analysis.nonCardEdge.approximateEdgeSet.center_pix
+      val approximate_pix = analysis.edge.approximateEdgeSet.center_pix
       new Point2d( //
         analysis.trans.iso2PixDistX(approximate_pix.x - center_pix.x),
         analysis.trans.iso2PixDistY(approximate_pix.y - center_pix.y)
@@ -383,8 +383,8 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
       </div>
     }
 
-    val profileList = analysis.nonCardEdge.edgeSet.edgeList.map(edgeProfile)
-    val gradientList = analysis.nonCardEdge.edgeSet.edgeList.map(edgeGradient)
+    val profileList = analysis.edge.edgeSet.edgeList.map(edgeProfile)
+    val gradientList = analysis.edge.edgeSet.edgeList.map(edgeGradient)
 
     val profileElem: Elem = {
       <div class="row">
@@ -463,12 +463,12 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     ElemJS(content, js)
   }
 
-  private val wlBallImage = WLBallImage(analysis)
+  private val wlBallImage = BallImage(analysis)
 
   private val xBallProfilesHTML: ElemJS = {
 
-    val yValueList = analysis.nonCardBall.xProfile
-    val increment = analysis.trans.pix2IsoDistX(Config.WLNonCardBallPixelResolution)
+    val yValueList = analysis.ball.xProfile
+    val increment = analysis.trans.pix2IsoDistX(Config.WinLutz360BallPixelResolution)
     val xValueList = yValueList.indices.map(_ * increment)
 
     val xProfile = new C3Chart(
@@ -491,7 +491,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
     */
   private def makeBallProfile(yValueList: Seq[Double]): ElemJS = {
 
-    val increment = analysis.trans.pix2IsoDistX(Config.WLNonCardBallPixelResolution)
+    val increment = analysis.trans.pix2IsoDistX(Config.WinLutz360BallPixelResolution)
     val xValueList = yValueList.indices.map(_ * increment)
 
     val xProfile = new C3Chart(
@@ -510,7 +510,7 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
   private def ballHTML(): ElemJS = {
 
     val center = {
-      val pix = analysis.nonCardBall.center_pix
+      val pix = analysis.ball.center_pix
       analysis.trans.pix2Iso(pix.x, pix.y)
     }
 
@@ -550,8 +550,8 @@ case class WLNonCardinalHTML(analysis: WLNonCardAnalysis, wlMessage: Option[WLMe
 
     val foreground = makeImageHTML(wlBallImage.ballImage(), "ball.png", "Ball with center marked.")
     val background = makeImageHTML(wlBallImage.ballBackgroundImage(), "ballBackground.png", "Background of ball to show effects of stem.")
-    val xProfile = makeBallProfile(analysis.nonCardBall.xProfile)
-    val yProfile = makeBallProfile(analysis.nonCardBall.yProfile)
+    val xProfile = makeBallProfile(analysis.ball.xProfile)
+    val yProfile = makeBallProfile(analysis.ball.yProfile)
 
     val content = {
       <div class="row">

@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl.nonCardinal
+package org.aqa.webrun.wl.winLutz360
 
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
@@ -12,18 +12,18 @@ import org.aqa.Util
 import org.aqa.db.MachineWL
 import org.aqa.webrun.wl.WLImageStatus
 
-case class WLNonCardValidate( //
-    nonCardEdge: WLNonCardEdgeAnalysis,
-    nonCardBall: WLNonCardBall,
-    machineWL: MachineWL,
-    wlMessage: Option[WLMessage]
+case class Validate( //
+                     edgeAnalysis: EdgeAnalysis,
+                     ball: Ball,
+                     machineWL: MachineWL,
+                     wlMessage: Option[WLMessage]
 ) {
 
-  val preprocessedImage: DicomImage = nonCardEdge.preprocessedImage
+  val preprocessedImage: DicomImage = edgeAnalysis.preprocessedImage
 
   private case class WLError(status: WLImageStatus.Value, msg: String) {}
 
-  private var wlNonCardStatus: Option[WLError] = None
+  private var status: Option[WLError] = None
 
   private def setError(sts: WLImageStatus.Value, msg: String): Unit = {
     if (sts.toString.equals(WLImageStatus.Passed.toString))
@@ -31,24 +31,24 @@ case class WLNonCardValidate( //
     else
       wlMessage.foreach(_.warn(msg))
 
-    wlNonCardStatus.synchronized {
-      if (wlNonCardStatus.isEmpty)
-        wlNonCardStatus = Some(WLError(sts, msg))
+    status.synchronized {
+      if (status.isEmpty)
+        status = Some(WLError(sts, msg))
     }
   }
 
   def getStatus: Option[WLImageStatus.Value] =
-    wlNonCardStatus.synchronized {
-      wlNonCardStatus.map(_.status)
+    status.synchronized {
+      status.map(_.status)
     }
 
   def getErrorMessage: Option[String] =
-    wlNonCardStatus.synchronized {
-      wlNonCardStatus.map(_.msg)
+    status.synchronized {
+      status.map(_.msg)
     }
 
   private val ballAOI: DicomImage = {
-    val ball = WLNonCardBallAOIBounds.makeBallAOI(nonCardEdge.edgeSet, preprocessedImage)
+    val ball = BallAOIBounds.makeBallAOI(edgeAnalysis.edgeSet, preprocessedImage)
     val normalized = ball.normalize(0.001)
     normalized
   }
@@ -67,8 +67,8 @@ case class WLNonCardValidate( //
     val max = sorted.dropRight(badPixelCount).takeRight(sampleCount).sum / sampleCount
     val range = max - min
 
-    val threshold = range * (Config.WLNonCardEdgePercentChange / 100)
-    wlMessage.foreach(_.info(s"Min and max image brightness: $min   $max.    Range: $range.    Threshold = ${Config.WLNonCardEdgePercentChange / 100} * $range = $threshold"))
+    val threshold = range * (Config.WinLutz360PercentChange / 100)
+    wlMessage.foreach(_.info(s"Min and max image brightness: $min   $max.    Range: $range.    Threshold = ${Config.WinLutz360PercentChange / 100} * $range = $threshold"))
     threshold
   }
 
@@ -78,32 +78,32 @@ case class WLNonCardValidate( //
     *
     * @return Empty list on success, error message on failure.
     */
-  private def validateEdge(edge: WLNonCardEdge): Seq[String] = {
+  private def validateEdge(edge: Edge): Seq[String] = {
 
     val measuredPctText: String = {
-      val max = wholeImagePixelValueRangeThreshold_cu / (Config.WLNonCardEdgePercentChange / 100)
+      val max = wholeImagePixelValueRangeThreshold_cu / (Config.WinLutz360PercentChange / 100)
       val pct = (edge.pixelValueRange / max) * 100
       Util.fmtDbl(pct) + "%"
     }
 
     if (edge.pixelValueRange >= wholeImagePixelValueRangeThreshold_cu) {
-      val msg = s"Edge for ${edge.name} has sufficient contrast of ${Util.fmtDbl(edge.pixelValueRange)} $measuredPctText . Threshold: ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WLNonCardEdgePercentChange}%)"
+      val msg = s"Edge for ${edge.name} has sufficient contrast of ${Util.fmtDbl(edge.pixelValueRange)} $measuredPctText . Threshold: ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WinLutz360PercentChange}%)"
       wlMessage.foreach(_.info(msg))
       Seq()
     } else {
       val msg =
-        s"Edge for ${edge.name} has insufficient contrast of ${Util.fmtDbl(edge.pixelValueRange)} ($measuredPctText)  when it should be at least ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WLNonCardEdgePercentChange}%)"
+        s"Edge for ${edge.name} has insufficient contrast of ${Util.fmtDbl(edge.pixelValueRange)} ($measuredPctText)  when it should be at least ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WinLutz360PercentChange}%)"
       setError(WLImageStatus.BoxNotFound, msg)
       Seq(msg)
     }
   }
 
   private def beamEnergyIsHighEnough(): Seq[String] = {
-    val kvp = DicomUtil.findAllSingle(nonCardEdge.al, TagByName.KVP).head.getDoubleValues.head
-    if (kvp >= Config.WLNonCardKVPLimit)
+    val kvp = DicomUtil.findAllSingle(edgeAnalysis.al, TagByName.KVP).head.getDoubleValues.head
+    if (kvp >= Config.WinLutz360KVPLimit)
       Seq()
     else {
-      val msg = s"DICOM file delivered with (insufficient) $kvp energy, when it should be at least (${Config.WLNonCardKVPLimit})"
+      val msg = s"DICOM file delivered with (insufficient) $kvp energy, when it should be at least (${Config.WinLutz360KVPLimit})"
       setError(WLImageStatus.LowEnergy, msg)
       Seq(msg)
     }
@@ -116,7 +116,7 @@ case class WLNonCardValidate( //
     * @return Empty list on success, error message on failure.
     */
   private def edgesHaveSufficientContrast(): Seq[String] = {
-    val list = nonCardEdge.edgeSet.edgeList.flatMap(validateEdge)
+    val list = edgeAnalysis.edgeSet.edgeList.flatMap(validateEdge)
     list
   }
 
@@ -174,14 +174,14 @@ case class WLNonCardValidate( //
       diff(yTop, yBottom)
     ).sum
 
-    val error = if (totalDiff < Config.WLNonCardSymmetryLimit) {
+    val error = if (totalDiff < Config.WinLutz360SymmetryLimit) {
       val msg = s"profile difference in symmetry: $totalDiff is within the valid limit, indicating that the object found is spherical," +
-        s" and therefore a valid phantom.  It must be lower than ${Config.WLNonCardSymmetryLimit} to be valid."
+        s" and therefore a valid phantom.  It must be lower than ${Config.WinLutz360SymmetryLimit} to be valid."
       wlMessage.foreach(_.info(msg))
       Seq()
     } else {
       val msg = s"profile difference in symmetry: $totalDiff is too large, indicating that the object found is non-spherical," +
-        s" and therefor an invalid phantom.  It must be lower than ${Config.WLNonCardSymmetryLimit} to be valid."
+        s" and therefor an invalid phantom.  It must be lower than ${Config.WinLutz360SymmetryLimit} to be valid."
       setError(WLImageStatus.BallMalformed, msg)
       Seq(msg)
     }
@@ -201,8 +201,8 @@ case class WLNonCardValidate( //
 
     Trace.trace(s"stdDev: $stdDev")
 
-    if (stdDev < Config.WLNonCardMinStdDev) {
-      val msg = s"Ball are has a standard deviation of $stdDev, which is below the required ${Config.WLNonCardMinStdDev}.  Probably due to no phantom."
+    if (stdDev < Config.WinLutz360MinStdDev) {
+      val msg = s"Ball are has a standard deviation of $stdDev, which is below the required ${Config.WinLutz360MinStdDev}.  Probably due to no phantom."
       setError(WLImageStatus.BallMissing, msg)
       Seq(msg)
     } else
@@ -212,8 +212,8 @@ case class WLNonCardValidate( //
 
   private def withinTolerance(): Unit = {
 
-    val errX_mm = nonCardEdge.trans.pix2IsoDistX(nonCardEdge.edgeSet.center_pix.getX - nonCardBall.center_pix.getX)
-    val errY_mm = nonCardEdge.trans.pix2IsoDistY(nonCardEdge.edgeSet.center_pix.getY - nonCardBall.center_pix.getY)
+    val errX_mm = edgeAnalysis.trans.pix2IsoDistX(edgeAnalysis.edgeSet.center_pix.getX - ball.center_pix.getX)
+    val errY_mm = edgeAnalysis.trans.pix2IsoDistY(edgeAnalysis.edgeSet.center_pix.getY - ball.center_pix.getY)
 
     val error_mm = Math.sqrt((errX_mm * errX_mm) + (errY_mm * errY_mm))
 

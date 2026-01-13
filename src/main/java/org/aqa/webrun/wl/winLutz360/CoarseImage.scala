@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl.nonCardinal
+package org.aqa.webrun.wl.winLutz360
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
@@ -12,7 +12,7 @@ import java.awt.image.BufferedImage
 import java.awt.Color
 import java.awt.geom.Point2D
 
-object WLNonCardCoarseImage {
+object CoarseImage {
 
   def makeImage(al: AttributeList, preprocessedImage: DicomImage): BufferedImage = {
     val gantryAngle = DicomUtil.findAllSingle(al, TagByName.GantryAngle).head.getDoubleValues.head

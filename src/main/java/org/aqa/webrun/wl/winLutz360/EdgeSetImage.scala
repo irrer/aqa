@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl.nonCardinal
+package org.aqa.webrun.wl.winLutz360
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
@@ -13,9 +13,9 @@ import java.awt.Graphics2D
 import java.awt.Rectangle
 import javax.vecmath.Point2d
 
-object WLNonCardEdgeSetImage {
+object EdgeSetImage {
 
-  private def labelEdge(edge: WLNonCardEdge, gc: Graphics2D, si: ScaledImage): Unit = {
+  private def labelEdge(edge: Edge, gc: Graphics2D, si: ScaledImage): Unit = {
 
     gc.setColor(Color.yellow)
     val textPoint = {
@@ -40,15 +40,15 @@ object WLNonCardEdgeSetImage {
 
   }
 
-  def makeImage(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, scale: Int, al: AttributeList): BufferedImage = {
+  def makeImage(edgeSet: EdgeSet, preprocessedImage: DicomImage, scale: Int, al: AttributeList): BufferedImage = {
     val dicomImage: DicomImage = new DicomImage(al)
 
     /** A buffered image using the ball pixels as the brightest pixels. This makes the ball stand out more.  */
-    val bufImg = WLBlankImage.make(preprocessedImage, edgeSet)
+    val bufImg = BlankImage.make(preprocessedImage, edgeSet)
 
     val scaledImage = ImageUtil.magnify(bufImg, 1)
 
-    def listCoordinates(edge: WLNonCardEdge): Seq[Point2d] = {
+    def listCoordinates(edge: Edge): Seq[Point2d] = {
       Seq(
         edge.loLoAoi, //
         edge.loHiAoi, //
@@ -75,7 +75,7 @@ object WLNonCardEdgeSetImage {
     val aoi: BufferedImage = ImageUtil.magnify(ImageUtil.subImage(scaledImage, boundingRectangle), scale)
 
     // val buf = si.magnify(origImage)
-    def drawAoi(edgeSet: WLNonCardEdgeSet, aoi: BufferedImage): Unit = {
+    def drawAoi(edgeSet: EdgeSet, aoi: BufferedImage): Unit = {
 
       val gc = ImageUtil.getGraphics(aoi)
       // scale the font to match the scale of the image.
@@ -89,7 +89,7 @@ object WLNonCardEdgeSetImage {
 
       gc.setColor(Color.white)
 
-      def drawEdge(edge: WLNonCardEdge, color: Color): Unit = {
+      def drawEdge(edge: Edge, color: Color): Unit = {
         labelEdge(edge, gc, si)
 
         gc.setColor(Color.white)

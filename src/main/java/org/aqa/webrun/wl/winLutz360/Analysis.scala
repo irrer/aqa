@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl.nonCardinal
+package org.aqa.webrun.wl.winLutz360
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
@@ -27,7 +27,7 @@ import java.awt.image.BufferedImage
 import java.io.File
 import javax.vecmath.Point2d
 
-case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLRunReq, machineWL: MachineWL, wlMessage: Option[WLMessage]) extends WLResult(extendedData, wlRunReq) {
+case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLRunReq, machineWL: MachineWL, wlMessage: Option[WLMessage]) extends WLResult(extendedData, wlRunReq) {
 
   // Invert the pixels if necessary.
   val preprocessedImage: DicomImage = WLPreprocessImage(al, None).preprocessedImage
@@ -51,13 +51,13 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
   }
 
   private val biCubicImage = BiCubicImage(preprocessedImage)
-  val nonCardEdge = WLNonCardEdgeAnalysis(preprocessedImage, al, biCubicImage, wlRunReq, wlMessage, trans, beamCenter_mm)
-  val nonCardBall = WLNonCardBall(nonCardEdge.edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage, biCubicImage: BiCubicImage, trans, al, wlMessage, beamCenter_mm)
+  val edge = EdgeAnalysis(preprocessedImage, al, biCubicImage, wlRunReq, wlMessage, trans, beamCenter_mm)
+  val ball = Ball(edge.edgeSet: EdgeSet, preprocessedImage: DicomImage, biCubicImage: BiCubicImage, trans, al, wlMessage, beamCenter_mm)
 
   /** Take the mean of the pixels that are in the center of the ball and use those to establish the point in the brightest color level. */
   val maxPixelValue: Float = {
     val offsetList = -2 until 3
-    val center_pix = nonCardEdge.edgeSet.center_pix
+    val center_pix = edge.edgeSet.center_pix
     val valueList = for (x <- offsetList; y <- offsetList) yield preprocessedImage.get(center_pix.x.toInt + x, center_pix.y.toInt + y)
     val mean = valueList.sum / valueList.size
     mean
@@ -71,16 +71,16 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
     sortedPixels.slice(drop, drop + take).sum / 10
   }
 
-  val approxImg: BufferedImage = WLNonCardEdgeSetImage.makeImage(nonCardEdge.approximateEdgeSet, preprocessedImage, scale = 1, al)
+  val approxImg: BufferedImage = EdgeSetImage.makeImage(edge.approximateEdgeSet, preprocessedImage, scale = 1, al)
 
   /** Scale (magnification factor) that images should be drawn at. */
   val scale: Int = WLImageUtil.calculateCloseupScale(al)
-  val img: BufferedImage = WLNonCardEdgeSetImage.makeImage(nonCardEdge.edgeSet, preprocessedImage, scale = scale, al)
+  val img: BufferedImage = EdgeSetImage.makeImage(edge.edgeSet, preprocessedImage, scale = scale, al)
 
   // ImageDisplay.showInMSPaint(approxImg)
   // ImageDisplay.showInMSPaint(img)
 
-  val validator: WLNonCardValidate = WLNonCardValidate(nonCardEdge, nonCardBall, machineWL, wlMessage)
+  val validator: Validate = Validate(edge, ball, machineWL, wlMessage)
 
   val status: WLImageStatus.Value = validator.getStatus.get
 
@@ -88,7 +88,7 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
 
   wlMessage.foreach(_.info(s"Status: $status : $statusMessage"))
 
-  private def makeWinstonLutzNonCardinal: WinLutz360 = {
+  private def makeWinLutz360: WinLutz360 = {
     val beamName: Option[String] = {
       if (wlRunReq.rtplan.isDefined)
         Util.getBeamNameOfRtimage(wlRunReq.rtplan.get, al)
@@ -106,58 +106,58 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
     }
 
     /**
-     * Determine if the origin (center of beam) is defined. It is defined if either:
-     *
-     * - The RTPLAN is available.
-     *
-     * - It is assumed to be 0,0, and both pairs of opposing edges are nearly equidistant from 0,0.
-     */
+      * Determine if the origin (center of beam) is defined. It is defined if either:
+      *
+      * - The RTPLAN is available.
+      *
+      * - It is assumed to be 0,0, and both pairs of opposing edges are nearly equidistant from 0,0.
+      */
     val originIsDefined: Boolean = {
       val maxDistanceError_mm = 5.0
-      def xDiff = (nonCardEdge.x1DistanceToOrigin - nonCardEdge.x2DistanceToOrigin).abs
-      def yDiff = (nonCardEdge.y1DistanceToOrigin - nonCardEdge.y2DistanceToOrigin).abs
+      def xDiff = (edge.x1DistanceToOrigin - edge.x2DistanceToOrigin).abs
+      def yDiff = (edge.y1DistanceToOrigin - edge.y2DistanceToOrigin).abs
       def isClose = (xDiff < maxDistanceError_mm) || (yDiff < maxDistanceError_mm)
 
       wlRunReq.rtplan.isDefined || isClose
     }
 
-    val wlNonCard = WinLutz360(
-      winLutz360PK             = None                                                                ,
-      outputPK                 = extendedData.outputPK                                               ,
-      rtimageUID               = Util.sopOfAl(al)                                                    ,
-      beamName                 = beamName                                                            ,
-      gantryAngle_deg          = Util.gantryAngle(al)                                                ,
-      collimatorAngle_deg      = Util.collimatorAngle(al)                                            ,
-      tableAngle_deg           = Some(tableAngle_deg)                                                ,
+    val winLutz360: WinLutz360 = WinLutz360(
+      winLutz360PK = None,
+      outputPK = extendedData.outputPK,
+      rtimageUID = Util.sopOfAl(al),
+      beamName = beamName,
+      gantryAngle_deg = Util.gantryAngle(al),
+      collimatorAngle_deg = Util.collimatorAngle(al),
+      tableAngle_deg = Some(tableAngle_deg),
       //
-      boxCenterX_mm            = nonCardEdge.edgeSet.center_pix.getX                                 ,
-      boxCenterY_mm            = nonCardEdge.edgeSet.center_pix.getY                                 ,
+      boxCenterX_mm = edge.edgeSet.center_pix.getX,
+      boxCenterY_mm = edge.edgeSet.center_pix.getY,
       //
-      ballCenterX_mm           = nonCardBall.center_pix.getX                                         ,
-      ballCenterY_mm           = nonCardBall.center_pix.getY                                         ,
+      ballCenterX_mm = ball.center_pix.getX,
+      ballCenterY_mm = ball.center_pix.getY,
       //
-      X1Offset_mm              = if (originIsDefined) Some(nonCardEdge.x1DistanceToOrigin) else None ,
-      X2Offset_mm              = if (originIsDefined) Some(nonCardEdge.x2DistanceToOrigin) else None ,
-      Y1Offset_mm              = if (originIsDefined) Some(nonCardEdge.y1DistanceToOrigin) else None ,
-      Y2Offset_mm              = if (originIsDefined) Some(nonCardEdge.y2DistanceToOrigin) else None ,
+      X1Offset_mm = if (originIsDefined) Some(edge.x1DistanceToOrigin) else None,
+      X2Offset_mm = if (originIsDefined) Some(edge.x2DistanceToOrigin) else None,
+      Y1Offset_mm = if (originIsDefined) Some(edge.y1DistanceToOrigin) else None,
+      Y2Offset_mm = if (originIsDefined) Some(edge.y2DistanceToOrigin) else None,
       //
-      X1Type                   = None                                                                ,  // TODO
-      X2Type                   = None                                                                ,  // TODO
-      Y1Type                   = None                                                                ,  // TODO
-      Y2Type                   = None                                                                ,  // TODO
+      X1Type = None, // TODO
+      X2Type = None, // TODO
+      Y1Type = None, // TODO
+      Y2Type = None, // TODO
       //
-      X1PlannedOffset_mm             = None                                                          ,  // TODO
-      X2PlannedOffset_mm             = None                                                          ,  // TODO
-      Y1PlannedOffset_mm             = None                                                          ,  // TODO
-      Y2PlannedOffset_mm             = None                                                          // TODO
+      X1PlannedOffset_mm = None, // TODO
+      X2PlannedOffset_mm = None, // TODO
+      Y1PlannedOffset_mm = None, // TODO
+      Y2PlannedOffset_mm = None // TODO
     )
 
-    wlNonCard
+    winLutz360
   }
 
-  override def offsetX_mm: Double = trans.pix2IsoDistX(nonCardEdge.edgeSet.center_pix.getX - nonCardBall.center_pix.getX)
+  override def offsetX_mm: Double = trans.pix2IsoDistX(edge.edgeSet.center_pix.getX - ball.center_pix.getX)
 
-  override def offsetY_mm: Double = trans.pix2IsoDistY(nonCardEdge.edgeSet.center_pix.getY - nonCardBall.center_pix.getY)
+  override def offsetY_mm: Double = trans.pix2IsoDistY(edge.edgeSet.center_pix.getY - ball.center_pix.getY)
 
   override def getImageStatus: WLImageStatus.Value = {
     val ok = validator.getStatus.isDefined && validator.getStatus.head.toString.equals(WLImageStatus.Passed.toString)
@@ -171,16 +171,16 @@ case class WLNonCardAnalysis(extendedData: ExtendedData, al: AttributeList, wlRu
     }
   } // TODO be more specific
 
-  override def convertToDB: Either[WinstonLutz, WinLutz360] = Right(makeWinstonLutzNonCardinal)
+  override def convertToDB: Either[WinstonLutz, WinLutz360] = Right(makeWinLutz360)
 
   override def attrList: AttributeList = al
 
-  private val htmlMaker = WLNonCardinalHTML(this, wlMessage)
+  private val htmlMaker = HTML(this, wlMessage)
   htmlMaker.generate()
 }
 
 //noinspection SpellCheckingInspection
-object WLNonCardAnalysis {
+object Analysis {
 
   // val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""")
   val file = new File("""D:/tmp/wl/nonorth/WLNonCardNon45_20250625_Peyton/20250625_G180C30T0.dcm""")
@@ -195,11 +195,11 @@ object WLNonCardAnalysis {
     val runReq = WLRunReq(Seq(al).toList, None)
     val wlMessage: WLMessage = WLMessage(runReq, al)
     val machineWL = MachineWL.getMachineWLOrDefault(ext.machine.machinePK.get)
-    val wlNonCardAnalysis = WLNonCardAnalysis(ext, al, runReq, machineWL, Some(wlMessage))
+    val wlNonCardAnalysis = Analysis(ext, al, runReq, machineWL, Some(wlMessage))
     Trace.trace("status: " + wlNonCardAnalysis.validator.getStatus)
     Trace.trace("error message: " + wlNonCardAnalysis.validator.getErrorMessage)
 
-    WLNonCardCompositeImage.makeCompositeImage(wlNonCardAnalysis)
+    CompositeImage.makeCompositeImage(wlNonCardAnalysis)
 
     Thread.sleep(5 * 1000)
     System.exit(99)

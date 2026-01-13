@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl.nonCardinal
+package org.aqa.webrun.wl.winLutz360
 
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageUtil
@@ -11,20 +11,20 @@ import java.awt.Color
 import java.awt.Rectangle
 import javax.vecmath.Point2d
 
-object WLNonCardCompositeImage {
+object CompositeImage {
 
   private def d2i(d: Double): Int = d.round.toInt
 
-  private def makeBoundingRectangle(nonCard: WLNonCardAnalysis): Rectangle = {
+  private def makeBoundingRectangle(analysis: Analysis): Rectangle = {
 
     /** extra space between the image's content and the image's edge. */
     val border_pix: Int = {
       val border_mm = 5.0
-      val pix = nonCard.trans.iso2PixDistX(border_mm).round.toInt
+      val pix = analysis.trans.iso2PixDistX(border_mm).round.toInt
       pix
     }
 
-    val edgeSet = nonCard.nonCardEdge.edgeSet
+    val edgeSet = analysis.edge.edgeSet
     val xList = edgeSet.intersectList.map(_.x)
     val yList = edgeSet.intersectList.map(_.y)
     val x = xList.min - border_pix
@@ -39,15 +39,15 @@ object WLNonCardCompositeImage {
 
   /**
     * Make a zoomed image containing only the area of interest.
-    * @param nonCard Results of analysis.
+    * @param analysis Results of analysis.
     * @return Zoomed AOI.
     */
-  private def makeInitialBufImage(preprocessedImage: DicomImage, nonCard: WLNonCardAnalysis, scale: Int): BufferedImage = {
+  private def makeInitialBufImage(preprocessedImage: DicomImage, analysis: Analysis, scale: Int): BufferedImage = {
     // convert to buffered image, using the central part of the ball as the brightest pixels.
-    val img1 = WLBlankImage.make(preprocessedImage, nonCard.nonCardEdge.edgeSet)
+    val img1 = BlankImage.make(preprocessedImage, analysis.edge.edgeSet)
 
     // restrict the image to the AOI
-    val img2 = ImageUtil.subImage(img1, makeBoundingRectangle(nonCard))
+    val img2 = ImageUtil.subImage(img1, makeBoundingRectangle(analysis))
 
     // make AOI bigger.
     val img3 = ImageUtil.magnify(img2, scale)
@@ -58,12 +58,12 @@ object WLNonCardCompositeImage {
   /**
     * Draw a line indicating where each edge is, and also crossing lines that shows where the center of the edges is.
     * @param bufImg Write on this image.
-    * @param nonCard The data.
+    * @param analysis The data.
     */
-  private def drawEdgeLines(bufImg: BufferedImage, nonCard: WLNonCardAnalysis, scale: Int): Unit = {
+  private def drawEdgeLines(bufImg: BufferedImage, analysis: Analysis, scale: Int): Unit = {
 
-    val edgeSet = nonCard.nonCardEdge.edgeSet
-    val rect = makeBoundingRectangle(nonCard)
+    val edgeSet = analysis.edge.edgeSet
+    val rect = makeBoundingRectangle(analysis)
     val si = ScaledImage(scale, rect.x, rect.y)
 
     val gc = ImageUtil.getGraphics(bufImg)
@@ -81,23 +81,23 @@ object WLNonCardCompositeImage {
     * Draw circles centered around the center of the ball, and lines that intersect at the center.  Rotate
     * the lines by the collimator angle so that they don't coincide with the edge lines.
     * @param bufImg Draw on this image
-    * @param nonCard Data
+    * @param analysis Data
     * @param scale Magnify the image by this factor.
     */
-  private def drawBallLines(bufImg: BufferedImage, nonCard: WLNonCardAnalysis, scale: Int): Unit = {
+  private def drawBallLines(bufImg: BufferedImage, analysis: Analysis, scale: Int): Unit = {
 
-    val outerRadius_pix: Int = nonCard.trans.iso2PixDistX(nonCard.machineWL.ballDiameter_mm).round.toInt
+    val outerRadius_pix: Int = analysis.trans.iso2PixDistX(analysis.machineWL.ballDiameter_mm).round.toInt
     val innerRadius_pix = outerRadius_pix / 2
 
-    val ballCenter_pix = nonCard.nonCardBall.center_pix
+    val ballCenter_pix = analysis.ball.center_pix
 
     val gc = ImageUtil.getGraphics(bufImg)
     gc.setColor(Color.yellow)
-    val rect = makeBoundingRectangle(nonCard)
+    val rect = makeBoundingRectangle(analysis)
     val si = ScaledImage(scale, rect.x, rect.y)
 
-    val angle = nonCard.collimator_deg
-    val center = nonCard.nonCardBall.center_pix
+    val angle = analysis.collimator_deg
+    val center = analysis.ball.center_pix
 
     {
       val x1 = ballCenter_pix.x - outerRadius_pix
@@ -137,35 +137,35 @@ object WLNonCardCompositeImage {
 
     gc.setColor(Color.red)
     ImageUtil.setLineThickness(gc, 2.0)
-    si.drawLine(gc, ballCenter_pix, nonCard.nonCardEdge.edgeSet.center_pix)
+    si.drawLine(gc, ballCenter_pix, analysis.edge.edgeSet.center_pix)
   }
 
   /**
     * Make a closeup image showing the centers of the edges and the ball.
-    * @param nonCard Data driving image.
+    * @param analysis Data driving image.
     * @return An annotated image.
     */
-  def makeCompositeImage(nonCard: WLNonCardAnalysis): BufferedImage = {
+  def makeCompositeImage(analysis: Analysis): BufferedImage = {
 
-    val scale = WLImageUtil.calculateCloseupScale(nonCard.al)
+    val scale = WLImageUtil.calculateCloseupScale(analysis.al)
 
-    val bufImg = makeInitialBufImage(nonCard.preprocessedImage, nonCard, scale)
+    val bufImg = makeInitialBufImage(analysis.preprocessedImage, analysis, scale)
 
-    drawEdgeLines(bufImg, nonCard, scale)
+    drawEdgeLines(bufImg, analysis, scale)
 
-    drawBallLines(bufImg, nonCard, scale)
+    drawBallLines(bufImg, analysis, scale)
 
     val annotate = new WLAnnotate(scale, 5)
 
     annotate.annotateImage( //
       png = bufImg,
       graphics = ImageUtil.getGraphics(bufImg),
-      errorScaledX = nonCard.offsetX_mm,
-      errorScaledY = nonCard.offsetY_mm,
-      errorScaledXYCombined = nonCard.offsetXY_mm,
+      errorScaledX = analysis.offsetX_mm,
+      errorScaledY = analysis.offsetY_mm,
+      errorScaledXYCombined = analysis.offsetXY_mm,
       background = true,
-      imageName = nonCard.imageName,
-      passLimit_mm = nonCard.machineWL.passLimit_mm
+      imageName = analysis.imageName,
+      passLimit_mm = analysis.machineWL.passLimit_mm
     )
 
     bufImg

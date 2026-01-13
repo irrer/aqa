@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl.nonCardinal
+package org.aqa.webrun.wl.winLutz360
 
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageUtil
@@ -11,7 +11,7 @@ import javax.vecmath.Point2d
   * Utility for making a blank image with variable brightness.  The brightness varies such
   * that the ball is clearly visible and the edges have the expected contrast.
   */
-object WLBlankImage {
+object BlankImage {
 
   private case class MinMax(min: Float, max: Float) {}
 
@@ -21,7 +21,7 @@ object WLBlankImage {
     *
     * @return The approximate min and max pixel values.
     */
-  private def calculateMinAndMaxMaxBall(preprocessedImage: DicomImage, edgeSet: WLNonCardEdgeSet): MinMax = {
+  private def calculateMinAndMaxMaxBall(preprocessedImage: DicomImage, edgeSet: EdgeSet): MinMax = {
     val valueList = for (x <- 0 until preprocessedImage.width; y <- 0 until preprocessedImage.height; if edgeSet.pointIsInBallAoi(new Point2d(x, y))) yield preprocessedImage.get(x, y)
     val sorted = valueList.sorted
     val min = sorted.slice(5, 15).sum / 10
@@ -51,7 +51,7 @@ object WLBlankImage {
     * @param edgeSet Needed to determine ball area.
     * @return A new image with user-friendly brightness but no annotation or magnification.
     */
-  def make(preprocessedImage: DicomImage, edgeSet: WLNonCardEdgeSet): BufferedImage = {
+  def make(preprocessedImage: DicomImage, edgeSet: EdgeSet): BufferedImage = {
 
     val minMaxWhole = calculateMinAndMaxMaxWholeImage(preprocessedImage)
 

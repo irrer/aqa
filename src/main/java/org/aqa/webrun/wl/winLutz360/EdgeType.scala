@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl.nonCardinal
+package org.aqa.webrun.wl.winLutz360
 
 import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.SequenceAttribute
@@ -10,7 +10,7 @@ import org.aqa.Util
 
 import java.io.File
 
-object WLEdgeType extends Enumeration with Logging {
+object EdgeType extends Enumeration with Logging {
   val Jaw: Value = Value
   val MLC: Value = Value
   //noinspection ScalaWeakerAccess
@@ -24,7 +24,7 @@ object WLEdgeType extends Enumeration with Logging {
 
     def show(beam: AttributeList): Unit = {
 
-      val edgeType = new WLEdgeType(beam)
+      val edgeType = new EdgeType(beam)
 
       val beamName = {
         val name = DicomUtil.findAllSingle(beam, TagByName.BeamName).head.getSingleStringValueOrEmptyString()
@@ -49,11 +49,19 @@ object WLEdgeType extends Enumeration with Logging {
   }
 }
 
+
+
+
+
+
+
+
+
 /**
   * Determine whether the jaw or MLC are defining the edge of a Winston Lutz field.
   * @param beam Part of the plan that defines beam delivery.
   */
-case class WLEdgeType(beam: AttributeList) {
+case class EdgeType(beam: AttributeList) {
   def this(rtplan: AttributeList, rtimage: AttributeList) = this(Util.getBeamOfRtimage(rtplan, rtimage).get)
 
   /** The part of the plan that positions this beam. */
@@ -99,56 +107,56 @@ case class WLEdgeType(beam: AttributeList) {
 
   // TODO : account for the leaf sides.  Use: 300a,00be LeafPositionBoundaries
 
-  val x1: WLEdgeType.Value = 0 match {
+  val x1: EdgeType.Value = 0 match {
     case _ if JawX.isDefined && MLCX.isDefined && JawX.get.positionLo > MLCX.get.positionLo =>
-      WLEdgeType.Jaw
+      EdgeType.Jaw
     case _ if JawX.isDefined && MLCX.isDefined && JawX.get.positionLo < MLCX.get.positionLo =>
-      WLEdgeType.MLC
+      EdgeType.MLC
     case _ if JawX.isDefined && MLCX.isDefined && JawX.get.positionLo == MLCX.get.positionLo =>
-      WLEdgeType.JawAndMLC
+      EdgeType.JawAndMLC
     case _ if MLCX.isDefined =>
-      WLEdgeType.MLC
+      EdgeType.MLC
     case _ =>
-      WLEdgeType.Jaw // assume a default
+      EdgeType.Jaw // assume a default
   }
 
-  val x2: WLEdgeType.Value = 0 match {
+  val x2: EdgeType.Value = 0 match {
     case _ if JawX.isDefined && MLCX.isDefined && JawX.get.positionHi < MLCX.get.positionHi =>
-      WLEdgeType.Jaw
+      EdgeType.Jaw
     case _ if JawX.isDefined && MLCX.isDefined && JawX.get.positionHi > MLCX.get.positionHi =>
-      WLEdgeType.MLC
+      EdgeType.MLC
     case _ if JawX.isDefined && MLCX.isDefined && JawX.get.positionHi == MLCX.get.positionHi =>
-      WLEdgeType.JawAndMLC
+      EdgeType.JawAndMLC
     case _ if MLCX.isDefined =>
-      WLEdgeType.MLC
+      EdgeType.MLC
     case _ =>
-      WLEdgeType.Jaw // assume a default
+      EdgeType.Jaw // assume a default
   }
 
-  val y1: WLEdgeType.Value = 0 match {
+  val y1: EdgeType.Value = 0 match {
     case _ if JawY.isDefined && MLCY.isDefined && JawY.get.positionLo > MLCY.get.positionLo =>
-      WLEdgeType.Jaw
+      EdgeType.Jaw
     case _ if JawY.isDefined && MLCY.isDefined && JawY.get.positionLo < MLCY.get.positionLo =>
-      WLEdgeType.MLC
+      EdgeType.MLC
     case _ if JawY.isDefined && MLCY.isDefined && JawY.get.positionLo == MLCY.get.positionLo =>
-      WLEdgeType.JawAndMLC
+      EdgeType.JawAndMLC
     case _ if MLCY.isDefined =>
-      WLEdgeType.MLC
+      EdgeType.MLC
     case _ =>
-      WLEdgeType.Jaw // assume a default
+      EdgeType.Jaw // assume a default
   }
 
-  val y2: WLEdgeType.Value = 0 match {
+  val y2: EdgeType.Value = 0 match {
     case _ if JawY.isDefined && MLCY.isDefined && JawY.get.positionHi < MLCY.get.positionHi =>
-      WLEdgeType.MLC
+      EdgeType.MLC
     case _ if JawY.isDefined && MLCY.isDefined && JawY.get.positionHi > MLCY.get.positionHi =>
-      WLEdgeType.Jaw
+      EdgeType.Jaw
     case _ if JawY.isDefined && MLCY.isDefined && JawY.get.positionHi == MLCY.get.positionHi =>
-      WLEdgeType.JawAndMLC
+      EdgeType.JawAndMLC
     case _ if MLCY.isDefined =>
-      WLEdgeType.MLC
+      EdgeType.MLC
     case _ =>
-      WLEdgeType.Jaw // assume a default
+      EdgeType.Jaw // assume a default
   }
 
   override def toString: String = {

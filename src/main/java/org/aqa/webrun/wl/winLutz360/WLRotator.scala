@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.aqa.webrun.wl.nonCardinal
+package org.aqa.webrun.wl.winLutz360
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName

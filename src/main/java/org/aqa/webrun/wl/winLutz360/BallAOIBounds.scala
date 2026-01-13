@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl.nonCardinal
+package org.aqa.webrun.wl.winLutz360
 
 import edu.umro.ImageUtil.DicomImage
 
@@ -6,7 +6,7 @@ import java.awt.Rectangle
 import javax.vecmath.Point2d
 import javax.vecmath.Point2i
 
-object WLNonCardBallAOIBounds {
+object BallAOIBounds {
 
   /**
     * Calculate the rectangle to enclose the region of the image that contains all the areas of interest
@@ -15,8 +15,8 @@ object WLNonCardBallAOIBounds {
     * @param margin_pix Number of extra pixels to serve as a margin separating the AOIs from the image edge.
     * @return Bounding rectangle in integer pixels.
     */
-  def calcAoiBounds(edgeSet: WLNonCardEdgeSet, margin_pix: Int): Rectangle = {
-    def listCoordinates(edge: WLNonCardEdge): Seq[Point2d] = {
+  def calcAoiBounds(edgeSet: EdgeSet, margin_pix: Int): Rectangle = {
+    def listCoordinates(edge: Edge): Seq[Point2d] = {
       Seq(
         edge.loLoAoi, //
         edge.loHiAoi, //
@@ -40,12 +40,12 @@ object WLNonCardBallAOIBounds {
     boundingRectangle
   }
 
-  def pointIsInBallAoi(point: Point2d, edgeSet: WLNonCardEdgeSet): Boolean = {
+  def pointIsInBallAoi(point: Point2d, edgeSet: EdgeSet): Boolean = {
     edgeSet.X1.loLine.pointIsBetween(point, edgeSet.X2.loLine) &&
     edgeSet.Y1.loLine.pointIsBetween(point, edgeSet.Y2.loLine)
   }
 
-  def makeBallBounds(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage): Rectangle = {
+  def makeBallBounds(edgeSet: EdgeSet, preprocessedImage: DicomImage): Rectangle = {
 
     val pointsInside = for (x <- 0 until preprocessedImage.width; y <- 0 until preprocessedImage.height; if (pointIsInBallAoi(new Point2d(x, y), edgeSet))) yield new Point2i(x, y)
 
@@ -59,7 +59,7 @@ object WLNonCardBallAOIBounds {
     rectangle
   }
 
-  def makeBallAOI(edgeSet: WLNonCardEdgeSet, preprocessedImage: DicomImage): DicomImage = {
+  def makeBallAOI(edgeSet: EdgeSet, preprocessedImage: DicomImage): DicomImage = {
 
     val rectangle = makeBallBounds(edgeSet, preprocessedImage)
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.aqa.webrun.wl.nonCardinal
+package org.aqa.webrun.wl.winLutz360
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
@@ -36,15 +36,15 @@ import scala.annotation.tailrec
   * @param width Width of sampling band in pixels.
   * @param resolution Resolution in pixels. 1 means same size as pixels, .5 means splitting pixels into 4 parts.
   */
-case class WLNonCardEdge( //
-    name: String,
-    line: AQALine,
-    offsetStart: Double,
-    offsetFinish: Double,
-    biCubicImage: BiCubicImage,
-    al: AttributeList,
-    width: Double,
-    resolution: Double
+case class Edge( //
+                 name: String,
+                 line: AQALine,
+                 offsetStart: Double,
+                 offsetFinish: Double,
+                 biCubicImage: BiCubicImage,
+                 al: AttributeList,
+                 width: Double,
+                 resolution: Double
 ) {
 
   private val positive = offsetFinish > offsetStart

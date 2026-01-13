@@ -1019,17 +1019,12 @@ object Config extends Logging {
   val WLAmqpRoutingKey: String = logMainText("WLSummarySize", "Aria.Event.EventWLQASRSDone")
   val WLEdgeCoefficientOfVariationMax: Double = logMainText("WLEdgeCoefficientOfVariationMax", "0.007").toDouble
 
-  val WLPolicyCardinalDoesCardinal: Boolean = logMainText("WLPolicyCardinalDoesCardinal", "true").toBoolean
-  val WLPolicyCardinalDoesNonCardinal: Boolean = logMainText("WLPolicyCardinalDoesNonCardinal", "false").toBoolean
-  val WLPolicyNonCardinalDoesCardinal: Boolean = logMainText("WLPolicyNonCardinalDoesCardinal", "false").toBoolean
-  val WLPolicyNonCardinalDoesNonCardinal: Boolean = logMainText("WLPolicyNonCardinalDoesNonCardinal", "true").toBoolean
-
-  val WLNonCardEdgePercentChange: Double = logMainText("WLNonCardEdgePercentChange", "98.0").toDouble
-  val WLNonCardMinStdDev: Double = logMainText("WLNonCardMinStdDev", "0.1").toDouble
-  val WLNonCardSymmetryLimit: Double = logMainText("WLNonCardSymmetryLimit", "0.4").toDouble
-  val WLNonCardKVPLimit: Double = logMainText("WLNonCardKVPLimit", "0.0").toDouble
-  val WLNonCardEdgePixelResolution: Double = logMainText("WLNonCardEdgePixelResolution", "0.1").toDouble
-  val WLNonCardBallPixelResolution: Double = logMainText("WLNonCardBallPixelResolution", "0.1").toDouble
+  val WinLutz360PercentChange: Double = logMainText("WinLutz360EdgePercentChange", "98.0").toDouble
+  val WinLutz360MinStdDev: Double = logMainText("WinLutz360MinStdDev", "0.1").toDouble
+  val WinLutz360SymmetryLimit: Double = logMainText("WinLutz360SymmetryLimit", "0.4").toDouble
+  val WinLutz360KVPLimit: Double = logMainText("WinLutz360KVPLimit", "0.0").toDouble
+  val WinLutz360EdgePixelResolution: Double = logMainText("WinLutz360EdgePixelResolution", "0.1").toDouble
+  val WinLutz360BallPixelResolution: Double = logMainText("WinLutz360BallPixelResolution", "0.1").toDouble
 
   val WLTreatmentMachineList: List[WLTreatmentMachine] = {
     val list = (document \ "WLTreatmentMachineList" \ "WLTreatmentMachine").toList.map(e => new WLTreatmentMachine(e))

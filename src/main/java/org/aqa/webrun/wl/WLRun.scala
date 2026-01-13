@@ -22,8 +22,6 @@ import org.aqa.AnonymizeUtil
 import org.aqa.web.WebServer
 import org.aqa.AQAEventNetClient
 import org.aqa.Config
-import org.aqa.db.MachineWL
-import org.aqa.webrun.wl.nonCardinal.WLNonCardAnalysis
 import org.restlet.Request
 import org.restlet.Response
 
@@ -81,33 +79,8 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
 
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
 
-    val cardinalAlList = runReq.epidList.filter(al => isCardinalAngle(al))
-    val nonCardinalAlList = runReq.epidList.filterNot(al => isCardinalAngle(al))
-
-    val machineWL = MachineWL.getMachineWLOrDefault(extendedData.machine.machinePK.get)
-
-    // the list of functions that process images with cardinal (older) processing
-    val cardinalFunctionList = {
-      val cList: Seq[AttributeList] = if (Config.WLPolicyCardinalDoesCardinal) cardinalAlList else Seq()
-      val nList: Seq[AttributeList] = if (Config.WLPolicyCardinalDoesNonCardinal) nonCardinalAlList else Seq()
-      val functionList = (cList ++ nList).map(rtimage => () => new WLProcessImage(extendedData, rtimage, runReq).process.asInstanceOf[WLResult])
-      functionList
-    }
-
-    // the list of functions that process images with non-cardinal (newer) processing
-    val nonCardinalFunctionList = {
-      val cList: Seq[AttributeList] = if (Config.WLPolicyNonCardinalDoesCardinal) cardinalAlList else Seq()
-      val nList: Seq[AttributeList] = if (Config.WLPolicyNonCardinalDoesNonCardinal) nonCardinalAlList else Seq()
-      val functionList = (cList ++ nList).map(rtimage => () => WLNonCardAnalysis(extendedData, rtimage, runReq, machineWL, Some(WLMessage(runReq, rtimage))).asInstanceOf[WLResult])
-      functionList
-    }
-
     // Perform processing in parallel for speed
-    val resultList =
-      if (false) // TODO remove when ready to go parallel
-        (cardinalFunctionList ++ nonCardinalFunctionList).map(f => f()).toList.sortBy(_.subDir.getName)
-      else
-        (cardinalFunctionList ++ nonCardinalFunctionList).par.map(f => f()).toList.sortBy(_.subDir.getName) // TODO put back
+    val resultList = runReq.epidList.par.map(rtimage => new WLProcessImage(extendedData, rtimage, runReq).process.asInstanceOf[WLResult]).toList
 
     val resultHasData = resultList.filter(r => WLImageStatus.hasResult(r.getImageStatus))
 
