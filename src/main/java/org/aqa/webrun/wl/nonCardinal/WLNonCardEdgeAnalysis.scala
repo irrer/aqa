@@ -177,28 +177,6 @@ case class WLNonCardEdgeAnalysis( //
   case class AnnotatedEdgeAoi(line: AQALine, offsetStart: Double, offsetFinish: Double, width: Double, position: Double) {}
 
   /**
-    * Log statistics for this edge.
-    * @param edge Show this one.
-    * @param center_pix Final precise center in pixels.
-    */
-  private def showEdge(edge: WLNonCardEdge, center_pix: Point2d): Unit = {
-
-    val point_mm: Point2d = {
-      val line = AQALine(centerPoint = center_pix, angle_deg = edge.line.angle_deg)
-      val point = line.intersection(edge.edgeLine)
-      trans.pix2Iso(new Point2d(point.x, point.y))
-    }
-
-    val x = fmt(point_mm.getX)
-    val y = fmt(point_mm.getY)
-
-    val d = fmt(point_mm.distance(beamCenter_mm))
-    wlMessage.foreach(_.info(s"Edge ${edge.name} edge center (mm): $x, $y    distance to center (mm): $d"))
-
-    wlMessage.foreach(_.info(s"edgeCenter pixels: ${trans.iso2Pix(point_mm)}"))
-  }
-
-  /**
     * Precisely locate the four edges using a larger number of pixels and a higher sampling resolution.
     *
     * @param approximateEdgeLocations Approximate locations of edges.
@@ -236,11 +214,6 @@ case class WLNonCardEdgeAnalysis( //
     wlMessage.foreach(_.info(s"precise center of edges pix X: ${fmt(edgeSetPrecise.center_pix.getX)}"))
     wlMessage.foreach(_.info(s"precise center of edges pix Y: ${fmt(edgeSetPrecise.center_pix.getY)}"))
 
-    showEdge(x1, center_pix)
-    showEdge(x2, center_pix)
-    showEdge(y1, center_pix)
-    showEdge(y2, center_pix)
-
     edgeSetPrecise
   }
 
@@ -255,5 +228,47 @@ case class WLNonCardEdgeAnalysis( //
   private val preciseEdgeLocations = preciseLocationOfEdges(approximateEdgeSet)
 
   val edgeSet: WLNonCardEdgeSet = preciseEdgeLocations
+
+  private def centerPointOfEdge_mm(edge: WLNonCardEdge): Point2d = {
+    val line = AQALine(centerPoint = edgeSet.center_pix, angle_deg = edge.line.angle_deg)
+    val point = line.intersection(edge.edgeLine)
+    trans.pix2Iso(new Point2d(point.x, point.y))
+  }
+
+  /**
+    * Calculate the shortest distance between the origin and the given edge.  This can be used to show how far off-center an edge.
+    * @param edge For this edge.
+    * @return The shortest distance between the origin and the given edge.
+    */
+  private def distanceToOrigin(edge: WLNonCardEdge): Double = {
+    val edgeCenter_mm = centerPointOfEdge_mm(edge)
+    val d = edgeCenter_mm.distance(beamCenter_mm)
+    d
+  }
+
+  /**
+    * Log statistics for this edge.
+    * @param edge Show this one.
+    */
+  private def showEdge(edge: WLNonCardEdge): Unit = {
+
+    val edgeCenter_mm: Point2d = centerPointOfEdge_mm(edge)
+
+    val x = fmt(edgeCenter_mm.getX)
+    val y = fmt(edgeCenter_mm.getY)
+
+    val d = fmt(distanceToOrigin(edge))
+    wlMessage.foreach(_.info(s"showEdge2 Edge ${edge.name} edge center (mm): $x, $y    distance to center (mm): $d"))
+  }
+
+  showEdge(edgeSet.X1)
+  showEdge(edgeSet.X2)
+  showEdge(edgeSet.Y1)
+  showEdge(edgeSet.Y2)
+
+  val x1DistanceToOrigin: Double = distanceToOrigin(edgeSet.X1)
+  val x2DistanceToOrigin: Double = distanceToOrigin(edgeSet.X2)
+  val y1DistanceToOrigin: Double = distanceToOrigin(edgeSet.Y1)
+  val y2DistanceToOrigin: Double = distanceToOrigin(edgeSet.Y2)
 
 }

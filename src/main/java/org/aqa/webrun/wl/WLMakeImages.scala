@@ -196,8 +196,8 @@ case class WLMakeImages(
     val wl = imageResult.toWinstonLutz
     wlMsg.info(s"Box  X center iso mm: ${wl.boxCenterX_mm}")
     wlMsg.info(s"Box  Y center iso mm: ${wl.boxCenterY_mm}")
-    wlMsg.info(s"Ball X center iso mm: ${wl.ballX_mm}")
-    wlMsg.info(s"Ball Y center iso mm: ${wl.ballY_mm}")
+    wlMsg.info(s"Ball X center iso mm: ${wl.ballCenterX_mm}")
+    wlMsg.info(s"Ball Y center iso mm: ${wl.ballCenterY_mm}")
     wlMsg.info(s"Box top       iso mm: ${wl.topEdge_mm}")
     wlMsg.info(s"Box bottom    iso mm: ${wl.bottomEdge_mm}")
     wlMsg.info(s"Box left      iso mm: ${wl.leftEdge_mm}")

@@ -55,8 +55,8 @@ class WLChart(outputPK: Long) extends Logging {
       new YData   ("X box center"          , new Color(0x00ffff), h => h.winstonLutz.boxCenterX_mm  ),
       new YData   ("Y box center"          , new Color(0x006666), h => h.winstonLutz.boxCenterY_mm  ),
       
-      new YData   ("X ball center"         , new Color(0xff00ff), h => h.winstonLutz.ballX_mm       ),
-      new YData   ("Y ball center"         , new Color(0x990099), h => h.winstonLutz.ballY_mm       ),
+      new YData   ("X ball center"         , new Color(0xff00ff), h => h.winstonLutz.ballCenterX_mm       ),
+      new YData   ("Y ball center"         , new Color(0x990099), h => h.winstonLutz.ballCenterY_mm       ),
       //
       new YDataOpt("Top edge - planned"    , new Color(0xffc800), h => h.winstonLutz.topError_mm    ),
       new YDataOpt("Bottom edge - planned" , new Color(0x44ff44), h => h.winstonLutz.bottomError_mm ),

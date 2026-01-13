@@ -3,7 +3,7 @@ package org.aqa.webrun.wl
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import org.aqa.db.WinstonLutz
-import org.aqa.db.WinstonLutzNonCardinal
+import org.aqa.db.WinLutz360
 import org.aqa.webrun.ExtendedData
 import org.aqa.Util
 
@@ -19,7 +19,7 @@ abstract class WLResult(extendedData: ExtendedData, runReq: WLRunReq) {
 
   def getImageStatus: WLImageStatus.Value
 
-  def convertToDB: Either[WinstonLutz, WinstonLutzNonCardinal]
+  def convertToDB: Either[WinstonLutz, WinLutz360]
 
   def attrList: AttributeList
 
@@ -81,7 +81,7 @@ abstract class WLResult(extendedData: ExtendedData, runReq: WLRunReq) {
 
 object WLResult {
 
-  type EitherWL = Either[WinstonLutz, WinstonLutzNonCardinal]
+  type EitherWL = Either[WinstonLutz, WinLutz360]
 
   def imageStatus(wl: EitherWL): WLImageStatus.ImageStatus = {
     ???

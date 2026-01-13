@@ -34,6 +34,12 @@ case class WLNonCardEdgeSet(
     Y2: WLNonCardEdge
 ) {
 
+  /**
+   * Construct a line that is parallel to and halfway between the given lines.
+   * @param edge1 One line.
+   * @param edge2 The other line.
+   * @return A line parallel to and halfway between the given lines.
+   */
   private def meanLineOf(edge1: WLNonCardEdge, edge2: WLNonCardEdge): AQALine = {
     val center1 = edge1.edgeLine.centerPoint
     val center2 = edge2.edgeLine.centerPoint

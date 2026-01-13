@@ -50,15 +50,15 @@ case class WinstonLutz(
     leftEdge_mm          : Double             , // measured left edge of rectangle
     rightEdge_mm         : Double             , // measured right edge of rectangle
     //
-    ballX_mm             : Double             , // width of measurement rectangle.  Not required to calculate values, but provides an indication of the number of pixels used to establish the edge measurements.
-    ballY_mm             : Double             , // width of measurement rectangle.  Not required to calculate values, but provides an indication of the number of pixels used to establish the edge measurements.
+    ballCenterX_mm       : Double             , // width of measurement rectangle.  Not required to calculate values, but provides an indication of the number of pixels used to establish the edge measurements.
+    ballCenterY_mm       : Double             , // width of measurement rectangle.  Not required to calculate values, but provides an indication of the number of pixels used to establish the edge measurements.
     //
     topEdgePlanned_mm    : Option[Double]     , // planned top edge of rectangle
     bottomEdgePlanned_mm : Option[Double]     , // planned bottom edge of rectangle
     leftEdgePlanned_mm   : Option[Double]     , // planned left edge of rectangle
     rightEdgePlanned_mm  : Option[Double]       // planned right edge of rectangle
                         // @formatter:on
-                      ) {
+                      ) extends Logging with WinstonLutzGeneric {
 
   def insert: WinstonLutz = {
     val insertQuery = WinstonLutz.query returning WinstonLutz.query.map(_.winstonLutzPK) into ((winstonLutz, winstonLutzPK) => winstonLutz.copy(winstonLutzPK = Some(winstonLutzPK)))
@@ -103,16 +103,16 @@ case class WinstonLutz(
   def insertOrUpdate(): Int = Db.run(WinstonLutz.query.insertOrUpdate(this))
 
   //noinspection ScalaWeakerAccess
-  def boxCenterX_mm: Double = (leftEdge_mm + rightEdge_mm) / 2
+  val boxCenterX_mm: Double = (leftEdge_mm + rightEdge_mm) / 2
 
   //noinspection ScalaWeakerAccess
-  def boxCenterY_mm: Double = (topEdge_mm + bottomEdge_mm) / 2
+  val boxCenterY_mm: Double = (topEdge_mm + bottomEdge_mm) / 2
 
   //noinspection ScalaWeakerAccess
-  val errorX_mm: Double = boxCenterX_mm - ballX_mm
+  val errorX_mm: Double = boxCenterX_mm - ballCenterX_mm
 
   //noinspection ScalaWeakerAccess
-  val errorY_mm: Double = boxCenterY_mm - ballY_mm
+  val errorY_mm: Double = boxCenterY_mm - ballCenterY_mm
 
   val errorXY_mm: Double = Math.sqrt((errorX_mm * errorX_mm) + (errorY_mm * errorY_mm))
 
@@ -173,8 +173,8 @@ case class WinstonLutz(
       s"""    bottomEdge_mm        : $bottomEdge_mm\n"""        +
       s"""    leftEdge_mm          : $leftEdge_mm\n"""          +
       s"""    rightEdge_mm         : $rightEdge_mm\n"""         +
-      s"""    ballX_mm             : $ballX_mm\n"""             +
-      s"""    ballY_mm             : $ballY_mm\n"""             +
+      s"""    ballCenterX_mm       : $ballCenterX_mm\n"""       +
+      s"""    ballCenterY_mm       : $ballCenterY_mm\n"""       +
       s"""    topEdgePlanned_mm    : $topEdgePlanned_mm\n"""    +
       s"""    bottomEdgePlanned_mm : $bottomEdgePlanned_mm\n""" +
       s"""    leftEdgePlanned_mm   : $leftEdgePlanned_mm\n"""   +
@@ -190,6 +190,47 @@ case class WinstonLutz(
       s"""    rightError_mm        : $rightError_mm\n"""
     // @formatter:on
   }
+
+  override val PK: Option[Long] = winstonLutzPK
+
+  private val x1 = collimatorAngleRounded match {
+    case 0 => leftEdge_mm
+    case 90 => bottomEdge_mm
+    case 180 => rightEdge_mm
+    case 270 => topEdge_mm
+  }
+
+  private val x2 = collimatorAngleRounded match {
+    case 0 => rightEdge_mm
+    case 90 => topEdge_mm
+    case 180 => leftEdge_mm
+    case 270 => bottomEdge_mm
+  }
+
+  private val y1 = collimatorAngleRounded match {
+    case 0 => bottomEdge_mm
+    case 90 => rightEdge_mm
+    case 180 => topEdge_mm
+    case 270 => leftEdge_mm
+  }
+
+  private val y2 = collimatorAngleRounded match {
+    case 0 => topEdge_mm
+    case 90 => leftEdge_mm
+    case 180 => bottomEdge_mm
+    case 270 => rightEdge_mm
+  }
+
+
+  override val X1Offset_mm: Option[Double] = Some(x1)
+  override val X2Offset_mm: Option[Double] = Some(x2)
+  override val Y1Offset_mm: Option[Double] = Some(y1)
+  override val Y2Offset_mm: Option[Double] = Some(y2)
+
+  override val X1Type: Option[String] = None
+  override val X2Type: Option[String] = None
+  override val Y1Type: Option[String] = None
+  override val Y2Type: Option[String] = None
 }
 
 object WinstonLutz extends Logging {

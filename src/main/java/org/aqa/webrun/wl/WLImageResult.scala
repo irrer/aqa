@@ -9,7 +9,7 @@ import org.aqa.db.WinstonLutz
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.PlannedRectangle
-import org.aqa.db.WinstonLutzNonCardinal
+import org.aqa.db.WinLutz360
 
 import java.awt.geom.Point2D
 import java.awt.Rectangle
@@ -189,8 +189,8 @@ case class WLImageResult(
       bottomEdge_mm = bottom_mm,
       leftEdge_mm = left_mm,
       rightEdge_mm = right_mm,
-      ballX_mm = ballCenter_mm.getX,
-      ballY_mm = ballCenter_mm.getY,
+      ballCenterX_mm = ballCenter_mm.getX,
+      ballCenterY_mm = ballCenter_mm.getY,
       topEdgePlanned_mm = planned.map(_.top),
       bottomEdgePlanned_mm = planned.map(_.bottom),
       leftEdgePlanned_mm = planned.map(_.left),
@@ -209,7 +209,7 @@ case class WLImageResult(
 
   override def getImageStatus: WLImageStatus.Value = imageStatus
 
-  override def convertToDB: Either[WinstonLutz, WinstonLutzNonCardinal] = Left(toWinstonLutz)
+  override def convertToDB: Either[WinstonLutz, WinLutz360] = Left(toWinstonLutz)
 
   override def attrList: AttributeList = rtimage
 
