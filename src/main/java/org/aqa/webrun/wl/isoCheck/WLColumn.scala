@@ -4,8 +4,8 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import edu.umro.ScalaUtil.DicomUtil
 import org.apache.poi.xssf.usermodel.XSSFCell
-import org.aqa.db.WinstonLutz
 import org.aqa.AnonymizeUtil
+import org.aqa.db.WinstonLutzGeneric
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.numericFormat
 
 /**
@@ -33,7 +33,7 @@ abstract case class WLColumn( //
     * @param al Using this value from DICOM.
     * @return Text to show user.
     */
-  def toText(wl: WinstonLutz, al: AttributeList): String
+  def toText(wl: WinstonLutzGeneric, al: AttributeList): String
 
   /**
     * Format the value as text.
@@ -41,7 +41,7 @@ abstract case class WLColumn( //
     * @param al Using this value from DICOM.
     * @return Text to show user in Preprocess sheet.
     */
-  def toPreprocessText(wl: WinstonLutz, al: AttributeList): String
+  def toPreprocessText(wl: WinstonLutzGeneric, al: AttributeList): String
 
   /**
     * Update the given spreadsheet cell's content.
@@ -53,7 +53,7 @@ abstract case class WLColumn( //
     * @param wl Using this value from database.
     * @param al Using this value from DICOM.
     */
-  def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit
+  def updateCell(cell: XSSFCell, wl: WinstonLutzGeneric, al: AttributeList): Unit
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -63,15 +63,15 @@ abstract case class WLColumn( //
  * @param name Column name.
  * @param toVal Convert data to text.
  */
-class WLColumnText(name: String, toVal: (WinstonLutz, AttributeList) => String) extends WLColumn(name) {
+class WLColumnText(name: String, toVal: (WinstonLutzGeneric, AttributeList) => String) extends WLColumn(name) {
 
   override val alignLeft: Boolean = true
 
-  override def toText(wl: WinstonLutz, al: AttributeList): String = toVal(wl, al)
+override def toText(wl: WinstonLutzGeneric, al: AttributeList): String = toVal(wl, al)
 
-  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toText(wl, al)
+override def toPreprocessText(wl: WinstonLutzGeneric, al: AttributeList): String = toText(wl, al)
 
-  override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = cell.setCellValue(toText(wl, al))
+override def updateCell(cell: XSSFCell, wl: WinstonLutzGeneric, al: AttributeList): Unit = cell.setCellValue(toText(wl, al))
 }
 
 
@@ -87,11 +87,11 @@ class WLColumnMachine(name: String, real: String, alias: String) extends WLColum
 
   override val alignLeft: Boolean = true
 
-  override def toText(wl: WinstonLutz, al: AttributeList): String = alias
+override def toText(wl: WinstonLutzGeneric, al: AttributeList): String = alias
 
-  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = alias
+override def toPreprocessText(wl: WinstonLutzGeneric, al: AttributeList): String = alias
 
-  override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = cell.setCellValue(real)
+override def updateCell(cell: XSSFCell, wl: WinstonLutzGeneric, al: AttributeList): Unit = cell.setCellValue(real)
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -109,11 +109,11 @@ class WLColumnAlNumeric(name: String, tag: AttributeTag) extends WLColumn(name) 
 
   def toRoundedVal(al: AttributeList): Double = (toVal(al) * 100).round / 100.0
 
-  override def toText(wl: WinstonLutz, al: AttributeList): String = toVal(al).toString
+override def toText(wl: WinstonLutzGeneric, al: AttributeList): String = toVal(al).toString
 
-  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toVal(al).formatted(numericFormat).trim
+override def toPreprocessText(wl: WinstonLutzGeneric, al: AttributeList): String = toVal(al).formatted(numericFormat).trim
 
-  override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = cell.setCellValue(toVal(al))
+override def updateCell(cell: XSSFCell, wl: WinstonLutzGeneric, al: AttributeList): Unit = cell.setCellValue(toVal(al))
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -131,11 +131,11 @@ class WLColumnAlAngle(name: String, tag: AttributeTag) extends WLColumn(name) {
 
   private def toRoundedVal(al: AttributeList): Int = WLXlsxUtil.angleRounded(toVal(al))
 
-  override def toText(wl: WinstonLutz, al: AttributeList): String = toVal(al).toString
+  override def toText(wl: WinstonLutzGeneric, al: AttributeList): String = toVal(al).toString
 
-  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toRoundedVal(al).toString
+  override def toPreprocessText(wl: WinstonLutzGeneric, al: AttributeList): String = toRoundedVal(al).toString
 
-  override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = cell.setCellValue(toVal(al))
+  override def updateCell(cell: XSSFCell, wl: WinstonLutzGeneric, al: AttributeList): Unit = cell.setCellValue(toVal(al))
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -153,29 +153,29 @@ class WLColumnAlNegAngle(name: String, tag: AttributeTag) extends WLColumn(name)
 
   private def toRoundedVal(al: AttributeList): Int = (360 - WLXlsxUtil.angleRounded(toVal(al))) % 360
 
-  override def toText(wl: WinstonLutz, al: AttributeList): String = toVal(al).toString
+  override def toText(wl: WinstonLutzGeneric, al: AttributeList): String = toVal(al).toString
 
-  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toRoundedVal(al).toString
+  override def toPreprocessText(wl: WinstonLutzGeneric, al: AttributeList): String = toRoundedVal(al).toString
 
-  override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = cell.setCellValue(toVal(al))
+  override def updateCell(cell: XSSFCell, wl: WinstonLutzGeneric, al: AttributeList): Unit = cell.setCellValue(toVal(al))
 }
 
 // ---------------------------------------------------------------------------------------------------
 
 /**
-  * Handle column that have a numeric value extracted from the WinstonLutz database object.
+  * Handle column that have a numeric value extracted from the WinstonLutzGeneric database object.
   * @param name Column name.
   * @param toVal Extract value from database object.
   */
-class WlColumnWlNumeric(name: String, toVal: WinstonLutz => Double) extends WLColumn(name) {
+class WlColumnWlNumeric(name: String, toVal: WinstonLutzGeneric => Double) extends WLColumn(name) {
 
   override val alignLeft: Boolean = false
 
-  override def toText(wl: WinstonLutz, al: AttributeList): String = toVal(wl).toString
+  override def toText(wl: WinstonLutzGeneric, al: AttributeList): String = toVal(wl).toString
 
-  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toVal(wl).formatted(numericFormat).trim
+  override def toPreprocessText(wl: WinstonLutzGeneric, al: AttributeList): String = toVal(wl).formatted(numericFormat).trim
 
-  override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = cell.setCellValue(toVal(wl))
+  override def updateCell(cell: XSSFCell, wl: WinstonLutzGeneric, al: AttributeList): Unit = cell.setCellValue(toVal(wl))
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -197,7 +197,7 @@ class WLColumnAlAnonText(name: String, tag: AttributeTag, institutionPK: Long) e
     text
   }
 
-  override def toText(wl: WinstonLutz, al: AttributeList): String = {
+  override def toText(wl: WinstonLutzGeneric, al: AttributeList): String = {
     val attr = al.get(tag)
     val text =
       if (attr == null)
@@ -208,9 +208,9 @@ class WLColumnAlAnonText(name: String, tag: AttributeTag, institutionPK: Long) e
     text
   }
 
-  override def toPreprocessText(wl: WinstonLutz, al: AttributeList): String = toText(wl, al)
+  override def toPreprocessText(wl: WinstonLutzGeneric, al: AttributeList): String = toText(wl, al)
 
-  override def updateCell(cell: XSSFCell, wl: WinstonLutz, al: AttributeList): Unit = {
+  override def updateCell(cell: XSSFCell, wl: WinstonLutzGeneric, al: AttributeList): Unit = {
     cell.setCellValue(toClearText(al))
   }
 }

@@ -1,7 +1,7 @@
 package org.aqa.webrun.wl.isoCheck
 
-import org.aqa.db.WinstonLutz
 import org.aqa.Util
+import org.aqa.db.WinstonLutzGeneric
 
 /**
   * Provide support for accessing Winston Lutz results for IsoCheck code.
@@ -14,12 +14,14 @@ import org.aqa.Util
   *
   * @param fullList All Winston Lutz results.
   */
-class WLMap(fullList: Seq[WinstonLutz]) {
+class WLMap(fullList: Seq[WinstonLutzGeneric]) {
+
+  private def r1 = Util.angleRoundedTo1 _
   private def nameOf(g: Int, c: Int, t: Int): String = s"G$g C$c t$t"
-  private def nameOf(wl: WinstonLutz): String = nameOf(wl.gantryAngleRounded, wl.collimatorAngleRounded, wl.tableAngleRounded.get)
-  val list: Seq[WinstonLutz] = {
+  private def nameOf(wl: WinstonLutzGeneric): String = nameOf( r1(wl.gantryAngle_deg), r1(wl.collimatorAngle_deg), r1(wl.tableAngle_deg.get))
+  val list: Seq[WinstonLutzGeneric] = {
     // list of groups that the same gantry, collimator, and table angles
-    val groupList = fullList.filter(_.tableAngleRounded.isDefined).groupBy(nameOf).values
+    val groupList = fullList.filter(_.tableAngle_deg.isDefined).groupBy(nameOf).values
 
     // take only the last one delivered in each group.  Sort the final list by time.
     groupList.map(_.maxBy(_.dataDate.getTime)).toSeq.sortBy(_.dataDate.getTime)
@@ -34,8 +36,8 @@ class WLMap(fullList: Seq[WinstonLutz]) {
     * @param table Table angle.
     * @return
     */
-  def find(gantry: Int, collimator: Int, table: Int = 0): Option[WinstonLutz] = wlMap.get(nameOf(gantry, collimator, table))
+  def find(gantry: Int, collimator: Int, table: Int = 0): Option[WinstonLutzGeneric] = wlMap.get(nameOf(gantry, collimator, table))
 
-  def findYaw(gantry: Int, collimator: Int, yaw: Int): Option[WinstonLutz] = wlMap.get(nameOf(gantry, collimator, Util.negateAngle(yaw)))
+  def findYaw(gantry: Int, collimator: Int, yaw: Int): Option[WinstonLutzGeneric] = wlMap.get(nameOf(gantry, collimator, Util.negateAngle(yaw)))
 
 }

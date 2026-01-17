@@ -1,13 +1,13 @@
 package org.aqa.webrun.wl.isoCheck
 
 import org.aqa.Logging
-import org.aqa.db.WinstonLutz
+import org.aqa.db.WinstonLutzGeneric
 
 case class WLCollimator(
     // @formatter:off
-    T__0: WinstonLutz,
-    T_90: WinstonLutz,
-    T270: WinstonLutz,
+    T__0: WinstonLutzGeneric,
+    T_90: WinstonLutzGeneric,
+    T270: WinstonLutzGeneric,
     // @formatter:on
                        ) extends Logging {
 
@@ -55,15 +55,15 @@ case class WLCollimator(
 
   // ------------------------------------------------------------------------------------------
 
-  def CA_X(wl: WinstonLutz): Double = -wl.errorX_mm
+  def CA_X(wl: WinstonLutzGeneric): Double = -wl.errorX_mm
 
-  def CA_Z(wl: WinstonLutz): Double = -wl.errorY_mm
+  def CA_Z(wl: WinstonLutzGeneric): Double = -wl.errorY_mm
 
-  def CA_Xpp(wl: WinstonLutz, Coll_X: Double): Double = CA_X(wl) - Coll_X
+  def CA_Xpp(wl: WinstonLutzGeneric, Coll_X: Double): Double = CA_X(wl) - Coll_X
 
-  def CA_Zpp(wl: WinstonLutz, Coll_Z: Double): Double = CA_Z(wl) - Coll_Z
+  def CA_Zpp(wl: WinstonLutzGeneric, Coll_Z: Double): Double = CA_Z(wl) - Coll_Z
 
-  def CA_Rpp(wl: WinstonLutz, Coll_X: Double, Coll_Z: Double): Double = {
+  def CA_Rpp(wl: WinstonLutzGeneric, Coll_X: Double, Coll_Z: Double): Double = {
     val x = CA_Xpp(wl, Coll_X)
     val z = CA_Zpp(wl, Coll_Z)
     Math.sqrt((x * x) + (z * z))
@@ -106,13 +106,13 @@ object WLCollimator {
 
 
     // @formatter:off
-    val T__0 : Option[WinstonLutz] = wlMap.find( 180,   0,  0 )
-    val T_90 : Option[WinstonLutz] = wlMap.find( 180,  90,  0 )
-    val T270 : Option[WinstonLutz] = wlMap.find( 180, 270,  0 )
+    val T__0 : Option[WinstonLutzGeneric] = wlMap.find( 180,   0,  0 )
+    val T_90 : Option[WinstonLutzGeneric] = wlMap.find( 180,  90,  0 )
+    val T270 : Option[WinstonLutzGeneric] = wlMap.find( 180, 270,  0 )
     // @formatter:on
 
     // list of all files required for WL IsoTable
-    val requiredList: Seq[Option[WinstonLutz]] = Seq(
+    val requiredList: Seq[Option[WinstonLutzGeneric]] = Seq(
       T__0,
       T_90,
       T270,

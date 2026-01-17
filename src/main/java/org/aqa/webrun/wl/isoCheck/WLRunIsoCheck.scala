@@ -1,11 +1,11 @@
 package org.aqa.webrun.wl.isoCheck
 
-import org.aqa.db.WinstonLutz
 import org.aqa.web.WebUtil
 import org.aqa.webrun.wl.WLRunReq
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 import org.aqa.db.IsoCheck
+import org.aqa.db.WinstonLutzGeneric
 
 import scala.xml.Elem
 
@@ -18,7 +18,7 @@ object WLRunIsoCheck extends Logging {
     * @param wlList analysis results.
     * @return HTML snippet for access to results.
     */
-  def run(extendedData: ExtendedData, runReq: WLRunReq, wlList: Seq[WinstonLutz]): Elem = {
+  def run(extendedData: ExtendedData, runReq: WLRunReq, wlList: Seq[WinstonLutzGeneric]): Elem = {
 
     val wlMap = new WLMap(wlList)
 

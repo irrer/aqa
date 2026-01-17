@@ -96,10 +96,6 @@ case class EdgeType(beam: AttributeList) {
 
   private val edgeList = list.map(Edge)
 
-  {
-    // Trace.trace(s"edgeList:\n" + edgeList.mkString("\n"))
-  }
-
   private val JawX = edgeList.find(e => e.name.equals("X") || e.name.equals("ASYMX"))
   private val MLCX = edgeList.find(e => e.name.equals("MLCX"))
   private val JawY = edgeList.find(e => e.name.equals("Y") || e.name.equals("ASYMY"))

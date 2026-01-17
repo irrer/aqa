@@ -130,8 +130,8 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
   private def toPng(pix: IndexedSeq[IndexedSeq[Float]]): BufferedImage = toPngScaled(pix, SCALE)
 
   /**
-    * Make an image showing the level of background noise immediately around the ball.
-    */
+   * Make an image showing the level of background noise immediately around the ball.
+   */
   private def showBallBackgroundNoise(areaOfInterest: IndexedSeq[IndexedSeq[Float]], name: String): Unit = {
     val aoiWidth = areaOfInterest.head.length
     val aoiHeight = areaOfInterest.length
@@ -163,15 +163,15 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
   }
 
   /**
-    * Locate the box to sub-pixel accuracy.
-    */
+   * Locate the box to sub-pixel accuracy.
+   */
   private def fineBoxLocate(
-      coarseAoi: DicomImage,
-      pixels: IndexedSeq[IndexedSeq[Float]],
-      aoiBounds: Rectangle,
-      tol2: Int,
-      tol4: Int
-  ): Either[WLImageStatus.Value, WLEdgeSet] = {
+                             coarseAoi: DicomImage,
+                             pixels: IndexedSeq[IndexedSeq[Float]],
+                             aoiBounds: Rectangle,
+                             tol2: Int,
+                             tol4: Int
+                           ): Either[WLImageStatus.Value, WLEdgeSet] = {
 
     // do sanity check to see if the box is reasonably sized.
     if ((coarseAoi.width < tol4) || (coarseAoi.height < tol4))
@@ -310,6 +310,22 @@ class WLProcessImage(extendedData: ExtendedData, rtimage: AttributeList, runReq:
             Util.writePng(toPng(ballAoi), new File(subDir, "ball_before_normalization.png"))
 
             showBallBackgroundNoise(normalizeArea(ballAoi), "normalized_ball_background")
+
+            wlMsg.info(s"rectangle describing coarseAoiBounds in pixels: $coarseAoiBounds")
+            wlMsg.info(s"edgeSet in pixels offset: $edgeSet")
+            wlMsg.info(s"rectangle describing ballBounds in pixels: $ballBounds")
+
+            wlMsg.info(s"rectangle describing edgeSet.top    in pixels: ${edgeSet.top.bounds}    edge: ${edgeSet.top.edge}")
+            wlMsg.info(s"rectangle describing edgeSet.bottom in pixels: ${edgeSet.bottom.bounds}    edge: ${edgeSet.bottom.edge}")
+            wlMsg.info(s"rectangle describing edgeSet.left   in pixels: ${edgeSet.left.bounds}    edge: ${edgeSet.left.edge}")
+            wlMsg.info(s"rectangle describing edgeSet.right  in pixels: ${edgeSet.right.bounds}    edge: ${edgeSet.right.edge}")
+
+            wlMsg.info(s"edge top      absolute position pix: ${edgeSet.top.absoluteEdge_pix}      absolute position mm: ${edgeSet.top.absoluteEdge_mm}")
+            wlMsg.info(s"edge bottom   absolute position pix: ${edgeSet.bottom.absoluteEdge_pix}      absolute position mm: ${edgeSet.bottom.absoluteEdge_mm}")
+            wlMsg.info(s"edge left     absolute position pix: ${edgeSet.left.absoluteEdge_pix}      absolute position mm: ${edgeSet.left.absoluteEdge_mm}")
+            wlMsg.info(s"edge right    absolute position pix: ${edgeSet.right.absoluteEdge_pix}      absolute position mm: ${edgeSet.right.absoluteEdge_mm}")
+            wlMsg.info(s"center of box in x,y in pixels: ${edgeSet.centerX_pix},  ${edgeSet.centerY_pix}")
+            wlMsg.info(s"center of box in x,y in mm (in isoplane): ${edgeSet.centerX_mm},  ${edgeSet.centerY_mm}")
 
 
             if (WLBallAreaIsFlat.ballAreaIsFlat(coarseAoi.pixelData, ballAoi, wlMsg)) {

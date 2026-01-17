@@ -10,6 +10,7 @@ import org.aqa.webrun.wl.isoCheck.isoCheckHTML.WLIsoCheckHTML
 import org.aqa.AnonymizeUtil
 import org.aqa.Crypto
 import org.aqa.db.WinstonLutz
+import org.aqa.db.WinstonLutzGeneric
 import org.aqa.webrun.wl.WLRunReq
 
 import java.io.ByteArrayOutputStream
@@ -68,7 +69,7 @@ object WLXLSXSpreadsheet extends Logging {
       analysisDateCell.setCellValue(s"Data Date: $analysisDateText")
     }
 
-    def updateContentRow(rowNum: Int, wl: WinstonLutz): Unit = {
+    def updateContentRow(rowNum: Int, wl: WinstonLutzGeneric): Unit = {
       val row = sheetData.getRow(rowNum - 1) // subtracting 1 converts a row number to a 0-relative row index
 
       columnList.indices.foreach(i => columnList(i).updateCell(row.getCell(i), wl, runReq.alOf(wl).get))

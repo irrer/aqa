@@ -5,16 +5,12 @@ import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.wl.WLRunReq
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.WLPreprocessImage
 import org.aqa.BiCubicImage
-import org.aqa.db.Output
-import org.aqa.Config
-import org.aqa.DicomFile
-import org.aqa.db.WinstonLutz
 import org.aqa.db.WinLutz360
+import org.aqa.db.WinstonLutz
 import org.aqa.webrun.wl.WLImageStatus
 import org.aqa.webrun.wl.WLMessage
 import org.aqa.webrun.wl.WLResult
@@ -24,7 +20,7 @@ import org.aqa.db.MachineWL
 import org.aqa.webrun.wl.WLImageUtil
 
 import java.awt.image.BufferedImage
-import java.io.File
+import java.sql.Timestamp
 import javax.vecmath.Point2d
 
 case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLRunReq, machineWL: MachineWL, wlMessage: Option[WLMessage]) extends WLResult(extendedData, wlRunReq) {
@@ -77,9 +73,6 @@ case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLR
   val scale: Int = WLImageUtil.calculateCloseupScale(al)
   val img: BufferedImage = EdgeSetImage.makeImage(edge.edgeSet, preprocessedImage, scale = scale, al)
 
-  // ImageDisplay.showInMSPaint(approxImg)
-  // ImageDisplay.showInMSPaint(img)
-
   val validator: Validate = Validate(edge, ball, machineWL, wlMessage)
 
   val status: WLImageStatus.Value = validator.getStatus.get
@@ -121,6 +114,8 @@ case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLR
       wlRunReq.rtplan.isDefined || isClose
     }
 
+    val dataDate = new Timestamp(WLImageUtil.timeOf(al).getTime)
+
     val winLutz360: WinLutz360 = WinLutz360(
       winLutz360PK = None,
       outputPK = extendedData.outputPK,
@@ -129,6 +124,7 @@ case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLR
       gantryAngle_deg = Util.gantryAngle(al),
       collimatorAngle_deg = Util.collimatorAngle(al),
       tableAngle_deg = Some(tableAngle_deg),
+      dataDate = dataDate,
       //
       boxCenterX_mm = edge.edgeSet.center_pix.getX,
       boxCenterY_mm = edge.edgeSet.center_pix.getY,
@@ -177,31 +173,4 @@ case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLR
 
   private val htmlMaker = HTML(this, wlMessage)
   htmlMaker.generate()
-}
-
-//noinspection SpellCheckingInspection
-object Analysis {
-
-  // val file = new File("""D:/tmp/wl/nonorth/1/0005.dcm""")
-  val file = new File("""D:/tmp/wl/nonorth/WLNonCardNon45_20250625_Peyton/20250625_G180C30T0.dcm""")
-  // val file = new File("""D:/tmp/wl/nonorth/ClinicalWinstonLutz_0.1_TB5_2025-12-12T06_34_56/RTIMAGE1.dcm""") // UM Production
-
-  def main(args: Array[String]): Unit = {
-    Config.validate
-    val output = Output.get(9711).get
-    Trace.trace("Starting test ----------------------------------------------------------------------------------")
-    val ext = ExtendedData.get(output)
-    val al = new DicomFile(file).attributeList.get
-    val runReq = WLRunReq(Seq(al).toList, None)
-    val wlMessage: WLMessage = WLMessage(runReq, al)
-    val machineWL = MachineWL.getMachineWLOrDefault(ext.machine.machinePK.get)
-    val wlNonCardAnalysis = Analysis(ext, al, runReq, machineWL, Some(wlMessage))
-    Trace.trace("status: " + wlNonCardAnalysis.validator.getStatus)
-    Trace.trace("error message: " + wlNonCardAnalysis.validator.getErrorMessage)
-
-    CompositeImage.makeCompositeImage(wlNonCardAnalysis)
-
-    Thread.sleep(5 * 1000)
-    System.exit(99)
-  }
 }

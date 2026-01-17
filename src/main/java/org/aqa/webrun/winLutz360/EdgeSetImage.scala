@@ -5,7 +5,6 @@ import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.ScaledImage
-import edu.umro.ScalaUtil.Trace
 
 import java.awt.image.BufferedImage
 import java.awt.Color
@@ -35,7 +34,6 @@ object EdgeSetImage {
       edge.line.pointOn(distance)
 
     }
-    Trace.trace(s"%%%%% Experiment ${edge.name} : $textPoint")
     si.drawTextCenteredAt(gc, textPoint.x.toInt, textPoint.y.toInt, edge.name)
 
   }

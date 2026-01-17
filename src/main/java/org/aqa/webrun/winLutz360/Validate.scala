@@ -2,10 +2,8 @@ package org.aqa.webrun.winLutz360
 
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageDisplay
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.wl.WLMessage
 import org.aqa.Config
 import org.aqa.Util
@@ -13,10 +11,10 @@ import org.aqa.db.MachineWL
 import org.aqa.webrun.wl.WLImageStatus
 
 case class Validate( //
-                     edgeAnalysis: EdgeAnalysis,
-                     ball: Ball,
-                     machineWL: MachineWL,
-                     wlMessage: Option[WLMessage]
+    edgeAnalysis: EdgeAnalysis,
+    ball: Ball,
+    machineWL: MachineWL,
+    wlMessage: Option[WLMessage]
 ) {
 
   val preprocessedImage: DicomImage = edgeAnalysis.preprocessedImage
@@ -53,8 +51,6 @@ case class Validate( //
     normalized
   }
 
-  // ImageDisplay.showInMSPaint(ballAOI.toBufferedImage(Color.blue))
-
   /** Establish a threshold for the min-to-max pixel range.  An edge must have at least this amount of change in pixel value to be considered valid. */
   private val wholeImagePixelValueRangeThreshold_cu: Double = {
     val sorted = preprocessedImage.pixelData.flatten.sorted
@@ -87,12 +83,14 @@ case class Validate( //
     }
 
     if (edge.pixelValueRange >= wholeImagePixelValueRangeThreshold_cu) {
-      val msg = s"Edge for ${edge.name} has sufficient contrast of ${Util.fmtDbl(edge.pixelValueRange)} $measuredPctText . Threshold: ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WinLutz360PercentChange}%)"
+      val msg =
+        s"Edge for ${edge.name} has sufficient contrast of ${Util.fmtDbl(edge.pixelValueRange)} $measuredPctText . Threshold: ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WinLutz360PercentChange}%)"
       wlMessage.foreach(_.info(msg))
       Seq()
     } else {
       val msg =
-        s"Edge for ${edge.name} has insufficient contrast of ${Util.fmtDbl(edge.pixelValueRange)} ($measuredPctText)  when it should be at least ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WinLutz360PercentChange}%)"
+        s"Edge for ${edge.name} has insufficient contrast of ${Util
+          .fmtDbl(edge.pixelValueRange)} ($measuredPctText)  when it should be at least ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WinLutz360PercentChange}%)"
       setError(WLImageStatus.BoxNotFound, msg)
       Seq(msg)
     }
@@ -137,17 +135,6 @@ case class Validate( //
     val xRight = xProfile.drop(maxXIndex)
     val yTop = yProfile.take(maxYIndex + 1).reverse
     val yBottom = yProfile.drop(maxYIndex)
-
-    if (false) { // TODO rm
-
-      ImageDisplay.showChart(xProfile.map(_.toDouble), title = "xProfile")
-      ImageDisplay.showChart(yProfile.map(_.toDouble), title = "yProfile")
-
-      ImageDisplay.showChart(xLeft.map(_.toDouble), title = "xLeft")
-      ImageDisplay.showChart(xRight.map(_.toDouble), title = "xRight")
-      ImageDisplay.showChart(yTop.map(_.toDouble), title = "yTop")
-      ImageDisplay.showChart(yBottom.map(_.toDouble), title = "yBottom")
-    }
 
     // use the minimum
     val ballRadius = Seq(xLeft, xRight, yTop, yBottom).map(_.size).min
@@ -198,8 +185,6 @@ case class Validate( //
     val pixelValueList = ballAOI.pixelData.flatten
 
     val stdDev = ImageUtil.stdDev(pixelValueList)
-
-    Trace.trace(s"stdDev: $stdDev")
 
     if (stdDev < Config.WinLutz360MinStdDev) {
       val msg = s"Ball are has a standard deviation of $stdDev, which is below the required ${Config.WinLutz360MinStdDev}.  Probably due to no phantom."

@@ -92,10 +92,10 @@ case class WLImageResult(
   val gantryAngle: Int = Util.angleRoundedTo90(Util.gantryAngle(rtimage)) //attrFloat(TagByName.GantryAngle)
 
   // @formatter:off
-  private def left_pix  : Double = edgeSet.get.  left.pos_pix + edgeSet.get.  left.bounds.x
-  private def right_pix : Double = edgeSet.get. right.pos_pix + edgeSet.get. right.bounds.x
-  private def top_pix   : Double = edgeSet.get.   top.pos_pix + edgeSet.get.   top.bounds.y
-  private def bottom_pix: Double = edgeSet.get.bottom.pos_pix + edgeSet.get.bottom.bounds.y
+  private def left_pix  : Double = edgeSet.get.  left.absoluteEdge_pix
+  private def right_pix : Double = edgeSet.get. right.absoluteEdge_pix
+  private def top_pix   : Double = edgeSet.get.   top.absoluteEdge_pix
+  private def bottom_pix: Double = edgeSet.get.bottom.absoluteEdge_pix
   // @formatter:on
   private def left_mm: Double = trans.pix2IsoCoordX(left_pix)
 
@@ -196,7 +196,8 @@ case class WLImageResult(
       leftEdgePlanned_mm = planned.map(_.left),
       rightEdgePlanned_mm = planned.map(_.right)
     )
-    wl
+    val newWl = wl.copy(winstonLutzPK = None)
+    newWl
   }
 
   // ----------------------------------------------------------------------------------------

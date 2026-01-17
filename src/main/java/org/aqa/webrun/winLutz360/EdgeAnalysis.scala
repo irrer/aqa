@@ -165,12 +165,6 @@ case class EdgeAnalysis( //
 
     val edgeSetApproximate: EdgeSet = EdgeSet(x1, x2, y1, y2)
 
-    /*
-    ImageDisplay.showInMSPaint(coarseImage)
-    wlMessage.foreach(_.info(s"approximate center iso X: ${trans.pix2IsoCoordX(edgeSetApproximate.center_pix.getX)}"))
-    wlMessage.foreach(_.info(s"approximate center iso Y: ${trans.pix2IsoCoordY(edgeSetApproximate.center_pix.getY)}"))
-     */
-
     edgeSetApproximate
   }
 

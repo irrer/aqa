@@ -1,4 +1,4 @@
-package org.aqa.webrun.wl
+package org.aqa.webrun.winLutz360
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
@@ -22,6 +22,15 @@ import org.aqa.AnonymizeUtil
 import org.aqa.web.WebServer
 import org.aqa.AQAEventNetClient
 import org.aqa.Config
+import org.aqa.db.MachineWL
+import org.aqa.webrun.wl.EventWLQASRSDone
+import org.aqa.webrun.wl.WLImageStatus
+import org.aqa.webrun.wl.WLImageUtil
+import org.aqa.webrun.wl.WLMainHtml
+import org.aqa.webrun.wl.WLMessage
+import org.aqa.webrun.wl.WLResult
+import org.aqa.webrun.wl.WLRunReq
+import org.aqa.webrun.wl.WLUpdateRestlet
 import org.restlet.Request
 import org.restlet.Response
 
@@ -29,7 +38,7 @@ import java.io.File
 import java.sql.Timestamp
 import scala.xml.Elem
 
-class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq] {
+class WinLutz360Run(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq] {
 
   private def getRtimageList(alList: Seq[AttributeList]) = alList.filter(al => Util.isRtimage(al)).sortBy(WLImageUtil.timeOfMs)
 
@@ -65,20 +74,42 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
     }
   }
 
+  /** Set to true to enable processing of non-cardinal collimator angles.  If false, all images are assumed to have cardinal angles. */
+  private val enableNonCardinalProcessing: Boolean = false
+
+  private def isCardinalAngle(rtimage: AttributeList): Boolean = {
+    if (enableNonCardinalProcessing) {
+      val angle = rtimage.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
+      WLImageUtil.isCardinalAngle(angle)
+    } else {
+      true
+    }
+  }
+
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
 
-    // Perform processing in parallel for speed
-    val resultList = runReq.epidList.par.map(rtimage => new WLProcessImage(extendedData, rtimage, runReq).process.asInstanceOf[WLResult]).toList
+    val machineWL = MachineWL.getMachineWLOrDefault(extendedData.machine.machinePK.get)
 
-    val wlResultList = resultList.filter(r => WLImageStatus.hasResult(r.getImageStatus))
+    val resultList = {
+      def doImage(rtimage: AttributeList): WLResult = {
+        val wlMessage = WLMessage(runReq, rtimage)
+        Analysis(extendedData, rtimage, runReq, machineWL, Some(wlMessage)).asInstanceOf[WLResult]
+      }
+      // Perform processing in parallel for speed
+      runReq.epidList.par.map(doImage).toList
+    }
 
-    val dbList = wlResultList.map(_.convertToDB)
+    val resultHasData = resultList.filter(r => WLImageStatus.hasResult(r.getImageStatus))
 
-    val wlList = dbList.filter(_.isLeft).map(_.left.get)
+    val dbList = resultHasData.map(_.convertToDB)
+
+    val wlList = dbList.filter(_.isLeft).map(_.left.get).toList
+    val wlNonCardList = dbList.filter(_.isRight).map(_.right.get)
 
     wlList.foreach(_.insert)
+    wlNonCardList.foreach(_.insert)
 
-    logger.info(s"Inserted ${wlResultList.size} WinstonLutz rows into database.")
+    logger.info(s"Inserted ${resultHasData.size} WinstonLutz rows into database out of ${runReq.epidList.size} RTIMAGE files.")
 
     // If there are images to do a monthly analysis, then do it and add links to the web page
     val monthly: Elem = {

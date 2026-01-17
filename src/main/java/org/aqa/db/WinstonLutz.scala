@@ -19,7 +19,6 @@ package org.aqa.db
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.Util
-import org.aqa.webrun.wl.isoCheck.WLXlsxUtil
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.rnd
 
 import java.sql.Timestamp
@@ -67,10 +66,11 @@ case class WinstonLutz(
     result
   }
 
-  val gantryAngleRounded: Int = Util.angleRoundedTo90(gantryAngle_deg)
-  val collimatorAngleRounded: Int = Util.angleRoundedTo90(collimatorAngle_deg)
-  val tableAngleRounded: Option[Int] = tableAngle_deg.map(WLXlsxUtil.angleRounded)
-  val yaw: Option[Int] = tableAngleRounded.map(Util.negateAngle)
+  // val gantryAngleRounded: Int = Util.angleRoundedTo90(gantryAngle_deg)
+  // val collimatorAngleRounded: Int = Util.angleRoundedTo90(collimatorAngle_deg)
+  // val tableAngleRounded: Option[Int] = tableAngle_deg.map(WLXlsxUtil.angleRounded)
+  // val yaw: Option[Int] = tableAngleRounded.map(Util.negateAngle)
+  //
 
   /**
    * Construct beam name based on the gantry, collimator, and table angles.
@@ -109,12 +109,12 @@ case class WinstonLutz(
   val boxCenterY_mm: Double = (topEdge_mm + bottomEdge_mm) / 2
 
   //noinspection ScalaWeakerAccess
-  val errorX_mm: Double = boxCenterX_mm - ballCenterX_mm
+  // val errorX_mm: Double = boxCenterX_mm - ballCenterX_mm
 
   //noinspection ScalaWeakerAccess
-  val errorY_mm: Double = boxCenterY_mm - ballCenterY_mm
+  // val errorY_mm: Double = boxCenterY_mm - ballCenterY_mm
 
-  val errorXY_mm: Double = Math.sqrt((errorX_mm * errorX_mm) + (errorY_mm * errorY_mm))
+  // val errorXY_mm: Double = Math.sqrt((errorX_mm * errorX_mm) + (errorY_mm * errorY_mm))
 
   /** top edge measured - planned */
   val topError_mm: Option[Double] = if (topEdgePlanned_mm.isDefined) Some(topEdge_mm - topEdgePlanned_mm.get) else None
@@ -130,7 +130,7 @@ case class WinstonLutz(
 
 
   /** Analysis F */
-  val caX: Option[Double] = {
+  val XcaX: Option[Double] = {
     val value = gantryAngleRounded match {
       case 0 => Some(errorX_mm)
       case 180 => Some(-errorX_mm)
@@ -140,7 +140,7 @@ case class WinstonLutz(
   }
 
   /** Analysis G */
-  val caY: Option[Double] = {
+  val XcaY: Option[Double] = {
     val value = gantryAngleRounded match {
       case 90 => Some(errorX_mm)
       case 270 => Some(-errorX_mm)
@@ -150,11 +150,11 @@ case class WinstonLutz(
   }
 
   /** Analysis H */
-  val caZ: Option[Double] = Some(-errorY_mm).map(rnd)
+  // val caZ: Option[Double] = Some(-errorY_mm).map(rnd)
 
-  private val rawRadians: Option[Double] = yaw.map(_.toDouble).map(Math.toRadians)
-  val yawSin: Option[Double] = rawRadians.map(Math.sin)
-  val yawCos: Option[Double] = rawRadians.map(Math.cos)
+  // private val rawRadians: Option[Double] = yaw.map(_.toDouble).map(Math.toRadians)
+  // val yawSin: Option[Double] = rawRadians.map(Math.sin)
+  // val yawCos: Option[Double] = rawRadians.map(Math.cos)
 
   override def toString: String = {
     // @formatter:off
@@ -231,6 +231,7 @@ case class WinstonLutz(
   override val X2Type: Option[String] = None
   override val Y1Type: Option[String] = None
   override val Y2Type: Option[String] = None
+
 }
 
 object WinstonLutz extends Logging {

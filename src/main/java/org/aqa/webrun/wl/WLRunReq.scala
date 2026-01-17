@@ -4,9 +4,9 @@ import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil
-import org.aqa.db.WinstonLutz
 import org.aqa.run.RunReqClass
 import org.aqa.Util
+import org.aqa.db.WinstonLutzGeneric
 
 case class WLRunReq(epidList: Seq[AttributeList], rtplan: Option[AttributeList]) extends RunReqClass {
 
@@ -15,7 +15,7 @@ case class WLRunReq(epidList: Seq[AttributeList], rtplan: Option[AttributeList])
     * @param wl For this Winston Lutz
     * @return DICOM, if found
     */
-  def alOf(wl: WinstonLutz): Option[AttributeList] = {
+  def alOf(wl: WinstonLutzGeneric): Option[AttributeList] = {
     epidList.find(epid => wl.rtimageUID.equals(Util.sopOfAl(epid)))
   }
 

@@ -112,7 +112,7 @@ object IsoCheck {
     Db.run(action)
   }
 
-  case class IsoCheckHistory(output: Output, isoCheck: WLIsoCheck, collimator: WLCollimator, isoTable: Option[WLIsoTable], wlList: Seq[WinstonLutz]) extends HasOutput {
+  case class IsoCheckHistory(output: Output, isoCheck: WLIsoCheck, collimator: WLCollimator, isoTable: Option[WLIsoTable], wlList: Seq[WinstonLutzGeneric]) extends HasOutput {
 
     val date: Timestamp = output.dataDate.get
     def getTime: Long = date.getTime
@@ -126,7 +126,7 @@ object IsoCheck {
     val maxR: Double = Seq(Some(isoCheck.maxR), isoTable.map(_.maxR)).flatten.max
   }
 
-  private def makeIsoCheckHistory(output: Output, isoCheck: IsoCheck, wlList: Seq[WinstonLutz]): Option[IsoCheckHistory] = {
+  private def makeIsoCheckHistory(output: Output, isoCheck: IsoCheck, wlList: Seq[WinstonLutzGeneric]): Option[IsoCheckHistory] = {
 
     val beamMap = new WLMap(wlList)
 

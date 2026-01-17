@@ -1,7 +1,7 @@
 package org.aqa.webrun.wl.isoCheck.ssHtml
 
 import org.aqa.Util
-import org.aqa.db.WinstonLutz
+import org.aqa.db.WinstonLutzGeneric
 import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.isoCheck.WLColumn
@@ -27,7 +27,7 @@ import scala.xml.Elem
   */
 class SSPreprocess(extendedData: ExtendedData, runReq: WLRunReq, wlMap: WLMap, isoTable: Option[WLIsoTable]) extends SSSheet {
 
-  private def preprocessSorter(a: WinstonLutz, b: WinstonLutz): Boolean = {
+  private def preprocessSorter(a: WinstonLutzGeneric, b: WinstonLutzGeneric): Boolean = {
     0 match {
       case _ if a.yaw.get > b.yaw.get => false
       case _ if a.yaw.get < b.yaw.get => true
@@ -128,7 +128,7 @@ class SSPreprocess(extendedData: ExtendedData, runReq: WLRunReq, wlMap: WLMap, i
 
   private val sortedColumnIndexList = Seq(4, 5, 3, 6, 7)
 
-  def colToHtml(wl: WinstonLutz, col: WLColumn): Elem = {
+  def colToHtml(wl: WinstonLutzGeneric, col: WLColumn): Elem = {
     toHtml(
       col.toPreprocessText(wl, runReq.alOf(wl).get),
       col.alignLeft,

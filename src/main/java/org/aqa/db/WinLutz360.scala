@@ -19,7 +19,6 @@ package org.aqa.db
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.Util
-import org.aqa.webrun.wl.isoCheck.WLXlsxUtil
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil.rnd
 import slick.collection.heterogeneous.HNil
 
@@ -34,81 +33,83 @@ import scala.xml.Elem
  * a pair of Y1 and Y2 MLCs or Jaws.  If only one edge is measured, then only one set of
  * values will be valid (non-null).
  *
- * @param winLutz360PK             primary key
- * @param outputPK                 output primary key
- * @param rtimageUID               SOP series instance UID of EPID image
- * @param beamName                 Name of beam in RTPLAN (if available)
- * @param gantryAngle_deg          Angle of gantry in degrees.  This is the raw value from the RTIMAGE and is not rounded.
- * @param collimatorAngle_deg      Angle of collimator in degrees.  This is the raw value from the RTIMAGE and is not rounded.
- * @param tableAngle_deg           Angle of table (couch) in degrees.  This is the raw value PatientSupportAngle from the RTIMAGE and is not rounded.
- * @param boxCenterX_mm            X coordinate of center of box (field) in mm in the isoplane
- * @param boxCenterY_mm            Y coordinate of center of box (field) in mm in the isoplane
- * @param ballCenterX_mm           X coordinate of center of ball (phantom) in mm in the isoplane
- * @param ballCenterY_mm           Y coordinate of center of ball (phantom) in mm in the isoplane
- * @param X1Offset_mm              Distance from the X1 edge to the center of the beam in mm in the isoplane.  If None, then the plan was not available and the center was not zero.
- * @param X2Offset_mm              Distance from the X2 edge to the center of the beam in mm in the isoplane.  If None, then the plan was not available and the center was not zero.
- * @param Y1Offset_mm              Distance from the Y1 edge to the center of the beam in mm in the isoplane.  If None, then the plan was not available and the center was not zero.
- * @param Y2Offset_mm              Distance from the Y2 edge to the center of the beam in mm in the isoplane.  If None, then the plan was not available and the center was not zero.
- * @param X1Type                   For X1, type of edge, Jaw, MLC, or JawAndMLC from origin.  The latter only occurs if both the jaw and edge are defined at the same position.  Only defined if the plan was available.
- * @param X2Type                   For X2, type of edge, Jaw, MLC, or JawAndMLC from origin.  The latter only occurs if both the jaw and edge are defined at the same position.  Only defined if the plan was available.
- * @param Y1Type                   For Y1, type of edge, Jaw, MLC, or JawAndMLC from origin.  The latter only occurs if both the jaw and edge are defined at the same position.  Only defined if the plan was available.
- * @param Y2Type                   For Y2, type of edge, Jaw, MLC, or JawAndMLC from origin.  The latter only occurs if both the jaw and edge are defined at the same position.  Only defined if the plan was available.
- * @param X1PlannedOffset_mm       For X1, planned distance of Jaw or MLC from origin.  Only defined if the plan was available at the time of analysis.
- * @param X2PlannedOffset_mm       For X1, planned distance of Jaw or MLC from origin.  Only defined if the plan was available at the time of analysis.
- * @param Y1PlannedOffset_mm       For X1, planned distance of Jaw or MLC from origin.  Only defined if the plan was available at the time of analysis.
- * @param Y2PlannedOffset_mm       For X2, planned distance of Jaw or MLC from origin.  Only defined if the plan was available at the time of analysis.
+ * @param winLutz360PK        primary key
+ * @param outputPK            output primary key
+ * @param rtimageUID          SOP series instance UID of EPID image
+ * @param beamName            Name of beam in RTPLAN (if available)
+ * @param gantryAngle_deg     Angle of gantry in degrees.  This is the raw value from the RTIMAGE and is not rounded.
+ * @param collimatorAngle_deg Angle of collimator in degrees.  This is the raw value from the RTIMAGE and is not rounded.
+ * @param tableAngle_deg      Angle of table (couch) in degrees.  This is the raw value PatientSupportAngle from the RTIMAGE and is not rounded.
+ * @param dataDate            Date and date when the image was acquired.
+ * @param boxCenterX_mm       X coordinate of center of box (field) in mm in the isoplane
+ * @param boxCenterY_mm       Y coordinate of center of box (field) in mm in the isoplane
+ * @param ballCenterX_mm      X coordinate of center of ball (phantom) in mm in the isoplane
+ * @param ballCenterY_mm      Y coordinate of center of ball (phantom) in mm in the isoplane
+ * @param X1Offset_mm         Distance from the X1 edge to the center of the beam in mm in the isoplane.  If None, then the plan was not available and the center was not zero.
+ * @param X2Offset_mm         Distance from the X2 edge to the center of the beam in mm in the isoplane.  If None, then the plan was not available and the center was not zero.
+ * @param Y1Offset_mm         Distance from the Y1 edge to the center of the beam in mm in the isoplane.  If None, then the plan was not available and the center was not zero.
+ * @param Y2Offset_mm         Distance from the Y2 edge to the center of the beam in mm in the isoplane.  If None, then the plan was not available and the center was not zero.
+ * @param X1Type              For X1, type of edge, Jaw, MLC, or JawAndMLC from origin.  The latter only occurs if both the jaw and edge are defined at the same position.  Only defined if the plan was available.
+ * @param X2Type              For X2, type of edge, Jaw, MLC, or JawAndMLC from origin.  The latter only occurs if both the jaw and edge are defined at the same position.  Only defined if the plan was available.
+ * @param Y1Type              For Y1, type of edge, Jaw, MLC, or JawAndMLC from origin.  The latter only occurs if both the jaw and edge are defined at the same position.  Only defined if the plan was available.
+ * @param Y2Type              For Y2, type of edge, Jaw, MLC, or JawAndMLC from origin.  The latter only occurs if both the jaw and edge are defined at the same position.  Only defined if the plan was available.
+ * @param X1PlannedOffset_mm  For X1, planned distance of Jaw or MLC from origin.  Only defined if the plan was available at the time of analysis.
+ * @param X2PlannedOffset_mm  For X1, planned distance of Jaw or MLC from origin.  Only defined if the plan was available at the time of analysis.
+ * @param Y1PlannedOffset_mm  For X1, planned distance of Jaw or MLC from origin.  Only defined if the plan was available at the time of analysis.
+ * @param Y2PlannedOffset_mm  For X2, planned distance of Jaw or MLC from origin.  Only defined if the plan was available at the time of analysis.
  */
 
 case class WinLutz360(
-                                   // @formatter:off
-    winLutz360PK : Option[Long]   ,
-    outputPK                 : Long           ,
-    rtimageUID               : String         ,
-    beamName                 : Option[String] ,
-    gantryAngle_deg          : Double         ,
-    collimatorAngle_deg      : Double         ,
-    tableAngle_deg           : Option[Double] ,
+                       // @formatter:off
+    winLutz360PK : Option[Long]                   ,
+    outputPK                 : Long               ,
+    rtimageUID               : String             ,
+    beamName                 : Option[String]     ,
+    gantryAngle_deg          : Double             ,
+    collimatorAngle_deg      : Double             ,
+    tableAngle_deg           : Option[Double]     ,
+    dataDate                 : java.sql.Timestamp ,
     //
-    boxCenterX_mm            : Double         ,
-    boxCenterY_mm            : Double         ,
+    boxCenterX_mm            : Double             ,
+    boxCenterY_mm            : Double             ,
     //
-    ballCenterX_mm           : Double         ,
-    ballCenterY_mm           : Double         ,
+    ballCenterX_mm           : Double             ,
+    ballCenterY_mm           : Double             ,
     //
-    X1Offset_mm              : Option[Double] ,
-    X2Offset_mm              : Option[Double] ,
-    Y1Offset_mm              : Option[Double] ,
-    Y2Offset_mm              : Option[Double] ,
+    X1Offset_mm              : Option[Double]     ,
+    X2Offset_mm              : Option[Double]     ,
+    Y1Offset_mm              : Option[Double]     ,
+    Y2Offset_mm              : Option[Double]     ,
     //
-    X1Type                   : Option[String] ,
-    X2Type                   : Option[String] ,
-    Y1Type                   : Option[String] ,
-    Y2Type                   : Option[String] ,
+    X1Type                   : Option[String]     ,
+    X2Type                   : Option[String]     ,
+    Y1Type                   : Option[String]     ,
+    Y2Type                   : Option[String]     ,
     //
-    X1PlannedOffset_mm       : Option[Double] ,
-    X2PlannedOffset_mm       : Option[Double] ,
-    Y1PlannedOffset_mm       : Option[Double] ,
+    X1PlannedOffset_mm       : Option[Double]     ,
+    X2PlannedOffset_mm       : Option[Double]     ,
+    Y1PlannedOffset_mm       : Option[Double]     ,
     Y2PlannedOffset_mm       : Option[Double]
   // @formatter:on
-                                 ) extends Logging with WinstonLutzGeneric {
+                     ) extends Logging with WinstonLutzGeneric {
 
-  override val PK = winLutz360PK
+  override val PK: Option[Long] = winLutz360PK
 
   def insert: WinLutz360 = {
     val insertQuery = WinLutz360.query returning
       WinLutz360.query.map(_.winLutz360PK) into
       ((winstonLutz, winLutz360PK) => winstonLutz.copy(winLutz360PK = winLutz360PK))
-    if (false) { // TODO put back
-      val action = insertQuery += this
-      val result = Db.run(action)
-      result
-    }
+
+    val action = insertQuery += this
+    Db.run(action)
+
     this
   }
 
-  val gantryAngleRounded: Int = Util.angleRoundedTo90(gantryAngle_deg)
-  val collimatorAngleRounded: Int = Util.angleRoundedTo90(collimatorAngle_deg)
-  val tableAngleRounded: Int = WLXlsxUtil.angleRounded(tableAngle_deg.get)
+  // val gantryAngleRounded: Int = Util.angleRoundedTo90(gantryAngle_deg)
+  // val collimatorAngleRounded: Int = Util.angleRoundedTo90(collimatorAngle_deg)
+  // val tableAngleRounded: Int = WLXlsxUtil.angleRounded(tableAngle_deg.get)
+  //
 
   /**
    * Construct beam name based on the gantry, collimator, and table angles.
@@ -117,8 +118,8 @@ case class WinLutz360(
    */
   private def isoBeamName: String = {
     val table: String =
-      if (tableAngleRounded != 0)
-        " T" + Util.angleRoundedTo90(tableAngleRounded)
+      if (tableAngleRounded.isDefined && (tableAngleRounded.get != 0))
+        " T" + Util.angleRoundedTo90(tableAngleRounded.get)
       else
         ""
     val name = "WL G" + Util.angleRoundedTo90(gantryAngle_deg) + " C" + Util.angleRoundedTo90(collimatorAngle_deg) + table
@@ -150,15 +151,15 @@ case class WinLutz360(
   def insertOrUpdate(): Int = Db.run(WinLutz360.query.insertOrUpdate(this))
 
   //noinspection ScalaWeakerAccess
-  val errorX_mm: Double = boxCenterX_mm - ballCenterX_mm
+  // val errorX_mm: Double = boxCenterX_mm - ballCenterX_mm
 
   //noinspection ScalaWeakerAccess
-  val errorY_mm: Double = boxCenterY_mm - ballCenterY_mm
+  // val errorY_mm: Double = boxCenterY_mm - ballCenterY_mm
 
-  val errorXY_mm: Double = Math.sqrt((errorX_mm * errorX_mm) + (errorY_mm * errorY_mm))
+  // val errorXY_mm: Double = Math.sqrt((errorX_mm * errorX_mm) + (errorY_mm * errorY_mm))
 
   /** Analysis F */
-  val caX: Option[Double] = {
+  val XcaX: Option[Double] = {
     val value = gantryAngleRounded match {
       case 0 => Some(errorX_mm)
       case 180 => Some(-errorX_mm)
@@ -168,7 +169,7 @@ case class WinLutz360(
   }
 
   /** Analysis G */
-  val caY: Option[Double] = {
+  val XcaY: Option[Double] = {
     val value = gantryAngleRounded match {
       case 90 => Some(errorX_mm)
       case 270 => Some(-errorX_mm)
@@ -178,21 +179,22 @@ case class WinLutz360(
   }
 
   /** Analysis H */
-  val caZ: Option[Double] = Some(-errorY_mm).map(rnd)
+  val XcaZ: Option[Double] = Some(-errorY_mm).map(rnd)
 
   private val tableAngle_radians: Double = Math.toRadians(tableAngle_deg.get)
-  val yawSin: Double = Math.sin(tableAngle_radians)
-  val yawCos: Double = Math.cos(tableAngle_radians)
+  val XyawSin: Double = Math.sin(tableAngle_radians)
+  val XyawCos: Double = Math.cos(tableAngle_radians)
 
   override def toString: String = {
     // @formatter:off
-      s"""    winLutz360PK       : $winLutz360PK\n"""                                +
+      s"""    winLutz360PK       : $winLutz360PK\n"""                                    +
       s"""    outputPK             : $outputPK\n"""                                      +
       s"""    rtimageUID           : $rtimageUID\n"""                                    +
       s"""    beamName             : $beamName\n"""                                      +
       s"""    gantryAngle_deg      : $gantryAngle_deg\n"""                               +
       s"""    collimatorAngle_deg  : $collimatorAngle_deg\n"""                           +
       s"""    tableAngle_deg       : $tableAngle_deg\n"""                                +
+      s"""    dataDate             : $dataDate\n"""                                      +
       s"""    gantryAngle_deg      : ${Util.angleRoundedTo90(gantryAngle_deg)}\n"""      +
       s"""    collimatorAngle_deg  : ${Util.angleRoundedTo90(collimatorAngle_deg)}\n"""  +
       s"""    ballX_mm             : $ballCenterX_mm\n"""                                +
@@ -211,46 +213,48 @@ object WinLutz360 extends Logging {
 
   class WinLutz360Table(tag: Tag) extends Table[WinLutz360](tag, "winLutz360PK") {
     // @formatter:off
-    def winLutz360PK = column[Option[Long]]   ("winLutz360PK", O.PrimaryKey, O.AutoInc)
-    def outputPK                 = column[Long]           ("outputPK")
-    def rtimageUID               = column[String]         ("rtimageUID")
-    def beamName                 = column[Option[String]] ("beamName")
-    def gantryAngle_deg          = column[Double]         ("gantryAngle_deg")
-    def collimatorAngle_deg      = column[Double]         ("collimatorAngle_deg")
-    def tableAngle_deg           = column[Option[Double]] ("tableAngle_deg")
+    def winLutz360PK             = column[Option[Long]]                           ("winLutz360PK", O.PrimaryKey, O.AutoInc)
+    def outputPK                 = column[Long]               ("outputPK")
+    def rtimageUID               = column[String]             ("rtimageUID")
+    def beamName                 = column[Option[String]]     ("beamName")
+    def gantryAngle_deg          = column[Double]             ("gantryAngle_deg")
+    def collimatorAngle_deg      = column[Double]             ("collimatorAngle_deg")
+    def tableAngle_deg           = column[Option[Double]]     ("tableAngle_deg")
+    def dataDate                 = column[java.sql.Timestamp] ("dataDate")
     //
-    def boxCenterX_mm            = column[Double]         ("boxCenterX_mm")
-    def boxCenterY_mm            = column[Double]         ("boxCenterY_mm")
+    def boxCenterX_mm            = column[Double]             ("boxCenterX_mm")
+    def boxCenterY_mm            = column[Double]             ("boxCenterY_mm")
     //
-    def ballCenterX_mm           = column[Double]         ("ballCenterX_mm")
-    def ballCenterY_mm           = column[Double]         ("ballCenterY_mm")
+    def ballCenterX_mm           = column[Double]             ("ballCenterX_mm")
+    def ballCenterY_mm           = column[Double]             ("ballCenterY_mm")
     //
-    def X1Offset_mm              = column[Option[Double]] ("X1Offset_mm")
-    def X2Offset_mm              = column[Option[Double]] ("X2Offset_mm")
-    def Y1Offset_mm              = column[Option[Double]] ("Y1Offset_mm")
-    def Y2Offset_mm              = column[Option[Double]] ("Y2Offset_mm")
+    def X1Offset_mm              = column[Option[Double]]     ("X1Offset_mm")
+    def X2Offset_mm              = column[Option[Double]]     ("X2Offset_mm")
+    def Y1Offset_mm              = column[Option[Double]]     ("Y1Offset_mm")
+    def Y2Offset_mm              = column[Option[Double]]     ("Y2Offset_mm")
     //
-    def X1Type                   = column[Option[String]] ("X1Type")
-    def X2Type                   = column[Option[String]] ("X2Type")
-    def Y1Type                   = column[Option[String]] ("Y1Type")
-    def Y2Type                   = column[Option[String]] ("Y2Type")
+    def X1Type                   = column[Option[String]]     ("X1Type")
+    def X2Type                   = column[Option[String]]     ("X2Type")
+    def Y1Type                   = column[Option[String]]     ("Y1Type")
+    def Y2Type                   = column[Option[String]]     ("Y2Type")
     //
-    def X1PlannedOffset_mm       = column[Option[Double]] ("X1PlannedOffset_mm")
-    def X2PlannedOffset_mm       = column[Option[Double]] ("X2PlannedOffset_mm")
-    def Y1PlannedOffset_mm       = column[Option[Double]] ("Y1PlannedOffset_mm")
-    def Y2PlannedOffset_mm       = column[Option[Double]] ("Y2PlannedOffset_mm")
+    def X1PlannedOffset_mm       = column[Option[Double]]     ("X1PlannedOffset_mm")
+    def X2PlannedOffset_mm       = column[Option[Double]]     ("X2PlannedOffset_mm")
+    def Y1PlannedOffset_mm       = column[Option[Double]]     ("Y1PlannedOffset_mm")
+    def Y2PlannedOffset_mm       = column[Option[Double]]     ("Y2PlannedOffset_mm")
     // @formatter:on
 
     def * =
       (
         // @formatter:off
-        winLutz360PK  :: //
+        winLutz360PK              ::
         outputPK                  ::
         rtimageUID                ::
         beamName                  ::
         gantryAngle_deg           ::
         collimatorAngle_deg       ::
         tableAngle_deg            ::
+        dataDate                  ::
         boxCenterX_mm             ::
         boxCenterY_mm             ::
         ballCenterX_mm            ::
@@ -270,7 +274,6 @@ object WinLutz360 extends Logging {
         HNil
         // @formatter:on
         ).mapTo[WinLutz360]
-    //<> (WinLutz360.apply _ tupled, WinLutz360.unapply)
 
     def outputFK = foreignKey("WinLutz360_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }

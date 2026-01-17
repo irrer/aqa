@@ -6,7 +6,7 @@ import org.aqa.webrun.wl.isoCheck.WLIsoCheck
 import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil._
 import org.aqa.Util
-import org.aqa.db.WinstonLutz
+import org.aqa.db.WinstonLutzGeneric
 import org.aqa.webrun.wl.isoCheck.WLMap
 
 import scala.xml.Elem
@@ -48,7 +48,7 @@ class SSAnalysis(extendedData: ExtendedData, wlMap: WLMap, isoCheck: WLIsoCheck,
     * @param beamOpt Beam to show.
     * @return cells for common content.
     */
-  private def isoTableAnglePrefix(beamOpt: Option[WinstonLutz]): Seq[Elem] = {
+  private def isoTableAnglePrefix(beamOpt: Option[WinstonLutzGeneric]): Seq[Elem] = {
 
     if (beamOpt.isEmpty) {
       toHtml("") +: blankCells(24)
@@ -356,7 +356,7 @@ class SSAnalysis(extendedData: ExtendedData, wlMap: WLMap, isoCheck: WLIsoCheck,
     </tr>
   }
 
-  private def makeBeamRow(rowNum: Int, beam: Option[WinstonLutz]): Elem = {
+  private def makeBeamRow(rowNum: Int, beam: Option[WinstonLutzGeneric]): Elem = {
     <tr>
       {makeRowIndex(rowNum)}
       {isoTableAnglePrefix(beam) /* */}

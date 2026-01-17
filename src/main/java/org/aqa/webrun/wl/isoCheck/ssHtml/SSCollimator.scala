@@ -1,6 +1,6 @@
 package org.aqa.webrun.wl.isoCheck.ssHtml
 
-import org.aqa.db.WinstonLutz
+import org.aqa.db.WinstonLutzGeneric
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.wl.isoCheck.WLCollimator
 import org.aqa.webrun.wl.isoCheck.WLXlsxUtil._
@@ -24,7 +24,7 @@ class SSCollimator(extendedData: ExtendedData, collimator: WLCollimator) extends
     * @param beam Beam to show.
     * @return cells for common content.
     */
-  private def isoTableAngleCells(beam: WinstonLutz): Seq[Elem] = {
+  private def isoTableAngleCells(beam: WinstonLutzGeneric): Seq[Elem] = {
 
     val isoTableAngle0 = beam.collimatorAngleRounded == 0
 

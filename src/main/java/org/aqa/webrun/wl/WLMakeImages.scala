@@ -141,6 +141,16 @@ case class WLMakeImages(
     val errorScaledY = boxCenterScaledY - ballCenterScaledY
     val errorScaledXYCombined = Math.sqrt((errorScaledX * errorScaledX) + (errorScaledY * errorScaledY))
 
+    wlMsg.info(s"box  center X mm: $boxCenterScaledX")
+    wlMsg.info(s"box  center Y mm: $boxCenterScaledY")
+
+    wlMsg.info(s"ball center X mm: $ballCenterScaledX")
+    wlMsg.info(s"ball center Y mm: $ballCenterScaledY")
+
+    wlMsg.info(s"error X mm: $errorScaledX")
+    wlMsg.info(s"error Y mm: $errorScaledY")
+    wlMsg.info(s"error XY mm: $errorScaledXYCombined")
+
     val passed: WLImageStatus.ImageStatus = {
       val p = annotate.annotateImage(normalPng, normalGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true, imageName, passLimit_mm = wlParameters.passLimit_mm)
       p

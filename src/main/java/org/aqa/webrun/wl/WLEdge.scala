@@ -181,6 +181,22 @@ case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtima
 
   val edge: Double = findEdge()
 
+  /** The absolute position (with respect to the entire image) of this edge in pixels. */
+  val absoluteEdge_pix: Double = {
+    if (vertical)
+      bounds.x + edge
+    else
+      bounds.y + edge
+  }
+
+  /** The absolute position (with respect to the entire image) of this edge in mm. */
+  val absoluteEdge_mm: Double = {
+    if (vertical)
+      trans.pix2IsoCoordX(absoluteEdge_pix)
+    else
+      trans.pix2IsoCoordY(absoluteEdge_pix)
+  }
+
   def pos_pix: Double = edge
 
   def posInt_pix: Int = pos_pix.round.toInt

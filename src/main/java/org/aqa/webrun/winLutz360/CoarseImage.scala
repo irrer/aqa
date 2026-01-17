@@ -41,7 +41,6 @@ object CoarseImage {
     ImageText.drawTextCenteredAt(gc, preprocessedImage.width / 2, textHeight * 3.5, tableText)
 
     def drawLine(x1: Double, y1: Double, x2: Double, y2: Double): Unit = {
-      // Trace.trace(Util.d2i(x1) + " : " + Util.d2i(y1) + " : " + Util.d2i(x2) + " : " + Util.d2i(y2))
       gc.drawLine(Util.d2i(x1), Util.d2i(y1), Util.d2i(x2), Util.d2i(y2))
     }
 

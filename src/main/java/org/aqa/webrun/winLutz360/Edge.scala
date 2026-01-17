@@ -37,14 +37,14 @@ import scala.annotation.tailrec
   * @param resolution Resolution in pixels. 1 means same size as pixels, .5 means splitting pixels into 4 parts.
   */
 case class Edge( //
-                 name: String,
-                 line: AQALine,
-                 offsetStart: Double,
-                 offsetFinish: Double,
-                 biCubicImage: BiCubicImage,
-                 al: AttributeList,
-                 width: Double,
-                 resolution: Double
+    name: String,
+    line: AQALine,
+    offsetStart: Double,
+    offsetFinish: Double,
+    biCubicImage: BiCubicImage,
+    al: AttributeList,
+    width: Double,
+    resolution: Double
 ) {
 
   private val positive = offsetFinish > offsetStart
@@ -116,8 +116,7 @@ case class Edge( //
 
   /** List of pixel values from one end of the edge, through the transition, to the other end. */
   val edgeProfile: Seq[Double] = centerToHiProfile.drop(indexOfMin)
-  // ImageDisplay.showChart(edgeProfile, yName = name + " edgeProfile")
-  // ImageDisplay.showChart(centerToHiProfile, yName = name + " centerToHiProfile")
+
   private val edgeProfileMedian = (edgeProfile.min + edgeProfile.max) / 2
 
   /** Distance from the point to the edge. */
