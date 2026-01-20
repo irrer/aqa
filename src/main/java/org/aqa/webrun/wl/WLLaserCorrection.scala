@@ -10,7 +10,7 @@ import scala.annotation.tailrec
   * Construct a complete set of 4 gantry angles with the same collimator angle and
   * calculate corrections to be made in the X, Y and Z axis.
   */
-class WLLaserCorrection(val resultList: Seq[WLImageResult]) extends Logging {
+class WLLaserCorrection(val resultList: Seq[WLResult]) extends Logging {
 
   if (!WLLaserCorrection.startsWithSet(resultList)) throw new RuntimeException("Set of results does not start with a proper set of gantry angles")
 
@@ -18,10 +18,10 @@ class WLLaserCorrection(val resultList: Seq[WLImageResult]) extends Logging {
 
   val failedText = "LIMIT EXCEEDED"
 
-  private def find(g: Int): WLImageResult = resultList.filter(ir => ir.gantryRounded_deg == g).head
+  private def find(g: Int): WLResult = resultList.filter(ir => ir.gantryRounded_deg == g).head
 
-  private def offX(g: Int): Double = find(g).offX_mm
-  private def offY(g: Int): Double = find(g).offY_mm
+  private def offX(g: Int): Double = find(g).offsetX_mm
+  private def offY(g: Int): Double = find(g).offsetY_mm
 
   val longitudinal: Double = (offY(180) + offY(0)) / 2
 
@@ -37,7 +37,7 @@ class WLLaserCorrection(val resultList: Seq[WLImageResult]) extends Logging {
   val logValues: Unit = {
     def show(g: Int): String = {
       val ir = resultList.filter(ir => ir.gantryRounded_deg == g).head
-      "    " + ir.collimatorRounded_txt + "    " + ir.gantryRounded_txt + "    xOff: " + ir.offX_mm + "    yOff: " + ir.offY_mm
+      "    " + ir.collimatorRounded_txt + "    " + ir.gantryRounded_txt + "    xOff: " + ir.offsetX_mm + "    yOff: " + ir.offsetX_mm
     }
     val text = (0 to 270 by 90).map(g => show(g)).foldLeft("")((t, r) => t + "\n" + r)
     logger.info("Values used for correction:" + text)
@@ -56,14 +56,14 @@ object WLLaserCorrection {
 
   private val NUM_IN_SET = 4 // Number of fields in a set (covers each multiple of 90 degrees).
 
-  private def startsWithSet(resultList: Seq[WLImageResult]): Boolean = {
+  private def startsWithSet(resultList: Seq[WLResult]): Boolean = {
     def collSame = resultList.take(NUM_IN_SET).map(ir => ir.collimatorRounded_deg).distinct.size == 1
     def gantryDifferent = resultList.take(NUM_IN_SET).map(ir => ir.gantryRounded_deg).distinct.size == NUM_IN_SET
     (resultList.size >= 4) && collSame && gantryDifferent
   }
 
   @tailrec
-  def setList(resultList: Seq[WLImageResult], correctionList: Seq[WLLaserCorrection] = Seq()): Seq[WLLaserCorrection] = {
+  def setList(resultList: Seq[WLResult], correctionList: Seq[WLLaserCorrection] = Seq()): Seq[WLLaserCorrection] = {
     if (resultList.size < NUM_IN_SET) correctionList
     else {
       if (startsWithSet(resultList.take(NUM_IN_SET))) {
@@ -74,7 +74,7 @@ object WLLaserCorrection {
   }
 
   /*
-  def setList(resultList: Seq[WLImageResult]): Seq[WLLaserCorrection] = {
+  def setList(resultList: Seq[WLResult]): Seq[WLLaserCorrection] = {
     setList(resultList, Seq[WLLaserCorrection]())
   }
    */

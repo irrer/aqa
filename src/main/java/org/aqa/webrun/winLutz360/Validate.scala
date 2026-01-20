@@ -10,40 +10,20 @@ import org.aqa.Util
 import org.aqa.db.MachineWL
 import org.aqa.webrun.wl.WLImageStatus
 
+object Validate {
+  case class ValidationStatus(status: WLImageStatus.Value, msg: String) {}
+}
+
 case class Validate( //
-    edgeAnalysis: EdgeAnalysis,
-    ball: Ball,
-    machineWL: MachineWL,
-    wlMessage: Option[WLMessage]
-) {
+                     edgeAnalysis: EdgeAnalysis,
+                     ball: Ball,
+                     machineWL: MachineWL,
+                     wlMessage: Option[WLMessage]
+                   ) {
+
+  import Validate.ValidationStatus
 
   val preprocessedImage: DicomImage = edgeAnalysis.preprocessedImage
-
-  private case class WLError(status: WLImageStatus.Value, msg: String) {}
-
-  private var status: Option[WLError] = None
-
-  private def setError(sts: WLImageStatus.Value, msg: String): Unit = {
-    if (sts.toString.equals(WLImageStatus.Passed.toString))
-      wlMessage.foreach(_.info(msg))
-    else
-      wlMessage.foreach(_.warn(msg))
-
-    status.synchronized {
-      if (status.isEmpty)
-        status = Some(WLError(sts, msg))
-    }
-  }
-
-  def getStatus: Option[WLImageStatus.Value] =
-    status.synchronized {
-      status.map(_.status)
-    }
-
-  def getErrorMessage: Option[String] =
-    status.synchronized {
-      status.map(_.msg)
-    }
 
   private val ballAOI: DicomImage = {
     val ball = BallAOIBounds.makeBallAOI(edgeAnalysis.edgeSet, preprocessedImage)
@@ -69,12 +49,12 @@ case class Validate( //
   }
 
   /**
-    * Determine if one edges is valid in the sense that it is yielding a genuine measurement that can be
-    * compared against pass/fail limits.  Reject if it has insufficient contrast.
-    *
-    * @return Empty list on success, error message on failure.
-    */
-  private def validateEdge(edge: Edge): Seq[String] = {
+   * Determine if one edges is valid in the sense that it is yielding a genuine measurement that can be
+   * compared against pass/fail limits.  Reject if it has insufficient contrast.
+   *
+   * @return Empty list on success, error message on failure.
+   */
+  private def validateEdge(edge: Edge): Seq[ValidationStatus] = {
 
     val measuredPctText: String = {
       val max = wholeImagePixelValueRangeThreshold_cu / (Config.WinLutz360PercentChange / 100)
@@ -89,63 +69,81 @@ case class Validate( //
       Seq()
     } else {
       val msg =
-        s"Edge for ${edge.name} has insufficient contrast of ${Util
-          .fmtDbl(edge.pixelValueRange)} ($measuredPctText)  when it should be at least ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WinLutz360PercentChange}%)"
-      setError(WLImageStatus.BoxNotFound, msg)
-      Seq(msg)
+        s"Edge for ${edge.name} has insufficient contrast of ${
+          Util
+            .fmtDbl(edge.pixelValueRange)
+        } ($measuredPctText)  when it should be at least ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WinLutz360PercentChange}%)"
+
+      Seq(ValidationStatus(WLImageStatus.BoxNotFound, msg))
     }
   }
 
-  private def beamEnergyIsHighEnough(): Seq[String] = {
+  private def beamEnergyIsHighEnough(): Seq[ValidationStatus] = {
     val kvp = DicomUtil.findAllSingle(edgeAnalysis.al, TagByName.KVP).head.getDoubleValues.head
     if (kvp >= Config.WinLutz360KVPLimit)
       Seq()
     else {
       val msg = s"DICOM file delivered with (insufficient) $kvp energy, when it should be at least (${Config.WinLutz360KVPLimit})"
-      setError(WLImageStatus.LowEnergy, msg)
-      Seq(msg)
+      Seq(ValidationStatus(WLImageStatus.LowEnergy, msg))
     }
   }
 
   /**
-    * Determine if the edges are valid in the sense that they are yielding genuine measurements that can be
-    * compared against pass/fail limits.  Reject edges that have insufficient contrast.
-    *
-    * @return Empty list on success, error message on failure.
-    */
-  private def edgesHaveSufficientContrast(): Seq[String] = {
+   * Determine if the edges are valid in the sense that they are yielding genuine measurements that can be
+   * compared against pass/fail limits.  Reject edges that have insufficient contrast.
+   *
+   * @return Empty list on success, error message on failure.
+   */
+  private def edgesHaveSufficientContrast(): Seq[ValidationStatus] = {
     val list = edgeAnalysis.edgeSet.edgeList.flatMap(validateEdge)
     list
   }
 
   /**
-    * Determine ball validity in that the X profile is the same as the Y profile.
-    *
-    * @return None on success, error message on failure.
-    */
-  private def ballIsSymmetrical(): Seq[String] = {
+   * Perform simple smoothing of given profile curve. Sum each adjacent pair of pixels.
+   *
+   * @param profile For this profile.
+   * @return A smoothed curve.
+   */
+  private def smooth(profile: Seq[Float]): Seq[Float] = {
+    val smoothed = profile.drop(1).zip(profile.tail).map(ab => ab._1 + ab._2)
+    smoothed
+  }
 
-    val xProfile = ballAOI.columnSums
-    val yProfile = ballAOI.rowSums
+  private case class BallProfiles() {
 
-    val maxXIndex = xProfile.indexOf(xProfile.max)
-    val maxYIndex = yProfile.indexOf(yProfile.max)
+    val xProfile: IndexedSeq[Float] = ballAOI.columnSums
+    val yProfile: IndexedSeq[Float] = ballAOI.rowSums
 
-    val xLeft = xProfile.take(maxXIndex + 1).reverse
-    val xRight = xProfile.drop(maxXIndex)
-    val yTop = yProfile.take(maxYIndex + 1).reverse
-    val yBottom = yProfile.drop(maxYIndex)
+    private val maxXIndex = xProfile.indexOf(xProfile.max)
+    private val maxYIndex = yProfile.indexOf(yProfile.max)
+
+    val xLeft: IndexedSeq[Float] = xProfile.take(maxXIndex + 1)
+    val xRight: IndexedSeq[Float] = xProfile.drop(maxXIndex)
+    val yTop: IndexedSeq[Float] = yProfile.take(maxYIndex + 1)
+    val yBottom: IndexedSeq[Float] = yProfile.drop(maxYIndex)
+  }
+
+  private val ballProfiles = BallProfiles()
+
+  /**
+   * Determine ball validity in that the X profile is the same as the Y profile.
+   *
+   * @return None on success, error message on failure.
+   */
+  private def ballIsSymmetrical(): Seq[ValidationStatus] = {
 
     // use the minimum
-    val ballRadius = Seq(xLeft, xRight, yTop, yBottom).map(_.size).min
+    val ballRadius = Seq(ballProfiles.xLeft, ballProfiles.xRight, ballProfiles.yTop, ballProfiles.yBottom).map(_.size).min
 
     /**
-      * Find the difference of two half profiles.  Pair values from each argument and take the
-      * absolute value of the difference of each.
-      * @param a One half profile to compare.
-      * @param b The other half profile to compare.
-      * @return A value indicating how similar they are.  A smaller value means more similar.
-      */
+     * Find the difference of two half profiles.  Pair values from each argument and take the
+     * absolute value of the difference of each.
+     *
+     * @param a One half profile to compare.
+     * @param b The other half profile to compare.
+     * @return A value indicating how similar they are.  A smaller value means more similar.
+     */
     def diff(a: Seq[Float], b: Seq[Float]): Float = {
       // note that dividing by the ball radius makes the size of the ball and the field irrelevant.
       (0 until ballRadius).map(i => (a(i) - b(i)).abs).sum / ballRadius
@@ -153,12 +151,14 @@ case class Validate( //
 
     // Compare all combinations of profile halves.  They should be fairly close.
     val totalDiff = Seq(
-      diff(xLeft, xRight),
-      diff(xLeft, yTop),
-      diff(xLeft, yBottom),
-      diff(xRight, yTop),
-      diff(xRight, yBottom),
-      diff(yTop, yBottom)
+      // @formatter:off
+      diff(ballProfiles.xLeft.reverse, ballProfiles.xRight      ),
+      diff(ballProfiles.xLeft.reverse, ballProfiles.yTop.reverse),
+      diff(ballProfiles.xLeft.reverse, ballProfiles.yBottom     ),
+      diff(ballProfiles.xRight       , ballProfiles.yTop.reverse),
+      diff(ballProfiles.xRight       , ballProfiles.yBottom     ),
+      diff(ballProfiles.yTop.reverse , ballProfiles.yBottom     )
+      // @formatter:on
     ).sum
 
     val error = if (totalDiff < Config.WinLutz360SymmetryLimit) {
@@ -169,61 +169,132 @@ case class Validate( //
     } else {
       val msg = s"profile difference in symmetry: $totalDiff is too large, indicating that the object found is non-spherical," +
         s" and therefor an invalid phantom.  It must be lower than ${Config.WinLutz360SymmetryLimit} to be valid."
-      setError(WLImageStatus.BallMalformed, msg)
-      Seq(msg)
+      Seq(ValidationStatus(WLImageStatus.BallMalformed, msg))
     }
 
     error
   }
 
   /**
-    * Determine ball validity in that it is sufficiently large so to be not mistaken for noise.
-    *
-    * @return None on success, error message on failure.
-    */
-  private def ballIsSufficientlyLarge(): Seq[String] = {
+   * Determine ball validity in that it is sufficiently large so to be not mistaken for noise.
+   *
+   * @return None on success, error message on failure.
+   */
+  private def ballIsSufficientlyLarge(): Seq[ValidationStatus] = {
     val pixelValueList = ballAOI.pixelData.flatten
 
     val stdDev = ImageUtil.stdDev(pixelValueList)
 
     if (stdDev < Config.WinLutz360MinStdDev) {
-      val msg = s"Ball are has a standard deviation of $stdDev, which is below the required ${Config.WinLutz360MinStdDev}.  Probably due to no phantom."
-      setError(WLImageStatus.BallMissing, msg)
-      Seq(msg)
-    } else
+      val msg = s"Ball standard deviation of $stdDev, which is too small (too flat).  It must be above the ${Config.WinLutz360MinStdDev} to be valid.  Probably due to no phantom."
+      ValidationStatus(WLImageStatus.BallMissing, msg)
+      Seq(ValidationStatus(WLImageStatus.BallMissing, msg))
+    } else {
+      wlMessage.foreach(_.info(s"Ball are has a sufficiently large standard deviation of $stdDev, which is above the required ${Config.WinLutz360MinStdDev}."))
       Seq()
+    }
 
   }
 
-  private def withinTolerance(): Unit = {
+  private def profilesCrossMeanTwice(profile: Seq[Float], name: String): Seq[ValidationStatus] = {
+    val smoothed = smooth(profile)
+
+    val mean = smoothed.sum / smoothed.size
+
+    def crossesLoToHi(lo: Int): Boolean = {
+      val hi = lo + 1
+      ((smoothed(lo) < mean) && (smoothed(hi) > mean)) ||
+        ((smoothed(lo) > mean) && (smoothed(hi) < mean))
+    }
+
+    val numberOfTimesMeanIsCrossed = smoothed.indices.dropRight(1).count(crossesLoToHi)
+
+    val ok = numberOfTimesMeanIsCrossed == 2
+
+    if (ok) {
+      wlMessage.foreach(_.info(s"Ball $name crosses the mean exactly twice, as required."))
+      Seq()
+    } else {
+      val timesText = if (numberOfTimesMeanIsCrossed == 1) "time" else "times"
+      val msg = s"Ball $name crosses the mean of the profile $numberOfTimesMeanIsCrossed $timesText, which indicates that it does not match the expected simple rise and fall of a ball profile."
+      wlMessage.foreach(_.warn(msg))
+      Seq(ValidationStatus(WLImageStatus.BallProfileIsMisshapen, msg))
+    }
+  }
+
+  /**
+   * Check to make sure that ball profile:
+   * Rises on the left side (X axis)
+   * Falls on the right side (X axis)
+   * Rises on the top side (Y axis)
+   * Falls on the bottom side (Y axis)
+   */
+  private def profilesRiseAndFall(): Seq[ValidationStatus] = {
+    def checkRiseFall(profile: IndexedSeq[Float], rising: Boolean, name: String): Seq[ValidationStatus] = {
+      val first = profile.take(profile.size / 2).sum
+      val second = profile.drop(profile.size / 2).sum
+      val ok =
+        ((first < second) && rising) ||
+          ((first > second) && (!rising))
+
+      val changeText = if (rising) "low to hi" else "hi to low"
+
+      if (ok) {
+        wlMessage.foreach(_.info(s"Ball profile $name changes from $changeText as expected."))
+        Seq()
+      } else {
+        val msg = s"Ball profile $name does not change from ${changeText} as expected."
+        wlMessage.foreach(_.warn(msg))
+        Seq(ValidationStatus(WLImageStatus.BallProfileIsMisshapen, msg))
+      }
+    }
+
+    // @formatter:off
+    checkRiseFall(ballProfiles.xLeft  , rising = true , "Left X profile  ") ++
+    checkRiseFall(ballProfiles.xRight , rising = false, "Right X profile ") ++
+    checkRiseFall(ballProfiles.yTop   , rising = true , "Top Y profile   ") ++
+    checkRiseFall(ballProfiles.yBottom, rising = false, "Bottom Y profile")
+    // @formatter:on
+  }
+
+  /**
+   * Determine if the final offset (distance between center of box and center of ball) is within the pass/fail limit.
+   *
+   * If so, set the status to Pass, otherwise set it to fail.
+   */
+  private def finalOffsetWithinTolerance(): Seq[ValidationStatus] = {
 
     val errX_mm = edgeAnalysis.trans.pix2IsoDistX(edgeAnalysis.edgeSet.center_pix.getX - ball.center_pix.getX)
     val errY_mm = edgeAnalysis.trans.pix2IsoDistY(edgeAnalysis.edgeSet.center_pix.getY - ball.center_pix.getY)
 
     val error_mm = Math.sqrt((errX_mm * errX_mm) + (errY_mm * errY_mm))
 
-    0 match {
-      case _ if (error_mm <= machineWL.passLimit_mm) && getStatus.isEmpty =>
-        val msg = s"Passed.  Error: $error_mm   Pass limit: ${machineWL.passLimit_mm}"
-        setError(WLImageStatus.Passed, msg)
-        Seq()
-      case _ if (error_mm > machineWL.passLimit_mm) && getStatus.isEmpty =>
-        val msg = s"Failed.  Error: $error_mm   Pass limit: ${machineWL.passLimit_mm}"
-        setError(WLImageStatus.OffsetLimitExceeded, msg)
-        Seq()
-
-      case _ =>
-        Seq()
+    if (error_mm < machineWL.passLimit_mm) {
+      val msg = s"box to ball offset of $error_mm mm is less than limit of ${machineWL.passLimit_mm} mm."
+      Seq(ValidationStatus(WLImageStatus.Passed, msg))
+    } else {
+      val msg = s"Failed.  Error: $error_mm   Pass limit: ${machineWL.passLimit_mm}"
+      Seq(ValidationStatus(WLImageStatus.OffsetLimitExceeded, msg))
     }
 
   }
 
-  edgesHaveSufficientContrast()
-  beamEnergyIsHighEnough()
-  ballIsSufficientlyLarge()
-  ballIsSymmetrical()
-  withinTolerance()
-  if (getStatus.isEmpty)
-    setError(WLImageStatus.UnexpectedError, "Unexpected error") // this should never happen
+  /** Perform several validation checks. */
+  private def makeStatusList(): Seq[ValidationStatus] =
+    Seq( //
+      edgesHaveSufficientContrast(),
+      beamEnergyIsHighEnough(),
+      ballIsSufficientlyLarge(),
+      ballIsSymmetrical(),
+      profilesCrossMeanTwice(ballProfiles.xProfile, "X Profile"),
+      profilesCrossMeanTwice(ballProfiles.yProfile, "Y Profile"),
+      profilesRiseAndFall(),
+      finalOffsetWithinTolerance()
+    ).flatten
+
+  /** A list of error messages.  The first one should be used as the status.  If
+   * all goes well, this list should contain a single status of "Passed".
+   */
+  val statusList: Seq[ValidationStatus] = makeStatusList()
 
 }

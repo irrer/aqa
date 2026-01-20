@@ -73,13 +73,87 @@ case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLR
   val scale: Int = WLImageUtil.calculateCloseupScale(al)
   val img: BufferedImage = EdgeSetImage.makeImage(edge.edgeSet, preprocessedImage, scale = scale, al)
 
-  val validator: Validate = Validate(edge, ball, machineWL, wlMessage)
+  private val validator: Validate = Validate(edge, ball, machineWL, wlMessage)
 
-  val status: WLImageStatus.Value = validator.getStatus.get
+  val statusList: Seq[Validate.ValidationStatus] = validator.statusList
 
-  private val statusMessage: String = validator.getErrorMessage.get
+  val status: WLImageStatus.Value = if (statusList.isEmpty) WLImageStatus.UnexpectedError else validator.statusList.head.status
+
+  private val statusMessage: String = if (statusList.isEmpty) "No status returned by validation." else validator.statusList.head.msg
 
   wlMessage.foreach(_.info(s"Status: $status : $statusMessage"))
+
+  override def OffsetX1_mm: Option[Double] = if (originIsDefined) Some(edge.x1DistanceToOrigin) else None
+  override def OffsetX2_mm: Option[Double] = if (originIsDefined) Some(edge.x2DistanceToOrigin) else None
+  override def OffsetY1_mm: Option[Double] = if (originIsDefined) Some(edge.y1DistanceToOrigin) else None
+  override def OffsetY2_mm: Option[Double] = if (originIsDefined) Some(edge.y2DistanceToOrigin) else None
+
+  override def OffsetTop_mm: Option[Double] = {
+    if (isCardinal) {
+      collimatorRoundedTo90 match {
+        case 0   => OffsetY2_mm
+        case 90  => OffsetX2_mm
+        case 180 => OffsetY1_mm
+        case 270 => OffsetX1_mm
+      }
+    } else
+      None
+  }
+
+  override def OffsetBottom_mm: Option[Double] = {
+    if (isCardinal) {
+      collimatorRoundedTo90 match {
+        case 0   => OffsetY1_mm
+        case 90  => OffsetX1_mm
+        case 180 => OffsetY2_mm
+        case 270 => OffsetX2_mm
+      }
+    } else
+      None
+  }
+
+  override def OffsetLeft_mm: Option[Double] = {
+    if (isCardinal) {
+      collimatorRoundedTo90 match {
+        case 0   => OffsetX1_mm
+        case 90  => OffsetY2_mm
+        case 180 => OffsetX2_mm
+        case 270 => OffsetY1_mm
+      }
+    } else
+      None
+  }
+
+  override def OffsetRight_mm: Option[Double] = {
+    if (isCardinal) {
+      collimatorRoundedTo90 match {
+        case 0   => OffsetX2_mm
+        case 90  => OffsetY1_mm
+        case 180 => OffsetX1_mm
+        case 270 => OffsetY2_mm
+      }
+    } else
+      None
+  }
+
+  override def boxCenter_mm: Point2d = trans.pix2Iso(edge.edgeSet.center_pix)
+  override def ballCenter_mm: Point2d = ball.center_iso
+
+  /**
+    * Determine if the origin (center of beam) is defined. It is defined if either:
+    *
+    * - The RTPLAN is available.
+    *
+    * - It is assumed to be 0,0, and both pairs of opposing edges are nearly equidistant from 0,0.
+    */
+  private val originIsDefined: Boolean = {
+    val maxDistanceError_mm = 5.0
+    def xDiff = (edge.x1DistanceToOrigin - edge.x2DistanceToOrigin).abs
+    def yDiff = (edge.y1DistanceToOrigin - edge.y2DistanceToOrigin).abs
+    def isClose = (xDiff < maxDistanceError_mm) || (yDiff < maxDistanceError_mm)
+
+    wlRunReq.rtplan.isDefined || isClose
+  }
 
   private def makeWinLutz360: WinLutz360 = {
     val beamName: Option[String] = {
@@ -96,22 +170,6 @@ case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLR
         Some(PlannedRectangle(wlRunReq.rtplan.get, al))
       else
         None
-    }
-
-    /**
-      * Determine if the origin (center of beam) is defined. It is defined if either:
-      *
-      * - The RTPLAN is available.
-      *
-      * - It is assumed to be 0,0, and both pairs of opposing edges are nearly equidistant from 0,0.
-      */
-    val originIsDefined: Boolean = {
-      val maxDistanceError_mm = 5.0
-      def xDiff = (edge.x1DistanceToOrigin - edge.x2DistanceToOrigin).abs
-      def yDiff = (edge.y1DistanceToOrigin - edge.y2DistanceToOrigin).abs
-      def isClose = (xDiff < maxDistanceError_mm) || (yDiff < maxDistanceError_mm)
-
-      wlRunReq.rtplan.isDefined || isClose
     }
 
     val dataDate = new Timestamp(WLImageUtil.timeOf(al).getTime)
@@ -132,10 +190,10 @@ case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLR
       ballCenterX_mm = ball.center_pix.getX,
       ballCenterY_mm = ball.center_pix.getY,
       //
-      X1Offset_mm = if (originIsDefined) Some(edge.x1DistanceToOrigin) else None,
-      X2Offset_mm = if (originIsDefined) Some(edge.x2DistanceToOrigin) else None,
-      Y1Offset_mm = if (originIsDefined) Some(edge.y1DistanceToOrigin) else None,
-      Y2Offset_mm = if (originIsDefined) Some(edge.y2DistanceToOrigin) else None,
+      X1Offset_mm = OffsetX1_mm,
+      X2Offset_mm = OffsetX2_mm,
+      Y1Offset_mm = OffsetY1_mm,
+      Y2Offset_mm = OffsetY2_mm,
       //
       X1Type = None, // TODO
       X2Type = None, // TODO
@@ -155,17 +213,7 @@ case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLR
 
   override def offsetY_mm: Double = trans.pix2IsoDistY(edge.edgeSet.center_pix.getY - ball.center_pix.getY)
 
-  override def getImageStatus: WLImageStatus.Value = {
-    val ok = validator.getStatus.isDefined && validator.getStatus.head.toString.equals(WLImageStatus.Passed.toString)
-    if (ok)
-      WLImageStatus.Passed
-    else {
-      if (validator.getStatus.isDefined)
-        validator.getStatus.get
-      else
-        WLImageStatus.UnexpectedError
-    }
-  } // TODO be more specific
+  override def getImageStatus: WLImageStatus.Value = status
 
   override def convertToDB: Either[WinstonLutz, WinLutz360] = Right(makeWinLutz360)
 

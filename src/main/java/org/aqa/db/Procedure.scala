@@ -104,7 +104,8 @@ case class Procedure(
   //noinspection ScalaWeakerAccess
   final val isGapSkew = name.toLowerCase.contains("gap") && name.toLowerCase.contains("skew")
   //noinspection ScalaWeakerAccess
-  final val isWinstonLutz = name.toLowerCase.contains("winston") && name.toLowerCase.contains("lutz")
+  final val isWinstonLutz = name.toLowerCase.contains("winston") && name.toLowerCase.contains("lutz") && (!name.contains("360"))
+  final val isWinLutz360 = name.toLowerCase.contains("win") && name.toLowerCase.contains("lutz") && name.contains("360")
   final val isFocalSpot = name.toLowerCase.contains("focal") && name.toLowerCase.contains("spot")
   final val isFloodField = name.toLowerCase.contains("flood")
   final val isPSM = name.toLowerCase.contains("psm")

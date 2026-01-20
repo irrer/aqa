@@ -140,7 +140,7 @@ object DbSetup extends Logging {
     BBbyEPID.query,
     BBbyEPIDComposite.query,
     FocalSpot.query,
-    BBbyEPID.query,
+    WinLutz360.query,
     FocalSpotSet.query,
     SymmetryAndFlatness.query,
     LeafPosition.query,

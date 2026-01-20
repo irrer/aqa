@@ -1193,6 +1193,10 @@ object Util extends Logging {
     new Color(Integer.parseInt(hex, 16))
   }
 
+  def colorToHexText(color: Color): String = {
+    "#%6x".format(color.getRGB & 0xffffff)
+  }
+
   /**
    * Get an attribute of a node as text.
    */

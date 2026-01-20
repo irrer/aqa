@@ -29,6 +29,7 @@ import org.aqa.webrun.machLog.MachLogRun
 import org.aqa.webrun.phase2.Phase2
 import org.aqa.webrun.phase3.Phase3
 import org.aqa.webrun.psm.PSMRun
+import org.aqa.webrun.winLutz360.WinLutz360Run
 import org.aqa.webrun.wl.WLRun
 import org.restlet.Request
 import org.restlet.Response
@@ -67,6 +68,7 @@ object WebRun {
     ("BBbyEPID", procedure => new BBbyEPIDRun(procedure)),
     ("GapSkewRun", procedure => new GapSkewRun(procedure)),
     ("WinstonLutz", procedure => new WLRun(procedure)),
+    ("WinLutz360", procedure => new WinLutz360Run(procedure)),
     ("FocalSpot", procedure => new FSRun(procedure)),
     ("MachineLog", procedure => new MachLogRun(procedure)),
     ("LOC", procedure => new LOCRun(procedure)),

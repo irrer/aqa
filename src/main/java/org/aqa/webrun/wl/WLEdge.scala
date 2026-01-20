@@ -68,7 +68,14 @@ case class WLEdge(name: String, vertical: Boolean, wholeImage: DicomImage, rtima
     val lo = sorted.take(numPix).sum / numPix
     val hi = sorted.takeRight(numPix).sum / numPix
     val mean = (lo + hi) / 2
-    val e = LocateEdge.locateEdge(line, mean)
+    val e =
+      try {
+        LocateEdge.locateEdge(line, mean)
+      } catch {
+        case t: Throwable =>
+          wlMsg.warn(s"Failure making edge profile")
+          -1
+      }
     e
   }
 

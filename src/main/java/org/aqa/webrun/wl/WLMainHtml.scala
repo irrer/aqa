@@ -18,7 +18,7 @@ object WLMainHtml extends Logging {
 
   def generateGroupHtml(extendedData: ExtendedData, resultList: Seq[WLResult], runReq: WLRunReq, monthly: Elem): String = {
 
-    val wlImageResultList = resultList.filter(_.isInstanceOf[WLImageResult]).map(_.asInstanceOf[WLImageResult])
+    val wlImageResultList = resultList // .filter(_.isInstanceOf[WLImageResult]).map(_.asInstanceOf[WLImageResult])
 
     val wlParameters = MachineWL.getMachineWLOrDefault(extendedData.machine.machinePK.get)
 
@@ -36,7 +36,7 @@ object WLMainHtml extends Logging {
     }
 
     def csvFileName = {
-      val list = resultList.filter(_.isInstanceOf[WLImageResult]).map(_.asInstanceOf[WLImageResult])
+      val list = resultList // .filter(_.isInstanceOf[WLImageResult]).map(_.asInstanceOf[WLImageResult])
       val wlCsv = new WLCsv(list, extendedData)
       wlCsv.writeCsvFile
     }

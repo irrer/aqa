@@ -584,6 +584,20 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
     ElemJS(content, allJS)
   }
 
+  /** Format the validate status(es). */
+  private def validationStatus: Elem = {
+    val list = analysis.statusList.map(vs => <p style="margin:20px;">{vs.status} : {vs.msg}</p>)
+    if (list.size == 1) {
+      { <h4 style={s"border: 5px solid ${Util.colorToHexText(Config.WLPassColor)};border-radius: 10px;"}>{list}</h4> }
+    } else {
+      <h4>
+      <p style={s"border: 5px solid ${Util.colorToHexText(Config.WLFailColor)};border-radius: 10px;"}> <span style="margin:20px;"> FAILED </span> </p>
+        List of failed validation checks:
+      {list}
+    </h4>
+    }
+  }
+
   private def makeDiagnosticsHtml(): Unit = {
     val coarseHTML = coarseLocationHTML()
     val approximate = approximateEdgeHTML()
@@ -600,6 +614,7 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
           <div class="row">
             <div class="col-md-6">
               <h2>Details for Beam {beamName}</h2>
+              {validationStatus}
             </div>
             <div class="col-md-3">
               <div style=" display: grid; place-items: center; height: 68px; ">

@@ -1,6 +1,7 @@
 package org.aqa.webrun.winLutz360
 
 import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.ScaledImage
 import org.aqa.webrun.wl.WLAnnotate
@@ -141,6 +142,31 @@ object CompositeImage {
   }
 
   /**
+    * Label each edge as X1, X2, Y1, Y2
+    * @param bufImg Put text here.
+    * @param analysis contains edges
+    * @param scale scale of image
+    */
+  private def labelEdges(bufImg: BufferedImage, analysis: Analysis, scale: Int): Unit = {
+    val gc = ImageUtil.getGraphics(bufImg)
+    gc.setColor(Color.green)
+    val rect = makeBoundingRectangle(analysis)
+    val si = ScaledImage(scale, rect.x, rect.y)
+    ImageText.setFont(gc, ImageText.DefaultFont, 30)
+
+    def annotateOneEdge(edge: Edge): Unit = {
+      val center = {
+        val x = (edge.edgeLine.centerPoint.x + edge.loLine.centerPoint.x) / 2
+        val y = (edge.edgeLine.centerPoint.y + edge.loLine.centerPoint.y) / 2
+        new Point2d(x, y)
+      }
+      si.drawTextCenteredAt(gc, center.x, center.y, edge.name)
+    }
+
+    analysis.edge.edgeSet.edgeList.foreach(annotateOneEdge)
+  }
+
+  /**
     * Make a closeup image showing the centers of the edges and the ball.
     * @param analysis Data driving image.
     * @return An annotated image.
@@ -156,6 +182,8 @@ object CompositeImage {
     drawBallLines(bufImg, analysis, scale)
 
     val annotate = new WLAnnotate(scale, 5)
+
+    labelEdges(bufImg, analysis, scale)
 
     annotate.annotateImage( //
       png = bufImg,

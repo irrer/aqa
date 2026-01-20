@@ -1299,7 +1299,7 @@ Note that when building a package for release, the Maven build process uses the 
     but other shapes will not.  If the result of the subtraction is less than this value, then it
     is considered to be valid.  The limit chosen was found by calculating the value for a variety of
     data sets.    Specified as a positive floating point positive number.  Default is  8.0  -->
-    <WinLutz360SymmetryLimit>8.0</WinLutz360SymmetryLimit>
+    <WinLutz360SymmetryLimit>10.0</WinLutz360SymmetryLimit>
 
     <!-- WL non-cardinal DICOM files must have at least this energy level to be considered valid.  This is
     a check in case the user submits a CT image.

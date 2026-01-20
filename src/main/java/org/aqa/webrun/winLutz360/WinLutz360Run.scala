@@ -74,22 +74,11 @@ class WinLutz360Run(procedure: Procedure) extends WebRunProcedure with RunTrait[
     }
   }
 
-  /** Set to true to enable processing of non-cardinal collimator angles.  If false, all images are assumed to have cardinal angles. */
-  private val enableNonCardinalProcessing: Boolean = false
-
-  private def isCardinalAngle(rtimage: AttributeList): Boolean = {
-    if (enableNonCardinalProcessing) {
-      val angle = rtimage.get(TagByName.BeamLimitingDeviceAngle).getDoubleValues.head
-      WLImageUtil.isCardinalAngle(angle)
-    } else {
-      true
-    }
-  }
-
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
 
     val machineWL = MachineWL.getMachineWLOrDefault(extendedData.machine.machinePK.get)
 
+    // list of processed images
     val resultList = {
       def doImage(rtimage: AttributeList): WLResult = {
         val wlMessage = WLMessage(runReq, rtimage)
@@ -99,17 +88,17 @@ class WinLutz360Run(procedure: Procedure) extends WebRunProcedure with RunTrait[
       runReq.epidList.par.map(doImage).toList
     }
 
+    // make a list of entries that have credible data, whether it is within limits or not.  Not included are
+    // those that failed sanity checks, such as edges having sufficient contrast.
     val resultHasData = resultList.filter(r => WLImageStatus.hasResult(r.getImageStatus))
 
     val dbList = resultHasData.map(_.convertToDB)
 
-    val wlList = dbList.filter(_.isLeft).map(_.left.get).toList
-    val wlNonCardList = dbList.filter(_.isRight).map(_.right.get)
+    val wlList = dbList.filter(_.isLeft).map(_.left.get)
 
-    wlList.foreach(_.insert)
-    wlNonCardList.foreach(_.insert)
+    val insertedList = dbList.map(r => r.right.get.insert)
 
-    logger.info(s"Inserted ${resultHasData.size} WinstonLutz rows into database out of ${runReq.epidList.size} RTIMAGE files.")
+    logger.info(s"Inserted ${insertedList.size} WinstonLutz rows into database out of ${runReq.epidList.size} RTIMAGE files.")
 
     // If there are images to do a monthly analysis, then do it and add links to the web page
     val monthly: Elem = {

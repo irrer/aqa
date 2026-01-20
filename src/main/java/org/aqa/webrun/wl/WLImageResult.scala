@@ -1,9 +1,7 @@
 package org.aqa.webrun.wl
 
 import com.pixelmed.dicom.AttributeList
-import com.pixelmed.dicom.AttributeTag
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Util
 import org.aqa.db.WinstonLutz
 import org.aqa.webrun.ExtendedData
@@ -11,7 +9,6 @@ import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.PlannedRectangle
 import org.aqa.db.WinLutz360
 
-import java.awt.geom.Point2D
 import java.awt.Rectangle
 import java.io.File
 import java.sql.Timestamp
@@ -34,43 +31,43 @@ class Edges(val top: Double, val bottom: Double, val left: Double, val right: Do
 }
 
 /**
-  * Encapsulate the results of the measurements for one image.
-  *
-  * @param imageStatus Pass, fail, etc.
-  * @param boxRelativeToBounds_mm Center of box relative to coarse bounds.
-  * @param ballRelativeToBounds_mm Center of ball relative to coarse bounds.
-  * @param edgesUnscaled unused
-  * @param boxEdgesP unknown
-  * @param edgeSet all edge in information, including AOI for each edge.  Measurements are relative to each edge's bounding box.
-  * @param directory HTML directory for this image
-  * @param rtimage DICOM image
-  * @param pixels unknown
-  * @param coarseAoiBounds_pix Bounding box in pixels around entire box.
-  * @param brcX X offset from coarseAoiBounds_pix to center of ball in pixels
-  * @param brcY Y offset from coarseAoiBounds_pix to center of ball in pixels
-  * @param badPixelList List of bad pixels.
-  * @param marginalPixelList List of marginal pixels.
-  * @param extendedData Metadata
-  * @param runReq all input data
-  */
+ * Encapsulate the results of the measurements for one image.
+ *
+ * @param imageStatus             Pass, fail, etc.
+ * @param boxRelativeToBounds_mm  Center of box relative to coarse bounds.
+ * @param ballRelativeToBounds_mm Center of ball relative to coarse bounds.
+ * @param edgesUnscaled           unused
+ * @param boxEdgesP               unknown
+ * @param edgeSet                 all edge in information, including AOI for each edge.  Measurements are relative to each edge's bounding box.
+ * @param directory               HTML directory for this image
+ * @param rtimage                 DICOM image
+ * @param pixels                  unknown
+ * @param coarseAoiBounds_pix     Bounding box in pixels around entire box.
+ * @param brcX                    X offset from coarseAoiBounds_pix to center of ball in pixels
+ * @param brcY                    Y offset from coarseAoiBounds_pix to center of ball in pixels
+ * @param badPixelList            List of bad pixels.
+ * @param marginalPixelList       List of marginal pixels.
+ * @param extendedData            Metadata
+ * @param runReq                  all input data
+ */
 case class WLImageResult(
-    imageStatus: WLImageStatus.ImageStatus,
-    boxRelativeToBounds_mm: Option[Point2d] = None,
-    ballRelativeToBounds_mm: Option[Point2d] = None,
-    edgesUnscaled: Option[Edges] = None,
-    boxEdgesP: Option[Edges] = None,
-    edgeSet: Option[WLEdgeSet] = None,
-    directory: File,
-    rtimage: AttributeList,
-    pixels: Option[Array[Array[Float]]] = None,
-    coarseAoiBounds_pix: Option[Rectangle] = None,
-    brcX: Option[Double] = None,
-    brcY: Option[Double] = None,
-    badPixelList: Seq[WLBadPixel],
-    marginalPixelList: Seq[WLBadPixel],
-    extendedData: ExtendedData,
-    runReq: WLRunReq
-) extends WLResult(extendedData, runReq) {
+                          imageStatus: WLImageStatus.ImageStatus,
+                          boxRelativeToBounds_mm: Option[Point2d] = None,
+                          ballRelativeToBounds_mm: Option[Point2d] = None,
+                          edgesUnscaled: Option[Edges] = None,
+                          boxEdgesP: Option[Edges] = None,
+                          edgeSet: Option[WLEdgeSet] = None,
+                          directory: File,
+                          rtimage: AttributeList,
+                          pixels: Option[Array[Array[Float]]] = None,
+                          coarseAoiBounds_pix: Option[Rectangle] = None,
+                          brcX: Option[Double] = None,
+                          brcY: Option[Double] = None,
+                          badPixelList: Seq[WLBadPixel],
+                          marginalPixelList: Seq[WLBadPixel],
+                          extendedData: ExtendedData,
+                          runReq: WLRunReq
+                        ) extends WLResult(extendedData, runReq) {
   val ok: Boolean = boxRelativeToBounds_mm.isDefined && ballRelativeToBounds_mm.isDefined
   val offX_mm: Double = if (ok) boxRelativeToBounds_mm.get.x - ballRelativeToBounds_mm.get.x else -1
   val offY_mm: Double = if (ok) boxRelativeToBounds_mm.get.y - ballRelativeToBounds_mm.get.y else -1
@@ -85,11 +82,7 @@ case class WLImageResult(
   // private val gantry_deg: Double = Util.gantryAngle(rtimage)
   // private val collimator_deg: Double = Util.collimatorAngle(rtimage)
 
-  def attr(tag: AttributeTag): String = {
-    DicomUtil.findAllSingle(rtimage, tag).map(_.getSingleStringValueOrEmptyString()).head
-  }
-
-  val gantryAngle: Int = Util.angleRoundedTo90(Util.gantryAngle(rtimage)) //attrFloat(TagByName.GantryAngle)
+  val gantryAngle: Int = Util.angleRoundedTo90(Util.gantryAngle(rtimage))
 
   // @formatter:off
   private def left_pix  : Double = edgeSet.get.  left.absoluteEdge_pix
@@ -109,54 +102,78 @@ case class WLImageResult(
 
   private def ballY_pix: Double = brcY.get + coarseAoiBounds_pix.get.y
 
-  private def ballCenter_mm: Point2D.Double = trans.pix2Iso(ballX_pix, ballY_pix)
+  override def ballCenter_mm: Point2d = trans.pix2Iso(new Point2d(ballX_pix, ballY_pix))
 
   private def boxCenterX_pix: Double = (right_pix + left_pix) / 2.0
 
   private def boxCenterY_pix: Double = (bottom_pix + top_pix) / 2.0
 
-  private def boxCenter_mm: Point2D.Double = trans.pix2Iso(boxCenterX_pix, boxCenterY_pix)
+  override def boxCenter_mm: Point2d = trans.pix2Iso(new Point2d(boxCenterX_pix, boxCenterY_pix))
 
-  private def offsetX_mm_def: Double = boxCenter_mm.getX - ballCenter_mm.getX
+  // private def offsetX_mm_def: Double = boxCenter_mm.getX - ballCenter_mm.getX
 
-  private def offsetY_mm_def: Double = boxCenter_mm.getY - ballCenter_mm.getY
+  // private def offsetY_mm_def: Double = boxCenter_mm.getY - ballCenter_mm.getY
 
-  private def offset_mm: Double = Math.sqrt((offsetX_mm_def * offsetX_mm_def) + (offsetY_mm_def * offsetY_mm_def))
+  // private def offset_mm: Double = Math.sqrt((offsetX_mm_def * offsetX_mm_def) + (offsetY_mm_def * offsetY_mm_def))
 
-  override def toString: String = {
+  override def OffsetTop_mm: Option[Double] = Some(top_mm)
 
-    def opt(dFun: () => Double): String = {
-      try {
-        dFun().toString
-      } catch {
-        case _: Throwable => "NA"
+  override def OffsetBottom_mm: Option[Double] = Some(bottom_mm)
+
+  override def OffsetLeft_mm: Option[Double] = Some(left_mm)
+
+  override def OffsetRight_mm: Option[Double] = Some(right_mm)
+
+  override def OffsetX1_mm: Option[Double] = {
+    if (isCardinal) {
+      collimatorRoundedTo90 match {
+        case 0 => OffsetLeft_mm
+        case 90 => OffsetBottom_mm
+        case 180 => OffsetRight_mm
+        case 270 => OffsetTop_mm
       }
     }
+    else
+      None
+  }
 
-    /*
-    "" +
-      "    Directory: " + directory.getAbsolutePath + "\n" +
-      s"    Status: $imageStatus\n" +
-      "    Offset: " + (if (ok) new Point(offX, offY).toString else "not available") + "\n" +
-      "    sqrt(x*x + y*y): " + (if (ok) offXY.formatted("%8.5f") else "not available") + "\n" +
-      s"    Box  left      pix: ${opt(left_pix _)}\n" +
-      s"    Box  right     pix: ${opt(right_pix _)}\n" +
-      s"    Box  top       pix: ${opt(top_pix _)}\n" +
-      s"    Box  bottom    pix: ${opt(bottom_pix _)}\n" +
-      s"    Box center X,Y pix: ${opt(boxCenterX_pix _)}, ${opt(boxCenterY_pix _)}\n" +
-      s"    Ball X,Y       pix: ${opt(ballX_pix _)}, ${opt(ballY_pix _)}\n" +
-      s"    Box  left      iso mm: ${opt(left_mm _)}\n" +
-      s"    Box  right     iso mm: ${opt(right_mm _)}\n" +
-      s"    Box  top       iso mm: ${opt(top_mm _)}\n" +
-      s"    Box  bottom    iso mm: ${opt(bottom_mm _)}\n" +
-      s"    Ball X,Y       iso mm: ${opt(ballCenter_mm.getX _)},${opt(ballCenter_mm.getY _)}\n" +
-      s"    Box X,Y        iso mm: ${opt(boxCenter_mm.getX _)}, ${opt(boxCenter_mm.getY _)}\n" +
-      s"    offset X,Y     iso mm: ${opt(offsetX_mm _)}, ${opt(offsetY_mm _)}\n" +
-      s"    offset         iso mm: ${opt(offset_mm _)}\n" +
-      badPixelListToString(badPixelList, "bad") +
-      badPixelListToString(marginalPixelList, "marginal")
-     */
-    ""
+  override def OffsetX2_mm: Option[Double] = {
+    if (isCardinal) {
+      collimatorRoundedTo90 match {
+        case 0 => OffsetRight_mm
+        case 90 => OffsetTop_mm
+        case 180 => OffsetLeft_mm
+        case 270 => OffsetBottom_mm
+      }
+    }
+    else
+      None
+  }
+
+  override def OffsetY1_mm: Option[Double] = {
+    if (isCardinal) {
+      collimatorRoundedTo90 match {
+        case 0 => OffsetBottom_mm
+        case 90 => OffsetRight_mm
+        case 180 => OffsetTop_mm
+        case 270 => OffsetLeft_mm
+      }
+    }
+    else
+      None
+  }
+
+  override def OffsetY2_mm: Option[Double] = {
+    if (isCardinal) {
+      collimatorRoundedTo90 match {
+        case 0 => OffsetTop_mm
+        case 90 => OffsetLeft_mm
+        case 180 => OffsetBottom_mm
+        case 270 => OffsetRight_mm
+      }
+    }
+    else
+      None
   }
 
   /**
