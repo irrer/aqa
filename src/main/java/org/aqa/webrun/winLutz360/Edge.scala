@@ -17,7 +17,6 @@
 package org.aqa.webrun.winLutz360
 
 import com.pixelmed.dicom.AttributeList
-import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.LocateEdge
 import org.aqa.AQALine
 import org.aqa.BiCubicImage
@@ -52,18 +51,6 @@ case class Edge( //
   private val increment = if (positive) resolution else -resolution
 
   private val widthRounded: Int = (width / resolution).round.toInt
-
-  private val RescaleSlope = al.get(TagByName.RescaleSlope).getDoubleValues.head
-  private val RescaleIntercept = al.get(TagByName.RescaleIntercept).getDoubleValues.head
-
-  /**
-    * Convert a raw pixel value to CU.
-    * @param pixelValue Value of pixel.
-    * @return Value in CU.
-    */
-  private def toCu(pixelValue: Double): Double = {
-    (pixelValue * RescaleSlope) + RescaleIntercept
-  }
 
   /**
     * Make profile of the sum of values along the line.
