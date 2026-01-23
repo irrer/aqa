@@ -85,6 +85,7 @@ jsonhttp.onreadystatechange = function() {
       aliasToRealList = JSON.parse(this.responseText);
       translateAliases();
       setTimeout(showOutputHeader, 250);
+      setTimeout(updateFloatingPrecision, 250);
       updateFloatingPrecision();
   }
 };
