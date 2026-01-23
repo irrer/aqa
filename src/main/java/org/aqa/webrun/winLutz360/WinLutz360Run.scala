@@ -86,6 +86,7 @@ class WinLutz360Run(procedure: Procedure) extends WebRunProcedure with RunTrait[
       }
       // Perform processing in parallel for speed
       runReq.epidList.par.map(doImage).toList
+      // runReq.epidList.map(doImage).toList // use this to NOT run in parallel to make debugging easier.
     }
 
     // make a list of entries that have credible data, whether it is within limits or not.  Not included are

@@ -16,17 +16,11 @@
 
 package org.aqa.webrun.winLutz360
 
-import com.pixelmed.dicom.Attribute
 import com.pixelmed.dicom.AttributeList
-import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageDisplay
-import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ImageUtil.ScaledImage
-import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.AQALine
 import org.aqa.BiCubicImage
 import org.aqa.Config
@@ -35,12 +29,9 @@ import org.aqa.Util
 import org.aqa.webrun.wl.WLCoarseBox
 import org.aqa.webrun.wl.WLMessage
 import org.aqa.webrun.wl.WLRunReq
-import org.aqa.DicomFile
-import org.aqa.webrun.wl.WLPreprocessImage
 
 import java.awt.Color
 import java.awt.image.BufferedImage
-import java.io.File
 import javax.vecmath.Point2d
 
 case class EdgeAnalysis( //
@@ -206,7 +197,11 @@ case class EdgeAnalysis( //
     * @return
     */
   private def preciseLocationOfEdges(approximateEdgeLocations: EdgeSet): EdgeSet = {
+
+    /** The line that crosses the center and intersects the X1 and X2 edges. */
     val xLine = AQALine(approximateEdgeLocations.center_pix, collAngle)
+
+    /** The line that crosses the center and intersects the Y1 and Y2 edges. */
     val yLine = xLine.perpendicular
 
     // use this granularity of pixels to get initial location of edges.
@@ -222,68 +217,24 @@ case class EdgeAnalysis( //
     val xWidth = ael.Y1.edgeCenter.distance(ael.Y2.edgeCenter) - penumbra_pix
     val yWidth = ael.X1.edgeCenter.distance(ael.X2.edgeCenter) - penumbra_pix
 
-    val XxSign: Int = {
-      if (collAngle == 0) -1
-      else if (collAngle <= 90) 1
-      else if (collAngle < 135) -1
-      else if (collAngle <= 225) 1
-      else if (collAngle < 315) -1
-      else 1
-    }
-
-    val XySign: Int = {
-      if (collAngle == 0) -1
-      else if (collAngle < 45) 1
-      else if (collAngle <= 135) -1
-      else if (collAngle < 225) 1
-      else if (collAngle < 270) -1
-      else if (collAngle == 270) 1
-      else if (collAngle <= 315) -1
-      else 1
-    }
-
+    /**
+      * Determine the meaning of the positive and negative distance from the point of a line.  This determines whether
+      * positive is in the direction of the X1 or X2 edge, or, the direction of the Y1 or Y2 edge.
+      * @param line For this line.
+      * @return
+      */
     def signOf(line: AQALine): Int = {
-      val pos = xLine.pointOn(1)
-      val neg = xLine.pointOn(-1)
-      val ptRot = WLRotator.rotatePoint(new Point2d(line.centerPoint.getX + 1, line.centerPoint.getY), line.centerPoint, 360 - line.angle_deg)
-      val sign = if (pos.distance(ptRot) > neg.distance(ptRot)) -1 else 1
-      sign
-    }
-
-    val XXxSign = -signOf(xLine)
-    val XXySign = signOf(yLine)
-
-    val xSign = {
       val c = approximateEdgeLocations.center_pix
-      val xPos = xLine.pointOn(1)
-      val xNeg = xLine.pointOn(-1)
-      val ptRot = WLRotator.rotatePoint(new Point2d(c.getX + 1, c.getY), c, 360 - xLine.angle_deg)
-
-      val dPos = xPos.distance(ptRot)
-      val dNeg = xNeg.distance(ptRot)
-
-      val sign = if (xPos.distance(ptRot) > xNeg.distance(ptRot)) 1 else -1
-
-      Trace.trace(s"dPos: $dPos    dNeg: $dNeg")
-      Trace.trace()
+      val pos = line.pointOn(1)
+      val neg = line.pointOn(-1)
+      val offsetPoint = new Point2d(c.getX + 1, c.getY)
+      val ptRot = WLRotator.rotatePoint(offsetPoint, c, 360 - line.angle_deg)
+      val sign = if (pos.distance(ptRot) > neg.distance(ptRot)) 1 else -1
       sign
     }
 
-    val ySign = {
-      val c = approximateEdgeLocations.center_pix
-      val xPos = yLine.pointOn(1)
-      val xNeg = yLine.pointOn(-1)
-      val ptRot = WLRotator.rotatePoint(new Point2d(c.getX + 1, c.getY), c, 360 - yLine.angle_deg)
-
-      val dPos = xPos.distance(ptRot)
-      val dNeg = xNeg.distance(ptRot)
-
-      val sign = if (xPos.distance(ptRot) > xNeg.distance(ptRot)) 1 else -1
-
-      Trace.trace(s"dPos: $dPos    dNeg: $dNeg")
-      Trace.trace()
-      sign
-    }
+    val xSign = signOf(xLine)
+    val ySign = signOf(yLine)
 
     val x1 = Edge("X1", xLine, 0, xSign * distanceX, biCubicImage, al, xWidth, preciseResolution)
     val x2 = Edge("X2", xLine, 0, -xSign * distanceX, biCubicImage, al, xWidth, preciseResolution)
@@ -294,11 +245,11 @@ case class EdgeAnalysis( //
 
     val center_pix = edgeSetPrecise.center_pix
 
-    wlMessage.foreach(_.info(s"precise center of edges mm X: ${fmt(trans.pix2IsoCoordX(edgeSetPrecise.center_pix.getX))}"))
-    wlMessage.foreach(_.info(s"precise center of edges mm Y: ${fmt(trans.pix2IsoCoordY(edgeSetPrecise.center_pix.getY))}"))
+    wlMessage.foreach(_.info(s"precise center of edges mm X: ${fmt(trans.pix2IsoCoordX(center_pix.getX))}"))
+    wlMessage.foreach(_.info(s"precise center of edges mm Y: ${fmt(trans.pix2IsoCoordY(center_pix.getY))}"))
 
-    wlMessage.foreach(_.info(s"precise center of edges pix X: ${fmt(edgeSetPrecise.center_pix.getX)}"))
-    wlMessage.foreach(_.info(s"precise center of edges pix Y: ${fmt(edgeSetPrecise.center_pix.getY)}"))
+    wlMessage.foreach(_.info(s"precise center of edges pix X: ${fmt(center_pix.getX)}"))
+    wlMessage.foreach(_.info(s"precise center of edges pix Y: ${fmt(center_pix.getY)}"))
 
     edgeSetPrecise
   }
@@ -356,383 +307,5 @@ case class EdgeAnalysis( //
   val x2DistanceToOrigin: Double = distanceToOrigin(edgeSet.X2)
   val y1DistanceToOrigin: Double = distanceToOrigin(edgeSet.Y1)
   val y2DistanceToOrigin: Double = distanceToOrigin(edgeSet.Y2)
-
-}
-
-object EdgeAnalysis {
-
-  private def makeEdgeAnalysis(angle: Double): EdgeAnalysis = {
-
-    val file = new File("""D:/tmp/wl/nonorth/ClinicalWinstonLutz_0.1_TB5_2025-12-12T06_34_56/RTIMAGE1.dcm""")
-    val al = new DicomFile(file).attributeList.get
-
-    // change the collimator angle
-    def setToAngle(attr: Attribute): Unit = {
-      attr.removeValues()
-      attr.addValue(angle)
-    }
-
-    DicomUtil.findAllSingle(al, TagByName.BeamLimitingDeviceAngle).foreach(setToAngle)
-
-    val preprocessedImage: DicomImage = WLPreprocessImage(al, None).preprocessedImage
-
-    val biCubicImage: BiCubicImage = BiCubicImage(preprocessedImage)
-    // val output = Output.get(10090)
-    val wlRunReq: WLRunReq = WLRunReq(Seq(al), None)
-    val wlMessage: Option[WLMessage] = None
-    val trans: IsoImagePlaneTranslator = new IsoImagePlaneTranslator(al)
-    val beamCenter_mm: Point2d = new Point2d(0, 0)
-
-    val ea = EdgeAnalysis( //
-      preprocessedImage = preprocessedImage,
-      al = al,
-      biCubicImage = biCubicImage,
-      wlRunReq = wlRunReq,
-      wlMessage = wlMessage,
-      trans = trans,
-      beamCenter_mm = beamCenter_mm
-    )
-
-    ea
-
-  }
-
-  private def drawSquare(bufImg: BufferedImage, collAngle: Double): Unit = {
-
-    val size_pix = bufImg.getWidth / 2
-
-    val top = (bufImg.getHeight / 2) - (size_pix / 2)
-    val bot = (bufImg.getHeight / 2) + (size_pix / 2)
-
-    val lft = (bufImg.getWidth / 2) - (size_pix / 2)
-    val rgt = (bufImg.getWidth / 2) + (size_pix / 2)
-
-    val center = new Point2d(bufImg.getWidth / 2, bufImg.getHeight / 2)
-
-    def rot(pt: Point2d) = WLRotator.rotatePoint(pt, center, 360 - collAngle)
-
-    val topLft = rot(new Point2d(top, lft))
-    val topRgt = rot(new Point2d(top, rgt))
-    val botLft = rot(new Point2d(bot, lft))
-    val botRgt = rot(new Point2d(bot, rgt))
-
-    val gc = ImageUtil.getGraphics(bufImg)
-    gc.setColor(Color.white)
-    def drawLine(p1: Point2d, p2: Point2d): Unit = {
-      gc.drawLine(p1.x.toInt, p1.y.toInt, p2.x.toInt, p2.y.toInt)
-    }
-
-    drawLine(topLft, topRgt)
-    drawLine(topLft, botLft)
-    drawLine(botLft, botRgt)
-    drawLine(topRgt, botRgt)
-  }
-
-  private def labelEdges(bufImg: BufferedImage, collAngle: Double): Unit = {
-    val center_pix = new Point2d(bufImg.getWidth / 2, bufImg.getHeight / 2)
-    val xLine = AQALine(center_pix, collAngle)
-    val yLine = xLine.perpendicular
-
-    val radius = 20.0
-
-    // case class Label(name: String, )
-
-    val a = collAngle
-
-    val XxSign = collAngle match {
-      case 0 => -1
-
-      case _ if (a > 0) && (a <= 45) => 1
-
-      //case 5   => 1
-      //case 10  => 1
-      //case 15  => 1
-      //case 20  => 1
-      //case 25  => 1
-      //case 30  => 1
-      //case 35  => 1
-      //case 40  => 1
-      //case 45  => 1
-
-      case _ if (a > 45) && (a < 90) => 1
-
-      //case 50  => -1
-      //case 55  => -1
-      //case 60  => -1
-      //case 65  => -1
-      //case 70  => -1
-      //case 75  => -1
-      //case 80  => -1
-      //case 85  => -1
-
-      case 90 => 1
-
-      case _ if (a > 90) && (a < 135) => -1
-
-      //case 95  => -1
-      //case 100 => -1
-      //case 105 => -1
-      //case 110 => -1
-      //case 115 => -1
-      //case 120 => -1
-      //case 125 => -1
-      //case 130 => -1
-
-      case _ if (a >= 135) && (a <= 225) => 1
-
-      //case 135 => 1
-      //case 140 => 1
-      //case 145 => 1
-      //case 150 => 1
-      //case 155 => 1
-      //case 160 => 1
-      //case 165 => 1
-      //case 170 => 1
-      //case 175 => 1
-      //case 180 => 1
-      //case 185 => 1
-      //case 190 => 1
-      //case 195 => 1
-      //case 200 => 1
-      //case 205 => 1
-      //case 210 => 1
-      //case 215 => 1
-      //case 220 => 1
-      //case 225 => 1
-
-      case _ if (a > 225) && (a < 315) => -1
-
-      //case 230 => -1
-      //case 235 => -1
-      //case 240 => -1
-      //case 245 => -1
-      //case 250 => -1
-      //case 255 => -1
-      //case 260 => -1
-      //case 265 => -1
-      //case 270 => -1
-      //case 275 => -1
-      //case 280 => -1
-      //case 285 => -1
-      //case 290 => -1
-      //case 295 => -1
-      //case 300 => -1
-      //case 305 => -1
-      //case 310 => -1
-
-      case _ if (a >= 315) => 1
-
-      //case 315 => 1
-      //case 320 => 1
-      //case 325 => 1
-      //case 330 => 1
-      //case 335 => 1
-      //case 340 => 1
-      //case 345 => 1
-      //case 350 => 1
-      //case 355 => 1
-      case _ => throw new RuntimeException("X badness")
-    }
-
-    val xSign = {
-      if (collAngle == 0) -1
-      else if (collAngle <= 90) 1
-      else if (collAngle < 135) -1
-      else if (collAngle <= 225) 1
-      else if (collAngle < 315) -1
-      else 1
-    }
-
-    val XySign = collAngle match {
-      case 0 => -1
-
-      case _ if (a > 0) && (a < 45) => 1
-
-      //case 5                        => 1
-      //case 10                       => 1
-      //case 15                       => 1
-      //case 20                       => 1
-      //case 25                       => 1
-      //case 30                       => 1
-      //case 35                       => 1
-      //case 40                       => 1
-
-      case _ if (a >= 45) && (a <= 135) => -1
-
-      //case 45                       => -1
-      //case 50                       => -1
-      //case 55                       => -1
-      //case 60                       => -1
-      //case 65                       => -1
-      //case 70                       => -1
-      //case 75                       => -1
-      //case 80                       => -1
-      //case 85                       => -1
-      //case 90                       => -1
-      //case 95                       => -1
-      //case 100                      => -1
-      //case 105                      => -1
-      //case 110                      => -1
-      //case 115                      => -1
-      //case 120                      => -1
-      //case 125                      => -1
-      //case 130                      => -1
-      //case 135                      => -1
-
-      case _ if (a > 135) && (a < 225) => 1
-
-      //case 140 => 1
-      //case 145 => 1
-      //case 150 => 1
-      //case 155 => 1
-      //case 160 => 1
-      //case 165 => 1
-      //case 170 => 1
-      //case 175 => 1
-      //case 180 => 1
-      //case 185 => 1
-      //case 190 => 1
-      //case 195 => 1
-      //case 200 => 1
-      //case 205 => 1
-      //case 210 => 1
-      //case 215 => 1
-      //case 220 => 1
-
-      case _ if (a >= 225) && (a < 270) => -1
-
-      //case 225 => -1
-      //case 230 => -1
-      //case 235 => -1
-      //case 240 => -1
-      //case 245 => -1
-      //case 250 => -1
-      //case 255 => -1
-      //case 260 => -1
-      //case 265 => -1
-
-      case 270 => 1
-
-      case _ if (a > 270) && (a <= 315) => -1
-
-      //case 275 => -1
-      //case 280 => -1
-      //case 285 => -1
-      //case 290 => -1
-      //case 295 => -1
-      //case 300 => -1
-      //case 305 => -1
-      //case 310 => -1
-      //case 315 => -1
-
-      case _ if (a > 315) => 1
-
-      //case 320 => 1
-      //case 325 => 1
-      //case 330 => 1
-      //case 335 => 1
-      //case 340 => 1
-      //case 345 => 1
-      //case 350 => 1
-      //case 355 => 1
-      //case _   => 1
-    }
-
-    val ySign = {
-      if (collAngle == 0) -1
-      else if (collAngle < 45) 1
-      else if (collAngle <= 135) -1
-      else if (collAngle < 225) 1
-      else if (collAngle < 270) -1
-      else if (collAngle == 270) 1
-      else if (collAngle <= 315) -1
-      else 1
-    }
-
-    val x1Point = xLine.pointOn(radius * xSign)
-    val x2Point = xLine.pointOn(radius * -xSign)
-    val y1Point = yLine.pointOn(radius * -ySign)
-    val y2Point = yLine.pointOn(radius * ySign)
-
-    val gc = ImageUtil.getGraphics(bufImg)
-    gc.setColor(Color.white)
-
-    def lab(p: Point2d, name: String): Unit = {
-      ImageText.drawTextCenteredAt(gc, p.getX, p.getY, name)
-    }
-
-    lab(x1Point, "X1")
-    lab(x2Point, "X2")
-    lab(y1Point, "Y1")
-    lab(y2Point, "Y2")
-
-    // gc.drawLine(x1Point.x.toInt, x1Point.y.toInt, y1Point.x.toInt, y1Point.y.toInt)
-  }
-
-  private def doIt(collAngle: Double): BufferedImage = {
-
-    val iSize = 100
-
-    val rgb =
-      ((((collAngle.round * 3) % 128) << 16) + //
-        (((collAngle.round * 5) % 128) << 8) + //
-        ((collAngle.round * 12) % 128)) //
-      .toInt
-
-    // val ea = makeEdgeAnalysis(collAngle)
-
-    // val bufImg = ea.preprocessedImage.toBufferedImage(Color.blue)
-
-    val bufImg = new BufferedImage(iSize, iSize, BufferedImage.TYPE_INT_RGB)
-    (0 until iSize).foreach( //
-      x => //
-        { //
-          (0 until iSize).foreach(y => //
-            bufImg.setRGB(x, y, rgb)
-          )
-        }
-    )
-
-    drawSquare(bufImg, collAngle)
-
-    val gc = ImageUtil.getGraphics(bufImg)
-    gc.setColor(Color.white)
-    ImageText.drawTextCenteredAt(gc, 20, 20, collAngle.round.toString)
-
-    labelEdges(bufImg, collAngle)
-
-    // ImageDisplay.showInMSPaint(bufImg)
-    // Thread.sleep(200)
-
-    bufImg
-  }
-
-  def main(args: Array[String]): Unit = {
-
-    val list = (0 until 360 by 5).map(collAngle => doIt(collAngle))
-
-    val bigImg = new BufferedImage(list.head.getWidth * 9, list.head.getHeight * 8, BufferedImage.TYPE_INT_RGB)
-
-    def putInBigImg(i: Int): Unit = {
-      val bigX = (i % 9) * list.head.getWidth
-      val bigY = (i / 9) * list.head.getHeight
-
-      (0 until list.head.getWidth).foreach( //
-        x => { //
-          (0 until list.head.getHeight).foreach( //
-            y => //
-              bigImg.setRGB(bigX + x, bigY + y, list(i).getRGB(x, y))
-          )
-        }
-      )
-    }
-
-    list.indices.foreach(putInBigImg)
-
-    ImageDisplay.showInMSPaint(bigImg)
-
-    Thread.sleep(2000)
-
-  }
 
 }
