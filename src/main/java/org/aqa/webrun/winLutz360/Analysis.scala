@@ -137,7 +137,7 @@ case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLR
   }
 
   override def boxCenter_mm: Point2d = trans.pix2Iso(edge.edgeSet.center_pix)
-  override def ballCenter_mm: Point2d = ball.center_iso
+  override def ballCenter_mm: Option[Point2d] = ball.center_mm
 
   /**
     * Determine if the origin (center of beam) is defined. It is defined if either:
@@ -184,11 +184,11 @@ case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLR
       tableAngle_deg = Some(tableAngle_deg),
       dataDate = dataDate,
       //
-      boxCenterX_mm = edge.edgeSet.center_pix.getX,
-      boxCenterY_mm = edge.edgeSet.center_pix.getY,
+      boxCenterX_mm = trans.pix2IsoCoordX(edge.edgeSet.center_pix.getX),
+      boxCenterY_mm = trans.pix2IsoCoordY(edge.edgeSet.center_pix.getY),
       //
-      ballCenterX_mm = ball.center_pix.getX,
-      ballCenterY_mm = ball.center_pix.getY,
+      ballCenterX_mm = if (ball.center_mm.isDefined) ball.center_mm.get.getX else Double.NaN,
+      ballCenterY_mm = if (ball.center_mm.isDefined) ball.center_mm.get.getY else Double.NaN,
       //
       X1Offset_mm = OffsetX1_mm,
       X2Offset_mm = OffsetX2_mm,
@@ -209,9 +209,9 @@ case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLR
     winLutz360
   }
 
-  override def offsetX_mm: Double = trans.pix2IsoDistX(edge.edgeSet.center_pix.getX - ball.center_pix.getX)
+  override def offsetX_mm: Double = if (ball.center_pix.isDefined) trans.pix2IsoDistX(edge.edgeSet.center_pix.getX - ball.center_pix.get.getX) else Double.NaN
 
-  override def offsetY_mm: Double = trans.pix2IsoDistY(edge.edgeSet.center_pix.getY - ball.center_pix.getY)
+  override def offsetY_mm: Double = if (ball.center_pix.isDefined) trans.pix2IsoDistY(edge.edgeSet.center_pix.getY - ball.center_pix.get.getY) else Double.NaN
 
   override def getImageStatus: WLImageStatus.Value = status
 

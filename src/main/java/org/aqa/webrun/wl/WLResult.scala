@@ -16,7 +16,7 @@ import javax.vecmath.Point2d
 abstract class WLResult(extendedData: ExtendedData, runReq: WLRunReq) {
 
   def boxCenter_mm: Point2d
-  def ballCenter_mm: Point2d
+  def ballCenter_mm: Option[Point2d]
 
   def offsetX_mm: Double
   def offsetY_mm: Double

@@ -45,44 +45,52 @@ object BallAOIBounds {
     edgeSet.Y1.loLine.pointIsBetween(point, edgeSet.Y2.loLine)
   }
 
-  def makeBallBounds(edgeSet: EdgeSet, preprocessedImage: DicomImage): Rectangle = {
+  private def makeBallBounds(edgeSet: EdgeSet, preprocessedImage: DicomImage): Option[Rectangle] = {
 
-    val pointsInside = for (x <- 0 until preprocessedImage.width; y <- 0 until preprocessedImage.height; if (pointIsInBallAoi(new Point2d(x, y), edgeSet))) yield new Point2i(x, y)
+    val pointsInside = for (x <- 0 until preprocessedImage.width; y <- 0 until preprocessedImage.height; if pointIsInBallAoi(new Point2d(x, y), edgeSet)) yield new Point2i(x, y)
 
-    val minX = pointsInside.map(_.x).min
-    val maxX = pointsInside.map(_.x).max
-    val minY = pointsInside.map(_.y).min
-    val maxY = pointsInside.map(_.y).max
+    if (pointsInside.isEmpty) {
+      None
+    } else {
+      val minX = pointsInside.map(_.x).min
+      val maxX = pointsInside.map(_.x).max
+      val minY = pointsInside.map(_.y).min
+      val maxY = pointsInside.map(_.y).max
 
-    val rectangle = new Rectangle(minX, minY, maxX - minX, maxY - minY)
+      val rectangle = new Rectangle(minX, minY, maxX - minX, maxY - minY)
 
-    rectangle
+      Some(rectangle)
+    }
   }
 
-  def makeBallAOI(edgeSet: EdgeSet, preprocessedImage: DicomImage): DicomImage = {
+  def makeBallAOI(edgeSet: EdgeSet, preprocessedImage: DicomImage): Option[DicomImage] = {
 
     val rectangle = makeBallBounds(edgeSet, preprocessedImage)
 
-    val subImg = preprocessedImage.getSubimage(rectangle)
+    if (rectangle.isDefined) {
 
-    val minPixelValue = subImg.pixelData.flatten.sorted.slice(5, 15).sum / 10
+      val subImg = preprocessedImage.getSubimage(rectangle.get)
 
-    def doRow(y: Int): Seq[Float] =
-      subImg
-        .pixelData(y)
-        .indices
-        .map(x => {
-          val p = new Point2d(x + rectangle.x, y + rectangle.y)
-          if (pointIsInBallAoi(p, edgeSet))
-            subImg.get(x, y)
-          else
-            minPixelValue
-        })
+      val minPixelValue = subImg.pixelData.flatten.sorted.slice(5, 15).sum / 10
 
-    val pixArray = (0 until subImg.height).map(doRow)
+      def doRow(y: Int): Seq[Float] =
+        subImg
+          .pixelData(y)
+          .indices
+          .map(x => {
+            val p = new Point2d(x + rectangle.get.x, y + rectangle.get.y)
+            if (pointIsInBallAoi(p, edgeSet))
+              subImg.get(x, y)
+            else
+              minPixelValue
+          })
 
-    val newSubImg = new DicomImage(pixArray)
-    newSubImg
+      val pixArray = (0 until subImg.height).map(doRow)
+
+      val newSubImg = new DicomImage(pixArray)
+      Some(newSubImg)
+    } else
+      None
   }
 
 }

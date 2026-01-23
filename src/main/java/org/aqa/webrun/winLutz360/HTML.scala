@@ -26,20 +26,24 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
     */
   private case class ElemJS(elem: Elem, js: String) {}
 
-  private def makeImageHTML(bufImg: BufferedImage, fileName: String, caption: String): ElemJS = {
-    val id: String = C3Chart.makeUniqueChartIdTag
-    val js: String = "" // s"""$$(document).ready(function(){ $$('#$id').zoom(); });""".replaceAllLiterally("\"", WebUtil.singleQuote)
+  private def makeImageHTML(bufImg: Option[BufferedImage], fileName: String, caption: String): ElemJS = {
 
-    val url = {
-      val file = new File(analysis.subDir, fileName)
-      Util.addGraticules(bufImg, analysis.trans, Color.lightGray)
-      Config.applyWatermark(bufImg)
-      Util.writePng(bufImg, file)
-      file.getName
-    }
+    if (bufImg.isEmpty) {
+      ElemJS(<div>Ball image not available.</div>, "")
+    } else {
+      val id: String = C3Chart.makeUniqueChartIdTag
+      val js: String = "" // s"""$$(document).ready(function(){ $$('#$id').zoom(); });""".replaceAllLiterally("\"", WebUtil.singleQuote)
 
-    val content = {
-      <div title="Click image for full-sized image.">
+      val url = {
+        val file = new File(analysis.subDir, fileName)
+        Util.addGraticules(bufImg.get, analysis.trans, Color.lightGray)
+        Config.applyWatermark(bufImg.get)
+        Util.writePng(bufImg.get, file)
+        file.getName
+      }
+
+      val content = {
+        <div title="Click image for full-sized image.">
         <a href={url}>
           <div style="border: 1px solid lightgrey;">
             <div id={id} style="margin: 20px;">
@@ -49,9 +53,10 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
        </a>
         <p style="text-align:center;font-style: italic;"> {caption} </p>
     </div>
-    }
+      }
 
-    ElemJS(content, js)
+      ElemJS(content, js)
+    }
   }
 
   private def makeCloseupImage(): Unit = {
@@ -150,7 +155,7 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
 
   private def coarseLocationHTML(): ElemJS = {
 
-    val imageHTML = makeImageHTML(analysis.edge.coarseImage(), "coarseLocation.png", "First step is to get the coarse location of the entire field.")
+    val imageHTML = makeImageHTML(Some(analysis.edge.coarseImage()), "coarseLocation.png", "First step is to get the coarse location of the entire field.")
 
     val center = {
       val c = analysis.edge.locateCoarseCenter
@@ -211,11 +216,11 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
 
   private def approximateEdgeHTML(): ElemJS = {
 
-    val imageHTML = makeImageHTML(analysis.approxImg, "approximateEdge.png", "Locate the approximate position of the edges.")
+    val imageHTML = makeImageHTML(Some(analysis.approxImg), "approximateEdge.png", "Locate the approximate position of the edges.")
 
     val center_pix = analysis.edge.approximateEdgeSet.center_pix
 
-    val center_iso = {
+    val center_mm = {
       val c = analysis.edge.approximateEdgeSet.center_pix
       analysis.trans.pix2Iso(c.x, c.y)
     }
@@ -231,7 +236,7 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
     val textElem: Elem = {
       <div>
         <h3>Step 2: Approximate Center of Edges</h3>
-        <p>Center: {fmtPoint(center_iso)}</p>
+        <p>Center mm: {fmtPoint(center_mm)}</p>
         <p>Change from coarse measurement: {fmtPoint(change)}</p>
         <p>Total XY change: {fmt.format(change.distance(new Point2d()))}</p>
         <p>The four boxes show the areas that were used to make an edge gradient. The line inside each box shows where the edge was found.</p>
@@ -346,11 +351,11 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
     */
   private def preciseEdgeHTML(): ElemJS = {
 
-    val imageHTML = makeImageHTML(analysis.img, "preciseEdge.png", "Measure precise location of edges using wider AOIs")
+    val imageHTML = makeImageHTML(Some(analysis.img), "preciseEdge.png", "Measure precise location of edges using wider AOIs")
 
     val center_pix = analysis.edge.edgeSet.center_pix
 
-    val center_iso = analysis.trans.pix2Iso(center_pix.x, center_pix.y)
+    val center_mm = analysis.trans.pix2Iso(center_pix.x, center_pix.y)
 
     val change = {
       val approximate_pix = analysis.edge.approximateEdgeSet.center_pix
@@ -363,7 +368,7 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
     val textElem: Elem = {
       <div>
         <h3>Step 3: Precise Center of Edges</h3>
-        Center: {fmtPoint(center_iso)}
+        Center mm: {fmtPoint(center_mm)}
         <p>Change from approximate measurement: {fmtPoint(change)}</p>
         <p>Total XY change: {fmt.format(change.distance(new Point2d()))}</p>
         <p></p>
@@ -465,25 +470,6 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
 
   private val wlBallImage = BallImage(analysis)
 
-  private val xBallProfilesHTML: ElemJS = {
-
-    val yValueList = analysis.ball.xProfile
-    val increment = analysis.trans.pix2IsoDistX(Config.WinLutz360BallPixelResolution)
-    val xValueList = yValueList.indices.map(_ * increment)
-
-    val xProfile = new C3Chart(
-      height = Some(200),
-      xAxisLabel = "mm",
-      xDataLabel = "CU",
-      xValueList = xValueList,
-      yAxisLabels = Seq("Offset (mm)"),
-      yDataLabel = "Offset (mm)",
-      yValues = Seq(yValueList)
-    )
-
-    ElemJS(xProfile.html, xProfile.javascript)
-  }
-
   /**
     * Make a profile for the ball.
     * @param yValueList Profile values.
@@ -494,30 +480,36 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
     val increment = analysis.trans.pix2IsoDistX(Config.WinLutz360BallPixelResolution)
     val xValueList = yValueList.indices.map(_ * increment)
 
-    val xProfile = new C3Chart(
-      height = Some(200),
-      xAxisLabel = "mm",
-      xDataLabel = "CU",
-      xValueList = xValueList,
-      yAxisLabels = Seq("Offset (mm)"),
-      yDataLabel = "Offset (mm)",
-      yValues = Seq(yValueList)
-    )
+    if (xValueList.isEmpty || yValueList.isEmpty) {
+      ElemJS(<div>Ball Y profiles not available.</div>, "")
+    } else {
+      val xProfile = new C3Chart(
+        height = Some(200),
+        xAxisLabel = "mm",
+        xDataLabel = "CU",
+        xValueList = xValueList,
+        yAxisLabels = Seq("Offset (mm)"),
+        yDataLabel = "Offset (mm)",
+        yValues = Seq(yValueList)
+      )
 
-    ElemJS(xProfile.html, xProfile.javascript)
+      ElemJS(xProfile.html, xProfile.javascript)
+    }
   }
 
   private def ballHTML(): ElemJS = {
 
     val center = {
-      val pix = analysis.ball.center_pix
-      analysis.trans.pix2Iso(pix.x, pix.y)
+      if (analysis.ball.center_mm.isDefined)
+        fmtPoint(analysis.ball.center_pix.get)
+      else
+        "NA"
     }
 
     val textElem = {
       <div>
         <h3>Step 4: Locating Ball</h3>
-        Center: {fmtPoint(center)}
+        Center: {center}
         <p>The image on the left shows the ball area, and is marked with the center of the ball.</p>
         <p>The ball area is delimited by the dimmest region between the ball and the edges.</p>
         <p>A background compenstation is done, by finding the lowest pixel value and then subtracting that

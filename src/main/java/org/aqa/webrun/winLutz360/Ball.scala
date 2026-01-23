@@ -39,13 +39,13 @@ import javax.vecmath.Point2d
   * @param beamCenter_mm planned center of beam in isoplane
   */
 case class Ball( //
-                 edgeSet: EdgeSet,
-                 preprocessedImage: DicomImage,
-                 biCubicImage: BiCubicImage,
-                 trans: IsoImagePlaneTranslator,
-                 al: AttributeList,
-                 wlMessage: Option[WLMessage],
-                 beamCenter_mm: Point2d
+    edgeSet: EdgeSet,
+    preprocessedImage: DicomImage,
+    biCubicImage: BiCubicImage,
+    trans: IsoImagePlaneTranslator,
+    al: AttributeList,
+    wlMessage: Option[WLMessage],
+    beamCenter_mm: Point2d
 ) extends Logging {
 
   private def fmt(d: Double): String = "%10.6f".format(d)
@@ -122,24 +122,32 @@ case class Ball( //
 
   /**
     * Get the approximate center of mass.
-    * @return
+    *
+    * If the pointList is empty, then return None.  This should only happen if the image not from a Winston-Lutz test.
+    * @return Center of mass of the ball.
     */
-  private def findCenterOfMass(): Point2d = {
+  private def findCenterOfMass(): Option[Point2d] = {
+    if (pointList.isEmpty)
+      None
+    else {
+      val xMinCoordinate = pointList.minBy(_.x).x
+      val yMinCoordinate = pointList.minBy(_.y).y
 
-    val xMinCoordinate = pointList.minBy(_.x).x
-    val yMinCoordinate = pointList.minBy(_.y).y
+      val x = (ImageUtil.centerOfMass(xProfile.map(_.toFloat).toIndexedSeq) * Config.WinLutz360BallPixelResolution) + xMinCoordinate
+      val y = (ImageUtil.centerOfMass(yProfile.map(_.toFloat).toIndexedSeq) * Config.WinLutz360BallPixelResolution) + yMinCoordinate
 
-    val x = (ImageUtil.centerOfMass(xProfile.map(_.toFloat).toIndexedSeq) * Config.WinLutz360BallPixelResolution) + xMinCoordinate
-    val y = (ImageUtil.centerOfMass(yProfile.map(_.toFloat).toIndexedSeq) * Config.WinLutz360BallPixelResolution) + yMinCoordinate
-
-    new Point2d(x, y)
+      Some(new Point2d(x, y))
+    }
   }
 
   /** Center of ball in pixel coordinates. */
-  val center_pix: Point2d = findCenterOfMass()
-  val center_iso: Point2d = trans.pix2Iso(center_pix)
+  val center_pix: Option[Point2d] = findCenterOfMass()
+  val center_mm: Option[Point2d] = center_pix.map(trans.pix2Iso)
 
-  wlMessage.foreach(_.info(s"Center of ball: ${fmt(center_iso.x)}, ${fmt(center_iso.y)}  Distance to center: ${fmt(center_iso.distance(beamCenter_mm))}"))
+  if (center_mm.isDefined)
+    wlMessage.foreach(_.info(s"Center of ball: ${fmt(center_mm.get.x)}, ${fmt(center_mm.get.y)}  Distance to center: ${fmt(center_mm.get.distance(beamCenter_mm))}"))
+  else
+    wlMessage.foreach(_.warn(s"Center of ball could not be determined. The ball area is of size zero"))
 
   private case class MinMax(min: Float, max: Float) {}
 

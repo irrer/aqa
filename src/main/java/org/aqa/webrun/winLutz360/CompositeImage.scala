@@ -47,12 +47,17 @@ object CompositeImage {
     // convert to buffered image, using the central part of the ball as the brightest pixels.
     val img1 = BlankImage.make(preprocessedImage, analysis.edge.edgeSet)
 
-    // restrict the image to the AOI
-    val img2 = ImageUtil.subImage(img1, makeBoundingRectangle(analysis))
+    try {
 
-    // make AOI bigger.
-    val img3 = ImageUtil.magnify(img2, scale)
-    img3
+      // restrict the image to the AOI
+      val img2 = ImageUtil.subImage(img1, makeBoundingRectangle(analysis))
+
+      // make AOI bigger.
+      val img3 = ImageUtil.magnify(img2, scale)
+      img3
+    } catch {
+      case _: Throwable => img1
+    }
 
   }
 
@@ -90,55 +95,56 @@ object CompositeImage {
     val outerRadius_pix: Int = analysis.trans.iso2PixDistX(analysis.machineWL.ballDiameter_mm).round.toInt
     val innerRadius_pix = outerRadius_pix / 2
 
-    val ballCenter_pix = analysis.ball.center_pix
-
     val gc = ImageUtil.getGraphics(bufImg)
     gc.setColor(Color.yellow)
     val rect = makeBoundingRectangle(analysis)
     val si = ScaledImage(scale, rect.x, rect.y)
 
     val angle = analysis.collimator_deg
-    val center = analysis.ball.center_pix
 
-    {
-      val x1 = ballCenter_pix.x - outerRadius_pix
-      val y1 = ballCenter_pix.y
-      val x2 = ballCenter_pix.x + outerRadius_pix
-      val y2 = ballCenter_pix.y
+    if (analysis.ball.center_pix.isDefined) {
+      val ballCenter_pix = analysis.ball.center_pix.get
 
-      val point1 = WLRotator.rotatePoint(new Point2d(x1, y1), center, angle)
-      val point2 = WLRotator.rotatePoint(new Point2d(x2, y2), center, angle)
+      {
+        val x1 = ballCenter_pix.x - outerRadius_pix
+        val y1 = ballCenter_pix.y
+        val x2 = ballCenter_pix.x + outerRadius_pix
+        val y2 = ballCenter_pix.y
 
-      si.drawLine(gc, point1, point2)
+        val point1 = WLRotator.rotatePoint(new Point2d(x1, y1), ballCenter_pix, angle)
+        val point2 = WLRotator.rotatePoint(new Point2d(x2, y2), ballCenter_pix, angle)
+
+        si.drawLine(gc, point1, point2)
+      }
+
+      {
+        val x1 = ballCenter_pix.x
+        val y1 = ballCenter_pix.y - outerRadius_pix
+        val x2 = ballCenter_pix.x
+        val y2 = ballCenter_pix.y + outerRadius_pix
+
+        val point1 = WLRotator.rotatePoint(new Point2d(x1, y1), ballCenter_pix, angle)
+        val point2 = WLRotator.rotatePoint(new Point2d(x2, y2), ballCenter_pix, angle)
+
+        si.drawLine(gc, point1, point2)
+      }
+
+      def makeCircle(radius: Double): Unit = {
+        val x = ballCenter_pix.x - radius
+        val width = radius * 2
+
+        val y = ballCenter_pix.y - radius
+        val height = radius * 2
+        si.drawOval(gc, x, y, width, height)
+      }
+
+      makeCircle(innerRadius_pix)
+      makeCircle(outerRadius_pix)
+
+      gc.setColor(Color.red)
+      ImageUtil.setLineThickness(gc, 2.0)
+      si.drawLine(gc, ballCenter_pix, analysis.edge.edgeSet.center_pix)
     }
-
-    {
-      val x1 = ballCenter_pix.x
-      val y1 = ballCenter_pix.y - outerRadius_pix
-      val x2 = ballCenter_pix.x
-      val y2 = ballCenter_pix.y + outerRadius_pix
-
-      val point1 = WLRotator.rotatePoint(new Point2d(x1, y1), center, angle)
-      val point2 = WLRotator.rotatePoint(new Point2d(x2, y2), center, angle)
-
-      si.drawLine(gc, point1, point2)
-    }
-
-    def makeCircle(radius: Double): Unit = {
-      val x = ballCenter_pix.x - radius
-      val width = radius * 2
-
-      val y = ballCenter_pix.y - radius
-      val height = radius * 2
-      si.drawOval(gc, x, y, width, height)
-    }
-
-    makeCircle(innerRadius_pix)
-    makeCircle(outerRadius_pix)
-
-    gc.setColor(Color.red)
-    ImageUtil.setLineThickness(gc, 2.0)
-    si.drawLine(gc, ballCenter_pix, analysis.edge.edgeSet.center_pix)
   }
 
   /**

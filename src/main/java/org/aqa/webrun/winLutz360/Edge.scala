@@ -20,6 +20,7 @@ import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.LocateEdge
 import org.aqa.AQALine
 import org.aqa.BiCubicImage
+import org.aqa.Logging
 
 import javax.vecmath.Point2d
 import scala.annotation.tailrec
@@ -44,7 +45,7 @@ case class Edge( //
     al: AttributeList,
     width: Double,
     resolution: Double
-) {
+) extends Logging {
 
   private val positive = offsetFinish > offsetStart
 
@@ -107,10 +108,25 @@ case class Edge( //
   private val edgeProfileMedian = (edgeProfile.min + edgeProfile.max) / 2
 
   /** Distance from the point to the edge. */
-  val position: Double = (LocateEdge.locateEdge(edgeProfile.map(_.toFloat).toIndexedSeq, edgeProfileMedian) + indexOfMin) * resolution
+  val position: Option[Double] = {
+    try {
+      val p = (LocateEdge.locateEdge(edgeProfile.map(_.toFloat).toIndexedSeq, edgeProfileMedian) + indexOfMin) * resolution
+      Some(p)
+    } catch {
+      case _: Throwable =>
+        logger.warn(s"Unable to locate edge.")
+        None
+    }
+  }
 
   /** Point where the WL edge  */
-  val edgeCenter: Point2d = line.pointOn(if (offsetFinish > 0) position else -position)
+  val edgeCenter: Point2d = {
+    if (position.isDefined) {
+      val p = position.get
+      line.pointOn(if (offsetFinish > 0) p else -p)
+    } else
+      line.pointOn(0)
+  }
 
   /** Line at the nearest (from line's center) edge of the AOI. */
   val loLine: AQALine = {

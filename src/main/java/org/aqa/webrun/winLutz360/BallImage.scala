@@ -29,19 +29,23 @@ case class BallImage(analysis: Analysis) {
       )
         yield new Point2i(x, y)
 
-    pointList.toSeq
+    pointList
 
   }
 
-  private val ballRectangle: Rectangle = {
-    val minX = ballPointList.map(_.x).min
-    val maxX = ballPointList.map(_.x).max
-    val minY = ballPointList.map(_.y).min
-    val maxY = ballPointList.map(_.y).max
+  private val ballRectangle: Option[Rectangle] = {
+    if (ballPointList.isEmpty)
+      None
+    else {
+      val minX = ballPointList.map(_.x).min
+      val maxX = ballPointList.map(_.x).max
+      val minY = ballPointList.map(_.y).min
+      val maxY = ballPointList.map(_.y).max
 
-    val rectangle = new Rectangle(minX, minY, maxX - minX, maxY - minY)
+      val rectangle = new Rectangle(minX, minY, maxX - minX, maxY - minY)
 
-    rectangle
+      Some(rectangle)
+    }
   }
 
   private val ballScale = 20
@@ -51,36 +55,42 @@ case class BallImage(analysis: Analysis) {
     * @param ballImage Annotate this.
     */
   private def annotateScaledBallImage(ballImage: BufferedImage): Unit = {
-    val si = ScaledImage(ballScale, ballRectangle.x, ballRectangle.y)
+    if (analysis.ball.center_pix.isDefined && ballRectangle.isDefined && ballPointList.nonEmpty) {
+      val si = ScaledImage(ballScale, ballRectangle.get.x, ballRectangle.get.y)
 
-    val center_pix = analysis.ball.center_pix
+      val center_pix = analysis.ball.center_pix.get
 
-    val lineLength_pix = 5
+      val lineLength_pix = 5
 
-    val gc = ImageUtil.getGraphics(ballImage)
-    gc.setColor(Color.yellow)
+      val gc = ImageUtil.getGraphics(ballImage)
+      gc.setColor(Color.yellow)
 
-    si.drawLine(gc, center_pix.x - lineLength_pix, center_pix.y, center_pix.x + lineLength_pix, center_pix.y)
+      si.drawLine(gc, center_pix.x - lineLength_pix, center_pix.y, center_pix.x + lineLength_pix, center_pix.y)
 
-    si.drawLine(gc, center_pix.x, center_pix.y - lineLength_pix, center_pix.x, center_pix.y + lineLength_pix)
+      si.drawLine(gc, center_pix.x, center_pix.y - lineLength_pix, center_pix.x, center_pix.y + lineLength_pix)
+    }
   }
 
   /**
     * Make an image of just the ball with the center marked.
     * @return Image of ball.
     */
-  def ballImage(): BufferedImage = {
+  def ballImage(): Option[BufferedImage] = {
 
-    val bufImg: BufferedImage = {
-      val fullImage = BlankImage.make(analysis.preprocessedImage, analysis.edge.edgeSet)
-      val subImage = ImageUtil.subImage(fullImage, ballRectangle)
-      val scaledImage = ImageUtil.magnify(subImage, ballScale)
-      scaledImage
+    if (ballPointList.isEmpty || ballRectangle.isEmpty)
+      None
+    else {
+      val bufImg: BufferedImage = {
+        val fullImage = BlankImage.make(analysis.preprocessedImage, analysis.edge.edgeSet)
+        val subImage = ImageUtil.subImage(fullImage, ballRectangle.get)
+        val scaledImage = ImageUtil.magnify(subImage, ballScale)
+        scaledImage
+      }
+
+      annotateScaledBallImage(bufImg)
+
+      Some(bufImg)
     }
-
-    annotateScaledBallImage(bufImg)
-
-    bufImg
   }
 
   /**
@@ -88,24 +98,28 @@ case class BallImage(analysis: Analysis) {
     * ball.  This image illustrates the effects of the stem that supports the ball.
     * @return Zoomed, annotated, ball image.
     */
-  def ballBackgroundImage(): BufferedImage = {
-    val subImg = analysis.preprocessedImage.getSubimage(ballRectangle)
+  def ballBackgroundImage(): Option[BufferedImage] = {
+    if (ballPointList.isEmpty || ballRectangle.isEmpty)
+      None
+    else {
+      val subImg = analysis.preprocessedImage.getSubimage(ballRectangle.get)
 
-    val stdDev = ImageUtil.stdDev(subImg.pixelData.flatten)
+      val stdDev = ImageUtil.stdDev(subImg.pixelData.flatten)
 
-    val limit = stdDev * .5
+      val limit = stdDev * .5
 
-    val min = subImg.pixelData.flatten.sorted.slice(5, 15).sum / 10
-    val backgroundImage = subImg.fun1(p => if (p > limit) min else p)
+      val min = subImg.pixelData.flatten.sorted.slice(5, 15).sum / 10
+      val backgroundImage = subImg.fun1(p => if (p > limit) min else p)
 
-    val bufImg = {
-      val img = backgroundImage.toBufferedImage(Color.blue)
-      ImageUtil.magnify(img, ballScale)
+      val bufImg = {
+        val img = backgroundImage.toBufferedImage(Color.blue)
+        ImageUtil.magnify(img, ballScale)
+      }
+
+      annotateScaledBallImage(bufImg)
+
+      Some(bufImg)
     }
-
-    annotateScaledBallImage(bufImg)
-
-    bufImg
   }
 
 }

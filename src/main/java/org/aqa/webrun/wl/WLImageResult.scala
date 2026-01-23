@@ -102,7 +102,7 @@ case class WLImageResult(
 
   private def ballY_pix: Double = brcY.get + coarseAoiBounds_pix.get.y
 
-  override def ballCenter_mm: Point2d = trans.pix2Iso(new Point2d(ballX_pix, ballY_pix))
+  override def ballCenter_mm: Option[Point2d] = Some(trans.pix2Iso(new Point2d(ballX_pix, ballY_pix)))
 
   private def boxCenterX_pix: Double = (right_pix + left_pix) / 2.0
 
@@ -206,8 +206,8 @@ case class WLImageResult(
       bottomEdge_mm = bottom_mm,
       leftEdge_mm = left_mm,
       rightEdge_mm = right_mm,
-      ballCenterX_mm = ballCenter_mm.getX,
-      ballCenterY_mm = ballCenter_mm.getY,
+      ballCenterX_mm = if (ballCenter_mm.isDefined) ballCenter_mm.get.getX else Double.NaN,
+      ballCenterY_mm = if (ballCenter_mm.isDefined) ballCenter_mm.get.getY else Double.NaN,
       topEdgePlanned_mm = planned.map(_.top),
       bottomEdgePlanned_mm = planned.map(_.bottom),
       leftEdgePlanned_mm = planned.map(_.left),
