@@ -100,13 +100,26 @@ case class EdgeAnalysis( //
   }
 
   /**
+    * Determine the meaning of the positive and negative distance from the point of a line.  This determines whether
+    * positive is in the direction of the X1 or X2 edge, or, the direction of the Y1 or Y2 edge.
+    * @param line For this line.
+    * @return
+    */
+  private def signOf(line: AQALine, center_pix: Point2d): Int = {
+    val pos = line.pointOn(1)
+    val neg = line.pointOn(-1)
+    val offsetPoint = new Point2d(center_pix.getX + 1, center_pix.getY)
+    val ptRot = WLRotator.rotatePoint(offsetPoint, center_pix, 360 - line.angle_deg)
+    val sign = if (pos.distance(ptRot) > neg.distance(ptRot)) 1 else -1
+    sign
+  }
+
+  /**
     * Make an image that represents the coarse finding of the edges.
     * @return Image showing coarse rectangle.
     */
   def coarseImage(): BufferedImage = {
     val img1 = preprocessedImage.toBufferedImage(Color.blue)
-
-    val border = 10
 
     val cr = coarseRectangle
 
@@ -153,30 +166,13 @@ case class EdgeAnalysis( //
     val xLine = AQALine(coarseCenter, collAngle)
     val yLine = xLine.perpendicular
 
-    val xSign: Int = {
-      if (collAngle == 0) -1
-      else if (collAngle <= 90) 1
-      else if (collAngle < 135) -1
-      else if (collAngle <= 225) 1
-      else if (collAngle < 315) -1
-      else 1
-    }
-
-    val ySign: Int = {
-      if (collAngle == 0) -1
-      else if (collAngle < 45) 1
-      else if (collAngle <= 135) -1
-      else if (collAngle < 225) 1
-      else if (collAngle < 270) -1
-      else if (collAngle == 270) 1
-      else if (collAngle <= 315) -1
-      else 1
-    }
+    val xSign = signOf(xLine, coarseCenter)
+    val ySign = signOf(yLine, coarseCenter)
 
     val x1MaxLen = maxOffset(xLine, xSign, pixBandWidth, approximateResolution)
     val x2MaxLen = maxOffset(xLine, -xSign, pixBandWidth, approximateResolution)
-    val y1MaxLen = maxOffset(yLine, -ySign, pixBandWidth, approximateResolution)
-    val y2MaxLen = maxOffset(yLine, ySign, pixBandWidth, approximateResolution)
+    val y1MaxLen = maxOffset(yLine, ySign, pixBandWidth, approximateResolution)
+    val y2MaxLen = maxOffset(yLine, -ySign, pixBandWidth, approximateResolution)
 
     val x1 = Edge("X1", xLine, 0, x1MaxLen, biCubicImage, al, pixBandWidth, approximateResolution)
     val x2 = Edge("X2", xLine, 0, x2MaxLen, biCubicImage, al, pixBandWidth, approximateResolution)
@@ -217,24 +213,8 @@ case class EdgeAnalysis( //
     val xWidth = ael.Y1.edgeCenter.distance(ael.Y2.edgeCenter) - penumbra_pix
     val yWidth = ael.X1.edgeCenter.distance(ael.X2.edgeCenter) - penumbra_pix
 
-    /**
-      * Determine the meaning of the positive and negative distance from the point of a line.  This determines whether
-      * positive is in the direction of the X1 or X2 edge, or, the direction of the Y1 or Y2 edge.
-      * @param line For this line.
-      * @return
-      */
-    def signOf(line: AQALine): Int = {
-      val c = approximateEdgeLocations.center_pix
-      val pos = line.pointOn(1)
-      val neg = line.pointOn(-1)
-      val offsetPoint = new Point2d(c.getX + 1, c.getY)
-      val ptRot = WLRotator.rotatePoint(offsetPoint, c, 360 - line.angle_deg)
-      val sign = if (pos.distance(ptRot) > neg.distance(ptRot)) 1 else -1
-      sign
-    }
-
-    val xSign = signOf(xLine)
-    val ySign = signOf(yLine)
+    val xSign = signOf(xLine, approximateEdgeLocations.center_pix)
+    val ySign = signOf(yLine, approximateEdgeLocations.center_pix)
 
     val x1 = Edge("X1", xLine, 0, xSign * distanceX, biCubicImage, al, xWidth, preciseResolution)
     val x2 = Edge("X2", xLine, 0, -xSign * distanceX, biCubicImage, al, xWidth, preciseResolution)
