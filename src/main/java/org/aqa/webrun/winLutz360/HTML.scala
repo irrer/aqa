@@ -1,5 +1,6 @@
 package org.aqa.webrun.winLutz360
 
+import edu.umro.ImageUtil.DicomImage
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.webrun.wl.WLgenHtml
 import org.aqa.Util
@@ -590,13 +591,68 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
     }
   }
 
+  private def imageNavigation(): ElemJS = {
+
+    def imgElem(fileName: String, title: String): Elem = {
+      <div style="margin:20px;">
+        <a href={fileName} title="Click for full image."><img src={fileName} width="100"  style="display: block; margin-left: auto; margin-right: auto; width: 50%;"/></a>
+        <p style="text-align:center;">{title}</p>
+      </div>
+    }
+
+    val closeup: Elem = {
+      imgElem(WLgenHtml.BRIGHT_SUMMARY_FILE_NAME, "Center Detail")
+    }
+
+    val fullImage: Elem = {
+      val bufImg = BlankImage.make(analysis.preprocessedImage, analysis.edge.edgeSet)
+      val fileName = "FullImage.png"
+      val file = new File(analysis.subDir, fileName)
+      Config.applyWatermark(bufImg)
+      Util.writePng(bufImg, file)
+      imgElem(fileName, "Full Image")
+    }
+
+    val deepColor: Elem = {
+      val dicomImage = new DicomImage(analysis.al)
+      val bufImg = dicomImage.toDeepColorBufferedImage(0.01)
+      val fileName = "DeepColorImage.png"
+      val file = new File(analysis.subDir, fileName)
+      Config.applyWatermark(bufImg)
+      Util.writePng(bufImg, file)
+      imgElem(fileName, "High Contrast Full Image")
+    }
+
+    val content = {
+      <div class="row">
+        <div class="col-md-2">
+          <p style="margin-top:81px;">
+          </p>
+          {dicomAsText()}
+        </div>
+        <div class="col-md-3">
+          {closeup}
+        </div>
+        <div class="col-md-3">
+          {fullImage}
+        </div>
+        <div class="col-md-3">
+          {deepColor}
+        </div>
+      </div>
+    }
+
+    ElemJS(content, "")
+  }
+
   private def makeDiagnosticsHtml(): Unit = {
     val coarseHTML = coarseLocationHTML()
     val approximate = approximateEdgeHTML()
     val preciseEdge = preciseEdgeHTML()
+    val imageNav = imageNavigation()
     val ball = ballHTML()
 
-    val allJS = Seq(coarseHTML, approximate, preciseEdge, ball).map(_.js).mkString("\n")
+    val allJS = Seq(coarseHTML, approximate, imageNav, preciseEdge, ball).map(_.js).mkString("\n")
 
     val js = s"<script>\n$allJS\n</script>"
 
@@ -615,7 +671,16 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
             </div>
           </div>
           <hr/>
-          {showWlMessage()}
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+            {imageNav.elem}
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+            {showWlMessage()}
+          </div>
         </div>
         <div>
           <hr/>
