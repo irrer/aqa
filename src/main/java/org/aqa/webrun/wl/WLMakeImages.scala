@@ -152,11 +152,13 @@ case class WLMakeImages(
     wlMsg.info(s"error XY mm: $errorScaledXYCombined")
 
     val passed: WLImageStatus.ImageStatus = {
-      val p = annotate.annotateImage(normalPng, normalGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true, imageName, passLimit_mm = wlParameters.passLimit_mm)
-      p
+      annotate.annotateImage(normalPng, normalGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true, imageName, passLimit_mm = Some(wlParameters.passLimit_mm))
+      val p = errorScaledXYCombined <= wlParameters.passLimit_mm
+      if (p) WLImageStatus.Passed else WLImageStatus.OffsetLimitExceeded
     }
-    annotate.annotateImage(brightPng, brightGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true, imageName, passLimit_mm = wlParameters.passLimit_mm)
-    annotate.annotateImage(blackPng, blackGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = false, imageName, passLimit_mm = wlParameters.passLimit_mm)
+
+    annotate.annotateImage(brightPng, brightGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = true, imageName, passLimit_mm = Some(wlParameters.passLimit_mm))
+    annotate.annotateImage(blackPng, blackGraphics, errorScaledX, errorScaledY, errorScaledXYCombined, background = false, imageName, passLimit_mm = Some(wlParameters.passLimit_mm))
 
     val pixelData = constructPixelData(blackPng, coarseAoi)
 

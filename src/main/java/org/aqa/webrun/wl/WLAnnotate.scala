@@ -162,8 +162,9 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
       errorScaledXYCombined: Double,
       background: Boolean,
       imageName: String,
-      passLimit_mm: Double
-  ): WLImageStatus.Value = {
+      passLimit_mm: Option[Double],
+      passedParam: Boolean = false
+  ): Unit = {
     def fmt(d: Double): String = "%6.2f".format(d).trim
 
     graphics.setColor(Config.WLTextColor)
@@ -181,12 +182,12 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
     graphics.drawString(text1, xPosition1.toInt, yPosition1.toInt)
 
     val combinedXY = "R = " + fmt(errorScaledXYCombined)
-    val passed = if (errorScaledXYCombined <= passLimit_mm) WLImageStatus.Passed else WLImageStatus.OffsetLimitExceeded
+    val didPass = passedParam || (passLimit_mm.isDefined && (errorScaledXYCombined <= passLimit_mm.get))
     val statusText: String = {
-      if (passed == WLImageStatus.Passed) "PASSED" else "FAILED"
+      if (didPass) "PASSED" else "FAILED"
     }
 
-    val statusColor = if (passed == WLImageStatus.Passed) Config.WLPassColor else Config.WLFailColor
+    val statusColor = if (didPass) Config.WLPassColor else Config.WLFailColor
     graphics.setBackground(statusColor)
     val text2 = combinedXY + spacer + statusText
     val stringRectangle2 = font.getStringBounds(text2, frc)
@@ -205,8 +206,6 @@ class WLAnnotate(SCALE: Int, BALL_RADIUS: Int) {
     val xPosition3 = (png.getWidth - stringRectangle3.getWidth) / 2
     val yPosition3 = png.getHeight - stringRectangle3.getHeight
     graphics.drawString(imageName, xPosition3.toInt, yPosition3.toInt)
-
-    passed
   }
 
 }

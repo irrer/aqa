@@ -579,14 +579,16 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
 
   /** Format the validate status(es). */
   private def validationStatus: Elem = {
-    val list = analysis.statusList.map(vs => <p style="margin:20px;">{vs.status} : {vs.msg}</p>)
+    val list: Seq[Elem] = analysis.statusList.map(vs => <p style="margin:20px;">{vs.status} : {vs.msg}</p>)
     if (list.size == 1) {
       { <h4 style={s"border: 5px solid ${Util.colorToHexText(Config.WLPassColor)};border-radius: 10px;"}>{list}</h4> }
     } else {
       <h4>
       <p style={s"border: 5px solid ${Util.colorToHexText(Config.WLFailColor)};border-radius: 10px;"}> <span style="margin:20px;"> FAILED </span> </p>
         List of failed validation checks:
-      {list}
+      <div>
+        {list}
+      </div>
     </h4>
     }
   }

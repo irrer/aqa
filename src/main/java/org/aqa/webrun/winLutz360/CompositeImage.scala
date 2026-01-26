@@ -5,6 +5,7 @@ import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.ScaledImage
 import org.aqa.webrun.wl.WLAnnotate
+import org.aqa.webrun.wl.WLImageStatus
 import org.aqa.webrun.wl.WLImageUtil
 
 import java.awt.image.BufferedImage
@@ -191,6 +192,8 @@ object CompositeImage {
 
     labelEdges(bufImg, analysis, scale)
 
+    val passed  = analysis.getImageStatus.toString.equals(WLImageStatus.Passed.toString)
+
     annotate.annotateImage( //
       png = bufImg,
       graphics = ImageUtil.getGraphics(bufImg),
@@ -199,7 +202,8 @@ object CompositeImage {
       errorScaledXYCombined = analysis.offsetXY_mm,
       background = true,
       imageName = analysis.imageName,
-      passLimit_mm = analysis.machineWL.passLimit_mm
+      passLimit_mm = None,
+      passed
     )
 
     bufImg
