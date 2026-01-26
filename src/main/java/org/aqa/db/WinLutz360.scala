@@ -206,6 +206,65 @@ case class WinLutz360(
       s"""    errorXY_mm           : $errorXY_mm\n"""
     // @formatter:on
   }
+
+  def collimatorRoundedTo90: Int = Util.angleRoundedTo90(collimatorAngle_deg)
+
+  def isCardinal: Boolean = {
+    val isCard = ((collimatorRoundedTo90 - collimatorAngle_deg).abs < 1) || (collimatorAngle_deg > 359)
+    isCard
+  }
+
+
+
+  def TopOffset_mm: Option[Double] = {
+    if (isCardinal) {
+      collimatorRoundedTo90 match {
+        case 0   => Y2Offset_mm
+        case 90  => X2Offset_mm
+        case 180 => Y1Offset_mm
+        case 270 => X1Offset_mm
+      }
+    } else
+      None
+  }
+
+  def BottomOffset_mm: Option[Double] = {
+    if (isCardinal) {
+      collimatorRoundedTo90 match {
+        case 0   => Y1Offset_mm
+        case 90  => X1Offset_mm
+        case 180 => Y2Offset_mm
+        case 270 => X2Offset_mm
+      }
+    } else
+      None
+  }
+
+  def LeftOffset_mm: Option[Double] = {
+    if (isCardinal) {
+      collimatorRoundedTo90 match {
+        case 0   => X1Offset_mm
+        case 90  => Y2Offset_mm
+        case 180 => X2Offset_mm
+        case 270 => Y1Offset_mm
+      }
+    } else
+      None
+  }
+
+  def RightOffset_mm: Option[Double] = {
+    if (isCardinal) {
+      collimatorRoundedTo90 match {
+        case 0   => X2Offset_mm
+        case 90  => Y1Offset_mm
+        case 180 => X1Offset_mm
+        case 270 => Y2Offset_mm
+      }
+    } else
+      None
+  }
+
+
 }
 
 //noinspection ScalaWeakerAccess

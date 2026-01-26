@@ -49,20 +49,20 @@ object EdgeType extends Enumeration with Logging {
   }
 }
 
-
-
-
-
-
-
-
-
 /**
   * Determine whether the jaw or MLC are defining the edge of a Winston Lutz field.
   * @param beam Part of the plan that defines beam delivery.
   */
 case class EdgeType(beam: AttributeList) {
   def this(rtplan: AttributeList, rtimage: AttributeList) = this(Util.getBeamOfRtimage(rtplan, rtimage).get)
+
+  private case class LeafPair(index: Int, BeamLimitingDevice: AttributeList, BeamLimitingDevicePosition: AttributeList) {
+
+    val loEndPosition: Double = ???
+    val hiEndPosition: Double = ???
+    val loBoundary: Double = ???
+    val hiBoundary: Double = ???
+  }
 
   /** The part of the plan that positions this beam. */
   // private val beam = Util.getBeamOfRtimage(rtplan, rtimage).get
@@ -82,7 +82,7 @@ case class EdgeType(beam: AttributeList) {
       */
     private def isSeparated(leafNum: Int): Boolean = {
       val separation = (leafList(leafNum) - leafList(leafNum + numPair)).abs
-      separation > 1
+      separation > 0.01
     }
 
     private val pairList = (0 until numPair).filter(isSeparated).map(pairNum => (leafList(pairNum), leafList(pairNum + numPair)))
@@ -127,6 +127,10 @@ case class EdgeType(beam: AttributeList) {
       EdgeType.MLC
     case _ =>
       EdgeType.Jaw // assume a default
+  }
+
+  if (MLCX.isDefined && ((x1 == EdgeType.MLC) || (x2 == EdgeType.MLC))) {
+    MLCX.get
   }
 
   val y1: EdgeType.Value = 0 match {

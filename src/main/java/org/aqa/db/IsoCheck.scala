@@ -21,6 +21,7 @@ import org.aqa.webrun.wl.isoCheck.WLCollimator
 import org.aqa.webrun.wl.isoCheck.WLIsoCheck
 import org.aqa.webrun.wl.isoCheck.WLIsoTable
 import org.aqa.webrun.wl.isoCheck.WLMap
+import org.aqa.Logging
 
 import java.sql.Timestamp
 
@@ -54,16 +55,23 @@ case class IsoCheck(
 
 }
 
-object IsoCheck {
+object IsoCheck extends Logging {
   class IsoCheckTable(tag: Tag) extends Table[IsoCheck](tag, "isoCheck") {
 
     def isoCheckPK = column[Long]("isoCheckPK", O.PrimaryKey, O.AutoInc)
+
     def outputPK = column[Long]("outputPK")
+
     private def dX_mm = column[Option[Double]]("dX_mm")
+
     private def dZ_mm = column[Option[Double]]("dZ_mm")
+
     private def tableX_mm = column[Option[Double]]("tableX_mm")
+
     private def tableZ_mm = column[Option[Double]]("tableZ_mm")
+
     private def collX_mm = column[Option[Double]]("collX_mm")
+
     private def collZ_mm = column[Option[Double]]("collZ_mm")
 
     def * =
@@ -112,10 +120,12 @@ object IsoCheck {
     Db.run(action)
   }
 
-  case class IsoCheckHistory(output: Output, isoCheck: WLIsoCheck, collimator: WLCollimator, isoTable: Option[WLIsoTable], wlList: Seq[WinstonLutzGeneric]) extends HasOutput {
+  case class IsoCheckHistory(output: Output, isoCheck: WLIsoCheck, collimator: WLCollimator, isoTable: Option[WLIsoTable], wlList: Seq[WinstonLutzGeneric]) extends HasOutput with Logging {
 
     val date: Timestamp = output.dataDate.get
+
     def getTime: Long = date.getTime
+
     val hasTable: Boolean = isoTable.isDefined
 
     override def getOutput: Output = output
@@ -127,48 +137,54 @@ object IsoCheck {
   }
 
   private def makeIsoCheckHistory(output: Output, isoCheck: IsoCheck, wlList: Seq[WinstonLutzGeneric]): Option[IsoCheckHistory] = {
+    try {
+      val beamMap = new WLMap(wlList)
 
-    val beamMap = new WLMap(wlList)
+      val wlIsoCheck = WLIsoCheck.make(beamMap)
 
-    val wlIsoCheck = WLIsoCheck.make(beamMap)
+      val wlCollimator = WLCollimator.make(beamMap).get
 
-    val wlCollimator = WLCollimator.make(beamMap).get
+      val wlIsoTable = WLIsoTable.make(beamMap)
 
-    val wlIsoTable = WLIsoTable.make(beamMap)
+      wlCollimator.set_Coll_X_Optimized(isoCheck.collX_mm.get)
+      wlCollimator.set_Coll_Z_Optimized(isoCheck.collZ_mm.get)
 
-    wlCollimator.set_Coll_X_Optimized(isoCheck.collX_mm.get)
-    wlCollimator.set_Coll_Z_Optimized(isoCheck.collZ_mm.get)
+      wlCollimator.set_CA_Rpp_Optimized(wlCollimator.MinCA_Rpp(isoCheck.collX_mm.get, isoCheck.collZ_mm.get))
 
-    wlCollimator.set_CA_Rpp_Optimized(wlCollimator.MinCA_Rpp(isoCheck.collX_mm.get, isoCheck.collZ_mm.get))
+      if (
+        wlIsoTable.isDefined &&
+        isoCheck.dX_mm.isDefined &&
+        isoCheck.dZ_mm.isDefined &&
+        isoCheck.tableX_mm.isDefined &&
+        isoCheck.tableZ_mm.isDefined
+      ) {
+        wlIsoTable.get.set_dXT__0_Optimized(isoCheck.dX_mm.get)
+        wlIsoTable.get.set_dZT__0_Optimized(isoCheck.dZ_mm.get)
+        wlIsoTable.get.set_IsoTable_X_Optimized(isoCheck.tableX_mm.get)
+        wlIsoTable.get.set_IsoTable_Z_Optimized(isoCheck.tableZ_mm.get)
 
-    if (
-      wlIsoTable.isDefined &&
-      isoCheck.dX_mm.isDefined &&
-      isoCheck.dZ_mm.isDefined &&
-      isoCheck.tableX_mm.isDefined &&
-      isoCheck.tableZ_mm.isDefined
-    ) {
-      wlIsoTable.get.set_dXT__0_Optimized(isoCheck.dX_mm.get)
-      wlIsoTable.get.set_dZT__0_Optimized(isoCheck.dZ_mm.get)
-      wlIsoTable.get.set_IsoTable_X_Optimized(isoCheck.tableX_mm.get)
-      wlIsoTable.get.set_IsoTable_Z_Optimized(isoCheck.tableZ_mm.get)
-
-      wlIsoTable.get.set_RSquared_Optimized(
-        wlIsoTable.get.minSquareOfBBDisplacement(
-          isoCheck.dX_mm.get,
-          isoCheck.dZ_mm.get,
-          isoCheck.tableX_mm.get,
-          isoCheck.tableZ_mm.get
+        wlIsoTable.get.set_RSquared_Optimized(
+          wlIsoTable.get.minSquareOfBBDisplacement(
+            isoCheck.dX_mm.get,
+            isoCheck.dZ_mm.get,
+            isoCheck.tableX_mm.get,
+            isoCheck.tableZ_mm.get
+          )
         )
-      )
 
+      }
+
+      if (wlIsoCheck.isDefined) {
+        val ich = IsoCheckHistory(output, wlIsoCheck.get, wlCollimator, wlIsoTable, wlList)
+        Some(ich)
+      } else
+        None
+    } catch {
+      // if something goes wrong with this output, then still generate the rest of them.
+      case t: Throwable =>
+        logger.warn(s"Unable to make IsoCheck CSV entry $output .  ${fmtEx(t)} ")
+        None
     }
-
-    if (wlIsoCheck.isDefined) {
-      val ich = IsoCheckHistory(output, wlIsoCheck.get, wlCollimator, wlIsoTable, wlList)
-      Some(ich)
-    } else
-      None
   }
 
   /**
