@@ -16,7 +16,7 @@ import org.aqa.db.WinstonLutzGeneric
   */
 class WLMap(fullList: Seq[WinstonLutzGeneric]) {
 
-  private def r1 = Util.angleRoundedTo1 _
+  private def r1 = Util.angleRoundedTo2 _
   private def nameOf(g: Int, c: Int, t: Int): String = s"G$g C$c t$t"
   private def nameOf(wl: WinstonLutzGeneric): String = nameOf( r1(wl.gantryAngle_deg), r1(wl.collimatorAngle_deg), r1(wl.tableAngle_deg.get))
   val list: Seq[WinstonLutzGeneric] = {
