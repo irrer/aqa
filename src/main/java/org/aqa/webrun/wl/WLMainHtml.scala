@@ -397,7 +397,7 @@ object WLMainHtml extends Logging {
       // @formatter:off
       val text = WebUtil.wrapBody(
         content = ExtendedData.wrapExtendedData(extendedData, content),
-        pageTitle = "Winston Lutz",
+        pageTitle = extendedData.procedure.name,
         c3 = true,
         runScript = Some(runScript) )
       // @formatter:on
