@@ -628,9 +628,11 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
     val content = {
       <div class="row">
         <div class="col-md-2">
-          <p style="margin-top:81px;">
+          <p style="margin-top:71px;">
           </p>
           {dicomAsText()}
+          <p></p>
+          <a href="../display.html">Main Report</a>
         </div>
         <div class="col-md-3">
           {closeup}
