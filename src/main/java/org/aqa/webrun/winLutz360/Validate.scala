@@ -4,6 +4,7 @@ import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.wl.WLMessage
 import org.aqa.Config
 import org.aqa.Util
@@ -154,7 +155,7 @@ case class Validate( //
 
     private def colSums(): IndexedSeq[Double] = {
       def doCol(x: Double): Double = {
-        yIndices.map(y => bicubic.get(x, y)).sum
+        yIndices.map(y => bicubic.get(x, y)).sum / yIndices.size
       }
 
       xIndices.map(doCol)
@@ -162,7 +163,7 @@ case class Validate( //
 
     private def rowSums(): IndexedSeq[Double] = {
       def doCol(y: Double): Double = {
-        xIndices.map(x => bicubic.get(x, y)).sum
+        xIndices.map(x => bicubic.get(x, y)).sum / xIndices.size
       }
 
       yIndices.map(doCol)
@@ -209,22 +210,30 @@ case class Validate( //
        * @param b The other half profile to compare.
        * @return A value indicating how similar they are.  A smaller value means more similar.
        */
-      def diff(a: Seq[Double], b: Seq[Double]): Double = {
+      def diff(a: Seq[Double], b: Seq[Double], name: String): Double = {
         // note that dividing by the ball radius makes the size of the ball and the field irrelevant.
         val aa = smooth(a)
         val bb = smooth(b)
+
+        /*
+        if (true) {
+          val list = (0 until ballRadius).map(i => (aa(i) - bb(i)).abs)
+          Trace.showChart(list, name = name)
+        }
+         */
+
         (0 until ballRadius).map(i => (aa(i) - bb(i)).abs).sum / ballRadius
       }
 
       // Compare all combinations of profile halves.  They should be fairly close.
       val totalDiff = Seq(
         // @formatter:off
-      diff(ballProf.xLeft.reverse, ballProf.xRight      ),
-      diff(ballProf.xLeft.reverse, ballProf.yTop.reverse),
-      diff(ballProf.xLeft.reverse, ballProf.yBottom     ),
-      diff(ballProf.xRight       , ballProf.yTop.reverse),
-      diff(ballProf.xRight       , ballProf.yBottom     ),
-      diff(ballProf.yTop.reverse , ballProf.yBottom     )
+      diff(ballProf.xLeft.reverse, ballProf.xRight      , "left right"),
+      diff(ballProf.xLeft.reverse, ballProf.yTop.reverse, "left top"),
+      diff(ballProf.xLeft.reverse, ballProf.yBottom     , "left bottom"),
+      diff(ballProf.xRight       , ballProf.yTop.reverse, "right top"),
+      diff(ballProf.xRight       , ballProf.yBottom     , "right bottom"),
+      diff(ballProf.yTop.reverse , ballProf.yBottom     , "top bottom")
       // @formatter:on
       ).sum
 
