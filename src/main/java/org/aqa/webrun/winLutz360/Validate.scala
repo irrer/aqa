@@ -17,11 +17,11 @@ object Validate {
 }
 
 case class Validate( //
-    edgeAnalysis: EdgeAnalysis,
-    ball: Ball,
-    machineWL: MachineWL,
-    wlMessage: Option[WLMessage]
-) extends Logging {
+                     edgeAnalysis: EdgeAnalysis,
+                     ball: Ball,
+                     machineWL: MachineWL,
+                     wlMessage: Option[WLMessage]
+                   ) extends Logging {
 
   import org.aqa.webrun.winLutz360.Validate.ValidationStatus
 
@@ -55,11 +55,11 @@ case class Validate( //
   }
 
   /**
-    * Determine if one edges is valid in the sense that it is yielding a genuine measurement that can be
-    * compared against pass/fail limits.  Reject if it has insufficient contrast.
-    *
-    * @return Empty list on success, error message on failure.
-    */
+   * Determine if one edges is valid in the sense that it is yielding a genuine measurement that can be
+   * compared against pass/fail limits.  Reject if it has insufficient contrast.
+   *
+   * @return Empty list on success, error message on failure.
+   */
   private def validateEdge(edge: Edge): Seq[ValidationStatus] = {
 
     val measuredPctText: String = {
@@ -75,18 +75,20 @@ case class Validate( //
       Seq()
     } else {
       val msg =
-        s"Edge for ${edge.name} has insufficient contrast of ${Util
-          .fmtDbl(edge.pixelValueRange)} ($measuredPctText)  when it should be at least ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WinLutz360PercentChange}%)"
+        s"Edge for ${edge.name} has insufficient contrast of ${
+          Util
+            .fmtDbl(edge.pixelValueRange)
+        } ($measuredPctText)  when it should be at least ${Util.fmtDbl(wholeImagePixelValueRangeThreshold_cu)} (${Config.WinLutz360PercentChange}%)"
 
       Seq(ValidationStatus(WLImageStatus.BoxNotFound, msg))
     }
   }
 
   /**
-    * Check to see that if an energy is defined, then it is sufficiently large.
-    *
-    * @return Error list or empty error list.
-    */
+   * Check to see that if an energy is defined, then it is sufficiently large.
+   *
+   * @return Error list or empty error list.
+   */
   private def beamEnergyIsHighEnough(): Seq[ValidationStatus] = {
     val kvpList = DicomUtil.findAllSingle(edgeAnalysis.al, TagByName.KVP).flatMap(_.getDoubleValues).distinct.sorted
 
@@ -102,22 +104,22 @@ case class Validate( //
   }
 
   /**
-    * Determine if the edges are valid in the sense that they are yielding genuine measurements that can be
-    * compared against pass/fail limits.  Reject edges that have insufficient contrast.
-    *
-    * @return Empty list on success, error message on failure.
-    */
+   * Determine if the edges are valid in the sense that they are yielding genuine measurements that can be
+   * compared against pass/fail limits.  Reject edges that have insufficient contrast.
+   *
+   * @return Empty list on success, error message on failure.
+   */
   private def edgesHaveSufficientContrast(): Seq[ValidationStatus] = {
     val list = edgeAnalysis.edgeSet.edgeList.flatMap(validateEdge)
     list
   }
 
   /**
-    * Perform simple smoothing of given profile curve. Sum each adjacent pair of pixels.
-    *
-    * @param profile For this profile.
-    * @return A smoothed curve.
-    */
+   * Perform simple smoothing of given profile curve. Sum each adjacent pair of pixels.
+   *
+   * @param profile For this profile.
+   * @return A smoothed curve.
+   */
   private def smooth(profile: Seq[Double]): Seq[Double] = {
     val smoothIndices = -2 to +2
 
@@ -184,10 +186,10 @@ case class Validate( //
   private val ballProfiles = if (ballAOI.isDefined) Some(BallProfiles()) else None
 
   /**
-    * Determine ball validity in that the X profile is the same as the Y profile.
-    *
-    * @return None on success, error message on failure.
-    */
+   * Determine ball validity in that the X profile is the same as the Y profile.
+   *
+   * @return None on success, error message on failure.
+   */
   private def ballIsSymmetrical(): Seq[ValidationStatus] = {
 
     if (ballProfiles.isEmpty) {
@@ -200,13 +202,13 @@ case class Validate( //
       val ballRadius = Seq(ballProf.xLeft, ballProf.xRight, ballProf.yTop, ballProf.yBottom).map(_.size).min
 
       /**
-        * Find the difference of two half profiles.  Pair values from each argument and take the
-        * absolute value of the difference of each.
-        *
-        * @param a One half profile to compare.
-        * @param b The other half profile to compare.
-        * @return A value indicating how similar they are.  A smaller value means more similar.
-        */
+       * Find the difference of two half profiles.  Pair values from each argument and take the
+       * absolute value of the difference of each.
+       *
+       * @param a One half profile to compare.
+       * @param b The other half profile to compare.
+       * @return A value indicating how similar they are.  A smaller value means more similar.
+       */
       def diff(a: Seq[Double], b: Seq[Double], name: String): Double = {
         // note that dividing by the ball radius makes the size of the ball and the field irrelevant.
         val aa = smooth(a)
@@ -277,7 +279,7 @@ case class Validate( //
         val msg = s"Ball standard deviation of $stdDev, which is too small (too flat).  It must be above the ${Config.WinLutz360MinStdDev} to be valid.  Probably due to no phantom."
         Seq(ValidationStatus(WLImageStatus.BallMissing, msg))
       } else {
-        wlMessage.foreach(_.info(s"Ball are has a sufficiently large standard deviation of $stdDev, which is above the required ${Config.WinLutz360MinStdDev}."))
+        wlMessage.foreach(_.info(s"Ball has a sufficiently large standard deviation of $stdDev, which is above the required ${Config.WinLutz360MinStdDev}."))
         Seq()
       }
     }
@@ -318,11 +320,29 @@ case class Validate( //
    */
   private def profilesRiseAndFall(): Seq[ValidationStatus] = {
     def checkRiseFall(profile: IndexedSeq[Double], rising: Boolean, name: String): Seq[ValidationStatus] = {
+
+      val numPartition = 4
+
+      val partitionSize = (profile.size - (profile.size % numPartition)) / numPartition
+
+      val partitionSumList = (0 until numPartition).map(p => profile.slice(partitionSize * p, partitionSize * p + partitionSize).sum)
+
+      val sortedPartitionSumList = {
+        if (rising)
+          partitionSumList.sorted
+        else
+          partitionSumList.sorted.reverse
+      }
+
+      val ok = !partitionSumList.zip(sortedPartitionSumList).exists(ps => ps._1 != ps._2)
+
+      /*
       val first = profile.take(profile.size / 2).sum
       val second = profile.drop(profile.size / 2).sum
       val ok =
         ((first < second) && rising) ||
           ((first > second) && (!rising))
+      */
 
       val changeText = if (rising) "low to hi" else "hi to low"
 
