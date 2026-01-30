@@ -14,6 +14,15 @@ import java.io.File
 
 /**
   * Determine whether the jaw or MLC are defining the edge of a Winston Lutz field.
+  *
+  * Caveats:
+  *
+  *  1: This class assumes that the beams describe a rectangular field.  Any other shapes
+  *     will produce unpredictable results.
+  *
+  *  2: The DICOM specification allows for the definition of Y collimators, but this
+  *     class ignores them except for logging a warning message.
+  *
   * @param beam Part of the plan that defines beam delivery.
   */
 case class PlannedEdgeSet(beam: AttributeList) extends Logging {
@@ -24,16 +33,21 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
     * @param isX        True if X1/X2, false if Y1/Y2
     * @param loPosition Position of the end of the lower leaf (X1 or Y1). Note: Varian machines do not have A Y collimator.d
     * @param hiPosition Position of the end of the upper leaf (X2 or Y2). Note: Varian machines do not have A Y collimator.
-    * @param loBoundary Position of the lower value side of leaf
-    * @param hiBoundary Position of the higher value side of leaf
+    * @param topBoundary Position of the top value side of leaf with collimator angle 0
+    * @param botBoundary Position of the bottom side of leaf with collimator angle 0
     */
   private case class LeafPair( //
       isX: Boolean,
       loPosition: Double,
       hiPosition: Double,
-      loBoundary: Double,
-      hiBoundary: Double
-  ) {}
+      topBoundary: Double,
+      botBoundary: Double
+  ) {
+    override def toString: String = {
+      val x = if (isX) "X" else "Y"
+      s"$x  loPos: $loPosition   hiPos: $hiPosition   topBoundary: $topBoundary      botBoundary: $botBoundary"
+    }
+  }
 
   /**
     * Determine if the given spec has a device type with the given name.
@@ -46,13 +60,19 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
     spec.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString().equalsIgnoreCase(name)
   }
 
-  private case class Jaw(isX: Boolean, lo: Double, hi: Double) {}
+  private case class Jaw(isX: Boolean, lo: Double, hi: Double) {
+    override def toString: String = {
+      val x = if (isX) "X" else "Y"
+      s"$x    lo: ${"%3d".format(lo.toInt)}    hi: ${"%3d".format(hi.toInt)}"
+    }
+  }
 
   private def makeJaw(XY: String): Option[Jaw] = {
     try {
 
       val jawPosAl = {
         val posSeq = DicomUtil.findAllSingle(beam, TagByName.BeamLimitingDevicePositionSequence).head.asInstanceOf[SequenceAttribute]
+        //noinspection SpellCheckingInspection
         DicomUtil.alOfSeq(posSeq).find(pos => hasName(pos, XY) || hasName(pos, s"ASYM$XY"))
       }
 
@@ -87,6 +107,12 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
 
     val leafPairList: Seq[LeafPair] = {
       positionList.indices.take(pairCount).flatMap(makePair)
+    }
+
+    override def toString: String = {
+      val x = if (isX) "X" else "Y"
+      val ll = leafPairList.mkString("\n    ")
+      s"$x\n    $ll    "
     }
   }
 
@@ -127,7 +153,7 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
   private val yMLC = makeMLC("Y") // Y MLC not supported
 
   if (yMLC.isDefined)
-    throw new RuntimeException(s"RTPLAN specifies a Y collimator (MLC), but Y MLC is not supported is not supported.  Only X collimator is supported.")
+    logger.warn(s"RTPLAN specifies a Y collimator (MLC), but Y MLC is not supported and is ignored.  Only X collimator is supported.")
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -194,17 +220,19 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
 
   /** Y1 edge */
   val y1: PlannedEdge = {
-    def PE(edgeType: EdgeType.Value, position: Double) = PlannedEdge("Y1", edgeType, position)
 
-    def mlc = xMLC.get.leafPairList.map(_.loBoundary).max
+    /** Negate position to convert from standard coordinates to AQA coordinates. */
+    def PE(edgeType: EdgeType.Value, position: Double) = PlannedEdge("Y1", edgeType, -position)
+
+    def mlc = xMLC.get.leafPairList.map(_.topBoundary).min
 
     def jaw = yJaw.get.lo
 
     0 match {
       case _ if yJaw.isDefined && xMLC.isDefined && xMLC.get.leafPairList.nonEmpty =>
         0 match {
-          case _ if mlc < jaw  => PE(EdgeType.MLC, mlc)
-          case _ if mlc > jaw  => PE(EdgeType.Jaw, jaw)
+          case _ if mlc > jaw  => PE(EdgeType.MLC, mlc)
+          case _ if mlc < jaw  => PE(EdgeType.Jaw, jaw)
           case _ if mlc == jaw => PE(EdgeType.JawAndMLC, jaw)
           case _               => PE(EdgeType.NA, Double.NaN)
         }
@@ -213,7 +241,7 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
         PE(EdgeType.Jaw, jaw)
 
       case _ if xMLC.isDefined =>
-        val maxOfLo = xMLC.get.leafPairList.map(_.loBoundary).max
+        val maxOfLo = xMLC.get.leafPairList.map(_.topBoundary).max
         PE(EdgeType.MLC, maxOfLo)
 
       case _ =>
@@ -225,8 +253,10 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
 
   /** Y2 edge */
   val y2: PlannedEdge = {
-    def PE(edgeType: EdgeType.Value, position: Double) = PlannedEdge("Y2", edgeType, position)
-    def mlc = xMLC.get.leafPairList.map(_.hiBoundary).min
+
+    /** Negate position to convert from standard coordinates to AQA coordinates. */
+    def PE(edgeType: EdgeType.Value, position: Double) = PlannedEdge("Y2", edgeType, -position)
+    def mlc = xMLC.get.leafPairList.map(_.botBoundary).max
     def jaw = yJaw.get.hi
 
     0 match {
@@ -250,7 +280,7 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
   }
 
   override def toString: String = {
-    s"X1: $x1    X2: $x2    Y1: $y1    Y2: $y2"
+    s"$x1  |  $x2  |  $y1  |  $y2"
   }
 
 }
@@ -266,21 +296,23 @@ object PlannedEdgeSet extends Logging {
     val NA: Value = Value
   }
 
-  case class PlannedEdge(name: String, edgeType: EdgeType.Value, position: Double) {}
+  case class PlannedEdge(name: String, edgeType: EdgeType.Value, position: Double) {
+    override def toString: String = s"edge: $name    type: $edgeType    pos: ${"%3d".format(position.toInt)}"
+  }
 
   def main(args: Array[String]): Unit = {
     //noinspection SpellCheckingInspection
-    val dir = new File("src/test/resources/TestWLEdgeType")
-    val planFile = new File(dir, "RTPLAN1.dcm")
+    val dir = new File("src/test/resources/TestWinLutz360PlannedEdgeSet")
+    val planFile = new File(dir, "RTPLAN.dcm")
     val rtplan = new DicomFile(planFile).attributeList.get
 
     def show(beam: AttributeList): Unit = {
 
-      val planenedEdgeSet = new PlannedEdgeSet(beam)
+      val plannedEdgeSet = new PlannedEdgeSet(beam)
 
       val beamName = {
         val name = DicomUtil.findAllSingle(beam, TagByName.BeamName).head.getSingleStringValueOrEmptyString()
-        "%-20s".format(name)
+        "%-12s".format(name)
       }
 
       val beamNumber = {
@@ -288,13 +320,25 @@ object PlannedEdgeSet extends Logging {
         "%3d".format(name)
       }
 
-      val msg = s"beam: $beamName : $beamNumber :: $planenedEdgeSet"
+      val xJaw = plannedEdgeSet.makeJaw("X")
+      val yJaw = plannedEdgeSet.makeJaw("Y")
+
+      val msg = s"beam: $beamName : $beamNumber   xJaw: ${xJaw.get}    yJaw: ${yJaw.get}    ::   $plannedEdgeSet"
 
       println(msg)
 
     }
 
-    val beamNumberList = DicomUtil.findAllSingle(rtplan, TagByName.BeamNumber).flatMap(_.getIntegerValues).distinct.sorted
+    val beamNumberList = DicomUtil.findAllSingle(rtplan, TagByName.BeamNumber).flatMap(_.getIntegerValues)
+
+    {
+      println("MLC parameters")
+      val plannedEdgeSet = new PlannedEdgeSet(DicomUtil.getBeamOfRtimage(rtplan, 2).get)
+      val xMLC = plannedEdgeSet.makeMLC("X")
+      println("MLCX:\n" + xMLC.get)
+    }
+
+    println("\nAll edges should be MLC except when specified otherwise in the beam name.\n")
 
     beamNumberList.foreach(beamNumber => show(DicomUtil.getBeamOfRtimage(rtplan, beamNumber).get))
 
