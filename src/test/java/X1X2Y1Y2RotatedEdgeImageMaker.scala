@@ -1,6 +1,6 @@
-import edu.umro.ImageUtil.ImageDisplay
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.winLutz360.WLRotator
 import org.aqa.AQALine
 
@@ -147,7 +147,7 @@ object X1X2Y1Y2RotatedEdgeImageMaker {
 
     list.indices.foreach(putInBigImg)
 
-    ImageDisplay.showInMSPaint(bigImg)
+    Trace.showInMSPaint(bigImg)
 
     Thread.sleep(2000)
 
