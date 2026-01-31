@@ -174,6 +174,13 @@ case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLR
 
     val dataDate = new Timestamp(WLImageUtil.timeOf(al).getTime)
 
+    val plannedEdgeSet = {
+      if (wlRunReq.rtplan.isDefined) {
+        Some(new PlannedEdgeSet(wlRunReq.rtplan.get, al))
+      } else
+        None
+    }
+
     val winLutz360: WinLutz360 = WinLutz360(
       winLutz360PK = None,
       outputPK = extendedData.outputPK,
@@ -195,15 +202,15 @@ case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLR
       Y1Offset_mm = OffsetY1_mm,
       Y2Offset_mm = OffsetY2_mm,
       //
-      X1Type = None, // TODO
-      X2Type = None, // TODO
-      Y1Type = None, // TODO
-      Y2Type = None, // TODO
+      X1Type = plannedEdgeSet.map(p => p.x1.edgeType.toString),
+      X2Type = plannedEdgeSet.map(p => p.x2.edgeType.toString),
+      Y1Type = plannedEdgeSet.map(p => p.y1.edgeType.toString),
+      Y2Type = plannedEdgeSet.map(p => p.y2.edgeType.toString),
       //
-      X1PlannedOffset_mm = None, // TODO
-      X2PlannedOffset_mm = None, // TODO
-      Y1PlannedOffset_mm = None, // TODO
-      Y2PlannedOffset_mm = None // TODO
+      X1PlannedOffset_mm = plannedEdgeSet.map(p => p.x1.position),
+      X2PlannedOffset_mm = plannedEdgeSet.map(p => p.x2.position),
+      Y1PlannedOffset_mm = plannedEdgeSet.map(p => p.y1.position),
+      Y2PlannedOffset_mm = plannedEdgeSet.map(p => p.y2.position)
     )
 
     winLutz360
