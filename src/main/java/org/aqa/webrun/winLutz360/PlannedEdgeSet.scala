@@ -105,8 +105,44 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
       }
     }
 
-    val leafPairList: Seq[LeafPair] = {
+    private val leafPairList: Seq[LeafPair] = {
       positionList.indices.take(pairCount).flatMap(makePair)
+    }
+
+    private def posList: Seq[Double] = leafPairList.flatMap(lp => Seq(lp.loPosition, lp.hiPosition))
+
+    private def bndList: Seq[Double] = leafPairList.flatMap(lp => Seq(lp.loPosition, lp.hiPosition))
+
+    /** Position of X1 edge. */
+    val X1: Double = {
+      if (isX)
+        posList.min
+      else
+        bndList.min
+    }
+
+    /** Position of X2 edge. */
+    val X2: Double = {
+      if (isX)
+        posList.max
+      else
+        bndList.max
+    }
+
+    /** Position of Y1 edge. */
+    val Y1: Double = {
+      if (isX)
+        bndList.min
+      else
+        posList.min
+    }
+
+    /** Position of Y2 edge. */
+    val Y2: Double = {
+      if (isX)
+        bndList.max
+      else
+        posList.max
     }
 
     override def toString: String = {
@@ -135,9 +171,13 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
           list.get(TagByName.LeafPositionBoundaries).getDoubleValues
         }
 
-        val mlc = MLC(XY.equalsIgnoreCase("X"), boundaryList, positionList)
+        if (boundaryList.isEmpty)
+          None
+        else {
+          val mlc = MLC(XY.equalsIgnoreCase("X"), boundaryList, positionList)
 
-        Some(mlc)
+          Some(mlc)
+        }
       }
     } catch {
       case _: Throwable =>
@@ -161,12 +201,12 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
   val x1: PlannedEdge = {
     def PE(edgeType: EdgeType.Value, position: Double) = PlannedEdge("X1", edgeType, position)
 
-    def mlc = xMLC.get.leafPairList.map(_.loPosition).max
+    def mlc = xMLC.get.X1
 
     def jaw = xJaw.get.lo
 
     0 match {
-      case _ if xJaw.isDefined && xMLC.isDefined && xMLC.get.leafPairList.nonEmpty =>
+      case _ if xJaw.isDefined && xMLC.isDefined =>
         0 match {
           case _ if mlc < jaw  => PE(EdgeType.Jaw, jaw)
           case _ if mlc > jaw  => PE(EdgeType.MLC, mlc)
@@ -177,7 +217,7 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
       case _ if xJaw.isDefined =>
         PE(EdgeType.Jaw, jaw)
 
-      case _ if xMLC.isDefined && xMLC.get.leafPairList.nonEmpty =>
+      case _ if xMLC.isDefined =>
         PE(EdgeType.MLC, jaw)
 
       case _ =>
@@ -191,13 +231,13 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
   val x2: PlannedEdge = {
     def PE(edgeType: EdgeType.Value, position: Double) = PlannedEdge("X2", edgeType, position)
 
-    def mlc = xMLC.get.leafPairList.map(_.hiPosition).min
+    def mlc = xMLC.get.X2
 
     def jaw = xJaw.get.hi
 
     0 match {
 
-      case _ if xJaw.isDefined && xMLC.isDefined && xMLC.get.leafPairList.nonEmpty =>
+      case _ if xJaw.isDefined && xMLC.isDefined =>
         0 match {
           case _ if mlc < jaw  => PE(EdgeType.MLC, mlc)
           case _ if mlc > jaw  => PE(EdgeType.Jaw, jaw)
@@ -208,7 +248,7 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
       case _ if xJaw.isDefined =>
         PE(EdgeType.Jaw, jaw)
 
-      case _ if xMLC.isDefined && xMLC.get.leafPairList.nonEmpty =>
+      case _ if xMLC.isDefined =>
         PE(EdgeType.MLC, mlc)
 
       case _ =>
@@ -224,12 +264,12 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
     /** Negate position to convert from standard coordinates to AQA coordinates. */
     def PE(edgeType: EdgeType.Value, position: Double) = PlannedEdge("Y1", edgeType, -position)
 
-    def mlc = xMLC.get.leafPairList.map(_.topBoundary).min
+    def mlc = xMLC.get.Y1
 
     def jaw = yJaw.get.lo
 
     0 match {
-      case _ if yJaw.isDefined && xMLC.isDefined && xMLC.get.leafPairList.nonEmpty =>
+      case _ if yJaw.isDefined && xMLC.isDefined =>
         0 match {
           case _ if mlc > jaw  => PE(EdgeType.MLC, mlc)
           case _ if mlc < jaw  => PE(EdgeType.Jaw, jaw)
@@ -241,8 +281,7 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
         PE(EdgeType.Jaw, jaw)
 
       case _ if xMLC.isDefined =>
-        val maxOfLo = xMLC.get.leafPairList.map(_.topBoundary).max
-        PE(EdgeType.MLC, maxOfLo)
+        PE(EdgeType.MLC, mlc)
 
       case _ =>
         PE(EdgeType.NA, Double.NaN)
@@ -256,11 +295,13 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
 
     /** Negate position to convert from standard coordinates to AQA coordinates. */
     def PE(edgeType: EdgeType.Value, position: Double) = PlannedEdge("Y2", edgeType, -position)
-    def mlc = xMLC.get.leafPairList.map(_.botBoundary).max
+
+    def mlc = xMLC.get.Y2
+
     def jaw = yJaw.get.hi
 
     0 match {
-      case _ if yJaw.isDefined && xMLC.isDefined && xMLC.get.leafPairList.nonEmpty =>
+      case _ if yJaw.isDefined && xMLC.isDefined =>
         0 match {
           case _ if mlc < jaw  => PE(EdgeType.MLC, mlc)
           case _ if mlc > jaw  => PE(EdgeType.Jaw, jaw)
