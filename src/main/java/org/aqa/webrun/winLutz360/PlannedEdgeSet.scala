@@ -60,6 +60,12 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
     spec.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString().equalsIgnoreCase(name)
   }
 
+  /**
+   * Container for properties related to a pair of jaws.
+   * @param isX X or Y jaws, true if X
+   * @param lo X1/Y1 value
+   * @param hi X2/Y2 value
+   */
   private case class Jaw(isX: Boolean, lo: Double, hi: Double) {
     override def toString: String = {
       val x = if (isX) "X" else "Y"
@@ -89,6 +95,12 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
     }
   }
 
+  /**
+   * Container for defining a collimator.
+   * @param isX True if X, false if Y.
+   * @param boundaryList List of all leaf boundaries for this MLC.
+   * @param positionList List of all leaf end positions for this MLC.
+   */
   private case class MLC(isX: Boolean, boundaryList: Seq[Double], positionList: Seq[Double]) {
 
     private val pairCount = positionList.size / 2
@@ -109,8 +121,10 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
       positionList.indices.take(pairCount).flatMap(makePair)
     }
 
+    /** list of all leaf positions for leaf pairs that are separated. */
     private def posList: Seq[Double] = leafPairList.flatMap(lp => Seq(lp.loPosition, lp.hiPosition))
 
+    /** list of all leaf boundaries for leaf pairs that are separated. */
     private def bndList: Seq[Double] = leafPairList.flatMap(lp => Seq(lp.loPosition, lp.hiPosition))
 
     /** Position of X1 edge. */
@@ -152,6 +166,11 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
     }
   }
 
+  /**
+   * Attempt to make a collimator of the given orientation.
+   * @param XY Either "X" or "Y".  Use this to search for the collimator name
+   * @return
+   */
   private def makeMLC(XY: String): Option[MLC] = {
     try {
 
