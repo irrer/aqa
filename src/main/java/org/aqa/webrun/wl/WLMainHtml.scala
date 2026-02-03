@@ -9,6 +9,7 @@ import org.aqa.web.C3ChartHistory
 import org.aqa.web.WebUtil
 import org.aqa.Util
 import org.aqa.web.C3Chart
+import org.aqa.webrun.winLutz360.WinLutz360Chart
 
 import java.awt.Color
 import java.io.File
@@ -24,8 +25,6 @@ object WLMainHtml extends Logging {
 
     val passStyle = s"color: #000000; background: #${Config.WLPassColor};"
     val cautionStyle = s"color: #000000; background: yellow;"
-
-    def relUrl(ir: WLImageResult) = ir.directory.getName
 
     def canRead(name: String, ir: WLResult): Boolean = new File(ir.subDir, name).canRead
 
@@ -48,8 +47,6 @@ object WLMainHtml extends Logging {
     // val readyForEvaluation = if (jobStatus(resultList) == JobStatus.ReadyForEvaluation) "*" else ""
 
     def irTextHtml(ir: WLResult): Seq[Elem] = {
-      def fmtDbl(value: Double): String = "%6.2f".format(value).trim
-
       def hiFmtDbl(d: Double): String = "%9.6f".format(d).trim
 
       // val wl: Option[WinstonLutz] = if (WLImageStatus.hasResult(ir.imageStatus)) Some(ir.toWinstonLutz) else None
@@ -364,7 +361,12 @@ object WLMainHtml extends Logging {
         </table>
       }
 
-      val wlChart = new WLChart(extendedData.output.outputPK.get)
+      val wlChart = {
+        if (extendedData.procedure.isWinLutz360)
+          new WinLutz360Chart(extendedData.output.outputPK.get)
+        else
+          new WLChart(extendedData.output.outputPK.get)
+      }
 
       val chartHtml: Seq[Elem] = {
         def toElem(beamName: String, chart: C3ChartHistory) = {

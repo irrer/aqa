@@ -9,11 +9,12 @@ import org.aqa.db.WinstonLutz
 import org.aqa.web.C3ChartHistory
 import org.aqa.Config
 import org.aqa.Util
+import org.aqa.webrun.winLutz360.WLChartGeneric
 
 import java.awt.Color
 import java.util.Date
 
-class WLChart(outputPK: Long) extends Logging {
+class WLChart(outputPK: Long) extends Logging with WLChartGeneric {
   private val output: Output = Output.get(outputPK).get
   private val machine: Machine = Machine.get(output.machinePK.get).get
 

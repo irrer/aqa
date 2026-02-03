@@ -18,6 +18,9 @@ package org.aqa.webrun.wl
 
 import org.aqa.web.WebUtil._
 import org.aqa.Logging
+import org.aqa.db.Output
+import org.aqa.db.Procedure
+import org.aqa.webrun.winLutz360.WinLutz360Chart
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -45,7 +48,13 @@ class WLHistoryRestlet extends Restlet with SubUrlRoot with Logging {
       super.handle(request, response)
       val valueMap = getValueMap(request)
       val outputPK = valueMap(WLHistoryRestlet.outputPKTag).toInt
-      val chartList = new WLChart(outputPK).chartList
+      val procedure = Procedure.get(Output.get(outputPK).get.procedurePK).get
+      val chartList = {
+        if (procedure.isWinLutz360)
+          new WinLutz360Chart(outputPK).chartList
+        else
+          new WLChart(outputPK).chartList
+      }
       val js = chartList.map(_.javascript).mkString("\n", "\n// ------------------------------------------------------------------------------------------\n", "\n")
       response.setStatus(Status.SUCCESS_OK)
       response.setEntity(js, MediaType.APPLICATION_JAVASCRIPT)
