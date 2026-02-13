@@ -34,6 +34,44 @@ import org.aqa.db.Db.driver.api._
   * Note: All UIDs are anonymized with the generic UID tag instead of their own (like 0008,0018:SOPInstanceUID or
   * 0008,1155:ReferencedSOPInstanceUID).  This is because the same value is used by different attributes, and the
   * lookup is really under the context of UID.
+  *
+  * Creating a database index for the attributeHash column can greatly improve performance.  The following statements
+  * were used in SqlServer to do so.
+  *
+  * The indexes discussed below have already been added to:
+  *     UMich Production
+  *     AQA Research
+  *     AQA Sandbox (test)
+  *     Jim's development system.
+  *
+  * --------- SqlServer --------------------------------------------------------------------
+  *
+  * Just a test to make sure no column exceeds 128 characters.  The SqlServer ALTER command should fail if 128 is exceeded,
+  * but it's nice to verify ahead of time:
+  *
+  *     SELECT MAX(LEN("attributeHash")) AS MaxLength FROM "dicomAnonymous";
+  *
+  *
+  * SqlServer will not let you index a varchar column of max length.  This limits the length to 128 characters.  It
+  * can be done while the database is running, but probably not a good idea when the table is being modified.
+  *
+  *     ALTER TABLE "dicomAnonymous" ALTER COLUMN "attributeHash" VARCHAR(128) NOT NULL;
+  *
+  *
+  * This creates an index so that previously anonymized DICOM attributes can be found quickly:
+  *
+  *     CREATE INDEX "indexDicomAnonymousAttributeHash" ON "dicomAnonymous" ("attributeHash");
+  *
+  * --------- Postgresql -------------------------------------------------------------------
+  *
+  * The equivalent statements in Postgresql:
+  *
+  *     SELECT MAX(LENGTH("attributeHash")) AS max_length FROM "dicomAnonymous";
+  *
+  *     (Postgresql does not require the type of the column to be modified)
+  *
+  *     CREATE INDEX "indexDicomAnonymousAttributeHash" ON "dicomAnonymous" ("attributeHash");
+  *
   */
 case class DicomAnonymous(
     dicomAnonymousPK: Option[Long], // primary key
