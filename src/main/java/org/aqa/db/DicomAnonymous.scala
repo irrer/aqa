@@ -28,6 +28,8 @@ import org.aqa.Crypto
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 
+import scala.util.Random
+
 /**
   * Support the anonymization of DICOM by providing a way to store previously anonymized values in the database.
   *
@@ -247,15 +249,26 @@ object DicomAnonymous extends Logging {
     val hashMap = attrList.map(attr => (makeAttributeHash(institutionKey, attr), attr)).toMap
     val hashSet = hashMap.keySet
 
+    val cachedList = hashSet.flatMap(key => DicomAnonymousCache.getCache(institutionPK, attributeHash = key))
+
+    val cachedListKeys = cachedList.map(_.attributeHash)
+
+    val neededList = hashSet.diff(cachedListKeys)
+
     val action = {
-      DicomAnonymous.query.filter(da => (da.institutionPK === institutionPK) && da.attributeHash.inSet(hashSet))
+      DicomAnonymous.query.filter(da => (da.institutionPK === institutionPK) && da.attributeHash.inSet(neededList))
     }
 
     // show database statement
     // action.result.statements.foreach(println)
 
-    val list = Db.run(action.result)
-    list
+    val listFromDb = Db.run(action.result)
+
+    listFromDb.foreach(da => DicomAnonymousCache.putCache(da))
+
+    val finalList = listFromDb ++ cachedList
+
+    finalList
   }
 
   /**
@@ -331,6 +344,55 @@ object DicomAnonymous extends Logging {
     val action = DicomAnonymous.query.filter(da => da.dicomAnonymousPK > pk)
     val list = Db.run(action.result)
     list
+  }
+
+  /**
+    * Maintain an in-memory cache of recently referenced DicomAnonymous values.
+    */
+  private object DicomAnonymousCache {
+
+    /** Cache */
+    private val anonymizedDicomAttributeCache = scala.collection.mutable.HashMap[String, DicomAnonymous]()
+
+    /** makes a key for the cache */
+    private def makeCacheKeyGet(institutionPK: Long, attributeHash: String): String = attributeHash + " " + institutionPK
+
+    /** makes a key for the cache */
+    private def makeCacheKeyPut(dicomAnonymous: DicomAnonymous): String = makeCacheKeyGet(dicomAnonymous.institutionPK, dicomAnonymous.attributeHash)
+
+    /** If the cache gets larger than this, then remove some values so that it does not consume excessive amounts of memory. */
+    private val maxSize = 2000
+
+    /**
+      * Add a member to the cache.
+      * @param dicomAnonymous Add this.
+      */
+    def putCache(dicomAnonymous: DicomAnonymous): Unit =
+      anonymizedDicomAttributeCache.synchronized {
+        if (anonymizedDicomAttributeCache.size > maxSize) {
+          val keyList = anonymizedDicomAttributeCache.keys.toSeq
+          val rand = new Random()
+          while (anonymizedDicomAttributeCache.size > (maxSize / 2)) {
+            val key = keyList(rand.nextInt(keyList.size))
+            anonymizedDicomAttributeCache.remove(key)
+          }
+        }
+        val key = makeCacheKeyPut(dicomAnonymous)
+        anonymizedDicomAttributeCache.put(key, dicomAnonymous)
+      }
+
+    /**
+      * Get an item from the cache.
+      * @param institutionPK For this institution.
+      * @param attributeHash Attributes's hash.
+      * @return Value if it is in cache, else None.
+      */
+    def getCache(institutionPK: Long, attributeHash: String): Option[DicomAnonymous] =
+      anonymizedDicomAttributeCache.synchronized {
+        val key = makeCacheKeyGet(institutionPK: Long, attributeHash: String)
+        anonymizedDicomAttributeCache.get(key)
+      }
+
   }
 
 }
