@@ -1,18 +1,21 @@
 package org.aqa.webrun.psm.html
 
 import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Logging
 import org.aqa.webrun.ExtendedData
 import org.aqa.Util
+import org.aqa.web.ViewOutput
 import org.aqa.web.WebUtil
 import org.aqa.webrun.psm.PSMBeamAnalysisResult
 import org.aqa.webrun.psm.PSMCharts
 import org.aqa.webrun.psm.PSMDicom
 import org.aqa.webrun.psm.PSMGradientAscent
 import org.aqa.webrun.psm.PSMGrid
+import org.aqa.webrun.psm.PSMRunReq
 
 import java.awt.Color
 import java.io.File
@@ -35,7 +38,8 @@ class PSMMainHTML(
                    rawImg: DicomImage,
                    cbrImg: DicomImage,
                    brImg: Option[DicomImage],
-                   psmImg: Option[DicomImage]
+                   psmImg: Option[DicomImage],
+                   psmRunReq: PSMRunReq
                  ) extends Logging {
 
   def make(): Unit = {
@@ -170,24 +174,56 @@ class PSMMainHTML(
       logger.info("Wrote PSM as DICOM to: " + psmDicomFile.getAbsolutePath)
     }
 
+    val beamType: Elem = {
+      val fffText = {
+        val isFFF = DicomUtil.findAllSingle(rtplan, TagByName.FluenceMode).map(_.getSingleStringValueOrEmptyString()).exists(_.trim.equalsIgnoreCase("FFF"))
+        if (isFFF) "FFF" else "non-FFF"
+      }
+      val kvpText = {
+        val k = DicomUtil.findAllSingle(wdAl, TagByName.KVP).head.getDoubleValues.head
+        0 match {
+          case _ if (k.round == k) && ((k.round % 1000) == 0) => (k / 1000).round.toString + " MV"
+          case _ => Util.fmtDbl(k / 1000) + " MV"
+        }
+      }
+
+      val text = s"Beam Type: $kvpText $fffText"
+
+      <h4>
+        {text}
+      </h4>
+    }
+
     val content = {
       <div>
         <div class="row">
-          <div class="col-md-2 col-md-offset-1">
+          <div class="col-md-2">
             {WebUtil.showPrecision}
           </div>
-          <div class="col-md-2 col-md-offset-1">
-            <a href={planHtml.fileName}>View RTPLAN</a>
+          <div class="col-md-3">
+            {beamType}
+          </div>
+          <div class="col-md-2">
+            <p style="margin-top:9px;">
+              <a href={ViewOutput.viewOutputUrl(psmRunReq.floodField.outputPK)}>View Flood Field</a>
+            </p>
+          </div>
+          <div class="col-md-2">
+            <p style="margin-top:9px;">
+              <a href={planHtml.fileName}>View RTPLAN</a>
+            </p>
           </div>{// @formatter:off
             if (psmImg.isDefined) {
-              <div class="col-md-2 col-md-offset-1" title="Note that only the pixel data is relevant, not energy or other parametes..">
-                <a href={psmDicomFile.getName}>Download PSM as DICOM</a>
+              <div class="col-md-2" title="Note that only the pixel data is relevant, not energy or other parametes..">
+                <p style="margin-top:9px;">
+                  <a href={psmDicomFile.getName}>Download PSM as DICOM</a>
+                </p>
                </div>
           // @formatter:on}
             }}
         </div>
         <div class="row">
-          <div class="col-md-10 col-md-offset-1">
+          <div class="col-md-10">
             <table class="table responsive table-bordered" style="margin-top:25px;">
               {imageContent._1}
             </table>

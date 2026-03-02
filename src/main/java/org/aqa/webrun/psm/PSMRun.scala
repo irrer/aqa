@@ -4,6 +4,7 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.run.ProcedureStatus
@@ -21,13 +22,9 @@ import org.aqa.db.FloodField
 import org.aqa.db.Machine
 import org.aqa.web.WebUtil
 import org.aqa.Config.PSMWholeDetectorBeamNamePattern
-import org.aqa.run.RunProcedure
-import org.aqa.web.Session
 import org.aqa.web.WebUtil.emptyValueMap
-import org.aqa.webrun.floodField.FloodRun
 import org.restlet.Response
 
-import java.io.File
 import java.sql.Timestamp
 import java.util.Date
 import scala.xml.Elem
@@ -74,41 +71,7 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
     list3.toSeq
   }
 
-  /**
-    * Process the given flood field as if the user were running the FloodField procedure.
-    * @param extendedData Metadata
-    * @param floodFieldDicom DICOM of flood field.
-    * @param response Web response.
-    * @return
-    */
-  private def processNewFloodField(extendedData: ExtendedData, floodFieldDicom: AttributeList, response: Response): Unit = {
-    logger.info("Making new FloodField results from flood field uploaded while running PSM procedure.")
-
-    val floodRun = new FloodRun(Procedure.ProcOfFloodField.get)
-    val floodRunTrait = floodRun.asInstanceOf[RunTrait[RunReqClass]]
-
-    val sessionId = Session.makeUniqueId
-    val sessionDir = Session.idToFile(sessionId)
-    sessionDir.mkdirs()
-    val dicomFile = new File(sessionDir, "0001.dcm")
-    DicomUtil.writeAttributeListToFile(floodFieldDicom, dicomFile, "AQA")
-
-    val valueMap: ValueMapT = Map(
-      RunProcedure.machineSelectorLabel -> extendedData.machine.machinePK.get.toString,
-      WebUtil.sessionLabel -> sessionId,
-      WebUtil.userIdRealTag -> extendedData.user.getRealId.get
-    )
-
-    RunProcedure.runIfDataValid(valueMap = valueMap, response = response, runTrait = floodRunTrait, sync = false)
-  }
-
   override def run(extendedData: ExtendedData, runReq: PSMRunReq, response: Response): ProcedureStatus.Value = {
-
-    val uploadedFloodFieldHash = FloodField.makeFloodField(extendedData.output.outputPK.get, runReq.floodField).imageHash_md5
-
-    if (FloodField.getByImageHash(extendedData.machine.machinePK.get, uploadedFloodFieldHash).isEmpty)
-      processNewFloodField(extendedData, runReq.floodField, response)
-
     new PSMExecute(extendedData, runReq)
     ProcedureStatus.done
   }
@@ -162,15 +125,17 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
   }
 
   /**
-    * Get the flood field to be used with this data set.  If the user uploaded one, then use that.  If they did not,
-    * then find the most recent one that is not more than <code>Config.Config.PSMMaxFloodFieldAge_days</code> than
-    * the data set, and not newer than the data set.
+    * Get the flood field to be used with this data set.  If there is more than one that qualify, then the
+    * most recent one will be used.  To qualify, the flood field must:
+    *   - have been delivered before the PSM was delivered
+    *   - have matching image resolution, energy, and FFF mode.
+    *   - be from the same machine
     *
     * @param alList List of all uploaded DICOM files.
     * @param rtimageList List of all RTIMAGE files except for flood field.
     * @return
     */
-  private def getFloodField(alList: Seq[AttributeList], rtimageList: Seq[AttributeList]): Option[AttributeList] = {
+  private def getFloodField(rtplan: AttributeList, alList: Seq[AttributeList], rtimageList: Seq[AttributeList]): Option[FloodField] = {
 
     val machinePK = {
       val anonAttr = rtimageList.head.get(TagByName.DeviceSerialNumber)
@@ -185,29 +150,37 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
     val Rows = getInt(TagByName.Rows)
     val ImagePlanePixelSpacing = rtimageList.head.get(TagByName.ImagePlanePixelSpacing).getDoubleValues
 
-    def matchingResolution(al: AttributeList): Boolean = {
-      val col = al.get(TagByName.Columns).getIntegerValues.head
-      val row = al.get(TagByName.Rows).getIntegerValues.head
-      val pixXY = al.get(TagByName.ImagePlanePixelSpacing).getDoubleValues
-      (col == Columns) && (row == Rows) && (pixXY.head == ImagePlanePixelSpacing(1)) && (pixXY.head == ImagePlanePixelSpacing(1))
+    val kvp = DicomUtil.findAllSingle(rtimageList.head, TagByName.KVP).head.getDoubleValues.head
+
+    val fff = {
+      val beam = DicomUtil.getBeamOfRtimage(rtplan, rtimageList.head).get
+
+      val fluenceModeList = DicomUtil.findAllSingle(beam, TagByName.FluenceMode).map(_.getSingleStringValueOrEmptyString).filter(_.equalsIgnoreCase("FFF")).flatten
+      val isFFF = fluenceModeList.nonEmpty
+      isFFF
     }
 
-    def timeOf(al: AttributeList) = Util.extractDateTimeAndPatientIdFromDicomAl(al)._1.head.getTime
+    /** Try to find a qualifying flood field. */
+    val floodField: Option[FloodField] = {
+      // must be older than this data set
+      val maxDate = getDataDate(valueMap = emptyValueMap, alList = alList, xmlList = Seq()).get
 
-    val floodField: Option[AttributeList] = {
-      val uploadedFloodField = alList.filter(FloodUtil.isFloodField).filter(matchingResolution).sortBy(timeOf).lastOption
+      // can not be too old
+      val minDate = new Timestamp(maxDate.getTime - Config.PSMMaxFloodFieldAge_ms)
 
-      val ff =
-        if (uploadedFloodField.isDefined)
-          uploadedFloodField // the user uploaded a flood field with matching geometry, so use it, regardless of its date.
-        else {
-          val maxDate = getDataDate(valueMap = emptyValueMap, alList = alList, xmlList = Seq()).get
-          val minDate = new Timestamp(maxDate.getTime - Config.PSMMaxFloodFieldAge_ms)
-          val dbFloodField = FloodField.getMatching(machinePK, Rows, Columns, ImagePlanePixelSpacing.head, ImagePlanePixelSpacing(1), minDate, maxDate).lastOption.map(_.dicom)
-          dbFloodField
-        }
-
-      ff
+      FloodField
+        .getMatching( //
+          machinePK = machinePK,
+          Rows = Rows,
+          Columns = Columns,
+          ImagePlanePixelSpacingX = ImagePlanePixelSpacing.head,
+          ImagePlanePixelSpacingY = ImagePlanePixelSpacing(1),
+          kvp = kvp,
+          fff = fff,
+          minDate = minDate,
+          maxDate = maxDate
+        )
+        .lastOption
     }
 
     floodField
@@ -239,18 +212,19 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
       } catch {
         case _: Throwable => None
       }
-
     }
 
+    val rtplanOpt = getRtplan(rtplanList, planUIDReferenceList.head)
+
     val result = 0 match {
-      case _ if alList.isEmpty                                           => formError("No DICOM files were uploaded.  There should be exactly one.")
-      case _ if planUIDReferenceList.isEmpty                             => formError("RTIMAGES do not reference an RTPLAN")
-      case _ if planUIDReferenceList.size > 1                            => formError("RTIMAGES reference more than one RTPLAN")
-      case _ if referencedSeriesList.size > 1                            => formError("RTIMAGES are from more than one series")
-      case _ if getRtplan(rtplanList, planUIDReferenceList.head).isEmpty => formError("Could not get RTPLAN.  Upload the RTPLAN with the RTIMAGE files.")
-      case _ if allBeams.nonEmpty                                        => formError(allBeams.get)
-      case _ if getFloodField(alList, rtimageList).isEmpty               => formError("Could not find compatible flood field.  Try uploading the latest flood field image with this upload set.")
-      case _ if getWholeDetector.isEmpty                                 => formError("Can not find whole detector image.")
+      case _ if alList.isEmpty                                            => formError("No DICOM files were uploaded.  There should be exactly one.")
+      case _ if planUIDReferenceList.isEmpty                              => formError("RTIMAGES do not reference an RTPLAN")
+      case _ if planUIDReferenceList.size > 1                             => formError("RTIMAGES reference more than one RTPLAN")
+      case _ if referencedSeriesList.size > 1                             => formError("RTIMAGES are from more than one series")
+      case _ if rtplanOpt.isEmpty                                         => formError("Could not get RTPLAN.  Upload the RTPLAN with the RTIMAGE files.")
+      case _ if allBeams.nonEmpty                                         => formError(allBeams.get)
+      case _ if getFloodField(rtplanOpt.get, alList, rtimageList).isEmpty => formError("Could not find compatible flood field.  Try running the 'FloodField' procedure with the latest flood field.")
+      case _ if getWholeDetector.isEmpty                                  => formError("Can not find whole detector image.")
       case _ =>
         val rtplan = getRtplan(rtplanList, planUIDReferenceList.head).get
         val planBeamNumberSet = getPlanBeamNumberList(rtplan).toSet
@@ -262,7 +236,7 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
           val list3 = list2.filterNot(rtimage => Util.sopOfAl(rtimage).equals(Util.sopOfAl(wholeDetector)))
           list3
         }
-        val floodField = getFloodField(alList, rtimageList).get
+        val floodField = getFloodField(rtplan, alList, rtimageList).get
         val runReq = PSMRunReq(rtplan = rtplan, wholeDetector = wholeDetector, rtimageList = imgList, floodField = floodField)
         Right(runReq)
     }
@@ -287,7 +261,7 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
       val list3 = list2.filterNot(rtimage => Util.sopOfAl(rtimage).equals(Util.sopOfAl(wholeDetector)))
       list3
     }
-    val floodField = getFloodField(alList, rtimageList).get
+    val floodField = getFloodField(rtplan, alList, rtimageList).get
 
     val runReq = PSMRunReq(rtplan = rtplan, wholeDetector = wholeDetector, rtimageList = imgList, floodField = floodField)
     runReq

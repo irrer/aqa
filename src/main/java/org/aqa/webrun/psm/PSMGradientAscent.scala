@@ -30,7 +30,12 @@ class PSMGradientAscent(val psmInterpolator: PSMInterpolator) extends Logging {
   private case class Pt(pt_iso: Point2D.Double) {
     def this(x: Double, y: Double) = this(new Point2D.Double(x, y))
 
-    val value: Double = psmInterpolator.interpolate(pt_iso)
+    val value: Double = {
+      if (psmInterpolator.isInBounds(pt_iso))
+        psmInterpolator.interpolate(pt_iso)
+      else
+        Double.NaN
+    }
   }
 
   private val centerPt = Pt(new Point2D.Double(0.0, 0.0))
@@ -46,7 +51,7 @@ class PSMGradientAscent(val psmInterpolator: PSMInterpolator) extends Logging {
 
   private def updateMaxPoint(point: Pt): Unit =
     maxPoint.synchronized {
-      if (point.value > maxPoint.value)
+      if ((!point.value.isNaN) && (point.value > maxPoint.value))
         maxPoint = point
     }
 
@@ -64,7 +69,7 @@ class PSMGradientAscent(val psmInterpolator: PSMInterpolator) extends Logging {
       incrementList.foreach(yInc => { //
         val y = center.pt_iso.getY + yInc
         val pt = new Pt(x, y)
-        if (pt.value > max.value) max = pt
+        if ((!pt.value.isNaN) && (pt.value > max.value)) max = pt
       })
     })
 

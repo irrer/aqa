@@ -18,6 +18,7 @@ package org.aqa.db
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
+import edu.umro.ImageUtil.DicomImage
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil.ToZipOutputStream
 import org.aqa.db.Db.driver.api._
@@ -27,23 +28,25 @@ import org.aqa.Util
 import java.sql.Timestamp
 
 /**
-  * Describe a flood field used for PSM processing.  Note that this is different from the flood field use in Phase2 and Phase3.
-  */
+ * Describe a flood field used for PSM processing.  Note that this is different from the flood field use in Phase2 and Phase3.
+ */
 
 case class FloodField(
-    floodFieldPK: Option[Long], // primary key
-    outputPK: Long, // output primary key
-    Rows: Int, // Number of rows in the image.  DICOM metadata 0028,0010
-    Columns: Int, // Number of columns in the image.  DICOM metadata 0028,0011
-    ImagePlanePixelSpacingX: Double, // Physical distance (in mm) between the center of each image pixel in the X axis.  DICOM metadata 3002,0011 first value
-    ImagePlanePixelSpacingY: Double, // Physical distance (in mm) between the center of each image pixel in the Y axis.  DICOM metadata 3002,0011 second value
-    SOPInstanceUID: Option[String], // SOPInstanceUID if it is in the DICOM
-    StationName: String, // StationName from DICOM.  This infers the identity of the treatment machine.
-    RTImageDescription: String, // RTImageDescription from DICOM.
-    StudyID: String, // StudyID from DICOM.
-    imageHash_md5: String, // MD5 hash of image bytes
-    dicom_zip: Array[Byte] // zipped DICOM content
-) extends Logging {
+                       floodFieldPK: Option[Long], // primary key
+                       outputPK: Long, // output primary key
+                       Rows: Int, // Number of rows in the image.  DICOM metadata 0028,0010
+                       Columns: Int, // Number of columns in the image.  DICOM metadata 0028,0011
+                       ImagePlanePixelSpacingX: Double, // Physical distance (in mm) between the center of each image pixel in the X axis.  DICOM metadata 3002,0011 first value
+                       ImagePlanePixelSpacingY: Double, // Physical distance (in mm) between the center of each image pixel in the Y axis.  DICOM metadata 3002,0011 second value
+                       KVP: Double, // energy level
+                       FlatteningFilterFree: Boolean, // true if this is an FFF (flattening filter free)
+                       SOPInstanceUID: Option[String], // SOPInstanceUID if it is in the DICOM
+                       StationName: String, // StationName from DICOM.  This infers the identity of the treatment machine.
+                       RTImageDescription: String, // RTImageDescription from DICOM.
+                       StudyID: String, // StudyID from DICOM.
+                       imageHash_md5: String, // MD5 hash of image bytes
+                       dicom_zip: Array[Byte] // zipped DICOM content
+                     ) extends Logging {
 
   def insert: FloodField = {
     val insertQuery = FloodField.query returning FloodField.query.map(_.floodFieldPK) into
@@ -62,6 +65,8 @@ case class FloodField(
       "    Columns: " + Columns + "\n" +
       "    ImagePlanePixelSpacingX: " + ImagePlanePixelSpacingX + "\n" +
       "    ImagePlanePixelSpacingY: " + ImagePlanePixelSpacingY + "\n" +
+      "    KVP: " + KVP + "\n" +
+      "    FlatteningFilterFree: " + FlatteningFilterFree + "\n" +
       "    SOPInstanceUID: " + {
       if (SOPInstanceUID.isDefined) SOPInstanceUID.get else "NA"
     } + "\n" +
@@ -91,6 +96,10 @@ object FloodField extends Logging {
 
     def ImagePlanePixelSpacingY = column[Double]("ImagePlanePixelSpacingY")
 
+    def KVP = column[Double]("KVP")
+
+    def FlatteningFilterFree = column[Boolean]("FlatteningFilterFree")
+
     def SOPInstanceUID = column[Option[String]]("SOPInstanceUID")
 
     def StationName = column[String]("StationName")
@@ -111,6 +120,8 @@ object FloodField extends Logging {
         Columns,
         ImagePlanePixelSpacingX,
         ImagePlanePixelSpacingY,
+        KVP,
+        FlatteningFilterFree,
         SOPInstanceUID,
         StationName,
         RTImageDescription,
@@ -132,8 +143,8 @@ object FloodField extends Logging {
   }
 
   /**
-    * Get a list of all rows for the given output
-    */
+   * Get a list of all rows for the given output
+   */
   def getByOutput(outputPK: Long): Seq[FloodField] = {
     val action = for {
       inst <- FloodField.query if inst.outputPK === outputPK
@@ -142,12 +153,12 @@ object FloodField extends Logging {
   }
 
   /**
-    * Get a list of all rows for the given hash.  There should be either zero or one.
-    * Also require it to specify the machine as an extra precaution against using a flood field from the wrong machine.
-    *
-    * @param machinePK Specify machine.
-    * @param imageHash For this hash
-    */
+   * Get a list of all rows for the given hash.  There should be either zero or one.
+   * Also require it to specify the machine as an extra precaution against using a flood field from the wrong machine.
+   *
+   * @param machinePK Specify machine.
+   * @param imageHash For this hash
+   */
   def getByImageHash(machinePK: Long, imageHash: String): Seq[FloodField] = {
     val action = for {
       output <- Output.query if output.machinePK === machinePK
@@ -157,26 +168,30 @@ object FloodField extends Logging {
   }
 
   /**
-    * Get all flood field entries that match passed parameters.
-    *
-    * @param machinePK               For this machine
-    * @param Rows                    Number of rows of pixels
-    * @param Columns                 Number of columns of pixels
-    * @param ImagePlanePixelSpacingX Horizontal spacing of pixels in mm
-    * @param ImagePlanePixelSpacingY Vertical spacing of pixels in mm
-    * @param minDate                 On or before this
-    * @param maxDate                 On or after this
-    * @return List of all matching flood fields, sorted by delivery date.
-    */
+   * Get all flood field entries that match passed parameters.
+   *
+   * @param machinePK               For this machine
+   * @param Rows                    Number of rows of pixels
+   * @param Columns                 Number of columns of pixels
+   * @param ImagePlanePixelSpacingX Horizontal spacing of pixels in mm
+   * @param ImagePlanePixelSpacingY Vertical spacing of pixels in mm
+   * @param kvp                     Energy level
+   * @param fff                     True if Flattening Filter Free
+   * @param minDate                 On or before this
+   * @param maxDate                 On or after this
+   * @return List of all matching flood fields, sorted by delivery date.
+   */
   def getMatching(
-      machinePK: Long,
-      Rows: Int,
-      Columns: Int,
-      ImagePlanePixelSpacingX: Double,
-      ImagePlanePixelSpacingY: Double,
-      minDate: Timestamp,
-      maxDate: Timestamp //
-  ): Seq[FloodField] = {
+                   machinePK: Long,
+                   Rows: Int,
+                   Columns: Int,
+                   ImagePlanePixelSpacingX: Double,
+                   ImagePlanePixelSpacingY: Double,
+                   kvp: Double,
+                   fff: Boolean,
+                   minDate: Timestamp,
+                   maxDate: Timestamp //
+                 ): Seq[FloodField] = {
     val action = for {
       output <- Output.query if output.machinePK === machinePK
       ff <- FloodField.query
@@ -184,6 +199,8 @@ object FloodField extends Logging {
         (ff.Columns === Columns) &&
         (ff.ImagePlanePixelSpacingX === ImagePlanePixelSpacingX) &&
         (ff.ImagePlanePixelSpacingY === ImagePlanePixelSpacingY) &&
+        (ff.KVP === kvp) &&
+        (ff.FlatteningFilterFree === fff) &&
         (ff.outputPK === output.outputPK) &&
         (output.dataDate >= minDate) &&
         (output.dataDate <= maxDate)
@@ -211,12 +228,69 @@ object FloodField extends Logging {
   }
 
   /**
-    * Create a FloodField object by extracting information from the given DICOM.
-    *
-    * @param outputPK For this output.
-    * @param al       From this DICOM.
-    * @return a new FloodField.
-    */
+   * Find the percentage of rise in the profile via: (hi - lo) / hi
+   *
+   * @param profile either X or Y image profile
+   * @return Percent rise.
+   */
+  private def profilePercentRise(profile: Seq[Float]): Double = {
+    val borderPercent = 5.0 // drop this percent of pixels off each end from the profiles to ignore edge effects
+    val samplePercent = 10.0 // take this percent of the profile to get a statistically sufficient number of points to be reliable
+
+    val borderCount: Int = ((borderPercent / 100) * profile.size).round.toInt // drop this number of pixels off each end from the profiles to ignore edge effects
+    val sampleCount: Int = ((samplePercent / 100) * profile.size).round.toInt // take this number of the profile to get a statistically sufficient number of points to be reliable
+
+    val lo: Float = profile.slice(borderCount, borderCount + sampleCount).sum / sampleCount
+    val hi: Float = profile.dropRight(borderCount).takeRight(sampleCount).sum / sampleCount
+
+    val edgeMean: Float = (lo + hi) / 2
+
+    val center: Float = {
+      val dropCount = (profile.size / 2) - (sampleCount / 2)
+      profile.slice(dropCount, dropCount + sampleCount).sum / sampleCount
+    }
+
+    val percentRise = ((center - edgeMean) / center) * 100
+    percentRise
+  }
+
+  def xProfilePercentRise(al: AttributeList): Double = {
+    val di = new DicomImage(al)
+    profilePercentRise(di.columnSums)
+  }
+
+  def yProfilePercentRise(al: AttributeList): Double = {
+    val di = new DicomImage(al)
+    profilePercentRise(di.rowSums)
+  }
+
+  /** If the center of the image is raised by this percent or more, then assume it is an FFF image. */
+  val fffPercentChange: Double = 15.0 // value in center must be at least this percent higher than ends to qualify as an FFF
+
+  /**
+   * Look at the profile of the image to determine whether it is FFF.  There is no way to determine
+   * this directly from the DICOM, so this is the best we can do.  FFF fields have a notable rise in
+   * the center, whereas non-FFF are nearly flat.
+   *
+   * @param al DICOM image.
+   * @return True if it is FFF.
+   */
+  def isFFF(al: AttributeList): Boolean = {
+
+    val is = //
+      (xProfilePercentRise(al) > fffPercentChange) &&
+        (yProfilePercentRise(al) > fffPercentChange)
+
+    is
+  }
+
+  /**
+   * Create a FloodField object by extracting information from the given DICOM.
+   *
+   * @param outputPK For this output.
+   * @param al       From this DICOM.
+   * @return a new FloodField.
+   */
   def makeFloodField(outputPK: Long, al: AttributeList): FloodField = {
 
     val Rows = al.get(TagByName.Rows).getIntegerValues.head
@@ -242,6 +316,8 @@ object FloodField extends Logging {
       zos.finish()
     }
 
+    val KVP = DicomUtil.findAllSingle(al, TagByName.KVP).head.getDoubleValues.head
+
     // @formatter:off
     val floodField = new FloodField(
       floodFieldPK            = None,
@@ -250,6 +326,8 @@ object FloodField extends Logging {
       Columns                 = Columns,
       ImagePlanePixelSpacingX = ImagePlanePixelSpacingX,
       ImagePlanePixelSpacingY = ImagePlanePixelSpacingY,
+      KVP                     = KVP,
+      FlatteningFilterFree    = isFFF(al),
       SOPInstanceUID          = SOPInstanceUID,
       StationName             = StationName,
       RTImageDescription      = RTImageDescription,

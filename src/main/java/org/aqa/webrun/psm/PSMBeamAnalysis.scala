@@ -158,7 +158,7 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
 
     val ms = if (edges.isDefined) Some(edges.get.measurementSet) else None
 
-    val floodField_cu: Option[Double] = meanCuOf(psmRunReq.floodField)
+    val floodField_cu: Option[Double] = meanCuOf(psmRunReq.floodField.dicom)
 
     val wholeDetector_cu = meanCuOf(psmRunReq.wholeDetector)
 

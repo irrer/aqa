@@ -8,6 +8,7 @@ import org.aqa.webrun.psm.PSMUtil.centerPixelsToString
 import org.aqa.Logging
 
 import java.awt.geom.Point2D
+import javax.vecmath.Point2d
 
 /**
   * Interpolate using bi-cubic spline to determine pixels between beam center.
@@ -39,6 +40,20 @@ class PSMInterpolator(psmList: Seq[PSMBeamAnalysisResult]) extends Logging {
     interpolator.interpolate(yCoordinateList, xCoordinateList, valueList)
   }
 
+  def isInBounds(x_iso: Double, y_iso: Double): Boolean = {
+    val ok = { //
+      (y_iso >= yCoordinateList.head) &&
+      (y_iso <= yCoordinateList.last) &&
+      (x_iso >= xCoordinateList.head) &&
+      (x_iso <= xCoordinateList.last)
+    }
+    ok
+  }
+
+  def isInBounds(point_iso: Point2d): Boolean = isInBounds(point_iso.getX, point_iso.getY)
+
+  def isInBounds(point_iso: Point2D.Double): Boolean = isInBounds(point_iso.getX, point_iso.getY)
+
   /**
     * Perform interpolation.
     *
@@ -64,12 +79,7 @@ class PSMInterpolator(psmList: Seq[PSMBeamAnalysisResult]) extends Logging {
       val y_iso = trans.pix2IsoCoordY(y)
       (0 until trans.width).map(x => {
         val x_iso = trans.pix2IsoCoordX(x)
-        if ( //
-          (y_iso >= yCoordinateList.head) &&
-          (y_iso <= yCoordinateList.last) &&
-          (x_iso >= xCoordinateList.head) &&
-          (x_iso <= xCoordinateList.last)
-        )
+        if (isInBounds(x_iso, y_iso))
           interpolate(x_iso, y_iso).toFloat
         else
           min

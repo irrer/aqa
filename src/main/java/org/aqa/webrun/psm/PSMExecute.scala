@@ -6,7 +6,6 @@ import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 import org.aqa.Util
-import org.aqa.db.FloodField
 import org.aqa.db.PSM
 import org.aqa.webrun.psm.html.PSMCompositeImageHTML
 import org.aqa.webrun.psm.html.PSMMainHTML
@@ -108,8 +107,7 @@ class PSMExecute(extendedData: ExtendedData, psmRunReq: PSMRunReq) extends Loggi
 
   // main processing.  Create a scaled DicomImage and Attribute list for each value.
 
-  private val ffAl = psmRunReq.floodField
-  private val ffImg = new DicomImage(ffAl).scalePixels(ffAl)
+  private val ffImg = new DicomImage(psmRunReq.floodField.dicom).scalePixels(psmRunReq.floodField.dicom)
 
   private val wdAl = psmRunReq.wholeDetector
   private val wdImg = new DicomImage(wdAl).scalePixels(wdAl)
@@ -124,18 +122,12 @@ class PSMExecute(extendedData: ExtendedData, psmRunReq: PSMRunReq) extends Loggi
 
   // ----------------------------------------------------------------------------------------
 
-  private def getReferencedFloodField: FloodField = {
-    val uploadedFloodFieldHash = FloodField.makeFloodField(extendedData.output.outputPK.get, psmRunReq.floodField).imageHash_md5
-    val ff = FloodField.getByImageHash(extendedData.machine.machinePK.get, uploadedFloodFieldHash)
-    ff.head
-  }
-
   private val psm: Option[PSM] = {
     if (psmImg.isDefined && gradientAscent.isDefined)
       Some(
         PSM.makePSM(
           outputPK = extendedData.outputPK,
-          floodFieldImageHash_md5 = getReferencedFloodField.imageHash_md5,
+          floodFieldImageHash_md5 = psmRunReq.floodField.imageHash_md5,
           image = psmImg.get,
           xMax_mm = gradientAscent.get.getMaxPoint_iso.getX,
           yMax_mm = gradientAscent.get.getMaxPoint_iso.getY,
@@ -161,14 +153,15 @@ class PSMExecute(extendedData: ExtendedData, psmRunReq: PSMRunReq) extends Loggi
     rtplan = rtplan,
     resultList = resultList,
     psmGradientAscent = gradientAscent,
-    ffAl = ffAl,
+    ffAl = psmRunReq.floodField.dicom,
     ffImg = ffImg,
     wdAl = wdAl,
     wdImg = wdImg,
     rawImg = rawImg,
     cbrImg = cbrImg,
     brImg = brImg,
-    psmImg = psmImg
+    psmImg = psmImg,
+    psmRunReq
   )
 
   mainHTML.make()

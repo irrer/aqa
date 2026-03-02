@@ -10,6 +10,7 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.Util
 import org.aqa.db.Output
 import org.aqa.Logging
+import org.aqa.db.FloodField
 import org.aqa.web.C3Chart
 import org.restlet.Response
 
@@ -167,6 +168,37 @@ object FloodHtml extends Logging {
     html
   }
 
+  private def beamType(rtimage: AttributeList): Elem = {
+    val kvpText: String = {
+      val k = DicomUtil.findAllSingle(rtimage, TagByName.KVP).head.getDoubleValues.head
+      if (k.round == k) {
+        if ((k % 1000) == 0)
+          (k.round / 1000).toString + " MV"
+        else
+          Util.fmtDbl(k / 1000) + " MV"
+      } else {
+        Util.fmtDbl(k) + " KV"
+      }
+    }
+
+    val fffText = if (FloodField.isFFF(rtimage)) "FFF" else "non-FFF"
+
+    <h3>Beam Type: {kvpText} {fffText}</h3>
+  }
+
+  private def fffStatistics(rtimage: AttributeList): Elem = {
+
+    val xRise = Util.fmtDbl(FloodField.xProfilePercentRise(rtimage))
+    val yRise = Util.fmtDbl(FloodField.yProfilePercentRise(rtimage))
+
+    <p title="Note: There is no indicator in the DICOM metadata for FFF, so it is inferred by the profile of the image.">
+      XProfile percent increase: {xRise}
+      <br>XProfile percent increase: {yRise}</br>
+      Minimum increase to qualify as FFF: {Util.fmtDbl(FloodField.fffPercentChange)}
+    </p>
+
+  }
+
   /**
     * Generate HTML that shows flood field information.
     *
@@ -200,6 +232,8 @@ object FloodHtml extends Logging {
       <div>
         {imageHtml(extendedData, image, runReq.floodField)}
         <p> </p>
+        {beamType(runReq.floodField)}
+        <p> </p>
         <h3>Profile of horizontal band one pixel thick from left to right across image center</h3>
         {horzChart.html}
         <p> </p>
@@ -208,6 +242,7 @@ object FloodHtml extends Logging {
         <p> </p>
         {hist._1}
         <p> </p>
+        {fffStatistics(runReq.floodField)}
       </div>
     }
 
