@@ -95,7 +95,7 @@ class WinLutz360Run(procedure: Procedure) extends WebRunProcedure with RunTrait[
 
     val dbList = resultHasData.map(_.convertToDB)
 
-    val wlList = dbList.filter(_.isLeft).map(_.left.get)
+    val wlList = dbList.filter(_.isRight).map(_.right.get)
 
     val insertedList = dbList.map(r => r.right.get.insert)
 
