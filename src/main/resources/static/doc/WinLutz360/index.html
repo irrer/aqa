@@ -1,4 +1,4 @@
-<div title="Winston Lutz" class="col-md-8 col-md-offset-1">
+<div title="WinLutz360" class="col-md-8 col-md-offset-1">
     <!--
     Copyright 2026 Regents of the University of Michigan
 
@@ -16,23 +16,54 @@
     -->
 
     <h2>@@title@@</h2>
+    <p> This document describes the processing steps that are taken in calculating WinLutz360 results. </p>
+    <p> WinLutz360 is a complete re-implementation of Winston Lutz that has the added capability to handle non-cardinal
+        collimator angles (e.g. 37.29164 degrees).
+    <p>
+        It uses the same processing regardless of the collimator angle. There is no '<b>special case</b>' handling for cardinal
+        angles. The collimator angle used for processing is extracted from the RTIMAGE file. Usually this deviates
+        slightly from the planned angle. For example, the plan may specify 90 degrees, but the RTIMAGE reports 90.02
+        degrees. In this case WinLutz360 uses the 90.02 value.
+    </p>
+
+    <p> WinLutz360 supports </p>
+    <ul>
+        <li> Non-cardinal angles</li>
+        <li> Arbitrary field sizes</li>
+        <li> Non-square (rectangular) fields </li>
+        <li> Off-center fields from EPID shifting (e.g. centered at isoplane x,y = 25,30mm)</li>
+        <li> A range of ball sizes (extremes values have not been tested)</li>
+        <li> Images without the RTPLAN</li>
+        <li> Field edges defined by any combination of collimator and jaws</li>
+        <li> Reporting of which edges are defined by jaws vs. collimator (requires RTPLAN)</li>
+        <li> Arbitrary imager resolution</li>
+        <li> Arbitrary source to image distance (DICOM tag 3002,0026)</li>
+        <li> <a href="../IsoCheck/index.html">IsoCheck</a></li>
+        <li> Explicit rejection of non-Winston Lutz images.</li>
+    </ul>
+
+
+
+    <p> Winston Lutz </p>
+    <p> Winston Lutz </p>
     <p> Winston Lutz </p>
     <h3>Coarse Location</h3>
     <h3>Bicubic Edge Interpolation</h3>
-        sub-pixel sampling
-        uses reported angles (from RTIMAGE)
-        AOI extends from low point to edge of image
+    sub-pixel sampling
+    uses reported angles (from RTIMAGE)
+    AOI extends from low point to edge of image
     <h3>Approximate Location</h3>
     <h3>Precise Edge Location</h3>
-        AOI extends from low point to a fixed distance
+    AOI extends from low point to a fixed distance
     <h3>Ball Location</h3>
-        create ball AOI
+    create ball AOI
 
     <h3>Ball is brightened for better visibility.</h3>
     <div class="row">
         <div class="col-md-12">
             <div style="margin:30px; border: 1px solid lightgrey;">
-                <img alt="Show surface interpolation from discrete to continuous." style="margin:30px;" src="PiecewiseBicubicInterpolation.png"/>
+                <img alt="Show surface interpolation from discrete to continuous." style="margin:30px;"
+                     src="PiecewiseBicubicInterpolation.png"/>
             </div>
             <em style="margin-left:270px;">Discretely sampled surface mapped to a continuous surface.</em>
         </div>
