@@ -20,17 +20,18 @@
     <p> WinLutz360 is a complete re-implementation of Winston Lutz that has the added capability to handle non-cardinal
         collimator angles (e.g. 37.29164 degrees).
     <p>
-        It uses the same processing regardless of the collimator angle. There is no '<b>special case</b>' handling for cardinal
+        It uses the same processing regardless of the collimator angle. There is no '<b>special case</b>' handling for
+        cardinal
         angles. The collimator angle used for processing is extracted from the RTIMAGE file. Usually this deviates
         slightly from the planned angle. For example, the plan may specify 90 degrees, but the RTIMAGE reports 90.02
         degrees. In this case WinLutz360 uses the 90.02 value.
     </p>
 
-    <p> WinLutz360 supports </p>
+    <p> WinLutz360 supports:</p>
     <ul>
         <li> Non-cardinal angles</li>
         <li> Arbitrary field sizes</li>
-        <li> Non-square (rectangular) fields </li>
+        <li> Non-square (rectangular) fields</li>
         <li> Off-center fields from EPID shifting (e.g. centered at isoplane x,y = 25,30mm)</li>
         <li> A range of ball sizes (extremes values have not been tested)</li>
         <li> Images without the RTPLAN</li>
@@ -38,15 +39,94 @@
         <li> Reporting of which edges are defined by jaws vs. collimator (requires RTPLAN)</li>
         <li> Arbitrary imager resolution</li>
         <li> Arbitrary source to image distance (DICOM tag 3002,0026)</li>
-        <li> <a href="../IsoCheck/index.html">IsoCheck</a></li>
+        <li><a href="../IsoCheck/index.html">IsoCheck</a></li>
         <li> Explicit rejection of non-Winston Lutz images.</li>
     </ul>
 
+    <h3> Processing Steps:</h3>
+    <ol>
+        <li><a href="#CoarseLoc">Coarse Location</a></li>
+        <li><a href="#ApproxLoc">Approximate Location</a></li>
+        <li><a href="#PreciseLoc">Precise Edge Location</a></li>
+        <li><a href="#BallLoc">Ball Location</a></li>
+    </ol>
+
+    <h3>Background</h3>
+    <p>Bicubic Edge Interpolation</p>
+
+    <!-- =========================================================================================================== -->
+
+    <h3 id="CoarseLoc">Coarse Location</h3>
+    <p>This step produces a very coarse approximation of the field and ball.</p>
+
+    <p> Profiles of the entire image are calculated in the X and Y direction. The highest and lowest values are used to
+        calculate the 50% point of each profile, as shown by the red lines in the image.
+    </p>
+
+    <p> Next, the intersections of the 50% points and the profile are found, which establishes the left, right, lower,
+        and upper bounds of the field. These four values define a rectangle, the center of which is used as the coarse
+        location.
+    </p>
+
+    <p> The following is an example of those profiles for an image with collimator angle 270 degrees. The small 'bump'
+        in the center is caused by the ball. </p>
 
 
-    <p> Winston Lutz </p>
-    <p> Winston Lutz </p>
-    <p> Winston Lutz </p>
+    <div class="row">
+        <div class="col-md-12">
+            <div style="margin:30px; border: 1px solid lightgrey;">
+                <img alt="Coarse location profiles." style="margin:30px;"
+                     src="CoarseLoc1.png"/>
+            </div>
+            <em style="margin-left:270px;"></em>
+        </div>
+    </div>
+
+    <p>The images below show the coarse field measurements with a yellow border around each. The border has been
+        expanded by the estimated penumbra thickness to better illustrate the result. </p>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div style="margin:30px; border: 1px solid lightgrey;">
+                <a href="Coarse270Degree.png">
+                <img alt="Coarse field outlined for collimator 270." style="margin:30px;"
+                     src="Coarse270Degree.png" width="256"/>
+                </a>
+            </div>
+            <em style="margin-left:270px;"></em>
+        </div>
+        <div class="col-md-6">
+            <div style="margin:30px; border: 1px solid lightgrey;">
+                <a href="Coarse70Degree.png">
+                <img alt="Coarse field outlined for collimator 45." style="margin:30px;"
+                     src="Coarse45Degree.png" width="256"/>
+                </a>
+            </div>
+            <em style="margin-left:270px;"></em>
+        </div>
+    </div>
+
+
+    <!-- =========================================================================================================== -->
+
+    <h3 id="ApproxLoc">Approximate Location</h3>
+
+    <p>The approximate location provides really only provides the center of the field. At this point we still don't know
+        how far the edges are from the center. This is especially obvious for non-cardinal collimator angles.</p>
+
+    <!-- =========================================================================================================== -->
+
+    <h3 id="PreciseLoc">Precise Edge Location</h3>
+
+    <!-- =========================================================================================================== -->
+
+    <h3 id="BallLoc">Ball Location</h3>
+
+    <!-- =========================================================================================================== -->
+
+
+    <!--                                                                                                               -->
+
     <h3>Coarse Location</h3>
     <h3>Bicubic Edge Interpolation</h3>
     sub-pixel sampling
