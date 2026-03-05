@@ -59,38 +59,60 @@
     <h3 id="CoarseLoc">Coarse Location</h3>
     <p>This step produces a very coarse approximation of the field and ball.</p>
 
-    <p> Profiles of the entire image are calculated in the X and Y direction. The highest and lowest values are used to
-        calculate the 50% point of each profile, as shown by the red lines in the image.
-    </p>
-
-    <p> Next, the intersections of the 50% points and the profile are found, which establishes the left, right, lower,
-        and upper bounds of the field. These four values define a rectangle, the center of which is used as the coarse
-        location.
-    </p>
-
-    <p> The following is an example of those profiles for an image with collimator angle 270 degrees. The small 'bump'
-        in the center is caused by the ball. </p>
-
+    <p> Profiles of the entire image are calculated in the X and Y direction. The example shows X and Y profiles for an
+        image with collimator at 270 degrees. The small 'bump' in the center is caused by the ball: </p>
 
     <div class="row">
         <div class="col-md-12">
             <div style="margin:30px; border: 1px solid lightgrey;">
                 <img alt="Coarse location profiles." style="margin:30px;"
-                     src="CoarseLoc1.png"/>
+                     src="CoarseLoc270XandY.png"/>
             </div>
             <em style="margin-left:270px;"></em>
         </div>
     </div>
 
+    <p> The highest and lowest values are used to calculate the 50% point of each profile (marked in red below). Then,
+        the intersections of the 50% points and the profile are found (marked in green below), which establishes the
+        left, right, lower, and upper bounds of the field. These four values define a rectangle, the center of which is
+        used as the coarse location: </p>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div style="margin:30px; border: 1px solid lightgrey;">
+                <img alt="Coarse location profiles." style="margin:30px;"
+                     src="CoarseLoc270.png"/>
+            </div>
+            <em style="margin-left:270px;"></em>
+        </div>
+    </div>
+
+
+    <p> The image below illustrates the differences between profiles of images with collimator at 270 verses 45 degrees.
+        The 45 degree image shows a 'V' shape compared with the steeper edges of the 270 image. Also, the small effect
+        of the ball in the 45 degree image is obscured by the profile of the edges. </p>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div style="margin:30px; border: 1px solid lightgrey;">
+                <img alt="Coarse location profiles." style="margin:30px;"
+                     src="CoarseLoc270vs45.png"/>
+            </div>
+            <em style="margin-left:270px;"></em>
+        </div>
+    </div>
+
+
     <p>The images below show the coarse field measurements with a yellow border around each. The border has been
-        expanded by the estimated penumbra thickness to better illustrate the result. </p>
+        expanded by the estimated penumbra thickness to better illustrate the result. Click the images for a larger
+        view.</p>
 
     <div class="row">
         <div class="col-md-6">
             <div style="margin:30px; border: 1px solid lightgrey;">
                 <a href="Coarse270Degree.png">
-                <img alt="Coarse field outlined for collimator 270." style="margin:30px;"
-                     src="Coarse270Degree.png" width="256"/>
+                    <img alt="Coarse field outlined for collimator 270." style="margin:30px;"
+                         src="Coarse270Degree.png" width="256"/>
                 </a>
             </div>
             <em style="margin-left:270px;"></em>
@@ -98,8 +120,8 @@
         <div class="col-md-6">
             <div style="margin:30px; border: 1px solid lightgrey;">
                 <a href="Coarse45Degree.png">
-                <img alt="Coarse field outlined for collimator 45." style="margin:30px;"
-                     src="Coarse45Degree.png" width="256"/>
+                    <img alt="Coarse field outlined for collimator 45." style="margin:30px;"
+                         src="Coarse45Degree.png" width="256"/>
                 </a>
             </div>
             <em style="margin-left:270px;"></em>
@@ -111,18 +133,139 @@
 
     <h3 id="ApproxLoc">Approximate Location</h3>
 
-    <p>The approximate location provides only provides the center of the field. At this point we still don't know
-        how far the edges are from the center. This is especially obvious for non-cardinal collimator angles.</p>
+    <p>The coarse location provides only provides the center of the field. At this point we still don't know
+        how far the edges are from the center.</p>
 
+    <p>To find the approximate location of the edges, two rectangular AOIs (areas of interest) are constructed, the
+        first parallel to the collimator angle, and the second perpendicular to it. Each are centered at the coarse
+        location, and extend to the edge of the image. The width is 4mm, which is small enough to be narrower than the
+        field width, but large enough use a statistically sufficient number of pixels. It is similar to the one acquired
+        in the coarse measurement, but in this case the effect of the ball is always distinctly observable. The image
+        below is an example from data acquired with the collimator at 45 degrees:
+    </p>
+
+    <h5>Outline of both AOIs (click for larger image):</h5>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div style="margin:30px; border: 1px solid lightgrey;">
+                <a href="ApproxFullAOI.png">
+                    <img alt="Full profile of approximate location." style="margin:30px;" width="500"
+                         src="ApproxFullAOI.png"/>
+                </a>
+            </div>
+            <em style="margin-left:270px;"></em>
+        </div>
+    </div>
+
+    <h5>Profile of one AOI:</h5>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div style="margin:30px; border: 1px solid lightgrey;">
+                <img alt="Full profile of approximate location." style="margin:30px;"
+                     src="ApproxFullProfile.png"/>
+            </div>
+            <em style="margin-left:270px;"></em>
+        </div>
+    </div>
+
+
+    These two AOIs are split into four AOIs (one for each edge), by starting at the low points on each side of center,
+    and extending to the image's edge. The image below shows the regions of each of the two profiles that are used to
+    make four:
+
+    <div class="row">
+        <div class="col-md-12">
+            <div style="margin:30px; border: 1px solid lightgrey;">
+                <img alt="Full profile of approximate location." style="margin:30px;"
+                     src="ApproxFullProfileAnnotated.png"/>
+            </div>
+            <em style="margin-left:270px;"></em>
+        </div>
+    </div>
+
+    The image below outlines the four AOIs (click for larger image). This is the same image generated at run time for
+    the diagnostics page. Each edge is labeled X1, X2, Y1, Y2. Each edge also contains a line across it that indicates
+    where the edge was found. Near the center of the image are two small crossing lines, each of which is halfway
+    between opposing edges. This crossing point is the approximate center.
+
+    <div class="row">
+        <div class="col-md-12">
+            <div style="margin:30px; border: 1px solid lightgrey;">
+                <a href="ApproxFourAOIs.png">
+                    <img alt="Full profile of approximate location." style="margin:30px;" width="500"
+                         src="ApproxFourAOIs.png"/>
+                </a>
+            </div>
+            <em style="margin-left:270px;"></em>
+        </div>
+    </div>
 
 
     <!-- =========================================================================================================== -->
 
     <h3 id="PreciseLoc">Precise Edge Location</h3>
+    <p>This is the final step in locating the edges. It is similar to approximate location, but the four areas of
+        interest are constructed using the approximate location. Given that the edge positions are known with a high
+        degree of certainty, the AOIs are made with a larger portion of each edge, which yields a more accurate
+        result.</p>
+
+    <p>The image below shows the four AOIs. Each has a crossing line indicating where it found the edge, and is labeled
+        with the edge it represents. The two crossing lines in the center are the halfway points between each pair of
+        opposing edges and give the precise location of the center of the edges. The 'horns' on edges Y1 and Y2 are due
+        to leakage between opposing leaf ends. </p>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div style="margin:30px; border: 1px solid lightgrey;">
+                <a href="PreciseLoc.png">
+                    <img alt="Full profile of approximate location." style="margin:30px;" width="500"
+                         src="PreciseLoc.png"/>
+                </a>
+            </div>
+            <em style="margin-left:270px;"></em>
+        </div>
+    </div>
+
+
+    <h4>Notes</h4>
+
+    <p> The profiles for these AOIs are sampled at a higher resolution than the approximate phase, producing a more
+        accurate result. The AOIs are not extended to the edge of the image, because the values farther away are largely
+        the same, and processing them takes an excessive amount of computing time. </p>
+
+    <p> The ball area in the image has been brightened to better show the ball.</p>
+
+    <h4>Gradients</h4>
+
+    <p>Along with the edge profiles, the diagnostics show edge gradients. They are calculated by finding the sums of
+        pixels in rows to those of the profile. These are not used in any analysis, but can give clues as to how the
+        test is performing. </p>
+
+    <p>The image below show two profiles and a gradient.</p>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div style="margin:30px; border: 1px solid lightgrey;">
+                <a href="PreciseLocProfileAndGradient.png">
+                    <img alt="Two profiles and a gradient." style="margin:30px;"
+                         src="PreciseLocProfileAndGradient.png"/>
+                </a>
+            </div>
+            <em style="margin-left:270px;"></em>
+        </div>
+    </div>
+
 
     <!-- =========================================================================================================== -->
 
     <h3 id="BallLoc">Ball Location</h3>
+
+    <p> To locate the ball, first an AOI is made by using the minimum values of the AOIs determined in the edge
+        analysis. The ball AOI is supersampled with pixel interpolation, and then calculating center of mass.
+
+    </p>
 
     <!-- =========================================================================================================== -->
 
@@ -139,8 +282,9 @@
     AOI extends from low point to a fixed distance
     <h3>Ball Location</h3>
     create ball AOI
+    <h3>Validation</h3>
+    <h3>Edge Gradients</h3>
 
-    <h3>Ball is brightened for better visibility.</h3>
     <div class="row">
         <div class="col-md-12">
             <div style="margin:30px; border: 1px solid lightgrey;">

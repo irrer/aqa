@@ -389,7 +389,7 @@ case class Validate( //
       val error_mm = Math.sqrt((errX_mm * errX_mm) + (errY_mm * errY_mm))
 
       if (error_mm < machineWL.passLimit_mm) {
-        val msg = s"box to ball offset of $error_mm mm is less than limit of ${machineWL.passLimit_mm} mm."
+        val msg = s"box to ball offset of ${Util.fmtDbl(error_mm)} mm is less than limit of ${machineWL.passLimit_mm} mm."
         Seq(ValidationStatus(WLImageStatus.Passed, msg))
       } else {
         val msg = s"Failed.  Error: $error_mm   Pass limit: ${machineWL.passLimit_mm}"

@@ -146,7 +146,7 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
     new C3Chart(
       height = Some(200),
       xAxisLabel = "pixel",
-      xDataLabel = "CU",
+      xDataLabel = "Pixel vs CU",
       xValueList = profile.indices.map(_.doubleValue),
       yAxisLabels = Seq(""),
       yDataLabel = "",
@@ -280,7 +280,7 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
     val chart = new C3Chart(
       height = Some(200),
       xAxisLabel = "mm",
-      xDataLabel = "CU",
+      xDataLabel = "Pixel vs CU",
       xValueList = xValueList,
       // xFormat // default:  String = ".4g",
       yAxisLabels = Seq("Offset (mm)"),
@@ -323,7 +323,7 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
     } else {
       val chart = new C3Chart(
         height = Some(200),
-        xAxisLabel = "CU",
+        xAxisLabel = "Pixel vs CU",
         xDataLabel = "mm",
         xValueList = xValueList,
         // xFormat // default:  String = ".4g",
@@ -337,7 +337,7 @@ case class HTML(analysis: Analysis, wlMessage: Option[WLMessage]) extends Loggin
 
       val content: Elem = {
         <div>
-        <h4 title="This shows how straight the edge is.">{edge.name} Edge Profile across width of AOI </h4>
+        <h4 title="This shows how straight the edge is.">{edge.name} Edge Gradient across width of AOI </h4>
         {chart.html}
       </div>
       }
