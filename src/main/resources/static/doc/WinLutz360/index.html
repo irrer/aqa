@@ -1,3 +1,4 @@
+<!--suppress CheckImageSize -->
 <div title="WinLutz360" class="col-md-8 col-md-offset-1">
     <!--
     Copyright 2026 Regents of the University of Michigan
@@ -35,6 +36,7 @@
         <li> Off-center fields from EPID shifting (e.g. centered at isoplane x,y = 25,30mm)</li>
         <li> A range of ball sizes (extremes values have not been tested)</li>
         <li> Images without the RTPLAN</li>
+        <li> Images delivered as FFF (Flattening Filter Free) or Standard</li>
         <li> Field edges defined by any combination of collimator and jaws</li>
         <li> Reporting of which edges are defined by jaws vs. collimator (requires RTPLAN)</li>
         <li> Arbitrary imager resolution</li>
@@ -50,6 +52,12 @@
         <li><a href="#PreciseLoc">Precise Edge Location</a></li>
         <li><a href="#BallLoc">Ball Location</a></li>
     </ol>
+
+    <h3> Other</h3>
+    <ul>
+        <li><a href="#Bicubic">Bicubic Interpolation</a></li>
+        <li><a href="#Validation">Validation</a></li>
+    </ul>
 
     <h3>Background</h3>
     <p>Bicubic Edge Interpolation</p>
@@ -257,33 +265,84 @@
         </div>
     </div>
 
-
     <!-- =========================================================================================================== -->
 
     <h3 id="BallLoc">Ball Location</h3>
 
     <p> To locate the ball, first an AOI is made by using the minimum values of the AOIs determined in the edge
         analysis. The ball AOI is supersampled with pixel interpolation, and then calculating center of mass.
-
     </p>
+
+    <p>Profile of the ball in one axis used to find center:</p>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div style="margin:30px; border: 1px solid lightgrey;">
+                <a href="BallProfile.png">
+                    <img alt="Ball Profile." style="margin:30px;"
+                         src="BallProfile.png"/>
+                </a>
+            </div>
+            <em style="margin-left:270px;"></em>
+        </div>
+    </div>
+
+
+    <p>This image shows the ball AOI with two orthogonal lines marking the center of the ball. Click for larger
+        image.</p>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div style="margin:30px; border: 1px solid lightgrey;">
+                <a href="BallImage.png">
+                    <img alt="Ball image with center marked." style="margin:30px;" width="300"
+                         src="BallImage.png"/>
+                </a>
+            </div>
+            <em style="margin-left:270px;"></em>
+        </div>
+    </div>
+
+
+    <p>The ball diagnostics also show an image that highlights the background immediately adjacent to the ball. This is
+        only for purposes of illustration and is not used in any calculations. What it does show is the effects of the
+        stem that supports the ball. Ideally, the stem would be perfectly transparent to the beam, but in some cases it
+        is not. No compensation is done for the effects of the stem, and a less transparent stem will change the
+        calculated position of the ball. The image below shows an image from another data set where the effects of the
+        stem are large enough to be observed on the right-hand side.</p>
+
+    <p>While images delivered with FFF are supported, a poorly centered ball with FFF may produce an exaggerated error.
+        When measuring the ball's position, no compensation is made for FFF.</p>
+
+    <p>This image shows the profile of a ball delivered with FFF:</p>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div style="margin:30px; border: 1px solid lightgrey;">
+                <a href="BallProfileWithFFF.png">
+                    <img alt="Ball image with center marked." style="margin:30px;"
+                         src="BallProfileWithFFF.png"/>
+                </a>
+            </div>
+            <em style="margin-left:270px;"></em>
+        </div>
+    </div>
 
     <!-- =========================================================================================================== -->
 
 
-    <!--                                                                                                               -->
+    <h3 id="Bicubic">Bicubic Edge Interpolation</h3>
 
-    <h3>Coarse Location</h3>
-    <h3>Bicubic Edge Interpolation</h3>
-    sub-pixel sampling
-    uses reported angles (from RTIMAGE)
-    AOI extends from low point to edge of image
-    <h3>Approximate Location</h3>
-    <h3>Precise Edge Location</h3>
-    AOI extends from low point to a fixed distance
-    <h3>Ball Location</h3>
-    create ball AOI
-    <h3>Validation</h3>
-    <h3>Edge Gradients</h3>
+    <p>Several of the processing steps described here use rectangular AOIs that are at non-cardinal angles. This creates
+        situations where individual pixels are partially in and partially out of the AOI. To address this, <a
+                href="https://en.wikipedia.org/wiki/Bicubic_interpolation">bicubic interpolation</a> is used, which
+        allows sampling at arbitrary points in the image. </p>
+
+    <p>This image illustrates how surface, measured at discrete points, is mathematically smoothed. The smooth model can
+        be sampled at any arbitrary point. This sampling is used for the approximate edge measurement, precise edge
+        measurement, and ball measurement. For efficiency reasons, the approximate edge measurement step uses a coarser
+        resolution. The precise and ball use a (configured) resolution of 0.1 samples per linear pixels. This results in
+        a resolution of 100 samples per pixel. </p>
 
     <div class="row">
         <div class="col-md-12">
@@ -295,7 +354,10 @@
         </div>
     </div>
 
+    <h3 id="Validation">Validation</h3>
+
+
+
     <div style="margin:200px;">
     </div>
-
 </div>
