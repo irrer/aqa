@@ -356,7 +356,18 @@
 
     <h3 id="Validation">Validation</h3>
 
+    <p> It is possible for a non-Winston Lutz image to be submitted for analysis (e.g. VMAT, IsoCal phantom, patient
+        scan). The following precautions are taken to avoid processing such images as valid Winston Lutz. If any of
+        these fails then the image will be rejected and no results will be put in the database. </p>
 
+    <ul>
+        <li>All four edges must have a sufficient amount of contrast (between light and dark). (configurable)</li>
+        <li>The beam energy must be sufficiently high. It is possible to deliver Winston Lutz with CT, but that is not
+            generally the intent. (configurable)
+        </li>
+        <li>The image of the ball must have sufficient contrast. (configurable)</li>
+        <li>The profile of the ball must be a simple curve with no dips.</li>
+    </ul>
 
     <div style="margin:200px;">
     </div>
