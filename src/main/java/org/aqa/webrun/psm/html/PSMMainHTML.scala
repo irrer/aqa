@@ -12,10 +12,10 @@ import org.aqa.web.ViewOutput
 import org.aqa.web.WebUtil
 import org.aqa.webrun.psm.PSMBeamAnalysisResult
 import org.aqa.webrun.psm.PSMCharts
-import org.aqa.webrun.psm.PSMDicom
 import org.aqa.webrun.psm.PSMGradientAscent
 import org.aqa.webrun.psm.PSMGrid
 import org.aqa.webrun.psm.PSMRunReq
+import org.aqa.webrun.psm.PSMUtil
 
 import java.awt.Color
 import java.io.File
@@ -63,7 +63,8 @@ class PSMMainHTML(
         dir = dir,
         al = Some(ffAl),
         valueGetter = psmBeam => psmBeam.floodField_cu.get,
-        color = Some(Color.white))
+        color = Some(Color.white)
+      )
 
       val wdRow = PSMHtmlImage( //
         extendedData,
@@ -74,7 +75,8 @@ class PSMMainHTML(
         dir = dir,
         al = Some(wdAl),
         valueGetter = psmBeam => psmBeam.wholeDetector_cu.get,
-        color = Some(Color.white))
+        color = Some(Color.white)
+      )
 
       val rawRow = PSMHtmlImage( //
         extendedData,
@@ -84,7 +86,8 @@ class PSMMainHTML(
         trans,
         dir = dir,
         valueGetter = psmBeam => psmBeam.rawImage,
-        color = Some(Color.white))
+        color = Some(Color.white)
+      )
 
       val cbrRow = PSMHtmlImage( //
         extendedData,
@@ -95,7 +98,8 @@ class PSMMainHTML(
         dir = dir,
         valueGetter = psmBeam => psmBeam.mean_cu,
         resultList = resultList,
-        color = Some(Color.white))
+        color = Some(Color.white)
+      )
 
       val brRow: Option[PSMHtmlImage] = {
         if (psmGradientAscent.isDefined && brImg.isDefined)
@@ -118,14 +122,8 @@ class PSMMainHTML(
       }
 
       val psmRow: Option[PSMHtmlImage] = {
-        if (psmImg.isDefined) Some(PSMHtmlImage(extendedData,
-          name = "PSM = Raw / Beam Response",
-          image = psmImg.get,
-          grid = grid,
-          trans,
-          dir = dir,
-          valueGetter = psmBeam => psmBeam.psm,
-          color = Some(Color.white)))
+        if (psmImg.isDefined)
+          Some(PSMHtmlImage(extendedData, name = "PSM = Raw / Beam Response", image = psmImg.get, grid = grid, trans, dir = dir, valueGetter = psmBeam => psmBeam.psm, color = Some(Color.white)))
         else
           None
       }
@@ -167,9 +165,17 @@ class PSMMainHTML(
 
     val planHtml = PlanHTML(extendedData, rtplan)
 
+    val brDicomFile = new File(dir, "BRDicom.dcm")
     val psmDicomFile = new File(dir, "PSMDicom.dcm")
+
+    if (brImg.isDefined) {
+      val brDicom = PSMUtil.DicomImageToDicom(brImg.get, wdAl, RTImageLabel = "Beam Response", RTImageDescription = "Only the pixel data is relevant.")
+      DicomUtil.writeAttributeListToFile(brDicom, brDicomFile, "AQA")
+      logger.info("Wrote Beam Response as DICOM to: " + brDicomFile.getAbsolutePath)
+    }
+
     if (psmImg.isDefined) {
-      val psmDicom = PSMDicom.psmToDicom(psmImg.get, wdAl, RTImageLabel = "PSM as DICOM", RTImageDescription = "Only the pixel data is relevant.")
+      val psmDicom = PSMUtil.DicomImageToDicom(psmImg.get, wdAl, RTImageLabel = "PSM as DICOM", RTImageDescription = "Only the pixel data is relevant.")
       DicomUtil.writeAttributeListToFile(psmDicom, psmDicomFile, "AQA")
       logger.info("Wrote PSM as DICOM to: " + psmDicomFile.getAbsolutePath)
     }
@@ -208,19 +214,28 @@ class PSMMainHTML(
               <a href={ViewOutput.viewOutputUrl(psmRunReq.floodField.outputPK)}>View Flood Field</a>
             </p>
           </div>
-          <div class="col-md-2">
+          <div class="col-md-1">
             <p style="margin-top:9px;">
               <a href={planHtml.fileName}>View RTPLAN</a>
             </p>
           </div>{// @formatter:off
+          if (brImg.isDefined) {
+            <div class="col-md-2" title="Note that only the pixel data is relevant, not energy or other parametes..">
+              <p style="margin-top:9px;">
+                <a href={brDicomFile.getName}>Download Beam<br>Response as DICOM</br></a>
+              </p>
+            </div>
+            // @formatter:on}
+          }}{// @formatter:off
             if (psmImg.isDefined) {
               <div class="col-md-2" title="Note that only the pixel data is relevant, not energy or other parametes..">
                 <p style="margin-top:9px;">
-                  <a href={psmDicomFile.getName}>Download PSM as DICOM</a>
+                  <a href={psmDicomFile.getName}>Download PSM<br>as DICOM</br></a>
                 </p>
                </div>
           // @formatter:on}
             }}
+
         </div>
         <div class="row">
           <div class="col-md-10">

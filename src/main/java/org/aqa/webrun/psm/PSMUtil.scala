@@ -1,8 +1,14 @@
 package org.aqa.webrun.psm
 
+import com.pixelmed.dicom.AttributeFactory
 import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.AttributeTag
+import com.pixelmed.dicom.OtherWordAttribute
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.util.UMROGUID
+import edu.umro.DicomDict.TagByName
+import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Config
 import org.aqa.Logging
 
@@ -97,5 +103,64 @@ object PSMUtil extends Logging {
       case _ => a / b
     }
   }
+
+  /**
+   * Make DICOM out of a DicomImage.
+   *
+   * This DICOM will have a new SOPInstanceUID and SeriesInstanceUID.  It uses 16-bit pixels.  It will have the same time and date stamps as the prototype.
+   *
+   * @param dicomImage PSM values.
+   * @param prototype One of the original PSM images.
+   * @return
+   */
+  def DicomImageToDicom(dicomImage: DicomImage, prototype: AttributeList, RTImageLabel: String, RTImageDescription: String): AttributeList = {
+
+    val al = DicomUtil.clone(prototype)
+
+    def set(tag: AttributeTag, value: Any): Unit = {
+      val attr = AttributeFactory.newAttribute(tag)
+      attr.removeValues()
+
+      value match {
+        case str: String => attr.addValue(str)
+        case dbl: Double => attr.addValue(dbl)
+        case flt: Float  => attr.addValue(flt)
+        case int: Int    => attr.addValue(int)
+      }
+
+      al.put(attr)
+    }
+
+    val sopUid = UMROGUID.getUID
+    set(TagByName.MediaStorageSOPInstanceUID, sopUid)
+    set(TagByName.SOPInstanceUID, sopUid)
+    set(TagByName.SeriesInstanceUID, UMROGUID.getUID)
+    set(TagByName.RTImageLabel, RTImageLabel)
+    set(TagByName.RTImageDescription, RTImageDescription)
+    set(TagByName.ReferencedBeamNumber, -1)
+
+    val hiPix = 0xffff
+
+    val RescaleIntercept = dicomImage.minPixelValue
+    val RescaleSlope = (dicomImage.maxPixelValue - dicomImage.minPixelValue) / hiPix
+
+    set(TagByName.RescaleIntercept, RescaleIntercept)
+    set(TagByName.RescaleSlope, RescaleSlope)
+
+    def toPix(psmValue: Float): Short = {
+      val i = ((psmValue - RescaleIntercept) / RescaleSlope).round
+      (i & 0xffff).toShort
+    }
+
+    val newPixels = dicomImage.pixelData.flatten.map(toPix).toArray
+    val otherWordAttribute = new OtherWordAttribute(TagByName.PixelData)
+    otherWordAttribute.setValues(newPixels)
+    al.remove(TagByName.PixelData)
+    al.put(otherWordAttribute)
+
+    al
+  }
+
+
 
 }

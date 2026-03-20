@@ -37,7 +37,14 @@ class PSMInterpolator(psmList: Seq[PSMBeamAnalysisResult]) extends Logging {
     * Use: <code>val psm = function.value(x,y)</code>
     */
   private val function: PiecewiseBicubicSplineInterpolatingFunction = {
-    interpolator.interpolate(yCoordinateList, xCoordinateList, valueList)
+    val centerValue: Double = {
+      val zero = new Point2d(0, 0)
+      val c = psmList.minBy(p => p.psmBeam.center.distance(zero))
+      c.psmBeam.mean_cu
+    }
+
+    val convoluted = valueList.map(row => row.map(v => centerValue / v))
+    interpolator.interpolate(yCoordinateList, xCoordinateList, convoluted)
   }
 
   def isInBounds(x_iso: Double, y_iso: Double): Boolean = {
@@ -95,7 +102,7 @@ class PSMInterpolator(psmList: Seq[PSMBeamAnalysisResult]) extends Logging {
     di
   }
 
-  val dicomImage: DicomImage = makeDicomImage()
+  private val dicomImage: DicomImage = makeDicomImage()
 
   val normalizedDicomImage: DicomImage = PSMUtil.normalize(trans, dicomImage)
 }
