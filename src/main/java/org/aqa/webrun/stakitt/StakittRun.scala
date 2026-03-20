@@ -1,22 +1,7 @@
-/*
- * Copyright 2026 Regents of the University of Michigan
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.aqa.webrun.stakitt
 
 import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.run.ProcedureStatus
@@ -27,14 +12,19 @@ import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.WebRunProcedure
 import org.aqa.Util
-import org.aqa.db.MachineWL
 import org.aqa.run.RunProcedure
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil.emptyValueMap
 import org.aqa.web.WebUtil.getValueMap
 import org.aqa.webrun.phase2.Phase2Util
-import org.aqa.webrun.winLutz360.Analysis
 import org.aqa.webrun.wl.isoCheck.WLRunIsoCheck
+import org.aqa.AnonymizeUtil
+import org.aqa.web.WebServer
+import org.aqa.AQAEventNetClient
+import org.aqa.Config
+import org.aqa.db.MachineWL
+import org.aqa.webrun.winLutz360.Analysis
+import org.aqa.webrun.wl.EventWLQASRSDone
 import org.aqa.webrun.wl.WLImageStatus
 import org.aqa.webrun.wl.WLImageUtil
 import org.aqa.webrun.wl.WLMainHtml
@@ -53,7 +43,37 @@ class StakittRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLR
 
   private def getRtimageList(alList: Seq[AttributeList]) = alList.filter(al => Util.isRtimage(al)).sortBy(WLImageUtil.timeOfMs)
 
+  /**
+    * Send an EventNet event indicating that a WL has been done.
+    * @param extendedData metadata for URL and machine ID
+    * @param runReq has patient ID
+    * @param status pass/fail
+    * @param NumberOfImages number of RTIMAGE files
+    */
+  private def sendEvent(extendedData: ExtendedData, runReq: WLRunReq, status: ProcedureStatus.Value, NumberOfImages: Int): Unit = {
+    val realPatientId: String =
+      try {
+        AnonymizeUtil.deAnonymizeAttribute(extendedData.institution.institutionPK.get, runReq.epidList.head.get(TagByName.PatientID)).get.getSingleStringValueOrEmptyString
+      } catch {
+        case _: Throwable => "NA"
+      }
 
+    try {
+      val event = new EventWLQASRSDone( //
+        PatientId = realPatientId,
+        CareEventStart = extendedData.output.dataDate.get,
+        Status = status,
+        NumberOfImages = NumberOfImages,
+        ReportURL = Config.RootUrl + WebServer.urlOfResultsFile(extendedData.output.dir) + "/" + Output.displayFilePrefix + ".html",
+        TreatmentMachine = extendedData.machine.getRealId
+      )
+
+      AQAEventNetClient.sendEventWLQASRSDone(event)
+      logger.info(s"Sent EventNet event\n$event")
+    } catch {
+      case t: Throwable => logger.error(s"Unexpected error sending event: ${fmtEx(t)}")
+    }
+  }
 
   override def run(extendedData: ExtendedData, runReq: WLRunReq, response: Response): ProcedureStatus.Value = {
 
@@ -107,6 +127,8 @@ class StakittRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLR
         ProcedureStatus.pass
       else
         ProcedureStatus.fail
+
+    sendEvent(extendedData, runReq, status, resultList.size)
 
     status
   }
