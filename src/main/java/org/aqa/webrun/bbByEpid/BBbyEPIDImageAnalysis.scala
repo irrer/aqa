@@ -163,7 +163,7 @@ object BBbyEPIDImageAnalysis extends Logging {
     /** List of jaw  */
     val rtplanDefaultJawList = Seq(-50.0, 50.0)
     def getLeafJawPositionList(al: AttributeList): Seq[Double] = {
-      DicomUtil.findAllSingle(al, TagByName.LeafJawPositions).flatMap(_.getDoubleValues).distinct
+      DicomUtil.findAllTag(al, TagByName.LeafJawPositions).flatMap(_.getDoubleValues).distinct
     }
 
     /**
@@ -189,7 +189,7 @@ object BBbyEPIDImageAnalysis extends Logging {
 
     val isClosedField: Boolean =
       try {
-        val rtplanUID = DicomUtil.findAllSingle(epidAl, TagByName.ReferencedSOPInstanceUID).head.getSingleStringValueOrNull
+        val rtplanUID = DicomUtil.findAllTag(epidAl, TagByName.ReferencedSOPInstanceUID).head.getSingleStringValueOrNull
         // The DICOM series referenced by this EPID.  Try for an exact match, and if that fails, use one from the same patient.
         val dicomSeries = DicomSeries.getBySopInstanceUID(rtplanUID).headOption match {
           case Some(ds) =>
@@ -212,7 +212,7 @@ object BBbyEPIDImageAnalysis extends Logging {
 
         val beamNumber = epidAl.get(TagByName.ReferencedBeamNumber).getIntegerValues.head
         val beamSequence = Phase2Util.getBeamSequence(rtplan, beamNumber)
-        val planLeafJawPositionList = DicomUtil.findAllSingle(beamSequence, TagByName.LeafJawPositions).flatMap(_.getDoubleValues).distinct
+        val planLeafJawPositionList = DicomUtil.findAllTag(beamSequence, TagByName.LeafJawPositions).flatMap(_.getDoubleValues).distinct
         jawsMatch(planLeafJawPositionList)
       } catch {
         // could not find an RTPLAN.  Use hard-coded values.

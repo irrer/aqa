@@ -96,7 +96,7 @@ trait RunTrait[RunReqClassType] extends Restlet with Logging {
     */
   def getRadiationMachineNameListFromRtimageUtil(alList: Seq[AttributeList], xmlList: Seq[Elem]): Seq[String] = {
     val rtimageList = alList.filter(al => Util.isRtimage(al))
-    val machineNameList =rtimageList.flatMap(rti => DicomUtil.findAllSingle(rti, TagByName.RadiationMachineName)).map(_.getSingleStringValueOrEmptyString()).filter(_.nonEmpty).distinct
+    val machineNameList =rtimageList.flatMap(rti => DicomUtil.findAllTag(rti, TagByName.RadiationMachineName)).map(_.getSingleStringValueOrEmptyString()).filter(_.nonEmpty).distinct
     machineNameList
   }
 

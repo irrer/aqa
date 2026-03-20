@@ -52,7 +52,7 @@ class MakeRtplanPSMMinimal extends MakeRtplan {
   )
 
   private def removeExtraBeams(rtplan: AttributeList): Unit = {
-    val beamNameList = DicomUtil.findAllSingle(rtplan, TagByName.BeamName).map(_.getSingleStringValueOrEmptyString())
+    val beamNameList = DicomUtil.findAllTag(rtplan, TagByName.BeamName).map(_.getSingleStringValueOrEmptyString())
     val beamNameListToRemove = beamNameList.filterNot(beamName => renameMap.contains(beamName))
 
     beamNameListToRemove.foreach(beamName => CustomizeRtPlanUtil.removeBeamFromPlan(rtplan, beamName))
@@ -68,7 +68,7 @@ class MakeRtplanPSMMinimal extends MakeRtplan {
       beamNameAttr.addValue(newName)
     }
 
-    DicomUtil.findAllSingle(rtplan, TagByName.BeamName).foreach(renameBeam)
+    DicomUtil.findAllTag(rtplan, TagByName.BeamName).foreach(renameBeam)
   }
 
   override def makeRtplan(machine: Machine, userPK: Long, planSpecification: PlanSpecification, procName: String): AttributeList = {

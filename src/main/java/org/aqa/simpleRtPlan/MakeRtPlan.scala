@@ -49,12 +49,12 @@ class MakeRtPlan(
     * @return Beam name.
     */
   private def numberOfBeam(beamAl: AttributeList): Int = {
-    val number = DicomUtil.findAllSingle(beamAl, TagByName.BeamNumber).head.getIntegerValues.head
+    val number = DicomUtil.findAllTag(beamAl, TagByName.BeamNumber).head.getIntegerValues.head
     number
   }
 
   private def nameOfBeam(beamAl: AttributeList): String = {
-    val name = DicomUtil.findAllSingle(beamAl, TagByName.BeamName).head.getSingleStringValueOrEmptyString()
+    val name = DicomUtil.findAllTag(beamAl, TagByName.BeamName).head.getSingleStringValueOrEmptyString()
     name
   }
 
@@ -78,7 +78,7 @@ class MakeRtPlan(
     */
   private def setLeafJawPositions(beamTemplate: AttributeList, deviceTypeList: Seq[String], d1: Double, d2: Double): Unit = {
     val positionSeqList = {
-      val atSeq = DicomUtil.findAllSingle(beamTemplate, TagByName.BeamLimitingDevicePositionSequence).asInstanceOf[IndexedSeq[SequenceAttribute]]
+      val atSeq = DicomUtil.findAllTag(beamTemplate, TagByName.BeamLimitingDevicePositionSequence).asInstanceOf[IndexedSeq[SequenceAttribute]]
       val list = atSeq.flatMap(DicomUtil.alOfSeq)
       list
     }
@@ -115,7 +115,7 @@ class MakeRtPlan(
         attr.addValue(newType)
       }
 
-      val deviceTypeList = DicomUtil.findAllSingle(beamTemplate, TagByName.RTBeamLimitingDeviceType).filter(_.getSingleStringValueOrEmptyString().equals(dt))
+      val deviceTypeList = DicomUtil.findAllTag(beamTemplate, TagByName.RTBeamLimitingDeviceType).filter(_.getSingleStringValueOrEmptyString().equals(dt))
       deviceTypeList.foreach(changeDeviceType)
     }
 
@@ -134,10 +134,10 @@ class MakeRtPlan(
     val beamRefAl = refBeamSeq(rtplan, beamSpecification.BeamNumber)
 
     // Find all references to beam energy and set them to the specified level.
-    DicomUtil.findAllSingle(beamAl, TagByName.NominalBeamEnergy).foreach(nbe => setNominalBeamEnergy(nbe, beamSpecification.NominalBeamEnergy))
+    DicomUtil.findAllTag(beamAl, TagByName.NominalBeamEnergy).foreach(nbe => setNominalBeamEnergy(nbe, beamSpecification.NominalBeamEnergy))
 
     // Find all references to SourceToSurfaceDistance and set them to the specified level.
-    DicomUtil.findAllSingle(beamAl, TagByName.SourceToSurfaceDistance).foreach(nbe => setSourceToSurfaceDistance(nbe, beamSpecification.SourceToSurfaceDistance))
+    DicomUtil.findAllTag(beamAl, TagByName.SourceToSurfaceDistance).foreach(nbe => setSourceToSurfaceDistance(nbe, beamSpecification.SourceToSurfaceDistance))
 
     def setRBS(tag: AttributeTag, value: Double): Unit = {
       beamRefAl.remove(tag)
@@ -160,7 +160,7 @@ class MakeRtPlan(
 
       tp.foreach(t => setLeafJawPositions(t, Seq("X", "ASYMX"), beamSpecification.X1_mm, beamSpecification.X2_mm))
       tp.foreach(t => setLeafJawPositions(t, Seq("Y", "ASYMY"), beamSpecification.Y1_mm, beamSpecification.Y2_mm))
-      tp.foreach(t => DicomUtil.findAllSingle(t, TagByName.SourceToSurfaceDistance).foreach(nbe => setSourceToSurfaceDistance(nbe, beamSpecification.SourceToSurfaceDistance)))
+      tp.foreach(t => DicomUtil.findAllTag(t, TagByName.SourceToSurfaceDistance).foreach(nbe => setSourceToSurfaceDistance(nbe, beamSpecification.SourceToSurfaceDistance)))
     }
     setPortfilmAl()
 
@@ -176,7 +176,7 @@ class MakeRtPlan(
     * @param value New value.
     */
   private def setAll(al: AttributeList, tag: AttributeTag, value: String): Unit = {
-    val list = DicomUtil.findAllSingle(al, tag)
+    val list = DicomUtil.findAllTag(al, tag)
 
     list.foreach(attr => {
       attr.removeValues()
@@ -255,7 +255,7 @@ class MakeRtPlan(
 
   private def makeNewUIDs(al: AttributeList): Unit = {
     val keySet = Config.ToBeAnonymizedList.keySet.filter(tag => ValueRepresentation.isUniqueIdentifierVR(DicomUtil.dictionary.getValueRepresentationFromTag(tag)))
-    val attrList = DicomUtil.findAll(al, keySet)
+    val attrList = DicomUtil.findAllTagSet(al, keySet)
     def replace(at: Attribute): Unit = {
       val uid = getReplacementUID(at.getSingleStringValueOrEmptyString)
       at.removeValues()
@@ -292,7 +292,7 @@ class MakeRtPlan(
 
       val description = {
         val list = Seq(TagByName.SOPInstanceUID, TagByName.StructureSetLabel, TagByName.ROIName, TagByName.ROIObservationLabel)
-        val textList = list.flatMap(tag => { DicomUtil.findAllSingle(rtstruct, tag).map(_.getSingleStringValueOrEmptyString()) })
+        val textList = list.flatMap(tag => { DicomUtil.findAllTag(rtstruct, tag).map(_.getSingleStringValueOrEmptyString()) })
         textList.mkString("  ")
       }
 
@@ -341,7 +341,7 @@ class MakeRtPlan(
       val suffix = if (rtimageList.size == 1) "" else "_" + (index + 1)
       toZipOutputStream.writeDicom(rtimage, "RTIMAGE" + suffix + ".dcm", sourceApplication)
       val description = "Beam number " + rtimage.get(TagByName.ReferencedBeamNumber).getIntegerValues.head + " : " +
-        DicomUtil.findAllSingle(rtimage, TagByName.LeafJawPositions).map(_.getDoubleValues.mkString(", ")).mkString("    ")
+        DicomUtil.findAllTag(rtimage, TagByName.LeafJawPositions).map(_.getDoubleValues.mkString(", ")).mkString("    ")
       logger.info("Made RTIMAGE " + description)
     }
 

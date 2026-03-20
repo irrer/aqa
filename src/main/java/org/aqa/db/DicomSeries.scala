@@ -450,7 +450,7 @@ object DicomSeries extends Logging {
       def getMappedFrameOfReferenceUID: Option[String] = {
         if (getFrameOfReferenceUID.isDefined) {
           val mainFrmOfRef = getFrameOfReferenceUID.get
-          val allFrmOfRef = alList.flatMap(al => DicomUtil.findAllSingle(al, TagByName.FrameOfReferenceUID)).map(a => a.getSingleStringValueOrNull).filterNot(uid => uid == null).distinct
+          val allFrmOfRef = alList.flatMap(al => DicomUtil.findAllTag(al, TagByName.FrameOfReferenceUID)).map(a => a.getSingleStringValueOrNull).filterNot(uid => uid == null).distinct
           val mapped = allFrmOfRef.filterNot(frmOfRef => frmOfRef.equals(mainFrmOfRef)).headOption
           mapped
         } else

@@ -90,7 +90,7 @@ case class Validate( //
    * @return Error list or empty error list.
    */
   private def beamEnergyIsHighEnough(): Seq[ValidationStatus] = {
-    val kvpList = DicomUtil.findAllSingle(edgeAnalysis.al, TagByName.KVP).flatMap(_.getDoubleValues).distinct.sorted
+    val kvpList = DicomUtil.findAllTag(edgeAnalysis.al, TagByName.KVP).flatMap(_.getDoubleValues).distinct.sorted
 
     // if the KVP was not available, then process the image anyway.  This covers some of the weird cases.
     val ok = kvpList.isEmpty || (kvpList.head >= Config.WinLutz360KVPLimit)

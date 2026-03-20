@@ -25,13 +25,13 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
   }
   private val collimatorAngle = Util.collimatorAngle(rtimage)
 
-  private val KVP = DicomUtil.findAllSingle(rtimage, TagByName.KVP).head.getDoubleValues.head
+  private val KVP = DicomUtil.findAllTag(rtimage, TagByName.KVP).head.getDoubleValues.head
   private val mv = KVP / 1000.0
 
   /** MV energy formatted to the minimal string that represents its full precision. */
   val mvText: String = if (mv.round == mv) mv.round.toString else mv.toString
   private val ExposureTime: Double = {
-    val list = DicomUtil.findAllSingle(rtimage, TagByName.ExposureTime)
+    val list = DicomUtil.findAllTag(rtimage, TagByName.ExposureTime)
     if (list.nonEmpty && list.head.getDoubleValues.nonEmpty)
       list.head.getDoubleValues.head
     else
@@ -39,7 +39,7 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
   }
 
   private val XRayImageReceptorTranslation = {
-    val list = DicomUtil.findAllSingle(rtimage, TagByName.XRayImageReceptorTranslation)
+    val list = DicomUtil.findAllTag(rtimage, TagByName.XRayImageReceptorTranslation)
     if (list.nonEmpty && (list.head.getDoubleValues.length == 3)) {
       val xrayTrans = list.head.getDoubleValues
       new javax.vecmath.Point3d(xrayTrans.head, xrayTrans(1), xrayTrans(2))
@@ -56,7 +56,7 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
 
   def beamName: String = DicomUtil.getBeamNameOfRtimage(rtplan, rtimage).get
 
-  def beamNumber: Int = DicomUtil.findAllSingle(rtimage, TagByName.ReferencedBeamNumber).head.getIntegerValues.head
+  def beamNumber: Int = DicomUtil.findAllTag(rtimage, TagByName.ReferencedBeamNumber).head.getIntegerValues.head
 
   def fileNamePrefix: String = {
     val typeName = if (isJaw) "Jaw" else "MLC"
@@ -65,7 +65,7 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
     name
   }
 
-  val NominalBeamEnergy: Double = DicomUtil.findAllSingle(beam, TagByName.NominalBeamEnergy).head.getDoubleValues.head
+  val NominalBeamEnergy: Double = DicomUtil.findAllTag(beam, TagByName.NominalBeamEnergy).head.getDoubleValues.head
 
   val RTImageSID_mm: Double = translator.rtimageSid // rtimage.get(TagByName.RTImageSID).getDoubleValues.head
   /** Distance in mm from source to EPID. */
@@ -136,7 +136,7 @@ case class FSMeasure(rtplan: AttributeList, rtimage: AttributeList, outputPK: Lo
   val isJaw: Boolean = !isMLC
 
   /** True if this is an FFF beam. */
-  val isFFF: Boolean = DicomUtil.findAllSingle(beam, TagByName.FluenceModeID).map(_.getSingleStringValueOrEmptyString()).exists(_.toUpperCase().contains("FFF"))
+  val isFFF: Boolean = DicomUtil.findAllTag(beam, TagByName.FluenceModeID).map(_.getSingleStringValueOrEmptyString()).exists(_.toUpperCase().contains("FFF"))
 
   // @formatter:off
   val analysisResult: MeasureTBLREdges.AnalysisResult = MeasureTBLREdges.measure(

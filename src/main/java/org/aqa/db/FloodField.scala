@@ -316,7 +316,7 @@ object FloodField extends Logging {
       zos.finish()
     }
 
-    val KVP = DicomUtil.findAllSingle(al, TagByName.KVP).head.getDoubleValues.head
+    val KVP = DicomUtil.findAllTag(al, TagByName.KVP).head.getDoubleValues.head
 
     // @formatter:off
     val floodField = new FloodField(

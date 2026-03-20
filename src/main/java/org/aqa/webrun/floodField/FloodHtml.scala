@@ -170,7 +170,7 @@ object FloodHtml extends Logging {
 
   private def beamType(rtimage: AttributeList): Elem = {
     val kvpText: String = {
-      val k = DicomUtil.findAllSingle(rtimage, TagByName.KVP).head.getDoubleValues.head
+      val k = DicomUtil.findAllTag(rtimage, TagByName.KVP).head.getDoubleValues.head
       if (k.round == k) {
         if ((k % 1000) == 0)
           (k.round / 1000).toString + " MV"

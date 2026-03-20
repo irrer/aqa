@@ -68,7 +68,7 @@ class FSRun(procedure: Procedure) extends WebRunProcedure with RunTrait[FSRunReq
     * @return List of RTPLAN SOPs.
     */
   private def getRtplanRefList(al: AttributeList): Seq[String] = {
-    val attrList = DicomUtil.seqToAttr(al, TagByName.ReferencedRTPlanSequence).flatMap(al => DicomUtil.findAllSingle(al, TagByName.ReferencedSOPInstanceUID))
+    val attrList = DicomUtil.seqToAttr(al, TagByName.ReferencedRTPlanSequence).flatMap(al => DicomUtil.findAllTag(al, TagByName.ReferencedSOPInstanceUID))
     attrList.flatMap(_.getStringValues).distinct
   }
 

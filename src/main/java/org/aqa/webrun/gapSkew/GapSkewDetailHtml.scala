@@ -204,7 +204,7 @@ case class GapSkewDetailHtml(extendedData: ExtendedData, gapSkew: GapSkew, rtima
       */
     def getDbl(tag: AttributeTag): String = {
       try {
-        val list = DicomUtil.findAllSingle(al, tag)
+        val list = DicomUtil.findAllTag(al, tag)
         if (list.nonEmpty)
           list.head.getDoubleValues()(0).toString
         else

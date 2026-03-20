@@ -31,7 +31,7 @@ object LOCFindRunReq extends Logging {
     * @return
     */
   private def maxSizeOfDistinctLeafJawPositions(rtimage: AttributeList): Int = {
-    val ljsList = DicomUtil.findAllSingle(rtimage, TagByName.LeafJawPositions)
+    val ljsList = DicomUtil.findAllTag(rtimage, TagByName.LeafJawPositions)
     val sizeList = ljsList.map(_.getDoubleValues.distinct.length).distinct
     sizeList.max
   }
@@ -77,11 +77,11 @@ object LOCFindRunReq extends Logging {
   }
 
   private def beamNumberOf(rtimage: AttributeList): Int = {
-    DicomUtil.findAllSingle(rtimage, TagByName.ReferencedBeamNumber).head.getIntegerValues.head
+    DicomUtil.findAllTag(rtimage, TagByName.ReferencedBeamNumber).head.getIntegerValues.head
   }
 
   private def exposureTime(rtimage: AttributeList): Double = {
-    DicomUtil.findAllSingle(rtimage, TagByName.ExposureTime).head.getIntegerValues.head
+    DicomUtil.findAllTag(rtimage, TagByName.ExposureTime).head.getIntegerValues.head
   }
 
   /**

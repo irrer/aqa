@@ -22,13 +22,13 @@ object FloodUtil {
   def isFloodField(al: AttributeList): Boolean = {
 
     /** True if al references a beam. */
-    def referencesBeam: Boolean = DicomUtil.findAllSingle(al, TagByName.ReferencedBeamNumber).nonEmpty
+    def referencesBeam: Boolean = DicomUtil.findAllTag(al, TagByName.ReferencedBeamNumber).nonEmpty
 
     /** True if there is an XRayImageReceptorTranslation and all of its values are near zero.  Criteria is that
       *  it be less than one.  Normal RTIMAGES have a large value around 500 or ~1000.
       */
     def XRayImageReceptorTranslationNearZero = {
-      val attrList = DicomUtil.findAllSingle(al, TagByName.XRayImageReceptorTranslation)
+      val attrList = DicomUtil.findAllTag(al, TagByName.XRayImageReceptorTranslation)
       attrList.nonEmpty && attrList.flatMap(_.getDoubleValues).map(_.abs < 1).reduce(_ && _)
     }
     val is = Util.isRtimage(al) && (!referencesBeam) && XRayImageReceptorTranslationNearZero

@@ -86,7 +86,7 @@ abstract class SubProcedure(val metaData: SPMetaData, beamList: Seq[Beam]) exten
           }
 
           def meanGantryAngleOfBeam(beam: Beam): Double = {
-            val list = DicomUtil.findAllSingle(beam.prototypeBeam, TagByName.GantryAngle).flatMap(_.getDoubleValues)
+            val list = DicomUtil.findAllTag(beam.prototypeBeam, TagByName.GantryAngle).flatMap(_.getDoubleValues)
             calcMeanAngle(list)
           }
 

@@ -457,7 +457,7 @@ object RunProcedure extends Logging {
 
   def getDeviceSerialNumber(alList: Seq[AttributeList]): Seq[String] = {
     val serNoByImageList = {
-      alList.flatMap(al => DicomUtil.findAllSingle(al, TagFromName.DeviceSerialNumber)).map(serNo => serNo.getSingleStringValueOrNull).filterNot(_ == null).distinct
+      alList.flatMap(al => DicomUtil.findAllTag(al, TagFromName.DeviceSerialNumber)).map(serNo => serNo.getSingleStringValueOrNull).filterNot(_ == null).distinct
     }
     serNoByImageList
   }

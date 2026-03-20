@@ -286,13 +286,13 @@ object Util extends Logging {
   }
 
   def collimatorAngle(al: AttributeList): Double = {
-    val at = DicomUtil.findAllSingle(al, TagByName.BeamLimitingDeviceAngle).headOption
+    val at = DicomUtil.findAllTag(al, TagByName.BeamLimitingDeviceAngle).headOption
     if (at.isDefined) at.get.getDoubleValues.head else 0
   }
 
   def gantryAngle(al: AttributeList): Double = {
     try {
-      DicomUtil.findAllSingle(al, TagByName.GantryAngle).head.getDoubleValues.head
+      DicomUtil.findAllTag(al, TagByName.GantryAngle).head.getDoubleValues.head
     } catch {
       case _: Throwable => 0.0
     }
@@ -1016,7 +1016,7 @@ object Util extends Logging {
    * @return Beam number.
    */
   def beamNumber(rtImage: AttributeList): Int =
-    DicomUtil.findAllSingle(rtImage, TagByName.ReferencedBeamNumber).head.getIntegerValues.head
+    DicomUtil.findAllTag(rtImage, TagByName.ReferencedBeamNumber).head.getIntegerValues.head
 
   /**
    * Show which jar file is being used to ensure that we have the right version of the software.
@@ -1460,7 +1460,7 @@ object Util extends Logging {
    */
   def attr2Csv(al: AttributeList, tag: AttributeTag, scale: Double = 1.0): Seq[String] = {
     try {
-      val at = DicomUtil.findAllSingle(al, tag).head
+      val at = DicomUtil.findAllTag(al, tag).head
 
       def asLong() = at.getLongValues.map(l => (l * scale).round)
 
@@ -1535,9 +1535,9 @@ object Util extends Logging {
    */
   def minCenteredFieldBeam(beam: AttributeList, minSize_mm: Double): Boolean = {
     val distance = minSize_mm / 2
-    val positionList = DicomUtil.findAllSingle(beam, TagByName.LeafJawPositions).flatMap(_.getDoubleValues)
+    val positionList = DicomUtil.findAllTag(beam, TagByName.LeafJawPositions).flatMap(_.getDoubleValues)
     val notOpen = positionList.exists(pos => pos.abs < distance)
-    val wedgeList = DicomUtil.findAllSingle(beam, TagByName.NumberOfWedges).flatMap(_.getIntegerValues).distinct.filter(_ != 0)
+    val wedgeList = DicomUtil.findAllTag(beam, TagByName.NumberOfWedges).flatMap(_.getIntegerValues).distinct.filter(_ != 0)
     (!notOpen) && wedgeList.isEmpty
   }
 
@@ -1643,7 +1643,7 @@ object Util extends Logging {
    * @return True if it is an FFF beam.
    */
   def isFFF(beam: AttributeList): Boolean = {
-    val fluenceList = DicomUtil.findAllSingle(beam, TagByName.FluenceModeID)
+    val fluenceList = DicomUtil.findAllTag(beam, TagByName.FluenceModeID)
     fluenceList.size match {
       case 0 => false
       case 1 => fluenceList.head.getSingleStringValueOrEmptyString.trim.toUpperCase().equals("FFF")

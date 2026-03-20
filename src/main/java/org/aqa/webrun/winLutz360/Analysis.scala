@@ -35,7 +35,7 @@ case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLR
   val beamCenter_mm: Point2d = {
     try {
       val planBeam = Util.getBeamOfRtimage(wlRunReq.rtplan.get, al)
-      val RTImagePosition = DicomUtil.findAllSingle(planBeam.get, TagByName.RTImagePosition).head.getDoubleValues
+      val RTImagePosition = DicomUtil.findAllTag(planBeam.get, TagByName.RTImagePosition).head.getDoubleValues
 
       val x = RTImagePosition.head / trans.beamExpansionRatio
       val y = RTImagePosition(1) / trans.beamExpansionRatio
@@ -163,7 +163,7 @@ case class Analysis(extendedData: ExtendedData, al: AttributeList, wlRunReq: WLR
         None
     }
 
-    val tableAngle_deg: Double = DicomUtil.findAllSingle(al, TagByName.PatientSupportAngle).head.getDoubleValues.head
+    val tableAngle_deg: Double = DicomUtil.findAllTag(al, TagByName.PatientSupportAngle).head.getDoubleValues.head
 
     val plannedRectangle: Option[PlannedRectangle] = {
       if (wlRunReq.rtplan.isDefined)

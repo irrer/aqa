@@ -40,7 +40,7 @@ class MakeRtplanFocalSpot extends MakeRtplan {
       attr.addValue("TREATMENT_DEVICE")
     }
 
-    DicomUtil.findAllSingle(rtplan, TagByName.RTPlanGeometry).foreach(setGeom)
+    DicomUtil.findAllTag(rtplan, TagByName.RTPlanGeometry).foreach(setGeom)
   }
 
   /**
@@ -113,7 +113,7 @@ class MakeRtplanFocalSpot extends MakeRtplan {
       DicomUtil.seqToAttr(copy, TagByName.FractionGroupSequence).flatMap(fr => DicomUtil.seqToAttr(fr, TagByName.ReferencedBeamSequence))
     }
 
-    val beamNameList = DicomUtil.findAllSingle(rtplan, TagByName.BeamName).map(attr => attr.getSingleStringValueOrNull).distinct
+    val beamNameList = DicomUtil.findAllTag(rtplan, TagByName.BeamName).map(attr => attr.getSingleStringValueOrNull).distinct
 
     beamNameList.foreach(beamName => CustomizeRtPlanUtil.removeBeamFromPlan(rtplan, beamName))
 

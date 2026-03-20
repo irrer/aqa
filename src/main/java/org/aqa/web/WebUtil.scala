@@ -1230,7 +1230,7 @@ object WebUtil extends Logging {
          * they reference the planning system, not a treatment machine.
          */
         def serialNumberOf(al: AttributeList): IndexedSeq[String] = {
-          val all = DicomUtil.findAllSingle(al, TagFromName.DeviceSerialNumber).map(attr => attr.getSingleStringValueOrEmptyString).filterNot(_.equals("")).distinct
+          val all = DicomUtil.findAllTag(al, TagFromName.DeviceSerialNumber).map(attr => attr.getSingleStringValueOrEmptyString).filterNot(_.equals("")).distinct
           val planDsn = {
             val dsn = {
               val attr = al.get(TagFromName.DeviceSerialNumber)

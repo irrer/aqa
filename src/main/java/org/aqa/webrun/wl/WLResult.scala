@@ -39,7 +39,7 @@ abstract class WLResult(extendedData: ExtendedData, runReq: WLRunReq) {
   }
 
   def attr(tag: AttributeTag): String = {
-    DicomUtil.findAllSingle(attrList, tag).map(_.getSingleStringValueOrEmptyString()).head
+    DicomUtil.findAllTag(attrList, tag).map(_.getSingleStringValueOrEmptyString()).head
   }
 
   def gantry_deg: Double = Util.gantryAngle(attrList)

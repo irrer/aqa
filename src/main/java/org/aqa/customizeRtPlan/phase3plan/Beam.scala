@@ -37,7 +37,7 @@ case class Beam(prototypeBeam: AttributeList, beamName: String, beamEnergy: Mach
   // def beamNumber: Int = al.get(TagByName.BeamNumber).getIntegerValues.head
 
   /** Beam energy in MeV. */
-  // def energy_MeV: Double = DicomUtil.findAllSingle(al, TagByName.NominalBeamEnergy).head.getDoubleValues.head
+  // def energy_MeV: Double = DicomUtil.findAllTag(al, TagByName.NominalBeamEnergy).head.getDoubleValues.head
 
   /** True if this is an FFF beam. */
   def isFFF: Boolean = beamEnergy.isFFF
@@ -52,7 +52,7 @@ case class Beam(prototypeBeam: AttributeList, beamName: String, beamEnergy: Mach
   def gantryAngle_deg: Double = Util.gantryAngle(prototypeBeam)
 
   /** List all gantry angles visited by this beam in the order they were visited. */
-  def gantryAngleList_deg: Seq[Double] = DicomUtil.findAllSingle(prototypeBeam, TagByName.GantryAngle).flatMap(_.getDoubleValues).distinct.sorted
+  def gantryAngleList_deg: Seq[Double] = DicomUtil.findAllTag(prototypeBeam, TagByName.GantryAngle).flatMap(_.getDoubleValues).distinct.sorted
 
   def gantryAngle_roundedDeg: Int = Util.angleRoundedTo90(gantryAngle_deg)
 
@@ -81,9 +81,9 @@ object Beam {
 
     val beamName = beamAl.get(TagByName.BeamName).getSingleStringValueOrEmptyString()
     val beamEnergy: MachineBeamEnergy = {
-      val photonEnergy_MeV = DicomUtil.findAllSingle(beamAl, TagByName.NominalBeamEnergy).head.getDoubleValues.head
+      val photonEnergy_MeV = DicomUtil.findAllTag(beamAl, TagByName.NominalBeamEnergy).head.getDoubleValues.head
       //noinspection SpellCheckingInspection
-      val maxDoseRate_MUperMin = DicomUtil.findAllSingle(beamAl, TagByName.DoseRateSet).head.getDoubleValues.head
+      val maxDoseRate_MUperMin = DicomUtil.findAllTag(beamAl, TagByName.DoseRateSet).head.getDoubleValues.head
 
       val fffEnergy_MeV: Double = if (CustomizeRtPlanUtil.isFFFBeam(beamAl)) 1.0 else 0
       MachineBeamEnergy(None, machinePK = machine.machinePK.get, Some(photonEnergy_MeV), Some(maxDoseRate_MUperMin), Some(fffEnergy_MeV))

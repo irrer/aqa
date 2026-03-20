@@ -77,7 +77,7 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
     try {
 
       val jawPosAl = {
-        val posSeq = DicomUtil.findAllSingle(beam, TagByName.BeamLimitingDevicePositionSequence).head.asInstanceOf[SequenceAttribute]
+        val posSeq = DicomUtil.findAllTag(beam, TagByName.BeamLimitingDevicePositionSequence).head.asInstanceOf[SequenceAttribute]
         //noinspection SpellCheckingInspection
         DicomUtil.alOfSeq(posSeq).find(pos => hasName(pos, XY) || hasName(pos, s"ASYM$XY"))
       }
@@ -175,7 +175,7 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
     try {
 
       val mlcPosAl = {
-        val posSeq = DicomUtil.findAllSingle(beam, TagByName.BeamLimitingDevicePositionSequence).head.asInstanceOf[SequenceAttribute]
+        val posSeq = DicomUtil.findAllTag(beam, TagByName.BeamLimitingDevicePositionSequence).head.asInstanceOf[SequenceAttribute]
         DicomUtil.alOfSeq(posSeq).find(pos => hasName(pos, s"MLC$XY"))
       }
 
@@ -185,7 +185,7 @@ case class PlannedEdgeSet(beam: AttributeList) extends Logging {
         val positionList = mlcPosAl.get.get(TagByName.LeafJawPositions).getDoubleValues.toSeq
 
         val boundaryList = {
-          val defSeq = DicomUtil.findAllSingle(beam, TagByName.BeamLimitingDeviceSequence).head.asInstanceOf[SequenceAttribute]
+          val defSeq = DicomUtil.findAllTag(beam, TagByName.BeamLimitingDeviceSequence).head.asInstanceOf[SequenceAttribute]
           val list = DicomUtil.alOfSeq(defSeq).find(pos => hasName(pos, s"MLC$XY")).get
           list.get(TagByName.LeafPositionBoundaries).getDoubleValues
         }
@@ -371,12 +371,12 @@ object PlannedEdgeSet extends Logging {
       val plannedEdgeSet = new PlannedEdgeSet(beam)
 
       val beamName = {
-        val name = DicomUtil.findAllSingle(beam, TagByName.BeamName).head.getSingleStringValueOrEmptyString()
+        val name = DicomUtil.findAllTag(beam, TagByName.BeamName).head.getSingleStringValueOrEmptyString()
         "%-12s".format(name)
       }
 
       val beamNumber = {
-        val name = DicomUtil.findAllSingle(beam, TagByName.BeamNumber).head.getIntegerValues.head
+        val name = DicomUtil.findAllTag(beam, TagByName.BeamNumber).head.getIntegerValues.head
         "%3d".format(name)
       }
 
@@ -389,7 +389,7 @@ object PlannedEdgeSet extends Logging {
 
     }
 
-    val beamNumberList = DicomUtil.findAllSingle(rtplan, TagByName.BeamNumber).flatMap(_.getIntegerValues)
+    val beamNumberList = DicomUtil.findAllTag(rtplan, TagByName.BeamNumber).flatMap(_.getIntegerValues)
 
     {
       println("MLC parameters")

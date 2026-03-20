@@ -91,7 +91,7 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
 
     val RTImagePosition = {
       val beamAl = DicomUtil.getBeamOfRtimage(planBeam.rtplan, planBeam.rtimage).get
-      DicomUtil.findAllSingle(beamAl, TagByName.RTImagePosition).head.getDoubleValues
+      DicomUtil.findAllTag(beamAl, TagByName.RTImagePosition).head.getDoubleValues
     }
 
     val x = -(RTImagePosition.head / trans.beamExpansionRatio)

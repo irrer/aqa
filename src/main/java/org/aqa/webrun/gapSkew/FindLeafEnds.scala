@@ -46,7 +46,7 @@ case class FindLeafEnds(extendedData: ExtendedData, rtimage: AttributeList, minP
 
   // The sorted list of leaf sides in the RTPLAN in pixels.
   private val leafSidesFromPlan_mm: Seq[Double] = {
-    DicomUtil.findAllSingle(rtplan, TagByName.LeafPositionBoundaries).head.getDoubleValues.sorted
+    DicomUtil.findAllTag(rtplan, TagByName.LeafPositionBoundaries).head.getDoubleValues.sorted
   }
 
   private val edgesFromPlan: EdgesFromPlan.OrientedEdgePair = EdgesFromPlan.edgesFromPlan(rtimage, rtplan)

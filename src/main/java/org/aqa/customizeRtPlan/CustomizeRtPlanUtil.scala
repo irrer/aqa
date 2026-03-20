@@ -67,7 +67,7 @@ object CustomizeRtPlanUtil extends Logging {
   def replaceAllUIDs(attributeList: AttributeList): Unit = {
     // get list of attributes that are UIDs
     val uidSet = Config.ToBeAnonymizedList.keySet.filter(tag => ValueRepresentation.isUniqueIdentifierVR(DicomUtil.dictionary.getValueRepresentationFromTag(tag)))
-    val attrList = DicomUtil.findAll(attributeList, uidSet)
+    val attrList = DicomUtil.findAllTagSet(attributeList, uidSet)
     val replaceMap = attrList.map(at => at.getSingleStringValueOrEmptyString).distinct.map(uid => (uid, UMROGUID.getUID)).toMap
 
     def replace(at: Attribute): Unit = {
@@ -83,7 +83,7 @@ object CustomizeRtPlanUtil extends Logging {
     * Given a planned beam's attribute list, get the energy it specifies.
     */
   private def getBeamEnergy(beamAl: AttributeList): Double = {
-    DicomUtil.findAllSingle(beamAl, TagByName.NominalBeamEnergy).head.getDoubleValues.head
+    DicomUtil.findAllTag(beamAl, TagByName.NominalBeamEnergy).head.getDoubleValues.head
   }
 
   /**
@@ -242,9 +242,9 @@ object CustomizeRtPlanUtil extends Logging {
 
       def beamSeqToPlanBeam(beamAl: AttributeList): PlanBeam = {
         val name = beamNameOf(beamAl)
-        val energy = DicomUtil.findAllSingle(beamAl, TagByName.NominalBeamEnergy).head.getDoubleValues.head
+        val energy = DicomUtil.findAllTag(beamAl, TagByName.NominalBeamEnergy).head.getDoubleValues.head
         val fff = {
-          val FluenceModeID = DicomUtil.findAllSingle(beamAl, TagByName.FluenceModeID)
+          val FluenceModeID = DicomUtil.findAllTag(beamAl, TagByName.FluenceModeID)
           if (FluenceModeID.isEmpty) false
           else FluenceModeID.map(fmi => fmi.getSingleStringValueOrEmptyString.toUpperCase.contains("FFF")).reduce(_ || _)
         }
@@ -544,7 +544,7 @@ object CustomizeRtPlanUtil extends Logging {
       val energy = getEnergy(beamAl)
       val fff = if (isFFFBeam(beamAl)) "F" else "X"
       val gantryAngleList = {
-        val list = DicomUtil.findAllSingle(beamAl, TagByName.GantryAngle).flatMap(ga => ga.getDoubleValues)
+        val list = DicomUtil.findAllTag(beamAl, TagByName.GantryAngle).flatMap(ga => ga.getDoubleValues)
         list.map(ga => Util.fmtDbl(ga)).mkString("  ")
       }
 

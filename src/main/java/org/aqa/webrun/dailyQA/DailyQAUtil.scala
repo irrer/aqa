@@ -33,7 +33,7 @@ object DailyQAUtil {
     */
   def getValues(al: AttributeList, tag: AttributeTag, scale: Double = 1.0): Seq[String] = {
     try {
-      val at = DicomUtil.findAllSingle(al, tag).head
+      val at = DicomUtil.findAllTag(al, tag).head
       def getLong() = at.getLongValues.map(l => (l * scale).round)
       val vr = DicomUtil.dictionary.getValueRepresentationFromTag(tag)
       val numList = vr match {

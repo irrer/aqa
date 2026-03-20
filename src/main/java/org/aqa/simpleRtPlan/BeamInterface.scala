@@ -94,7 +94,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) extends L
   val isTreat: Boolean = {
     // val attr = beamRef.get(TagByName.BeamMeterset)
     // (attr != null) && (attr.getIntegerValues.head > 0)
-    DicomUtil.findAllSingle(beamAl, TagByName.TreatmentDeliveryType) match {
+    DicomUtil.findAllTag(beamAl, TagByName.TreatmentDeliveryType) match {
       case list if list.nonEmpty => list.head.getSingleStringValueOrEmptyString().trim.equalsIgnoreCase("TREATMENT")
       case _                     => false
     }
@@ -137,7 +137,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) extends L
 
   import EntryType._
 
-  private def beamList(tag: AttributeTag): Seq[Attribute] = DicomUtil.findAllSingle(beamAl, tag)
+  private def beamList(tag: AttributeTag): Seq[Attribute] = DicomUtil.findAllTag(beamAl, tag)
 
   private def beamDbl(tag: AttributeTag): Double = {
     beamList(tag).head.getDoubleValues.head
@@ -313,7 +313,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) extends L
   }
 
   private def getToleranceTableLabel: String = {
-    DicomUtil.findAllSingle(rtplan, TagByName.ToleranceTableLabel).head.getSingleStringValueOrEmptyString()
+    DicomUtil.findAllTag(rtplan, TagByName.ToleranceTableLabel).head.getSingleStringValueOrEmptyString()
   }
 
   /**
@@ -326,7 +326,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) extends L
   private val tolTable = Col(
     toleranceColName,
     if (isTreat) Input else Display,
-    init = _ => DicomUtil.findAllSingle(rtplan, TagByName.ToleranceTableLabel).head.getSingleStringValueOrEmptyString(),
+    init = _ => DicomUtil.findAllTag(rtplan, TagByName.ToleranceTableLabel).head.getSingleStringValueOrEmptyString(),
     validate = validateToleranceTable
   )
 
@@ -338,8 +338,8 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) extends L
         "beamRef:\n" + DicomUtil.attributeListToString(beamRef) + "\n"
     Trace.trace(text)
 
-    val DoseRateSet = DicomUtil.findAllSingle(beamAl, TagByName.DoseRateSet).head.getDoubleValues.head
-    val BeamMeterset = DicomUtil.findAllSingle(beamRef, TagByName.BeamMeterset).head.getDoubleValues.head
+    val DoseRateSet = DicomUtil.findAllTag(beamAl, TagByName.DoseRateSet).head.getDoubleValues.head
+    val BeamMeterset = DicomUtil.findAllTag(beamRef, TagByName.BeamMeterset).head.getDoubleValues.head
 
     val mu = valueMap.get(makeColLabel(labelMU))
 
@@ -367,7 +367,7 @@ case class BeamInterface(rtplan: AttributeList, beamAl: AttributeList) extends L
       valueMap.get(label) match {
         case Some(text) => text
         case _ =>
-          DicomUtil.findAllSingle(beamRef, TagByName.BeamMeterset).head.getDoubleValues.head.toString
+          DicomUtil.findAllTag(beamRef, TagByName.BeamMeterset).head.getDoubleValues.head.toString
       }
     } else {
       ""

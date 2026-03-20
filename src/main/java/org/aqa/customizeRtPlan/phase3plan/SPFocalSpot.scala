@@ -33,7 +33,7 @@ object SPFocalSpot {
     * @return True if MLC, false if jaw.
     */
   def isMLC(prototypeBeam: AttributeList): Boolean = {
-    DicomUtil.findAllSingle(prototypeBeam, TagByName.LeafJawPositions).map(_.getDoubleValues).exists(ljp => ljp.length > 2)
+    DicomUtil.findAllTag(prototypeBeam, TagByName.LeafJawPositions).map(_.getDoubleValues).exists(ljp => ljp.length > 2)
   }
 
   /**

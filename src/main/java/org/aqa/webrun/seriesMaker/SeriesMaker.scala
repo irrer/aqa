@@ -252,7 +252,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
     val gantryAngle = Util.angleRoundedTo90(Util.gantryAngle(rtimage)).toString
     val collimatorAngle = Util.angleRoundedTo90(Util.collimatorAngle(rtimage)).toString
     val mv = {
-      val d = DicomUtil.findAllSingle(rtimage, TagByName.KVP).head.getDoubleValues.head / 1000
+      val d = DicomUtil.findAllTag(rtimage, TagByName.KVP).head.getDoubleValues.head / 1000
       if (d.round == d)
         d.round.toString
       else
@@ -380,7 +380,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
           val g = Util.angleRoundedTo90(Util.gantryAngle(al))
           val c = Util.angleRoundedTo90(Util.collimatorAngle(al))
           val mv = {
-            val m = DicomUtil.findAllSingle(al, TagByName.KVP).head.getDoubleValues.head / 1000
+            val m = DicomUtil.findAllTag(al, TagByName.KVP).head.getDoubleValues.head / 1000
             if (m.round == m) m.round.toString else Util.fmtDbl(m)
           }
           s"** G:$g C:$c Mv:$mv"
@@ -764,7 +764,7 @@ class SeriesMaker extends Restlet with SubUrlRoot with Logging {
 
     val InstitutionName: String = {
       def attrIn(alList: Seq[AttributeList]): Option[String] = {
-        alList.flatMap(al => DicomUtil.findAllSingle(al, TagByName.InstitutionName)).flatMap(attrText).find(_.trim.nonEmpty)
+        alList.flatMap(al => DicomUtil.findAllTag(al, TagByName.InstitutionName)).flatMap(attrText).find(_.trim.nonEmpty)
       }
       Seq(attrIn(Seq(req.rtplan)), attrIn(Seq(req.rtplan))).flatten.head
     }

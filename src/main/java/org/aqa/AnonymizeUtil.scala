@@ -49,6 +49,7 @@ object AnonymizeUtil extends Logging {
 
   /** Used to generate alias ids for users. */
   val userAliasPrefixId = "USER"
+  //noinspection SpellCheckingInspection
   val userAliasFullNamePrefixId: String = userAliasPrefixId + "_FULLNAME"
   val userAliasEmailPrefixId: String = userAliasPrefixId + "_EMAIL"
 
@@ -90,14 +91,14 @@ object AnonymizeUtil extends Logging {
     */
   private case class InstitutionCredentials(institution: Institution, key: String) {
 
-    val aliasName: String = {
+    private val aliasName: String = {
       if (institution.name.startsWith(institutionAliasPrefixId)) institution.name
       else aliasify(institutionAliasPrefixId, institution.institutionPK.get)
     }
 
     private lazy val cipher = Crypto.getCipher(key)
 
-    lazy val name_real: String = if (institution.name_real.isDefined) Crypto.decryptWithNonce(institution.name_real.get, cipher) else institution.name
+    private lazy val name_real: String = if (institution.name_real.isDefined) Crypto.decryptWithNonce(institution.name_real.get, cipher) else institution.name
 
     /** To avoid keeping credentials in memory longer than necessary, give them an expiration time when they are removed from memory. */
     private val timeout = System.currentTimeMillis + cacheTimeout
@@ -248,13 +249,14 @@ object AnonymizeUtil extends Logging {
   /**
     * Construct an alias from the given prefix and number.
     */
+  //noinspection SpellCheckingInspection
   def aliasify(aliasPrefix: String, number: Long): String = {
     aliasPrefix + "_" + number.toString
   }
 
   private def getListOfAttributesThatGetAnonymized(al: AttributeList): Seq[Attribute] = {
     val tagSet = Config.ToBeAnonymizedList.keys.toSet
-    DicomUtil.findAll(al, tagSet)
+    DicomUtil.findAllTagSet(al, tagSet).toList
   }
 
   private val makeDicomAnonymousListSync = ""
@@ -283,8 +285,8 @@ object AnonymizeUtil extends Logging {
         }
       }
 
-      val updated = attrList.foldLeft(previouslyAnonymized)((list, attr) => addIfNeeded(list, attr))
-      updated
+      val updated = attrList.foldLeft(previouslyAnonymized)((list, attr) => addIfNeeded(list.toList, attr))
+      updated.toList
     }
 
   private val anonymizeDicomSync = ""
@@ -390,7 +392,7 @@ object AnonymizeUtil extends Logging {
     *
     * @return Same XML with device serial number anonymized.
     */
-  def anonymizeMachineLog(institutionPK: Long, xml: Elem): Node = {
+  private def anonymizeMachineLog(institutionPK: Long, xml: Elem): Node = {
     import scala.xml.Node
     import scala.xml.transform.RewriteRule
     import scala.xml.transform.RuleTransformer
@@ -402,7 +404,7 @@ object AnonymizeUtil extends Logging {
     } else {
 
       // Use the same value as in the DICOM DeviceSerialNumber tag.  Note that if there is not already a
-      // value in the database, then one will be be established.
+      // value in the database, then one will be established.
       val anonymizedDeviceSerialNumber = {
         val at = AttributeFactory.newAttribute(TagByName.DeviceSerialNumber)
         at.addValue(dsn.get)

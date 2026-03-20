@@ -338,7 +338,7 @@ object MetadataCheck extends Logging {
               val imgMap = imageAl
                 .map(al =>
                   Util.sopOfAl(al) + " :: " + {
-                    val atList = DicomUtil.findAllSingle(al, TagByName.ReferencedBeamNumber)
+                    val atList = DicomUtil.findAllTag(al, TagByName.ReferencedBeamNumber)
                     atList.flatMap(_.getIntegerValues).mkString("  ")
                   }
                 )

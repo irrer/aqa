@@ -73,7 +73,7 @@ class CollimatorCenteringResource(collimatorCentering: Seq[CollimatorCentering],
     */
   private def gantryAngleOfBeam(beamName: String): Int = {
     val seq = Phase2Util.getBeamSequenceOfPlan(beamName, runReq.rtplan)
-    val gantryAngleList = DicomUtil.findAllSingle(seq, TagByName.GantryAngle).map(_.getDoubleValues.head)
+    val gantryAngleList = DicomUtil.findAllTag(seq, TagByName.GantryAngle).map(_.getDoubleValues.head)
 
     def distanceTo(angle: Double, angleRounded: Int): Double = {
       val rad1 = Math.toRadians(Util.modulo360(angle))

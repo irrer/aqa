@@ -58,7 +58,7 @@ object GapSkewUtil {
     * @return Y1 and Y2 values.
     */
   def yRtimageJawPositions_mm(rtimage: AttributeList): Seq[Double] = {
-    val bl = DicomUtil.findAllSingle(rtimage, TagByName.BeamLimitingDeviceSequence)
+    val bl = DicomUtil.findAllTag(rtimage, TagByName.BeamLimitingDeviceSequence)
     val alList = bl.flatMap(l => DicomUtil.alOfSeq(l.asInstanceOf[SequenceAttribute]))
     def isY(al: AttributeList) = {
       Seq("Y", "ASYMY").contains(al.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString())

@@ -36,13 +36,13 @@ case class WLRotator(rtimage: AttributeList) {
   private val offsetX = XRayImageReceptorTranslation.head
   private val offsetY = XRayImageReceptorTranslation(1)
 
-  private val angle: Double = DicomUtil.findAllSingle(rtimage, TagByName.BeamLimitingDeviceAngle).head.getDoubleValues.head
+  private val angle: Double = DicomUtil.findAllTag(rtimage, TagByName.BeamLimitingDeviceAngle).head.getDoubleValues.head
 
   private val radians: Double = Math.toRadians(angle)
   private val cos = Math.cos(radians)
   private val sin = Math.sin(radians)
 
-  private val jaws = DicomUtil.findAllSingle(rtimage, TagByName.LeafJawPositions)
+  private val jaws = DicomUtil.findAllTag(rtimage, TagByName.LeafJawPositions)
 
   val jawsXLeft: Double = jaws.head.getDoubleValues.head
   val jawsXRight: Double = jaws.head.getDoubleValues()(1)

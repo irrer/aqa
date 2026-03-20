@@ -199,7 +199,7 @@ case class Machine(
     // only update if it is not defined or is blank, and the machine is already in the database
     if ((tpsID_real.isEmpty || getRealTpsId.get.trim.isEmpty) && machinePK.isDefined) {
       val attrList = {
-        val all = alList.filter(properModality).flatMap(al => DicomUtil.findAll(al, Set(TagByName.StationName, TagByName.RadiationMachineName))).toList
+        val all = alList.filter(properModality).flatMap(al => DicomUtil.findAllTagSet(al, Set(TagByName.StationName, TagByName.RadiationMachineName))).toList
         val allReduced = all.groupBy(_.getSingleStringValueOrEmptyString()).map(_._2.head).map(deAnon)
         allReduced.groupBy(_.getSingleStringValueOrEmptyString()).map(_._2.head)
       }
@@ -505,7 +505,7 @@ object Machine extends Logging {
           Trace.trace("no attribute lists.  elapsed ms: " + elapsed)
         } else {
           val al = alList.head
-          val machineName = DicomUtil.findAllSingle(al, TagByName.RadiationMachineName).head.getSingleStringValueOrEmptyString()
+          val machineName = DicomUtil.findAllTag(al, TagByName.RadiationMachineName).head.getSingleStringValueOrEmptyString()
           val attr = AttributeFactory.newAttribute(TagByName.RadiationMachineName)
           attr.addValue(machineName)
           val daList = DicomAnonymous.getByAttrAndValue(machine.institutionPK, Seq(attr))
@@ -523,7 +523,7 @@ object Machine extends Logging {
 
             if (machine.tpsID_real.isEmpty) {
               Trace.trace("Expecting to set tpsId_real for machine " + machine.id + " / " + machine.getRealId + " to " + realName)
-              machine.setTpsIdIfNeeded(alList, write = writeToDatabase)
+              machine.setTpsIdIfNeeded(alList.toList, write = writeToDatabase)
             }
           }
         }

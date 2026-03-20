@@ -33,7 +33,7 @@ import org.aqa.run.ProcedureStatus
 
 case class DailyDataSetComposite(composite: BBbyEPIDComposite, cbct: BBbyCBCT, machine: Machine, output: Output, bbByEpid: Seq[BBbyEPID], cbctDicomSeries: DicomSeries) extends Logging {
 
-  val lowestEpidKVP: Double = bbByEpid.map(_.attributeList).flatMap(al => DicomUtil.findAllSingle(al, TagByName.KVP)).map(_.getDoubleValues.head).min
+  val lowestEpidKVP: Double = bbByEpid.map(_.attributeList).flatMap(al => DicomUtil.findAllTag(al, TagByName.KVP)).map(_.getDoubleValues.head).min
 
   // unique reference to this set of data
   val checksum: String = {

@@ -74,7 +74,7 @@ object EdgesFromPlan extends Logging {
     logger.info("Leaf Gap Skew processing BeamName: " + beamName + "    BeamNumber: " + beamNumber + "   Col Angle rounded: " + col)
     val beamSequence = Phase2Util.getBeamSequence(rtplan, Util.beamNumber(rtimage))
     // get the first control point that contains RTBeamLimitingDeviceType
-    val cps = DicomUtil.seqToAttr(beamSequence, TagByName.ControlPointSequence).filter(al => DicomUtil.findAllSingle(al, TagByName.RTBeamLimitingDeviceType).nonEmpty).head
+    val cps = DicomUtil.seqToAttr(beamSequence, TagByName.ControlPointSequence).filter(al => DicomUtil.findAllTag(al, TagByName.RTBeamLimitingDeviceType).nonEmpty).head
 
     // convert them to a list of edge pairs
     val beamLimitList = DicomUtil.seqToAttr(cps, TagByName.BeamLimitingDevicePositionSequence)

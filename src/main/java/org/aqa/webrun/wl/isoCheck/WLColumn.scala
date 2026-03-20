@@ -105,7 +105,7 @@ class WLColumnAlNumeric(name: String, tag: AttributeTag) extends WLColumn(name) 
 
   override val alignLeft: Boolean = false
 
-  private def toVal(al: AttributeList): Double = DicomUtil.findAllSingle(al, tag).head.getDoubleValues.head
+  private def toVal(al: AttributeList): Double = DicomUtil.findAllTag(al, tag).head.getDoubleValues.head
 
   def toRoundedVal(al: AttributeList): Double = (toVal(al) * 100).round / 100.0
 
@@ -127,7 +127,7 @@ class WLColumnAlAngle(name: String, tag: AttributeTag) extends WLColumn(name) {
 
   override val alignLeft: Boolean = false
 
-  private def toVal(al: AttributeList): Double = DicomUtil.findAllSingle(al, tag).head.getDoubleValues.head
+  private def toVal(al: AttributeList): Double = DicomUtil.findAllTag(al, tag).head.getDoubleValues.head
 
   private def toRoundedVal(al: AttributeList): Int = WLXlsxUtil.angleRounded(toVal(al))
 
@@ -149,7 +149,7 @@ class WLColumnAlNegAngle(name: String, tag: AttributeTag) extends WLColumn(name)
 
   override val alignLeft: Boolean = false
 
-  private def toVal(al: AttributeList): Double = DicomUtil.findAllSingle(al, tag).head.getDoubleValues.head
+  private def toVal(al: AttributeList): Double = DicomUtil.findAllTag(al, tag).head.getDoubleValues.head
 
   private def toRoundedVal(al: AttributeList): Int = (360 - WLXlsxUtil.angleRounded(toVal(al))) % 360
 

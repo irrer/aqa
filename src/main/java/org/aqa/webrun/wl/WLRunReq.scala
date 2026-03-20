@@ -50,8 +50,8 @@ case class WLRunReq(epidList: Seq[AttributeList], rtplan: Option[AttributeList])
       }
     }
 
-    val gantryAngle = DicomUtil.findAllSingle(rtimage, TagByName.GantryAngle).head.getDoubleValues.head
-    val collimatorAngle = DicomUtil.findAllSingle(rtimage, TagByName.BeamLimitingDeviceAngle).head.getDoubleValues.head
+    val gantryAngle = DicomUtil.findAllTag(rtimage, TagByName.GantryAngle).head.getDoubleValues.head
+    val collimatorAngle = DicomUtil.findAllTag(rtimage, TagByName.BeamLimitingDeviceAngle).head.getDoubleValues.head
 
     val gantryAngle_txt = "G" + angleToString(gantryAngle)
     val collimatorAngle_txt = "C" + angleToString(collimatorAngle)

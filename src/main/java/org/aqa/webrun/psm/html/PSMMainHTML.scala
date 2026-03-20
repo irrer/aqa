@@ -182,11 +182,11 @@ class PSMMainHTML(
 
     val beamType: Elem = {
       val fffText = {
-        val isFFF = DicomUtil.findAllSingle(rtplan, TagByName.FluenceMode).map(_.getSingleStringValueOrEmptyString()).exists(_.trim.equalsIgnoreCase("FFF"))
+        val isFFF = DicomUtil.findAllTag(rtplan, TagByName.FluenceMode).map(_.getSingleStringValueOrEmptyString()).exists(_.trim.equalsIgnoreCase("FFF"))
         if (isFFF) "FFF" else "non-FFF"
       }
       val kvpText = {
-        val k = DicomUtil.findAllSingle(wdAl, TagByName.KVP).head.getDoubleValues.head
+        val k = DicomUtil.findAllTag(wdAl, TagByName.KVP).head.getDoubleValues.head
         0 match {
           case _ if (k.round == k) && ((k.round % 1000) == 0) => (k / 1000).round.toString + " MV"
           case _ => Util.fmtDbl(k / 1000) + " MV"

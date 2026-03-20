@@ -143,7 +143,7 @@ object SeriesMakerReq extends Logging {
     // list of machines referenced by RTIMAGE files as RadiationMachineName
     val machineListFromRtimageList: Seq[Machine] = {
       // list of referenced machine names
-      val attrList = rtimageList.flatMap(ri => DicomUtil.findAllSingle(ri.al, TagByName.RadiationMachineName))
+      val attrList = rtimageList.flatMap(ri => DicomUtil.findAllTag(ri.al, TagByName.RadiationMachineName))
 
       val deAnonSet = attrList.flatMap(attr => AnonymizeUtil.deAnonymizeAttribute(institutionPK, attr)).map(_.getSingleStringValueOrEmptyString()).distinct.filter(_.nonEmpty).toSet
 
@@ -153,7 +153,7 @@ object SeriesMakerReq extends Logging {
 
     // list of machines referenced by RTPLAN as TreatmentMachineName
     val machineListFromRtplan: Seq[Machine] = {
-      val machineNameSet = DicomUtil.findAllSingle(rtplan, TagByName.TreatmentMachineName).map(_.getSingleStringValueOrEmptyString).distinct.filter(_.nonEmpty).toSet
+      val machineNameSet = DicomUtil.findAllTag(rtplan, TagByName.TreatmentMachineName).map(_.getSingleStringValueOrEmptyString).distinct.filter(_.nonEmpty).toSet
 
 
       // val referencedMachineList = machineList.filter(machine => machine.getRealTpsId.isDefined && machineNameSet.contains(machine.getRealTpsId.get))
@@ -186,7 +186,7 @@ object SeriesMakerReq extends Logging {
   private def getTemplateList(institutionPK: Long, rtplan: Either[String, AttributeList], rtimageList: Seq[AttributeList]): Seq[AttributeList] = {
 
     def getReferencedBeamNumber(rtimage: AttributeList): Option[Int] = {
-      DicomUtil.findAllSingle(rtimage, TagByName.ReferencedBeamNumber).flatMap(_.getIntegerValues).sorted.headOption
+      DicomUtil.findAllTag(rtimage, TagByName.ReferencedBeamNumber).flatMap(_.getIntegerValues).sorted.headOption
     }
 
     if (rtplan.isLeft)
@@ -203,7 +203,7 @@ object SeriesMakerReq extends Logging {
       val referencedBeamList = templateList.flatMap(getReferencedBeamNumber).distinct.sorted
 
       // list of all beam numbers in plan
-      val planBeamList = DicomUtil.findAllSingle(plan, TagByName.BeamNumber).flatMap(_.getIntegerValues).distinct.sorted
+      val planBeamList = DicomUtil.findAllTag(plan, TagByName.BeamNumber).flatMap(_.getIntegerValues).distinct.sorted
 
       val list: Seq[AttributeList] = {
         if (referencedBeamList == planBeamList)
@@ -219,7 +219,7 @@ object SeriesMakerReq extends Logging {
            * @return Beam number, if found.
            */
           def beamNumberOfRtimage(rtimage: AttributeList): Option[Int] = {
-            DicomUtil.findAllSingle(rtimage, TagByName.ReferencedBeamNumber).flatMap(_.getIntegerValues).headOption
+            DicomUtil.findAllTag(rtimage, TagByName.ReferencedBeamNumber).flatMap(_.getIntegerValues).headOption
           }
 
           // list of beam numbers from template-eligible files that were uploaded by the user
@@ -243,7 +243,7 @@ object SeriesMakerReq extends Logging {
         }
       }
 
-      def referencedBeamNumber(rtimage: AttributeList): Int = DicomUtil.findAllSingle(rtimage, TagByName.ReferencedBeamNumber).flatMap(_.getIntegerValues).head
+      def referencedBeamNumber(rtimage: AttributeList): Int = DicomUtil.findAllTag(rtimage, TagByName.ReferencedBeamNumber).flatMap(_.getIntegerValues).head
 
       list.sortBy(referencedBeamNumber)
     }

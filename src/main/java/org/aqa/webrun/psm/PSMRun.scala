@@ -41,7 +41,7 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
     beamNumber
   }
 
-  private def getPlanBeamNumberList(rtplan: AttributeList): Seq[Int] = DicomUtil.findAllSingle(rtplan, TagByName.BeamNumber).map(_.getIntegerValues.head).sorted
+  private def getPlanBeamNumberList(rtplan: AttributeList): Seq[Int] = DicomUtil.findAllTag(rtplan, TagByName.BeamNumber).map(_.getIntegerValues.head).sorted
 
   /**
     * Get the list of RTIMAGE files.  They must:
@@ -96,7 +96,7 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
     */
   private def allBeamsPresent(rtplan: AttributeList, rtimageList: Seq[AttributeList]): Option[String] = {
     val planBeamNumberList = getPlanBeamNumberList(rtplan)
-    val rtimageBeamNumberList = rtimageList.flatMap(rtimage => DicomUtil.findAllSingle(rtimage, TagByName.ReferencedBeamNumber)).map(_.getIntegerValues.head).sorted
+    val rtimageBeamNumberList = rtimageList.flatMap(rtimage => DicomUtil.findAllTag(rtimage, TagByName.ReferencedBeamNumber)).map(_.getIntegerValues.head).sorted
 
     val missingBeamNumberList = planBeamNumberList.diff(rtimageBeamNumberList)
 
@@ -149,12 +149,12 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
     val Rows = getInt(TagByName.Rows)
     val ImagePlanePixelSpacing = rtimageList.head.get(TagByName.ImagePlanePixelSpacing).getDoubleValues
 
-    val kvp = DicomUtil.findAllSingle(rtimageList.head, TagByName.KVP).head.getDoubleValues.head
+    val kvp = DicomUtil.findAllTag(rtimageList.head, TagByName.KVP).head.getDoubleValues.head
 
     val fff = {
       val beam = DicomUtil.getBeamOfRtimage(rtplan, rtimageList.head).get
 
-      val fluenceModeList = DicomUtil.findAllSingle(beam, TagByName.FluenceMode).map(_.getSingleStringValueOrEmptyString).filter(_.equalsIgnoreCase("FFF")).flatten
+      val fluenceModeList = DicomUtil.findAllTag(beam, TagByName.FluenceMode).map(_.getSingleStringValueOrEmptyString).filter(_.equalsIgnoreCase("FFF")).flatten
       val isFFF = fluenceModeList.nonEmpty
       isFFF
     }

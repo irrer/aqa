@@ -15,9 +15,9 @@ import java.awt.geom.Point2D
 object CoarseImage {
 
   def makeImage(al: AttributeList, preprocessedImage: DicomImage): BufferedImage = {
-    val gantryAngle = DicomUtil.findAllSingle(al, TagByName.GantryAngle).head.getDoubleValues.head
-    val colAngle = DicomUtil.findAllSingle(al, TagByName.BeamLimitingDeviceAngle).head.getDoubleValues.head
-    val tableAngle = DicomUtil.findAllSingle(al, TagByName.PatientSupportAngle).head.getDoubleValues.head
+    val gantryAngle = DicomUtil.findAllTag(al, TagByName.GantryAngle).head.getDoubleValues.head
+    val colAngle = DicomUtil.findAllTag(al, TagByName.BeamLimitingDeviceAngle).head.getDoubleValues.head
+    val tableAngle = DicomUtil.findAllTag(al, TagByName.PatientSupportAngle).head.getDoubleValues.head
 
     val bufImg = {
       val sortedPixels = preprocessedImage.pixelData.flatten.sorted
