@@ -29,6 +29,7 @@ import org.aqa.webrun.machLog.MachLogRun
 import org.aqa.webrun.phase2.Phase2
 import org.aqa.webrun.phase3.Phase3
 import org.aqa.webrun.psm.PSMRun
+import org.aqa.webrun.stakitt.StakittRun
 import org.aqa.webrun.winLutz360.WinLutz360Run
 import org.aqa.webrun.wl.WLRun
 import org.restlet.Request
@@ -74,7 +75,8 @@ object WebRun {
     ("LOC", procedure => new LOCRun(procedure)),
     ("LOCBaseline", procedure => new LOCBaselineRun(procedure)),
     ("FloodField", procedure => new FloodRun(procedure)),
-    ("PSM", procedure => new PSMRun(procedure))
+    ("PSM", procedure => new PSMRun(procedure)),
+    ("Stakitt", procedure => new StakittRun(procedure))
   )
 
   /** Possible choices for procedure interfaces. */

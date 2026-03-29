@@ -1,0 +1,49 @@
+package org.aqa.webrun.stakitt
+
+import com.pixelmed.dicom.AttributeList
+import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.ImageUtil
+import edu.umro.ImageUtil.ScaledImage
+import edu.umro.ScalaUtil.Trace
+import org.aqa.webrun.ExtendedData
+import org.aqa.Logging
+
+import java.awt.Color
+
+case class Analysis(extendedData: ExtendedData, rtimage: AttributeList, rtplan: Option[AttributeList]) extends Logging {
+
+  private val dicomImage = new DicomImage(rtimage)
+
+  // private val beamName: String = Phase2Util.getBeamNameOfRtimage(rtplan, rtimage).get
+
+  // private case class AOIBorder(lo: Double, hi: Double) {}
+
+  // private case class AOIBorderList(staggeredLo: AOIBorder, smooth: Seq[AOIBorder], staggeredHi: AOIBorder) {}
+
+  private val xImageBorders = XImageBorders(rtimage)
+  private val yImageBorders = YImageBorders(rtimage, xImageBorders.xPointList)
+
+  private val planBorders = rtplan.map(p => PlanBorders(rtimage, p))
+
+  def analyze(): AnalysisResult = {
+    val scale = 7
+    val bufImg = {
+      val img = dicomImage.toDeepColorBufferedImage(0.01)
+      ImageUtil.magnify(img, scale)
+    }
+    val gc = ImageUtil.getGraphics(bufImg)
+    gc.setColor(Color.white)
+
+    val si = ScaledImage(scale, 0, 0)
+
+    def vertLine(x: Double): Unit = si.drawLine(gc, x, 0, x, dicomImage.height)
+    def horzLine(y: Double): Unit = si.drawLine(gc, 0, y, dicomImage.width, y)
+
+    xImageBorders.xPointList.foreach(vertLine)
+    yImageBorders.yPointList.foreach(horzLine)
+    AnalysisResult(extendedData, rtimage, rtplan)
+    Trace.showInMSPaint(bufImg)
+
+    AnalysisResult(extendedData, rtimage, rtplan)
+  }
+}
