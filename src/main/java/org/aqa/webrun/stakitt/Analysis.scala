@@ -2,6 +2,7 @@ package org.aqa.webrun.stakitt
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.ScaledImage
 import edu.umro.ScalaUtil.Trace
@@ -37,10 +38,23 @@ case class Analysis(extendedData: ExtendedData, rtimage: AttributeList, rtplan: 
     val si = ScaledImage(scale, 0, 0)
 
     def vertLine(x: Double): Unit = si.drawLine(gc, x, 0, x, dicomImage.height)
-    def horzLine(y: Double): Unit = si.drawLine(gc, 0, y, dicomImage.width, y)
+
+    def foo(y: Double): Unit = si.drawLine(gc, 0, y, dicomImage.width, y)
+
+    def horzLine(lineList: Seq[Double], name: String, offset: Int, color: Color): Unit = {
+      gc.setColor(color)
+      val rect = ImageText.getTextDimensions(gc, name)
+      ImageText.drawTextCenteredAt(gc, (rect.getWidth / 2) + 20, (rect.getHeight + 1) * 2 * offset, name)
+      lineList.foreach(y => si.drawLine(gc, 0, y, dicomImage.width, y))
+    }
 
     xImageBorders.xPointList.foreach(vertLine)
-    yImageBorders.yPointList.foreach(horzLine)
+
+    // horzLine(yImageBorders.yPointList_pix, "All", 1, Color.white)
+    horzLine(yImageBorders.yPointListLo_pix, "Lo", 2, Color.black)
+    horzLine(yImageBorders.yPointListHi_pix, "Hi", 3, Color.white)
+    // horzLine(yImageBorders.yPointListMid_pix, "Mid", 4, Color.pink)
+
     AnalysisResult(extendedData, rtimage, rtplan)
     Trace.showInMSPaint(bufImg)
 
