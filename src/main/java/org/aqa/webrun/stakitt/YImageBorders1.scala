@@ -18,7 +18,7 @@ import scala.annotation.tailrec
   * @param rtimage Stakitt image.
   * @param xBorderList List of X coordinates for AOIs.
   */
-case class YImageBorders(rtimage: AttributeList, xBorderList: Seq[Double]) extends Logging {
+case class YImageBorders1(rtimage: AttributeList, xBorderList: Seq[Double]) extends Logging {
 
   private val dicomBorderLo = xBorderList(1).round.toInt - 60
   private val dicomBorderHi = xBorderList.reverse(1).round.toInt + 60

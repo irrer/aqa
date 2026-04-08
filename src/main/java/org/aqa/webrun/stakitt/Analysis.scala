@@ -8,6 +8,7 @@ import edu.umro.ImageUtil.ScaledImage
 import edu.umro.ScalaUtil.Trace
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
+import org.aqa.webrun.stakitt.leafBoundaries.LeafBoundaries
 
 import java.awt.Color
 
@@ -21,8 +22,8 @@ case class Analysis(extendedData: ExtendedData, rtimage: AttributeList, rtplan: 
 
   // private case class AOIBorderList(staggeredLo: AOIBorder, smooth: Seq[AOIBorder], staggeredHi: AOIBorder) {}
 
-  private val xImageBorders = XImageBorders(rtimage)
-  private val yImageBorders = YImageBorders(rtimage, xImageBorders.xPointList)
+  private val xImageBorders = LeafEnds(rtimage)
+  private val yImageBorders = LeafBoundaries(rtimage, xImageBorders.xPointList)
 
   private val planBorders = rtplan.map(p => PlanBorders(rtimage, p))
 
