@@ -63,10 +63,6 @@ case class FindPeakAndValleyCoarsely() extends Logging {
 
     val pvList = pvListUnclassified.map(pv => PeakOrValley(pv.indexes, pv.isPeak, pv.indexes.size > widthThreshold))
 
-    def show(pv: PeakOrValley): String = pv.indexes.size + " " + pv.isWide
-
-    // Trace.trace("pvList:\n" + pvList.map(show).mkString("\n"))
-
     pvList
   }
 

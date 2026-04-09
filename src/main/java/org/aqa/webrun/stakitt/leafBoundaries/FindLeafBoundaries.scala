@@ -2,7 +2,6 @@ package org.aqa.webrun.stakitt.leafBoundaries
 
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.opensourcephysics.numerics.CubicSpline
 
@@ -17,7 +16,7 @@ import scala.annotation.tailrec
   * @param image Use this image. It will either be  the left-hand or right-hand part of the whole image.
   * @param name Used for diagnostics and debugging.
   */
-case class FindBoundariesByMidpoints(image: DicomImage, name: String) extends Logging {
+case class FindLeafBoundaries(image: DicomImage, name: String) extends Logging {
 
   /** Scale the profile to values 0 to 100 to make debugging easier. */
   private val profileScaled = {
@@ -148,83 +147,119 @@ case class FindBoundariesByMidpoints(image: DicomImage, name: String) extends Lo
   }
 
   /**
-    * Given a profile of the square wave, determine where it crosses the mean value of the wave.
+    * Take the measured boundaries and make them evenly spaced.
     *
-    * @return List of leaf boundaries
+    * Some of them are double width, so first insert a fake, temporary boundary to make them all the same.
+    *
+    * Next, apply the least-squares algorithm to change from close to evenly spaced to be exactly evenly spaced.
+    *
+    *  Finally, remove the fake temporary boundaries and return the result.
+    *
+    * @param measured Measured boundaries.
+    * @return Equivalent list as the measured parameters, but the position of each adjusted slightly so
+    *         that they are evenly spaced.
     */
-  private def findBoundariesByMidPoints(): Seq[Double] = {
+  private def makeEvenlySpaced(measured: Seq[Double]): Seq[Double] = {
 
-    val borderList = pvList.indices.tail.map(findCrossingPoint)
-    if (true) { // TODO rm
-      val text = borderList.indices.tail.map(i => borderList(i) + " : " + (borderList(i) - borderList(i - 1))).mkString("\n")
-      Trace.trace(s"Border list for $name\n$text\n")
-    }
-    borderList
-
-  }
-
-  def findLeafBoundaries(): Seq[Double] = {
-    val measured = findBoundariesByMidPoints()
-
+    // all spaces between boundaries
     val widthList = measured.indices.tail.map(i => measured(i) - measured(i - 1))
 
-    val approximateNarrowWidth = widthList.sorted.take(5).sum / 5
-
-    def isWide(width: Double): Boolean = width > (approximateNarrowWidth * 1.5)
-
-    val topWideCount = widthList.takeWhile(w => isWide(w)).size
-
-    val bottomWideCount = widthList.reverse.takeWhile(w => isWide(w)).size
-
-    val evenlySpaced = {
-      val topWideList = measured.take(topWideCount)
-      val bottomWideList = measured.takeRight(bottomWideCount)
-
-      def makeNarrow(index: Int): Option[Double] = {
-        val width = measured(index + 1) - measured(index)
-        if (isWide(width)) {
-          val middle = (measured(index + 1) + measured(index)) / 2
-          Some(middle)
-        } else
-          None
-      }
-
-      val fakeBoundaries = measured.indices.dropRight(1).flatMap(makeNarrow)
-
-      val measuredWithFakeBoundaries = (measured ++ fakeBoundaries).sorted
-
-      val evenlySpaced = ImageUtil.evenlySpacedLeastSquares(measuredWithFakeBoundaries)
-
-      val indicesToRemove = {
-        val top = (0 until topWideCount).map(i => (i * 2) + 1)
-        val bottom = (0 until bottomWideCount).map(i => evenlySpaced.size - ((i + 1) * 2))
-        top ++ bottom
-      }
-
-      val measuredMadeEven = evenlySpaced.indices.filterNot(i => indicesToRemove.contains(i)).map(i => evenlySpaced(i))
-      measuredMadeEven
+    def isWide(width: Double): Boolean = {
+      val approximateNarrowWidth = widthList.sorted.take(5).sum / 5
+      width > (approximateNarrowWidth * 1.5)
     }
 
+    /**
+      * If this is the lower boundary of a wide leaf, make a fake temporary boundary to be positioned after
+      * this one.  Otherwise, return None.
+      *
+      * @param index Index of a measured boundary.
+      * @return New fake temporary boundary or None.
+      */
+    def makeNarrow(index: Int): Option[Double] = {
+      val width = measured(index + 1) - measured(index)
+      if (isWide(width)) {
+        val middle = (measured(index + 1) + measured(index)) / 2
+        Some(middle)
+      } else
+        None
+    }
+
+    // make all the fake boundaries needed
+    val fakeBoundaries = measured.indices.dropRight(1).flatMap(makeNarrow)
+
+    // merge the fakes into the real
+    val measuredWithFakeBoundaries = (measured ++ fakeBoundaries).sorted
+
+    // make an evenly spaced version
+    val evenlySpaced = ImageUtil.evenlySpacedLeastSquares(measuredWithFakeBoundaries)
+
+    // the list of indices of the fake boundaries
+    val indicesToRemove = {
+      val topWideCount = widthList.takeWhile(w => isWide(w)).size
+      val top = (0 until topWideCount).map(i => (i * 2) + 1)
+
+      val bottomWideCount = widthList.reverse.takeWhile(w => isWide(w)).size
+      val bottom = (0 until bottomWideCount).map(i => evenlySpaced.size - ((i + 1) * 2))
+      top ++ bottom
+    }
+
+    // remove the fake boundaries
+    val measuredMadeEven = evenlySpaced.indices.filterNot(i => indicesToRemove.contains(i)).map(i => evenlySpaced(i))
+
+    measuredMadeEven
+  }
+
+  /**
+    * Add the boundaries to the top and bottom that, because of their position, are not easily measured by
+    * looking at their crossing point.
+    *
+    * This is done by finding the vertical extent of the field, extrapolating how many more boundaries are
+    * needed, and then add them at the regular spacing points.
+    *
+    * @param evenlySpaced List of evenly spaced boundaries.
+    * @return New list with top and bottom boundaries added.
+    */
+  private def addExtrapolatedBoundaries(evenlySpaced: Seq[Double]): Seq[Double] = {
     val verticalBounds = findVerticalBoundaries()
 
     val wideWidth = evenlySpaced(1) - evenlySpaced.head
 
-    val topList = {
+    def topList = {
       val count = ((evenlySpaced.head - verticalBounds._1) / wideWidth).round.toInt
       (0 until count).map(i => evenlySpaced.head - ((i + 1) * wideWidth))
     }
 
-    val bottomList = {
+    def bottomList = {
       val count = ((verticalBounds._2 - evenlySpaced.last) / wideWidth).round.toInt
       (0 until count).map(i => evenlySpaced.last + ((i + 1) * wideWidth))
     }
 
     val boundaryList = (evenlySpaced ++ topList ++ bottomList).sorted
 
-    if (true) { // TODO
-      val j0 = boundaryList.indices.tail.map(i => boundaryList(i) - boundaryList(i - 1)).distinct.sorted
-      Trace.trace(s"j0:\n${j0.mkString("\n")}")
-    }
+    boundaryList
+  }
+
+  /**
+    * Find the leaf boundaries (sides).  Return them as a list of pixel coordinates in the Y axis.
+    *
+    * @return List of leaf boundaries.
+    */
+  def findLeafBoundaries_pix(): Seq[Double] = {
+    val measured = pvList.indices.tail.map(findCrossingPoint)
+
+    val evenlySpaced = makeEvenlySpaced(measured)
+
+    if (evenlySpaced.size != measured.size)
+      throw new RuntimeException(s"Started with ${measured.size} boundaries but number of evenly spaced is ${evenlySpaced.size}")
+
+    val boundaryList = addExtrapolatedBoundaries(evenlySpaced)
+
+    val widths = boundaryList.indices.tail.map(i => boundaryList(i) - boundaryList(i - 1))
+    if (widths.min < 1)
+      throw new RuntimeException(s"Bad width between boundaries found of ${widths.min}")
+
+    logger.info(s"Number of leaf boundaries found for $name: ${boundaryList.size}    min_pix: ${widths.min}    max_pix: ${widths.max}")
 
     boundaryList
   }

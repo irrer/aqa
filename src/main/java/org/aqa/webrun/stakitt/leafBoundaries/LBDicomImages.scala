@@ -67,10 +67,8 @@ case class LBDicomImages(rtimage: AttributeList, xBorderList: Seq[Double]) exten
     def fixPix(pix: Float): Float = {
       0 match {
         case _ if pix > hiLimit =>
-          Trace.trace(s"fixPix too hi $pix --> $hiLimit")
           hiLimit
         case _ if pix < loLimit =>
-          Trace.trace(s"fixPix too lo $pix --> $loLimit")
           loLimit
         case _ => pix
       }
