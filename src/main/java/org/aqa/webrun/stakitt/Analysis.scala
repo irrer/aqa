@@ -27,7 +27,7 @@ case class Analysis(extendedData: ExtendedData, rtimage: AttributeList, rtplan: 
 
   private val planBorders = rtplan.map(p => PlanBorders(rtimage, p))
 
-  def analyze(): AnalysisResult = {
+  def analyze(): Unit = { // StakittResult = { TODO
     val scale = 7
     val bufImg = {
       val img = dicomImage.toDeepColorBufferedImage(0.01)
@@ -39,8 +39,6 @@ case class Analysis(extendedData: ExtendedData, rtimage: AttributeList, rtplan: 
     val si = ScaledImage(scale, 0, 0)
 
     def vertLine(x: Double): Unit = si.drawLine(gc, x, 0, x, dicomImage.height)
-
-    def foo(y: Double): Unit = si.drawLine(gc, 0, y, dicomImage.width, y)
 
     def horzLine(lineList: Seq[Double], name: String, offset: Int, color: Color): Unit = {
       gc.setColor(color)
@@ -54,11 +52,12 @@ case class Analysis(extendedData: ExtendedData, rtimage: AttributeList, rtplan: 
     // horzLine(yImageBorders.yPointList_pix, "All", 1, Color.white)
     horzLine(yImageBorders.yPointListLo_pix, "Lo", 2, Color.black)
     horzLine(yImageBorders.yPointListHi_pix, "Hi", 3, Color.white)
-    // horzLine(yImageBorders.yPointListMid_pix, "Mid", 4, Color.pink)
 
-    AnalysisResult(extendedData, rtimage, rtplan)
+    val leafEndPositionList = new LeafEndPositions(dicomImage, xImageBorders, yImageBorders, rtimage).measureLeafPositions()
+
+    // StakittResult(extendedData, rtimage, rtplan)
     Trace.showInMSPaint(bufImg)
 
-    AnalysisResult(extendedData, rtimage, rtplan)
+    // StakittResult(extendedData, rtimage, rtplan)
   }
 }
