@@ -12,22 +12,10 @@ import org.aqa.webrun.stakitt.leafBoundaries.LeafBoundaries
 
 import java.awt.Color
 
-case class Analysis(extendedData: ExtendedData, rtimage: AttributeList, rtplan: Option[AttributeList]) extends Logging {
+case class Analysis(dicomImage: DicomImage, xAOIBorders: LeafEnds, yAOIBorders: LeafBoundaries, leafEndPositions: Seq[StakittResult]) extends Logging {
 
-  private val dicomImage = new DicomImage(rtimage)
+  private def showAOIBorderSpans(): Unit = {
 
-  // private val beamName: String = Phase2Util.getBeamNameOfRtimage(rtplan, rtimage).get
-
-  // private case class AOIBorder(lo: Double, hi: Double) {}
-
-  // private case class AOIBorderList(staggeredLo: AOIBorder, smooth: Seq[AOIBorder], staggeredHi: AOIBorder) {}
-
-  private val xImageBorders = LeafEnds(rtimage)
-  private val yImageBorders = LeafBoundaries(rtimage, xImageBorders.xPointList)
-
-  private val planBorders = rtplan.map(p => PlanBorders(rtimage, p))
-
-  def analyze(): Unit = { // StakittResult = { TODO
     val scale = 7
     val bufImg = {
       val img = dicomImage.toDeepColorBufferedImage(0.01)
@@ -47,17 +35,35 @@ case class Analysis(extendedData: ExtendedData, rtimage: AttributeList, rtplan: 
       lineList.foreach(y => si.drawLine(gc, 0, y, dicomImage.width, y))
     }
 
-    xImageBorders.xPointList.foreach(vertLine)
+    xAOIBorders.xPointList.foreach(vertLine)
 
     // horzLine(yImageBorders.yPointList_pix, "All", 1, Color.white)
-    horzLine(yImageBorders.yPointListLo_pix, "Lo", 2, Color.black)
-    horzLine(yImageBorders.yPointListHi_pix, "Hi", 3, Color.white)
+    horzLine(yAOIBorders.yPointListLo_pix, "Lo", 2, Color.black)
+    horzLine(yAOIBorders.yPointListHi_pix, "Hi", 3, Color.white)
 
-    val leafEndPositionList = new LeafEndPositions(dicomImage, xImageBorders, yImageBorders, rtimage).measureLeafPositions()
-
-    // StakittResult(extendedData, rtimage, rtplan)
     Trace.showInMSPaint(bufImg)
-
-    // StakittResult(extendedData, rtimage, rtplan)
   }
+
+  if (true) showAOIBorderSpans()
+
+}
+
+object Analysis extends Logging {
+
+  def analyze(extendedData: ExtendedData, rtimage: AttributeList, rtplan: Option[AttributeList]): Analysis = {
+
+    val dicomImage = new DicomImage(rtimage)
+
+    val xAOIBorders = LeafEnds(rtimage)
+    val yAOIBorders = LeafBoundaries(rtimage, xAOIBorders.xPointList)
+
+    val planAOIBorders = rtplan.map(p => PlanBorders(rtimage, p)) // TODO require?
+
+    val leafEndPositionList = LeafEndPositions(dicomImage, xAOIBorders, yAOIBorders, rtimage).measureLeafPositions()
+
+    val analysis = Analysis(dicomImage, xAOIBorders, yAOIBorders, leafEndPositionList)
+
+    analysis
+  }
+
 }

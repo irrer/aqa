@@ -4,6 +4,7 @@ import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ImageUtil.ScaledImage
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
@@ -11,9 +12,12 @@ import org.aqa.webrun.stakitt.leafBoundaries.LeafBoundaries
 
 import java.awt.geom.Rectangle2D
 import java.awt.Color
+import java.awt.image.BufferedImage
 import scala.util.Random
 
 case class LeafEndPositions(dicomImage: DicomImage, xImageBorders: LeafEnds, yImageBorders: LeafBoundaries, rtimage: AttributeList) extends Logging {
+
+  private val trans = new IsoImagePlaneTranslator(rtimage)
 
   // abbreviation
   type Rect2d = Rectangle2D.Double
@@ -48,8 +52,8 @@ case class LeafEndPositions(dicomImage: DicomImage, xImageBorders: LeafEnds, yIm
     }
 
     def toXAoi(index: Int): XAoi = {
-      val lo = mean(xL0, xL1)
-      val hi = xL0 + (xFilled / 2)
+      val lo = mean(xList(index - 1), xList(index))
+      val hi = mean(xList(index), xList(index + 1))
       XAoi(lo, hi)
     }
 
@@ -79,7 +83,7 @@ case class LeafEndPositions(dicomImage: DicomImage, xImageBorders: LeafEnds, yIm
   // -------------------------------------------------------------------------------------------------------------------
 
   val scale = 7
-  val bufImg = {
+  val bufImg: BufferedImage = {
     val img = dicomImage.toDeepColorBufferedImage(0.01)
     ImageUtil.magnify(img, scale)
   }
@@ -87,7 +91,8 @@ case class LeafEndPositions(dicomImage: DicomImage, xImageBorders: LeafEnds, yIm
   gc.setColor(Color.white)
 
   val rand = new Random()
-  val colorList = Seq(Color.white, Color.pink, Color.lightGray, Color.yellow)
+  // val colorList = Seq(Color.white, Color.pink, Color.lightGray, Color.yellow)
+  val colorList = Seq(Color.lightGray, Color.lightGray)
 
   val si = ScaledImage(scale, 0, 0)
 
@@ -115,31 +120,39 @@ case class LeafEndPositions(dicomImage: DicomImage, xImageBorders: LeafEnds, yIm
   // -------------------------------------------------------------------------------------------------------------------
   // -------------------------------------------------------------------------------------------------------------------
 
-  private def aoi(xIndex: Int, yIndex: Int): Rect2d = {
+  private def makeAOI(xIndex: Int, yIndex: Int): Rect2d = {
 
     val xAoi = xAoiPairList(xIndex)
 
     val yDelta = yRange * (xAoi.mid / xRange)
 
-    val rect = new Rect2d(xAoi.lo, yImageBorders.yPointListLo_pix(yIndex) + yDelta, xAoi.width, yHeight)
+    val rect = new Rect2d(xAoi.lo, yImageBorders.yPointListLo_pix(yIndex) - yDelta, xAoi.width, yHeight)
     rect
   }
 
   private def measureLeafEnd(xIndex: Int, yIndex: Int): Int = { // StakittResult = { // TODO change type
 
-    val rect = aoi(xIndex, yIndex)
+    val rect = makeAOI(xIndex, yIndex)
+    val verticalMargin_mm = 0.2
+    val verticalMargin_pix = trans.iso2PixDistY(verticalMargin_mm)
     drawRect(rect)
+    val rowRange = rect.y.floor.toInt until rect.height.ceil.toInt
+
+    rowRange.map()
     0
   }
 
   private def doColumn(xIndex: Int): Seq[StakittResult] = { // TODO
-    yImageBorders.yPointListLo_pix.indices.drop(1).map(yIndex => measureLeafEnd(xIndex, yIndex))
+    yImageBorders.yPointListLo_pix.indices.dropRight(1).map(yIndex => measureLeafEnd(xIndex, yIndex))
     Seq()
   }
 
   def measureLeafPositions(): Seq[StakittResult] = {
 
-    (0 until xAoiPairList.size).map(doColumn)
+    horzLine(yImageBorders.yPointListLo_pix, "Lo", 100, Color.black)
+    horzLine(yImageBorders.yPointListHi_pix, "Hi", 150, Color.white)
+
+    val j = (0 until xAoiPairList.size).map(doColumn)
     //
     Trace.showInMSPaint(bufImg) // TODO rm
 
