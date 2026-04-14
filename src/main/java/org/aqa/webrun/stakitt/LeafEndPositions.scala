@@ -2,20 +2,23 @@ package org.aqa.webrun.stakitt
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.ImageUtil.LocateEdge
 import edu.umro.ImageUtil.ScaledImage
 import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
+import org.aqa.db.Stakitt
 import org.aqa.webrun.stakitt.leafBoundaries.LeafBoundaries
+import org.aqa.webrun.ExtendedData
+import org.aqa.Util
 
 import java.awt.geom.Rectangle2D
 import java.awt.Color
 import java.awt.image.BufferedImage
 import scala.util.Random
 
-case class LeafEndPositions(dicomImage: DicomImage, xImageBorders: LeafEnds, yImageBorders: LeafBoundaries, rtimage: AttributeList) extends Logging {
+case class LeafEndPositions(extendedData: ExtendedData, dicomImage: DicomImage, xImageBorders: LeafEnds, yImageBorders: LeafBoundaries, rtimage: AttributeList) extends Logging {
 
   private val trans = new IsoImagePlaneTranslator(rtimage)
 
@@ -60,8 +63,8 @@ case class LeafEndPositions(dicomImage: DicomImage, xImageBorders: LeafEnds, yIm
     val mid = xList.indices.drop(1).dropRight(1).map(toXAoi)
 
     val last = {
-      val lo = ((xL1 - xL2) / 2) + xL0
-      val hi = x0 - ((xList(2) - x1) / 2)
+      val lo = xL0 - ((xL0 - xL1) / 2)
+      val hi = xL0 + ((xL1 - xL2) / 2)
       XAoi(lo, hi)
     }
 
@@ -96,6 +99,7 @@ case class LeafEndPositions(dicomImage: DicomImage, xImageBorders: LeafEnds, yIm
 
   val si = ScaledImage(scale, 0, 0)
 
+  /*
   def vertLine(x: Double): Unit = si.drawLine(gc, x, 0, x, dicomImage.height)
 
   def horzLine(lineList: Seq[Double], name: String, offset: Int, color: Color): Unit = {
@@ -104,6 +108,7 @@ case class LeafEndPositions(dicomImage: DicomImage, xImageBorders: LeafEnds, yIm
     ImageText.drawTextCenteredAt(gc, (rect.getWidth / 2) + 20, (rect.getHeight + 1) * 2 * offset, name)
     lineList.foreach(y => si.drawLine(gc, 0, y, dicomImage.width, y))
   }
+   */
 
   def drawRect(rect: Rect2d): Unit = {
     gc.setColor(colorList(rand.nextInt(colorList.size)))
@@ -130,27 +135,126 @@ case class LeafEndPositions(dicomImage: DicomImage, xImageBorders: LeafEnds, yIm
     rect
   }
 
-  private def measureLeafEnd(xIndex: Int, yIndex: Int): Int = { // StakittResult = { // TODO change type
+  private def findRowEdge(y: Int, xRange: Range): Double = {
 
+    val minMaxSampleSize_pix = {
+      val minMaxSampleSize_mm = 2.5 // TODO   Make configurable.
+      trans.iso2PixDistX(minMaxSampleSize_mm).round.toInt
+    }
+
+    val list = xRange.map(x => dicomImage.get(x, y)) // one single row of pixes in the AOI
+    val sorted = list.sorted
+    val min = sorted.take(minMaxSampleSize_pix).sum / minMaxSampleSize_pix
+    val max = sorted.takeRight(minMaxSampleSize_pix).sum / minMaxSampleSize_pix
+    val midValue = mean(min, max)
+
+    val e = LocateEdge.locateEdge(list, midValue)
+
+    val xPosition_pix = xRange.head + e
+
+    if (true) { // TODO rm
+      gc.setColor(Color.white)
+      Trace.trace(s"${xPosition_pix - 0.5}    $y    ${xPosition_pix + 0.5}    $y")
+      si.drawLine(gc, xPosition_pix - 0.5, y, xPosition_pix + 0.5, y)
+    }
+
+    xPosition_pix
+  }
+
+  /**
+    * Make an AOI with a top and bottom margin.
+    * @param xIndex X index of AOI array.
+    * @param yIndex Y index of AOI array.
+    * @return A rectangle in absolute pixel coordinates.
+    */
+  private def makeAOIWithMargin_pix(xIndex: Int, yIndex: Int) = {
+
+    val verticalMargin_pix = {
+      val verticalMargin_mm = 0.2 // TODO ask Michael.  Make configurable.
+      trans.iso2PixDistY(verticalMargin_mm)
+    }
     val rect = makeAOI(xIndex, yIndex)
-    val verticalMargin_mm = 0.2
-    val verticalMargin_pix = trans.iso2PixDistY(verticalMargin_mm)
     drawRect(rect)
-    val rowRange = rect.y.floor.toInt until rect.height.ceil.toInt
+    new Rect2d(rect.x, rect.y + verticalMargin_pix, rect.width, rect.height - (2 * verticalMargin_pix))
+  }
 
-    rowRange.map()
-    0
+  /**
+    * Measures the position of the leaf's end in absolute (not relative) pixels.
+    * @param xIndex X index of AOI.
+    * @param yIndex Y index of AOI.
+    * @return End of leaf in absolute pixels.
+    */
+  private def measureLeafEnd(xIndex: Int, yIndex: Int): Double = { // StakittResult = { // TODO change type
+
+    val rectWithMargin = makeAOIWithMargin_pix(xIndex, yIndex)
+
+    val rectBottom = rectWithMargin.y + rectWithMargin.height
+
+    val xRange: Range = rectWithMargin.x.floor.toInt until (rectWithMargin.x + rectWithMargin.width).ceil.toInt
+
+    val xPosition_pix = {
+
+      // the sum of all the edge positions of the individual rows of pixels, with the top and bottom rows weighted in proportion
+      // to their contribution of the edge.  So for example if only 30% a row of pixels is in the AOI, then multiply that row's
+      // edge by 0.30
+      val xPosition_sum = {
+
+        val headFraction = rectWithMargin.y.ceil - rectWithMargin.y
+        val lastFraction = rectBottom - rectBottom.floor
+
+        // Edge position for each individual row of pixels in the leaf.
+        val pixelWiseEdgeList_pix = {
+          // List of rows of pixels to measure for a single leaf.  Values are in absolute pixel coordinates.
+          val yRange_pix = rectWithMargin.y.floor.toInt until rectBottom.ceil.toInt
+
+          yRange_pix.map(y => findRowEdge(y, xRange))
+        }
+
+        // as a prelude to finding the mean, sum the edge coordinates, assigning each the appropriate weight.
+        (headFraction * pixelWiseEdgeList_pix.head) + pixelWiseEdgeList_pix.drop(1).dropRight(1).sum + (lastFraction * pixelWiseEdgeList_pix.last)
+      }
+
+      // divide the sum of positions by the total height of the rectangle to get the mean position of the leaf end
+      xPosition_sum / rectWithMargin.height
+    }
+
+    gc.setColor(Color.black)
+    si.drawLine(gc, xPosition_pix, rectWithMargin.y, xPosition_pix, rectWithMargin.y + rectWithMargin.height)
+
+    Trace.trace(s"Leaf end: $xPosition_pix")
+    xPosition_pix
+  }
+
+  private def constructStakittResult(xIndex: Int, yIndex: Int): StakittResult = {
+    val edgePosition_pix = measureLeafEnd(xIndex, yIndex)
+    val edgePosition_mm = trans.pix2IsoCoordX(edgePosition_pix)
+    val rect = makeAOI(xIndex, yIndex)
+
+    val stakitt = Stakitt( //
+      stakittPK = None,
+      outputPK = extendedData.outputPK,
+      SOPInstanceUID = Util.sopOfAl(rtimage),
+      beamName = "NA", // TODO
+      leafIndex = yIndex + 1,
+      leafPositionIndex = xIndex + 1,
+      measuredEndPosition_mm = edgePosition_mm,
+      plannedEndPosition_mm = -1, // TODO
+      measuredMinorSide_mm = trans.pix2IsoCoordY(rect.y),
+      measuredMajorSide_mm = trans.pix2IsoCoordY(rect.y + rect.height)
+    )
+
+    val result = StakittResult(stakitt, rect)
+    result
   }
 
   private def doColumn(xIndex: Int): Seq[StakittResult] = { // TODO
-    yImageBorders.yPointListLo_pix.indices.dropRight(1).map(yIndex => measureLeafEnd(xIndex, yIndex))
-    Seq()
+    yImageBorders.yPointListLo_pix.indices.dropRight(1).map(yIndex => constructStakittResult(xIndex, yIndex))
   }
 
   def measureLeafPositions(): Seq[StakittResult] = {
 
-    horzLine(yImageBorders.yPointListLo_pix, "Lo", 100, Color.black)
-    horzLine(yImageBorders.yPointListHi_pix, "Hi", 150, Color.white)
+    // horzLine(yImageBorders.yPointListLo_pix, "Lo", 100, Color.black)
+    // horzLine(yImageBorders.yPointListHi_pix, "Hi", 150, Color.white)
 
     val j = (0 until xAoiPairList.size).map(doColumn)
     //

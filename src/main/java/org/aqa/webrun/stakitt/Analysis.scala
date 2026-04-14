@@ -44,7 +44,7 @@ case class Analysis(dicomImage: DicomImage, xAOIBorders: LeafEnds, yAOIBorders: 
     Trace.showInMSPaint(bufImg)
   }
 
-  if (true) showAOIBorderSpans()
+  if (false) showAOIBorderSpans()
 
 }
 
@@ -59,7 +59,7 @@ object Analysis extends Logging {
 
     val planAOIBorders = rtplan.map(p => PlanBorders(rtimage, p)) // TODO require?
 
-    val leafEndPositionList = LeafEndPositions(dicomImage, xAOIBorders, yAOIBorders, rtimage).measureLeafPositions()
+    val leafEndPositionList = LeafEndPositions(extendedData, dicomImage, xAOIBorders, yAOIBorders, rtimage).measureLeafPositions()
 
     val analysis = Analysis(dicomImage, xAOIBorders, yAOIBorders, leafEndPositionList)
 
