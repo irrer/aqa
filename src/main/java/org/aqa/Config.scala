@@ -1057,6 +1057,11 @@ object Config extends Logging {
 
   // =================================================================================
 
+  val StakittVerticalMargin_mm: Double = logMainText("StakittVerticalMargin_mm", 0.5.toString).toDouble
+  val StakittHorizontalMinMaxSampleLength_mm: Double = logMainText("StakittHorizontalMinMaxSampleLength_mm", 2.5.toString).toDouble
+
+  // =================================================================================
+
   /** If this is defined, then the configuration was successfully initialized. */
   val validated = true
 

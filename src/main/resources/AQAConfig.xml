@@ -1347,4 +1347,20 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
+    <!-- Stakitt configuration -->
+
+    <!-- Vertical margin in mm to space between the measured leaf boundary (side of leaf) and the area of
+    interest.  This can help diminish the effects of leakage between leaves. Specified as a floating point
+    numbers in mm, default is 0.5  -->
+    <StakittVerticalMargin_mm>0.5</StakittVerticalMargin_mm>
+
+    <!-- Horizontal distance used to sample the high and low pixels on either side of an edge.  The mean of
+    the two ends are used to establish the 50% point. Specified as a floating point numbers in mm, default
+    is 2.5  -->
+    <StakittHorizontalMinMaxSampleLength_mm>0.5</StakittHorizontalMinMaxSampleLength_mm>
+
+
+
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 </AQAConfig>
