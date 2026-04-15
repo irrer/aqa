@@ -38,8 +38,8 @@ case class Analysis(dicomImage: DicomImage, xAOIBorders: LeafEnds, yAOIBorders: 
     xAOIBorders.xPointList.foreach(vertLine)
 
     // horzLine(yImageBorders.yPointList_pix, "All", 1, Color.white)
-    horzLine(yAOIBorders.yPointListLo_pix, "Lo", 2, Color.black)
-    horzLine(yAOIBorders.yPointListHi_pix, "Hi", 3, Color.white)
+    horzLine(yAOIBorders.yPointListLo_pix.adjusted_pix, "Lo", 2, Color.black)
+    horzLine(yAOIBorders.yPointListHi_pix.adjusted_pix, "Hi", 3, Color.white)
 
     Trace.showInMSPaint(bufImg)
   }

@@ -16,12 +16,9 @@ case class LeafBoundaries(rtimage: AttributeList, xBorderList: Seq[Double]) exte
   private val di = LBDicomImages(rtimage, xBorderList)
 
   /** Inflection points on the left */
-  val yPointListLo_pix: Seq[Double] = FindLeafBoundaries(di.dicomImageLo, "Lo").findLeafBoundaries_pix()
+  val yPointListLo_pix: LeafBoundariesMeasuredAndAdjusted = FindLeafBoundaries(di.dicomImageLo, "Lo").findLeafBoundaries_pix()
 
   /** Inflection points on the right */
-  val yPointListHi_pix: Seq[Double] = FindLeafBoundaries(di.dicomImageHi, "Hi").findLeafBoundaries_pix()
-
-  /** List of Y coordinates that mark the edges of the leaf AOIs.  These are extracted by using the profile of the rows of pixels across the entire image. */
-  val yPointList_pix: Seq[Double] = yPointListLo_pix
+  val yPointListHi_pix: LeafBoundariesMeasuredAndAdjusted = FindLeafBoundaries(di.dicomImageHi, "Hi").findLeafBoundaries_pix()
 
 }
