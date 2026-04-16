@@ -72,6 +72,34 @@ case class LeafEndPositions(extendedData: ExtendedData, dicomImage: DicomImage, 
   }
 
   /**
+    * Annotate a leaf end with it's measured value.  Set the background color of the text to have good contrast.
+    * @param xPosition_pix Leaf position.
+    * @param stakittAOI Containing AOI.
+    */
+  private def annotateLeafEnd(xPosition_pix: Double, stakittAOI: StakittAOI): Unit = {
+    val text = "%10.3f".format(trans.pix2IsoCoordX(xPosition_pix)).trim
+    val textX = xPosition_pix + (ImageText.getTextDimensions(gc, text).getWidth * 0.8) / scale
+    val textY = stakittAOI.rectangle.y + (stakittAOI.rectangle.height / 2)
+
+    val textDimensions = ImageText.getTextDimensions(gc, text)
+    val expansionHorizontal_pix = 4
+    val expansionVertical_pix = 2
+
+    def rnd(d: Double): Int = d.round.toInt
+
+    gc.setColor(Color.yellow)
+    gc.fillRect(
+      rnd(si.scalePixelX(textX) - (textDimensions.getWidth / 2) - expansionHorizontal_pix),
+      rnd(si.scalePixelY(textY) - (textDimensions.getHeight / 2) - expansionVertical_pix),
+      rnd(textDimensions.getWidth + (expansionHorizontal_pix * 2)),
+      rnd(textDimensions.getHeight + (expansionVertical_pix * 2))
+    )
+
+    gc.setColor(Color.black)
+    si.drawTextCenteredAt(gc, textX, textY, text)
+  }
+
+  /**
     * Measures the position of the leaf's end in absolute (not relative) pixels.
     * @return End of leaf in absolute pixels.
     */
@@ -116,11 +144,7 @@ case class LeafEndPositions(extendedData: ExtendedData, dicomImage: DicomImage, 
     ImageUtil.setLineThickness(gc, 1.0)
     pixelWiseEdgeList_pix.indices.foreach(index => drawSingleLeafEdge(index, pixelWiseEdgeList_pix(index), stakittAOI))
 
-    gc.setColor(Color.black)
-    val text = "%10.3f".format(trans.pix2IsoCoordX(xPosition_pix)).trim
-    val textX = xPosition_pix + (ImageText.getTextDimensions(gc, text).getWidth * 0.7) / scale
-    val textY = stakittAOI.rectangle.y + (stakittAOI.rectangle.height / 2)
-    si.drawTextCenteredAt(gc, textX, textY, text)
+    annotateLeafEnd(xPosition_pix, stakittAOI)
 
     xPosition_pix
   }
