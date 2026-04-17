@@ -54,21 +54,25 @@ case class LeafEndPositions(extendedData: ExtendedData, dicomImage: DicomImage, 
     xPosition_pix
   }
 
-  private def drawSingleLeafEdge(index: Int, xEdgePosition_pix: Double, stakittAOI: StakittAOI): Unit = {
-    val top = stakittAOI.rectangle.y.floor - 0.5
-    val onePix = 1.0 / scale
-    val y1 = {
-      val y = top + index + 0.5
-      Math.max(y, stakittAOI.rectangle.y + onePix)
-    }
+  private def drawSinglePixelOfLeafEdge(index: Int, xEdgePosition_pix: Double, stakittAOI: StakittAOI): Unit = {
+    val x = si.scalePixelX(xEdgePosition_pix)
+    //  val y1 = (index * si.scale) + si.scalePixelY(stakittAOI.rectangle.y) - (si.scale / 2) - 1
+    val y1 = stakittAOI.yCoordinateList(index) * si.scale
+    val y2 = (y1 + si.scale) - 1
 
-    val y2 = {
-      val y = top + index + 1 - onePix + 0.5
-      Math.min(y, stakittAOI.rectangle.y + stakittAOI.rectangle.height - onePix)
-    }
+    val top = si.scalePixelY(stakittAOI.rectangle.y) + 1
+    val bottom = si.scalePixelY(stakittAOI.rectangle.y + stakittAOI.rectangle.height)
 
-    gc.setColor(Color.white)
-    si.drawLine(gc, xEdgePosition_pix, y1, xEdgePosition_pix, y2)
+    // if (Math.clamp(y1, top, bottom) == y1 || Math.clamp(y2, top, bottom) == y2) {
+
+    if ((y2 >= top) && (y1 <= bottom)) {
+      val y1Bounded = Math.clamp(y1, top, bottom)
+      val y2Bounded = Math.clamp(y2, top, bottom)
+
+      gc.setColor(Color.white)
+      ImageUtil.setLineThickness(gc, 1.0)
+      gc.drawLine(x, y1Bounded, x, y2Bounded)
+    }
   }
 
   /**
@@ -101,23 +105,17 @@ case class LeafEndPositions(extendedData: ExtendedData, dicomImage: DicomImage, 
 
   /**
     * Measures the position of the leaf's end in absolute (not relative) pixels.
+    * @param stakittAOI Area of interest for one leaf. This includes a margin that separates vertical consecutive AOIs.
     * @return End of leaf in absolute pixels.
     */
   private def measureLeafEnd(stakittAOI: StakittAOI): Double = {
 
-    val rectWithMargin = stakittAOI.rectangle //  makeAOIWithMargin_pix(xIndex, yIndex)
+    val rect = stakittAOI.rectangle //  makeAOIWithMargin_pix(xIndex, yIndex)
 
-    val rectBottom = rectWithMargin.y + rectWithMargin.height
-
-    val xRange: Range = rectWithMargin.x.floor.toInt until (rectWithMargin.x + rectWithMargin.width).ceil.toInt
+    val xRange: Range = rect.x.floor.toInt until (rect.x + rect.width).ceil.toInt
 
     // Edge position for each individual row of pixels in the leaf.
-    val pixelWiseEdgeList_pix = {
-      // List of rows of pixels to measure for a single leaf.  Values are in absolute pixel coordinates.
-      val yRange_pix = rectWithMargin.y.floor.toInt until rectBottom.ceil.toInt
-
-      yRange_pix.map(y => findRowEdge(y, xRange))
-    }
+    val pixelWiseEdgeList_pix = stakittAOI.yCoordinateList.map(y => findRowEdge(y, xRange))
 
     val xPosition_pix = {
 
@@ -125,24 +123,20 @@ case class LeafEndPositions(extendedData: ExtendedData, dicomImage: DicomImage, 
       // to their contribution of the edge.  So for example if only 30% a row of pixels is in the AOI, then multiply that row's
       // edge by 0.30
       val xPosition_sum = {
-
-        val headFraction = rectWithMargin.y.ceil - rectWithMargin.y
-        val lastFraction = rectBottom - rectBottom.floor
-
-        // as a prelude to finding the mean, sum the edge coordinates, assigning each the appropriate weight.
-        (headFraction * pixelWiseEdgeList_pix.head) + pixelWiseEdgeList_pix.drop(1).dropRight(1).sum + (lastFraction * pixelWiseEdgeList_pix.last)
+        val list = pixelWiseEdgeList_pix.indices.map(i => pixelWiseEdgeList_pix(i) * stakittAOI.yWeightList(i))
+        list.sum
       }
 
       // divide the sum of positions by the total height of the rectangle to get the mean position of the leaf end
-      xPosition_sum / rectWithMargin.height
+      xPosition_sum / rect.height
     }
 
     gc.setColor(Color.black)
     ImageUtil.setLineThickness(gc, 3.0)
-    si.drawLine(gc, xPosition_pix, rectWithMargin.y, xPosition_pix, rectWithMargin.y + rectWithMargin.height)
+    si.drawLine(gc, xPosition_pix, rect.y, xPosition_pix, rect.y + rect.height)
 
     ImageUtil.setLineThickness(gc, 1.0)
-    pixelWiseEdgeList_pix.indices.foreach(index => drawSingleLeafEdge(index, pixelWiseEdgeList_pix(index), stakittAOI))
+    pixelWiseEdgeList_pix.indices.foreach(index => drawSinglePixelOfLeafEdge(index, pixelWiseEdgeList_pix(index), stakittAOI))
 
     annotateLeafEnd(xPosition_pix, stakittAOI)
 
@@ -153,8 +147,8 @@ case class LeafEndPositions(extendedData: ExtendedData, dicomImage: DicomImage, 
     val edgePosition_pix = measureLeafEnd(stakittAOI)
     val edgePosition_mm = trans.pix2IsoCoordX(edgePosition_pix)
 
-    gc.setColor(Color.gray)
-    si.drawRect(gc, stakittAOI.rectangle)
+    // gc.setColor(Color.gray)
+    // si.drawRect(gc, stakittAOI.rectangle)
 
     val stakitt = Stakitt( //
       stakittPK = None,

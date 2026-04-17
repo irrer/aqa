@@ -2,6 +2,7 @@ package org.aqa.webrun.stakitt
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.webrun.stakitt.leafBoundaries.LeafBoundaries
 import org.aqa.Config
@@ -10,6 +11,30 @@ import java.awt.geom.Rectangle2D
 
 case class StakittAOI(xIndex: Int, yIndex: Int, rectangle: Rectangle2D.Double) {
   val firstPixelRowY: Int = rectangle.y.floor.round.toInt
+
+  private val bottom = rectangle.y + rectangle.height
+
+  val yCoordinateList: Seq[Int] = (rectangle.y.floor.round.toInt until bottom.ceil.round.toInt).map(i => i)
+
+  private def toWeight(y: Int): Double = {
+    y match {
+      case _ if y == yCoordinateList.head => rectangle.y.ceil - rectangle.y
+      case _ if y == yCoordinateList.last => bottom - bottom.floor
+      case _                              => 1.0
+    }
+  }
+
+  val yWeightList: Seq[Double] = yCoordinateList.map(toWeight)
+
+  if (true) {
+    val sum = yWeightList.sum
+    val diff = (sum - rectangle.height).abs
+    val err = diff / rectangle.height
+    if (err > 0.0000000001) {
+      Trace.trace(s"Y weights do not match height: sum: $sum    height: ${rectangle.height}    diff: $diff    " + this)
+      Trace.trace()
+    }
+  }
 }
 
 object StakittAOI extends Logging {
@@ -82,10 +107,6 @@ object StakittAOI extends Logging {
     val xRange = xMax - xMin
 
     val yRange = yImageBorders.yPointListLo_pix.adjusted_pix.head - yImageBorders.yPointListHi_pix.adjusted_pix.head
-    val JyHeight = mean( //
-      yImageBorders.yPointListLo_pix.adjusted_pix(1) - yImageBorders.yPointListLo_pix.adjusted_pix.head,
-      yImageBorders.yPointListHi_pix.adjusted_pix(1) - yImageBorders.yPointListHi_pix.adjusted_pix.head
-    )
 
     def makeAOI(xIndex: Int, yIndex: Int): Rect2d = {
 
