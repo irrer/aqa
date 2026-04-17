@@ -55,50 +55,9 @@ case class LeafEnds(rtimage: AttributeList) extends Logging {
     list
   }
 
-  /**
-    * Coarsely find the leaf ends of the square tooth pattern on either side (left and right) of the image.
-    * @return First and last edges.
-    */
-  private def findSquareToothEnds(): Seq[Double] = {
-    if (false) {
-      val rowSums = dicomImage.rowSums
-      val lo = (rowSums.take(10) ++ rowSums.takeRight(10)).sum / 20
-
-      val oneThird = dicomImage.height / 3
-      val hi = rowSums.slice(oneThird, oneThird + oneThird).sum / oneThird
-      val mid = (lo + hi) / 2
-
-      val top = rowSums.indices.indexWhere(i => rowSums(i) > mid)
-      val bottom = rowSums.indices.lastIndexWhere(i => rowSums(i) > mid)
-    }
-
-    val columnSums = dicomImage.columnSums
-
-    val mid: Float = {
-      val lo = (columnSums.take(10) ++ columnSums.takeRight(10)).sum / 20
-      val oneThird = dicomImage.width / 3
-      val hi = columnSums.slice(oneThird, oneThird + oneThird).sum / oneThird
-      (lo + hi) / 2
-    }
-
-    val left = columnSums.indices.indexWhere(i => columnSums(i) > mid)
-    val right = columnSums.indices.lastIndexWhere(i => columnSums(i) > mid)
-
-    Seq(left, right)
-  }
-
   /** Points where X profile crosses mean. */
   val xPointList: Seq[Double] = {
-    if (false) {
-      // the first and last are in the middles of the 'square wave' profiles of the left and right side, and are meaningless.
-      val list1 = crossingPointsOfMeanSubPix(dicomImage.columnSums)
-      val list2 = list1.drop(1).tail
-      val squareToothEnds = findSquareToothEnds()
-      val list3 = squareToothEnds.head +: list2 :+ squareToothEnds.last
-      list3
-    } else {
-      val list = crossingPointsOfMeanSubPix(dicomImage.columnSums)
-      list.tail.dropRight(1)
-    }
+    val list = crossingPointsOfMeanSubPix(dicomImage.columnSums)
+    list.tail.dropRight(1)
   }
 }

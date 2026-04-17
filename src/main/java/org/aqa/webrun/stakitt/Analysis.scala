@@ -44,8 +44,8 @@ case class Analysis(dicomImage: DicomImage, xAOIBorders: LeafEnds, yAOIBorders: 
     Trace.showInMSPaint(bufImg)
   }
 
+  // enable this to see the leaf boundaries
   if (false) showAOIBorderSpans()
-
 }
 
 object Analysis extends Logging {
