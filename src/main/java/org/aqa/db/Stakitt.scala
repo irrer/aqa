@@ -32,7 +32,7 @@ case class Stakitt(
                     plannedEndPosition_mm: Double, // planned position of leaf end
                     measuredMinorSide_mm: Double, // measured position of top side of leaf, or left side if collimator is vertical
                     measuredMajorSide_mm: Double // measured position of bottom side of leaf, or right side if collimator is vertical
-                  ) {
+                  ) extends Logging {
 
   def insert: Stakitt = {
     //  val insertQuery = LeafPosition.query returning LeafPosition.query.map(_.leafPositionPK) into ((leafPosition, leafPositionPK) => leafPosition.copy(leafPositionPK = Some(leafPositionPK)))
