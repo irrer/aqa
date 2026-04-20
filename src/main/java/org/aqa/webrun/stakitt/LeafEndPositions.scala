@@ -67,9 +67,7 @@ case class LeafEndPositions(extendedData: ExtendedData, dicomImage: DicomImage, 
 
     def rnd(d: Double): Int = d.round.toInt
 
-    val backgroundColor = new Color(0xb1d1fc)
-
-    gc.setColor(backgroundColor)
+    gc.setColor(Color.lightGray)
     gc.fillRect(
       rnd(si.scalePixelX(textX) - (textDimensions.getWidth / 2) - expansionHorizontal_pix),
       rnd(si.scalePixelY(textY) - (textDimensions.getHeight / 2) - expansionVertical_pix),
@@ -87,14 +85,15 @@ case class LeafEndPositions(extendedData: ExtendedData, dicomImage: DicomImage, 
     */
   private def annotateAOIEdge(stakittAOI: StakittAOI, top: Boolean = true): Unit = {
 
-    val y_pix = if (top) stakittAOI.rectangle.y else stakittAOI.rectangle.y + stakittAOI.rectangle.height
-    val xCenter_pix = stakittAOI.rectangle.x + (stakittAOI.rectangle.width / 2)
+    val rect = stakittAOI.rectangle
+    val y_pix = if (top) rect.y else rect.y + rect.height
+    val xCenter_pix = rect.x + (rect.width / 2)
 
-    val x1a = xCenter_pix - (3 * oneMM_pix)
+    val x1a = rect.x
     val x2a = xCenter_pix - oneMM_pix
 
     val x1b = xCenter_pix + oneMM_pix
-    val x2b = xCenter_pix + (3 * oneMM_pix)
+    val x2b = rect.x + rect.width
 
     gc.setColor(Color.black)
     ImageUtil.setLineThickness(gc, 1.0)
