@@ -50,14 +50,14 @@ case class Analysis(dicomImage: DicomImage, xAOIBorders: Seq[Double], yAOIBorder
 
 object Analysis extends Logging {
 
-  def analyze(extendedData: ExtendedData, rtimage: AttributeList, rtplan: Option[AttributeList]): Analysis = {
+  def analyze(extendedData: ExtendedData, rtimage: AttributeList, rtplan: AttributeList): Analysis = {
 
     val dicomImage = new DicomImage(rtimage)
 
     val xAOIBorders = LeafEnds.xPointList(dicomImage)
     val yAOIBorders = LeafBoundaries(rtimage, xAOIBorders)
 
-    val planAOIBorders = rtplan.map(p => PlanBorders(rtimage, p)) // TODO require?
+    val planAOIBorders = PlanBorders(rtimage, rtplan)
 
     val leafEndPositionList = LeafEndPositions(extendedData, dicomImage, xAOIBorders, yAOIBorders, rtimage).measureLeafPositions()
 

@@ -2,7 +2,6 @@ package org.aqa.webrun.stakitt
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.DicomDict.TagByName
-import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Logging
@@ -12,8 +11,6 @@ case class PlanBorders(rtimage: AttributeList, rtplan: AttributeList) extends Lo
 
   private val trans = new IsoImagePlaneTranslator(rtimage)
 
-  private val dicomImage = new DicomImage(rtimage)
-
   // beam's attribute list
   private val beam: AttributeList = {
     val beamNumber = DicomUtil.findAllTag(rtplan, TagByName.BeamNumber).head.getIntegerValues.head
@@ -22,15 +19,15 @@ case class PlanBorders(rtimage: AttributeList, rtplan: AttributeList) extends Lo
 
   // private val beamName: String = Phase2Util.getBeamNameOfRtimage(rtplan, rtimage).get
 
-  private case class AOIBorder(lo: Double, hi: Double) {}
+  case class AOIBorder(lo: Double, hi: Double) {}
 
-  private case class AOIBorderList(staggeredLo: AOIBorder, smooth: Seq[AOIBorder], staggeredHi: AOIBorder) {}
+  case class AOIBorderList(staggeredLo: AOIBorder, smooth: Seq[AOIBorder], staggeredHi: AOIBorder) {}
 
   /**
     * Make a list of planned edges, including the lo and hi staggered edges.
     * @return List of edges.
     */
-  private def findPlanXBorderList(plan: AttributeList): AOIBorderList = {
+  private def findPlanXBorderList(): AOIBorderList = {
     // make a list of all leaf ends
     val sortedEdgeList = DicomUtil.findAllTag(beam, TagByName.LeafJawPositions).flatMap(_.getDoubleValues).distinct.sorted
 
@@ -71,8 +68,6 @@ case class PlanBorders(rtimage: AttributeList, rtplan: AttributeList) extends Lo
     AOIBorderList(loStaggered, list, hiStaggered)
   }
 
-  private def planYBorderList = {
-
-  }
+  val aoiBorderList: AOIBorderList = findPlanXBorderList()
 
 }

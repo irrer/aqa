@@ -75,7 +75,7 @@ class StakittRun(procedure: Procedure) extends WebRunProcedure with RunTrait[Skt
       case _ if rtplan.isEmpty      => formError("RTPLAN could not be found. Try uploading it with the RTIMAGE file(s).")
       case _ if stakittList.isEmpty => formError("No Stakitt RTIMAGE files uploaded")
       case _ =>
-        val runReq = SktRunReq(Util.sortByDateTime(rtimageList), rtplan)
+        val runReq = SktRunReq(Util.sortByDateTime(rtimageList), rtplan.get)
         Right(runReq)
     }
     result
@@ -88,7 +88,7 @@ class StakittRun(procedure: Procedure) extends WebRunProcedure with RunTrait[Skt
     }
 
     val stakittList = Util.sortByDateTime(getRtimageList(alList).filter(img => isStakitt(img, rtplan)))
-    val result = SktRunReq(stakittList, rtplan)
+    val result = SktRunReq(stakittList, rtplan.get)
     result
   }
 
