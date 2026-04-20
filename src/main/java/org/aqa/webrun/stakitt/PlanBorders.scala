@@ -1,73 +1,80 @@
 package org.aqa.webrun.stakitt
 
+import com.pixelmed.dicom.Attribute
 import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.SequenceAttribute
 import edu.umro.DicomDict.TagByName
-import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Logging
-import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.Util
 
-case class PlanBorders(rtimage: AttributeList, rtplan: AttributeList) extends Logging {
+/**
+  * List of planned leaf ands and leaf boundaries (sides).
+  * @param xLeafEndList List of leaf ends (x coordinates).
+  * @param yLeafBoundaryList List of leaf boundaries (x coordinates).
+  */
 
-  private val trans = new IsoImagePlaneTranslator(rtimage)
-
-  // beam's attribute list
-  private val beam: AttributeList = {
-    val beamNumber = DicomUtil.findAllTag(rtplan, TagByName.BeamNumber).head.getIntegerValues.head
-    Phase2Util.getBeamSequence(rtplan, beamNumber)
+case class PlanBorders(xLeafEndList: Seq[Double], yLeafBoundaryList: Seq[Double]) extends Logging {
+  override def toString: String = {
+    s"leafEndList ${xLeafEndList.size} : " + xLeafEndList.map(Util.fmtDbl).mkString("  ") + "\n" +
+      s"leafBorderList ${yLeafBoundaryList.size} : " + yLeafBoundaryList.map(Util.fmtDbl).mkString("  ")
   }
+}
 
-  // private val beamName: String = Phase2Util.getBeamNameOfRtimage(rtplan, rtimage).get
-
-  case class AOIBorder(lo: Double, hi: Double) {}
-
-  case class AOIBorderList(staggeredLo: AOIBorder, smooth: Seq[AOIBorder], staggeredHi: AOIBorder) {}
+object PlanBorders extends Logging {
 
   /**
-    * Make a list of planned edges, including the lo and hi staggered edges.
-    * @return List of edges.
+    * Make a list of all planned edges for comparison to those measured in the image.
+    * @param rtimage DICOM image.
+    * @param rtplan RTPLAN for DICOM image.
+    * @return
     */
-  private def findPlanXBorderList(): AOIBorderList = {
-    // make a list of all leaf ends
-    val sortedEdgeList = DicomUtil.findAllTag(beam, TagByName.LeafJawPositions).flatMap(_.getDoubleValues).distinct.sorted
+  def make(rtimage: AttributeList, rtplan: AttributeList): PlanBorders = {
 
-    val loStaggered: AOIBorder = {
-      // left-hand edge of the EPID
-      val lo = trans.pix2IsoCoordX(0)
+    // beam's attribute list
+    val beam: AttributeList = Util.getBeamOfRtimage(rtplan, rtimage).get
 
-      // midway between staggered and straight edge
-      val hi = (sortedEdgeList(1) + sortedEdgeList(2)) / 2
+    /**
+      * Make a list of planned edges, including the lo and hi staggered edges.
+      * @return List of edges.
+      */
+    def makeXEdgeList(): Seq[Double] = {
+      // make a list of all leaf ends
+      val sortedEdgeList = DicomUtil.findAllTag(beam, TagByName.LeafJawPositions).map(_.getDoubleValues).filter(_.length > 2).flatten.distinct.sorted
 
-      AOIBorder(lo, hi)
+      val measuredEdgeList = sortedEdgeList.drop(2).dropRight(2)
+
+      measuredEdgeList
     }
 
-    val hiStaggered: AOIBorder = {
-      val rev = sortedEdgeList.reverse
-      // midway between staggered and straight edge
-      val lo = (rev(1) + rev(2)) / 2
+    /**
+      * Make a list of all Y edges.
+      * @return
+      */
+    def makeYEdgeList(): Seq[Double] = {
 
-      // right-hand edge of the EPID
-      val hi = trans.pix2IsoCoordX(0)
+      def toSeq(attr: Attribute): Seq[AttributeList] = DicomUtil.alOfSeq(attr.asInstanceOf[SequenceAttribute])
 
-      AOIBorder(lo, hi)
+      val positionSequenceList = DicomUtil.findAllTag(beam, TagByName.BeamLimitingDevicePositionSequence).flatMap(toSeq)
+
+      def isYJaw(al: AttributeList): Boolean = {
+        val name = al.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrEmptyString().trim
+        name.equalsIgnoreCase("Y") || name.equalsIgnoreCase("ASYMY")
+      }
+
+      val yJawPositionList = positionSequenceList.filter(isYJaw).flatMap(_.get(TagByName.LeafJawPositions).getDoubleValues)
+
+      val yMin = yJawPositionList.min
+      val yMax = yJawPositionList.max
+
+      val allLeafPositionBoundaries = DicomUtil.findAllTag(beam, TagByName.LeafPositionBoundaries).flatMap(_.getDoubleValues).distinct
+      val visibleLeafBoundaries = allLeafPositionBoundaries.map(b => Math.clamp(b, yMin, yMax)).distinct.sorted
+      visibleLeafBoundaries
     }
 
-    // number of AOIs in the middle
-    val count = (sortedEdgeList.size - 6) / 2
+    val planBorders = PlanBorders(makeXEdgeList(), makeYEdgeList())
 
-    // given an index, make the X borders to be used for AOIs.
-    def makeAOIBorder(i: Int): AOIBorder = {
-      val ii = (i * 2) + 1
-      val lo = (sortedEdgeList(ii + 0) + sortedEdgeList(ii + 1)) / 2
-      val hi = (sortedEdgeList(ii + 2) + sortedEdgeList(ii + 2)) / 2
-      AOIBorder(lo, hi)
-    }
-
-    val list = (0 until count).map(makeAOIBorder)
-
-    AOIBorderList(loStaggered, list, hiStaggered)
+    planBorders
   }
-
-  val aoiBorderList: AOIBorderList = findPlanXBorderList()
 
 }
