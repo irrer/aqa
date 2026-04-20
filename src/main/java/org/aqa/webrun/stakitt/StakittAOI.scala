@@ -2,14 +2,13 @@ package org.aqa.webrun.stakitt
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.webrun.stakitt.leafBoundaries.LeafBoundaries
 import org.aqa.Config
 
 import java.awt.geom.Rectangle2D
 
-case class StakittAOI(xIndex: Int, yIndex: Int, rectangle: Rectangle2D.Double) {
+case class StakittAOI(xIndex: Int, yIndex: Int, rectangle: Rectangle2D.Double)extends Logging {
   val firstPixelRowY: Int = rectangle.y.floor.round.toInt
 
   private val bottom = rectangle.y + rectangle.height
@@ -25,40 +24,26 @@ case class StakittAOI(xIndex: Int, yIndex: Int, rectangle: Rectangle2D.Double) {
   }
 
   val yWeightList: Seq[Double] = yCoordinateList.map(toWeight)
-
-  if (true) {
-    val sum = yWeightList.sum
-    val diff = (sum - rectangle.height).abs
-    val err = diff / rectangle.height
-    if (err > 0.0000000001) {
-      Trace.trace(s"Y weights do not match height: sum: $sum    height: ${rectangle.height}    diff: $diff    " + this)
-      Trace.trace()
-    }
-  }
 }
 
 object StakittAOI extends Logging {
 
-  private def mean(d1: Double, d2: Double) = (d1 + d2) / 2
-
-  def makeAOIs(xImageBorders: LeafEnds, yImageBorders: LeafBoundaries, rtimage: AttributeList): Seq[StakittAOI] = {
+  def makeAOIs(approximateLeafEnds: Seq[Double], yImageBorders: LeafBoundaries, rtimage: AttributeList): Seq[StakittAOI] = {
 
     val trans = new IsoImagePlaneTranslator(rtimage)
 
     // abbreviation
     type Rect2d = Rectangle2D.Double
 
-    val xList = xImageBorders.xPointList
+    val x0 = approximateLeafEnds.head
+    val x1 = approximateLeafEnds(1)
+    val x2 = approximateLeafEnds(2)
 
-    val x0 = xList.head
-    val x1 = xList(1)
-    val x2 = xList(2)
-
-    val xL0 = xList.last
+    val xL0 = approximateLeafEnds.last
 
     val xFilled = x2 - x1
 
-    val xAoiPairList = XAoiBorders.makeXPairList(xImageBorders.xPointList)
+    val xAoiPairList = XAoiBorders.makeXPairList(approximateLeafEnds)
 
     val xMin = x0 - xFilled
     val xMax = xL0 + xFilled
@@ -99,7 +84,7 @@ object StakittAOI extends Logging {
       yImageBorders.yPointListLo_pix.adjusted_pix.indices.dropRight(1).map(yIndex => makeAOIWithMargin_pix(xIndex, yIndex))
     }
 
-    val list = xImageBorders.xPointList.indices.flatMap(makeColumn)
+    val list = approximateLeafEnds.indices.flatMap(makeColumn)
 
     list
   }

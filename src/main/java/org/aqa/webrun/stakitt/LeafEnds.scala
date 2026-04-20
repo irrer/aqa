@@ -1,13 +1,11 @@
 package org.aqa.webrun.stakitt
 
-import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.LocateEdge
 import org.aqa.Logging
 
-case class LeafEnds(rtimage: AttributeList) extends Logging {
-
-  private val dicomImage = new DicomImage(rtimage)
+/** Find the approximate leaf ends.  These are the points where X profile crosses mean. */
+object LeafEnds extends Logging {
 
   /**
     * Find the indices of the crossing points to the accuracy of one pixel.
@@ -55,8 +53,11 @@ case class LeafEnds(rtimage: AttributeList) extends Logging {
     list
   }
 
-  /** Points where X profile crosses mean. */
-  val xPointList: Seq[Double] = {
+  /** Find the approximate leaf ends.  These are the points where X profile crosses mean.
+    * @param dicomImage Stakitt image
+    * @return List of approximate leaf edges (X coordinates).
+    */
+  def xPointList(dicomImage: DicomImage): Seq[Double] = {
     val list = crossingPointsOfMeanSubPix(dicomImage.columnSums)
     list.tail.dropRight(1)
   }

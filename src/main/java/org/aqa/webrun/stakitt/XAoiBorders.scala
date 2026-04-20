@@ -10,6 +10,9 @@ import org.aqa.Logging
 case class XAoiBorders(lo: Double, hi: Double) extends Logging {
   val mid: Double =  XAoiBorders mean(lo, hi)
   val width: Double = hi - lo
+
+  /** List of X pixels that comprise the column. */
+  val xRange_pix: Range = lo.floor.toInt until hi.ceil.toInt
 }
 
 object XAoiBorders extends Logging {

@@ -12,7 +12,7 @@ import org.aqa.webrun.stakitt.leafBoundaries.LeafBoundaries
 
 import java.awt.Color
 
-case class Analysis(dicomImage: DicomImage, xAOIBorders: LeafEnds, yAOIBorders: LeafBoundaries, leafEndPositions: Seq[StakittResult]) extends Logging {
+case class Analysis(dicomImage: DicomImage, xAOIBorders: Seq[Double], yAOIBorders: LeafBoundaries, leafEndPositions: Seq[StakittResult]) extends Logging {
 
   private def showAOIBorderSpans(): Unit = {
 
@@ -35,7 +35,7 @@ case class Analysis(dicomImage: DicomImage, xAOIBorders: LeafEnds, yAOIBorders: 
       lineList.foreach(y => si.drawLine(gc, 0, y, dicomImage.width, y))
     }
 
-    xAOIBorders.xPointList.foreach(vertLine)
+    xAOIBorders.foreach(vertLine)
 
     // horzLine(yImageBorders.yPointList_pix, "All", 1, Color.white)
     horzLine(yAOIBorders.yPointListLo_pix.adjusted_pix, "Lo", 2, Color.black)
@@ -54,8 +54,8 @@ object Analysis extends Logging {
 
     val dicomImage = new DicomImage(rtimage)
 
-    val xAOIBorders = LeafEnds(rtimage)
-    val yAOIBorders = LeafBoundaries(rtimage, xAOIBorders.xPointList)
+    val xAOIBorders = LeafEnds.xPointList(dicomImage)
+    val yAOIBorders = LeafBoundaries(rtimage, xAOIBorders)
 
     val planAOIBorders = rtplan.map(p => PlanBorders(rtimage, p)) // TODO require?
 
