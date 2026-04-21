@@ -18,6 +18,7 @@ package org.aqa.db
 
 import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
+import org.aqa.Util
 
 import scala.xml.Elem
 
@@ -29,9 +30,11 @@ case class Stakitt(
                     leafIndex: Int, // leaf number starting at 1
                     leafPositionIndex: Int, // leaf position number as it moves across the field
                     measuredEndPosition_mm: Double, // measured position of leaf end
-                    plannedEndPosition_mm: Double, // planned position of leaf end
                     measuredMinorSide_mm: Double, // measured position of top side of leaf, or left side if collimator is vertical
-                    measuredMajorSide_mm: Double // measured position of bottom side of leaf, or right side if collimator is vertical
+                    measuredMajorSide_mm: Double, // measured position of bottom side of leaf, or right side if collimator is vertical
+                    plannedEndPosition_mm: Double, // planned position of leaf end
+                    plannedMinorSide_mm: Double, // measured position of top side of leaf, or left side if collimator is vertical
+                    plannedMajorSide_mm: Double // measured position of bottom side of leaf, or right side if collimator is vertical
                   ) extends Logging {
 
   def insert: Stakitt = {
@@ -42,8 +45,21 @@ case class Stakitt(
     result
   }
 
-  /** Positioning error of leaf end: planned - measured  */
-  val offset_mm: Double = plannedEndPosition_mm - measuredEndPosition_mm
+  /** Positioning error of leaf end: planned - measured */
+  //noinspection ScalaWeakerAccess
+  val leafEndOffset_mm: Double = measuredEndPosition_mm - plannedEndPosition_mm
+
+  //noinspection ScalaWeakerAccess
+  val minorSideOffset_mm: Double = measuredMinorSide_mm - plannedMinorSide_mm
+
+  //noinspection ScalaWeakerAccess
+  val majorSideOffset_mm: Double = measuredMajorSide_mm - plannedMajorSide_mm
+
+  //noinspection ScalaWeakerAccess
+  val measuredLeafWidth_mm: Double = measuredMajorSide_mm - measuredMinorSide_mm
+
+  //noinspection ScalaWeakerAccess
+  val plannedLeafWidth_mm: Double = plannedMajorSide_mm - plannedMinorSide_mm
 
   def insertOrUpdate(): Int = Db.run(Stakitt.query.insertOrUpdate(this))
 
@@ -51,24 +67,43 @@ case class Stakitt(
     "Beam: " + beamName +
       "  Leaf Index: " + leafIndex.formatted("%2d") +
       "  Leaf Position Index: " + leafPositionIndex.formatted("%2d") +
-      "  offset_mm: " + offset_mm.formatted("%9.5f") +
-      "  plannedEndPosition_mm: " + plannedEndPosition_mm.formatted("%6.2f") +
-      "  measuredEndPosition_mm: " + measuredEndPosition_mm.formatted("%10.5f")
+      "  leaf end offset_mm: " + Util.fmtDbl(leafEndOffset_mm) +
+      "  minor side offset_mm: " + Util.fmtDbl(minorSideOffset_mm) +
+      "  major side offset_mm: " + Util.fmtDbl(majorSideOffset_mm) +
+      "  measuredEndPosition_mm: " + Util.fmtDbl(measuredEndPosition_mm) +
+      "  measuredMinorSide_mm: " + Util.fmtDbl(measuredMinorSide_mm) +
+      "  measuredMajorSide_mm: " + Util.fmtDbl(measuredMajorSide_mm) +
+      "  plannedEndPosition_mm: " + Util.fmtDbl(plannedEndPosition_mm) +
+      "  plannedMinorSide_mm: " + Util.fmtDbl(plannedMinorSide_mm) +
+      "  plannedMajorSide_mm: " + Util.fmtDbl(plannedMajorSide_mm)
 }
 
 object Stakitt extends Logging {
   class StakittTable(tag: Tag) extends Table[Stakitt](tag, "leafPosition") {
 
     def stakittPK = column[Long]("stakittPK", O.PrimaryKey, O.AutoInc)
+
     def outputPK = column[Long]("outputPK")
+
     def SOPInstanceUID = column[String]("SOPInstanceUID")
+
     def beamName = column[String]("beamName")
+
     def leafIndex = column[Int]("leafIndex")
+
     def leafPositionIndex = column[Int]("leafPositionIndex")
+
     def measuredEndPosition_mm = column[Double]("measuredEndPosition_mm")
-    def plannedEndPosition_mm = column[Double]("plannedEndPosition_mm")
+
     def measuredMinorSide_mm = column[Double]("measuredLowSide_mm")
+
     def measuredMajorSide_mm = column[Double]("measuredHighSide_mm")
+
+    def plannedEndPosition_mm = column[Double]("plannedEndPosition_mm")
+
+    def plannedMinorSide_mm = column[Double]("plannedMinorSide_mm")
+
+    def plannedMajorSide_mm = column[Double]("plannedMajorSide_mmk")
 
     def * =
       (
@@ -79,9 +114,11 @@ object Stakitt extends Logging {
         leafIndex,
         leafPositionIndex,
         measuredEndPosition_mm,
-        plannedEndPosition_mm,
         measuredMinorSide_mm,
-        measuredMajorSide_mm
+        measuredMajorSide_mm,
+        plannedEndPosition_mm,
+        plannedMinorSide_mm,
+        plannedMajorSide_mm
       ) <> (Stakitt.apply _ tupled, Stakitt.unapply)
 
     def outputFK = foreignKey("Stakitt_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
@@ -146,7 +183,7 @@ object Stakitt extends Logging {
     /**
      * Get the entry corresponding to the leaf's position and index.
      *
-     * @param leafPositionIndex Index of horizontal position of leaf.  Currently a number from 1 to 10.  Note: NOT zero relative.
+     * @param leafPositionIndex Index of horizontal position of leaf.  Currently, a number from 1 to 10.  Note: NOT zero relative.
      * @param leafIndex         Index of leaf.  Will be either 1 to 36 or 1 to 52 depending on the collimator.  Note: NOT zero relative.
      * @return A leaf position entry.
      */

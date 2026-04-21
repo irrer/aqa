@@ -17,7 +17,17 @@ import org.aqa.Util
 import java.awt.Color
 import java.awt.image.BufferedImage
 
-case class LeafEndPositions(extendedData: ExtendedData, dicomImage: DicomImage, xImageBorders: Seq[Double], yImageBorders: LeafBoundaries, rtimage: AttributeList) extends Logging {
+case class LeafEndPositions(
+    extendedData: ExtendedData,
+    dicomImage: DicomImage,
+    xImageBorders: Seq[Double],
+    yImageBorders: LeafBoundaries,
+    rtimage: AttributeList,
+    rtplan: AttributeList,
+    planBorders: PlanBorders
+) extends Logging {
+
+  private val beamName: String = Util.getBeamNameOfRtimage(rtplan, rtimage).get
 
   private val trans = new IsoImagePlaneTranslator(rtimage)
 
@@ -57,7 +67,8 @@ case class LeafEndPositions(extendedData: ExtendedData, dicomImage: DicomImage, 
     * @param stakittAOI Containing AOI.
     */
   private def annotateLeafEnd(xPosition_pix: Double, stakittAOI: StakittAOI): Unit = {
-    val text = "%10.3f".format(trans.pix2IsoCoordX(xPosition_pix)).trim
+    val err = trans.pix2IsoCoordX(xPosition_pix) - stakittAOI.plannedXEdge_mm
+    val text = "%10.3f".format(err).trim
     val textX = xPosition_pix + (ImageText.getTextDimensions(gc, text).getWidth * 0.8) / scale
     val textY = stakittAOI.rectangle.y + (stakittAOI.rectangle.height / 2)
 
@@ -146,13 +157,15 @@ case class LeafEndPositions(extendedData: ExtendedData, dicomImage: DicomImage, 
       stakittPK = None,
       outputPK = extendedData.outputPK,
       SOPInstanceUID = Util.sopOfAl(rtimage),
-      beamName = "NA", // TODO
+      beamName = beamName,
       leafIndex = stakittAOI.yIndex + 1,
       leafPositionIndex = stakittAOI.xIndex + 1,
       measuredEndPosition_mm = edgePosition_mm,
-      plannedEndPosition_mm = -1, // TODO
-      measuredMinorSide_mm = trans.pix2IsoCoordY(stakittAOI.rectangle.y),
-      measuredMajorSide_mm = trans.pix2IsoCoordY(stakittAOI.rectangle.y + stakittAOI.rectangle.height)
+      measuredMinorSide_mm = trans.pix2IsoCoordY(stakittAOI.rectangle.y) - Config.StakittVerticalMargin_mm,
+      measuredMajorSide_mm = trans.pix2IsoCoordY(stakittAOI.rectangle.y + stakittAOI.rectangle.height) + (Config.StakittVerticalMargin_mm * 2),
+      plannedEndPosition_mm = stakittAOI.plannedXEdge_mm,
+      plannedMinorSide_mm = planBorders.yLeafBoundaryList(stakittAOI.yIndex),
+      plannedMajorSide_mm = planBorders.yLeafBoundaryList(stakittAOI.yIndex + 1)
     )
 
     val result = StakittResult(stakitt, stakittAOI)
@@ -173,7 +186,7 @@ case class LeafEndPositions(extendedData: ExtendedData, dicomImage: DicomImage, 
 
     // val j = (0 until xAoiPairList.size).map(doColumn)
 
-    val aoiList = StakittAOI.makeAOIs(xImageBorders, yImageBorders, rtimage)
+    val aoiList = StakittAOI.makeAOIs(xImageBorders, yImageBorders, rtimage, planBorders.xLeafEndList)
 
     // val xAoiBorders = XAoiBorders.makeXPairList(xImageBorders.xPointList)
 

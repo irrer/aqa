@@ -54,12 +54,29 @@ object Analysis extends Logging {
 
     val dicomImage = new DicomImage(rtimage)
 
+    val planAOIBorders = PlanBorders.make(rtimage, rtplan)
     val xAOIBorders = LeafEnds.xPointList(dicomImage)
     val yAOIBorders = LeafBoundaries(rtimage, xAOIBorders)
 
-    val planAOIBorders = PlanBorders(rtimage, rtplan)
+    if (yAOIBorders.yPointListLo_pix.adjusted_pix.size != yAOIBorders.yPointListHi_pix.adjusted_pix.size) {
+      val msg = s"Visually found ${yAOIBorders.yPointListLo_pix.adjusted_pix.size} lo leaf boundaries (sides) but ${yAOIBorders.yPointListHi_pix.adjusted_pix.size} hi leaf boundaries."
+      logger.error(msg)
+      throw new RuntimeException(msg)
+    }
 
-    val leafEndPositionList = LeafEndPositions(extendedData, dicomImage, xAOIBorders, yAOIBorders, rtimage).measureLeafPositions()
+    if (xAOIBorders.size != planAOIBorders.xLeafEndList.size) {
+      val msg = s"Visually found ${xAOIBorders.size} leaf ends, but plan indicates that there should be ${planAOIBorders.xLeafEndList.size}"
+      logger.error(msg)
+      throw new RuntimeException(msg)
+    }
+
+    if (yAOIBorders.yPointListLo_pix.adjusted_pix.size != planAOIBorders.yLeafBoundaryList.size) {
+      val msg = s"Visually found ${yAOIBorders.yPointListLo_pix.adjusted_pix.size} leaf boundaries (sides), but plan indicates that there should be ${planAOIBorders.yLeafBoundaryList.size}"
+      logger.error(msg)
+      throw new RuntimeException(msg)
+    }
+
+    val leafEndPositionList = LeafEndPositions(extendedData, dicomImage, xAOIBorders, yAOIBorders, rtimage, rtplan, planAOIBorders).measureLeafPositions()
 
     val analysis = Analysis(dicomImage, xAOIBorders, yAOIBorders, leafEndPositionList)
 

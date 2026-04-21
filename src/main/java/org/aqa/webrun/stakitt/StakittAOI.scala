@@ -8,7 +8,7 @@ import org.aqa.Config
 
 import java.awt.geom.Rectangle2D
 
-case class StakittAOI(xIndex: Int, yIndex: Int, rectangle: Rectangle2D.Double)extends Logging {
+case class StakittAOI(xIndex: Int, yIndex: Int, rectangle: Rectangle2D.Double, plannedXEdge_mm: Double)extends Logging {
   val firstPixelRowY: Int = rectangle.y.floor.round.toInt
 
   private val bottom = rectangle.y + rectangle.height
@@ -28,7 +28,7 @@ case class StakittAOI(xIndex: Int, yIndex: Int, rectangle: Rectangle2D.Double)ex
 
 object StakittAOI extends Logging {
 
-  def makeAOIs(approximateLeafEnds: Seq[Double], yImageBorders: LeafBoundaries, rtimage: AttributeList): Seq[StakittAOI] = {
+  def makeAOIs(approximateLeafEnds: Seq[Double], yImageBorders: LeafBoundaries, rtimage: AttributeList, plannedXEdgeList: Seq[Double]): Seq[StakittAOI] = {
 
     val trans = new IsoImagePlaneTranslator(rtimage)
 
@@ -77,7 +77,7 @@ object StakittAOI extends Logging {
 
       val rect = makeAOI(xIndex, yIndex)
       val rectWithMargin = new Rect2d(rect.x, rect.y + verticalMargin_pix, rect.width, rect.height - (2 * verticalMargin_pix))
-      StakittAOI(xIndex, yIndex, rectWithMargin)
+      StakittAOI(xIndex, yIndex, rectWithMargin, plannedXEdgeList(xIndex))
     }
 
     def makeColumn(xIndex: Int): Seq[StakittAOI] = {
