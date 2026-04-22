@@ -8,7 +8,7 @@ import org.aqa.Config
 
 import java.awt.geom.Rectangle2D
 
-case class StakittAOI(xIndex: Int, yIndex: Int, rectangle: Rectangle2D.Double, plannedXEdge_mm: Double)extends Logging {
+case class StakittAOI(xIndex: Int, yIndex: Int, rectangle: Rectangle2D.Double, plannedXEdge_mm: Double) extends Logging {
   val firstPixelRowY: Int = rectangle.y.floor.round.toInt
 
   private val bottom = rectangle.y + rectangle.height
@@ -23,7 +23,35 @@ case class StakittAOI(xIndex: Int, yIndex: Int, rectangle: Rectangle2D.Double, p
     }
   }
 
-  val yWeightList: Seq[Double] = yCoordinateList.map(toWeight)
+  /** List of how much each row of pixels contributes to the leaf end position. */
+  private val yWeightList: Seq[Double] = yCoordinateList.map(toWeight)
+
+  /**
+    * Measures the position of the leaf's end in absolute (not relative) pixels.
+    * @param leafEndBySinglePixel List of all measured leaf ends for each row of pixels.
+    * @return End of leaf in absolute pixels.
+    */
+  def measureLeafEnd(leafEndBySinglePixel: LeafEndBySinglePixel): Double = {
+
+    // Edge position for each individual row of pixels in the leaf.
+    val pixelWiseEdgeList_pix = yCoordinateList.map(y_pix => leafEndBySinglePixel.get(rectangle.x, y_pix))
+
+    val xPosition_pix = {
+      // the sum of all the edge positions of the individual rows of pixels, with the top and bottom rows weighted in proportion
+      // to their contribution of the edge.  So for example if only 30% a row of pixels is in the AOI, then multiply that row's
+      // edge by 0.30
+      val xPosition_sum = {
+        val list = pixelWiseEdgeList_pix.zip(yWeightList).map(vw => vw._1 * vw._2)
+        list.sum
+      }
+
+      // divide the sum of positions by the total height of the rectangle to get the mean position of the leaf end
+      xPosition_sum / rectangle.height
+    }
+
+    xPosition_pix
+  }
+
 }
 
 object StakittAOI extends Logging {
@@ -71,7 +99,7 @@ object StakittAOI extends Logging {
       * @param yIndex Y index of AOI array.
       * @return A rectangle in absolute pixel coordinates.
       */
-    def makeAOIWithMargin_pix(xIndex: Int, yIndex: Int): StakittAOI = {
+    def makeAOIWithYMargin_pix(xIndex: Int, yIndex: Int): StakittAOI = {
 
       val verticalMargin_pix = trans.iso2PixDistY(Config.StakittVerticalMargin_mm)
 
@@ -81,7 +109,7 @@ object StakittAOI extends Logging {
     }
 
     def makeColumn(xIndex: Int): Seq[StakittAOI] = {
-      yImageBorders.yPointListLo_pix.adjusted_pix.indices.dropRight(1).map(yIndex => makeAOIWithMargin_pix(xIndex, yIndex))
+      yImageBorders.yPointListLo_pix.adjusted_pix.indices.dropRight(1).map(yIndex => makeAOIWithYMargin_pix(xIndex, yIndex))
     }
 
     val list = approximateLeafEnds.indices.flatMap(makeColumn)

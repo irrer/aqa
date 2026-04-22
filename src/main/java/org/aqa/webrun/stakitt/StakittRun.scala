@@ -2,6 +2,7 @@ package org.aqa.webrun.stakitt
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.DicomUtil
+import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.run.ProcedureStatus
@@ -34,6 +35,10 @@ class StakittRun(procedure: Procedure) extends WebRunProcedure with RunTrait[Skt
 
     val resultList = runReq.rtimageList.par.map(rtimage => {
       val analysis = Analysis.analyze(extendedData, rtimage, runReq.rtplan)
+      if (true) { // TODO rm
+        val bufImg = MakeImage.makeImage(analysis)
+        Trace.showInMSPaint(bufImg)
+      }
       analysis
     })
 

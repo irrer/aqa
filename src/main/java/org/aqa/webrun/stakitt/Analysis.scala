@@ -2,64 +2,46 @@ package org.aqa.webrun.stakitt
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageText
-import edu.umro.ImageUtil.ImageUtil
-import edu.umro.ImageUtil.ScaledImage
-import edu.umro.ScalaUtil.Trace
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 import org.aqa.webrun.stakitt.leafBoundaries.LeafBoundaries
+import org.aqa.Util
 
-import java.awt.Color
+case class Analysis( //
+    dicomImage: DicomImage,
+    rtimage: AttributeList,
+                     xAoiBorders:   Seq[  XAoiBorders],
+    yLeafBoundaries: LeafBoundaries,
+    leafEndBySinglePixel: LeafEndBySinglePixel,
+    stakittList: Seq[StakittResult],
+    planBorders: PlanBorders
+) extends Logging {
 
-case class Analysis(dicomImage: DicomImage, xAOIBorders: Seq[Double], yAOIBorders: LeafBoundaries, leafEndPositions: Seq[StakittResult]) extends Logging {
-
-  private def showAOIBorderSpans(): Unit = {
-
-    val scale = 7
-    val bufImg = {
-      val img = dicomImage.toDeepColorBufferedImage(0.01)
-      ImageUtil.magnify(img, scale)
-    }
-    val gc = ImageUtil.getGraphics(bufImg)
-    gc.setColor(Color.white)
-
-    val si = ScaledImage(scale, 0, 0)
-
-    def vertLine(x: Double): Unit = si.drawLine(gc, x, 0, x, dicomImage.height)
-
-    def horzLine(lineList: Seq[Double], name: String, offset: Int, color: Color): Unit = {
-      gc.setColor(color)
-      val rect = ImageText.getTextDimensions(gc, name)
-      ImageText.drawTextCenteredAt(gc, (rect.getWidth / 2) + 20, (rect.getHeight + 1) * 2 * offset, name)
-      lineList.foreach(y => si.drawLine(gc, 0, y, dicomImage.width, y))
-    }
-
-    xAOIBorders.foreach(vertLine)
-
-    // horzLine(yImageBorders.yPointList_pix, "All", 1, Color.white)
-    horzLine(yAOIBorders.yPointListLo_pix.adjusted_pix, "Lo", 2, Color.black)
-    horzLine(yAOIBorders.yPointListHi_pix.adjusted_pix, "Hi", 3, Color.white)
-
-    Trace.showInMSPaint(bufImg)
-  }
-
-  // enable this to see the leaf boundaries
-  if (false) showAOIBorderSpans()
+  //
 }
 
 object Analysis extends Logging {
 
-  def analyze(extendedData: ExtendedData, rtimage: AttributeList, rtplan: AttributeList): Analysis = {
+  /**
+    * Check that the number of edges found match the count in the plan, and also that
+    * the number of leaf boundaries on the left and right are the same.  If anything
+    * is wrong, then throw an exception.
+    *
+    * TODO Instead of an exception, return a bad ProcedureStatus
+    *
+    * @param planAOIBorders Boundaries from rtplan.
+    * @param xAOIBorders List of leaf ends found in the image.
+    * @param yLeafBoundaries List of leaf boundaries (sides) found in the image.
+    */
+  private def validateBoundaries(
+      planAOIBorders: PlanBorders,
+      xAOIBorders: Seq[Double],
+      yLeafBoundaries: LeafBoundaries
+  ): Unit = {
 
-    val dicomImage = new DicomImage(rtimage)
-
-    val planAOIBorders = PlanBorders.make(rtimage, rtplan)
-    val xAOIBorders = LeafEnds.xPointList(dicomImage)
-    val yAOIBorders = LeafBoundaries(rtimage, xAOIBorders)
-
-    if (yAOIBorders.yPointListLo_pix.adjusted_pix.size != yAOIBorders.yPointListHi_pix.adjusted_pix.size) {
-      val msg = s"Visually found ${yAOIBorders.yPointListLo_pix.adjusted_pix.size} lo leaf boundaries (sides) but ${yAOIBorders.yPointListHi_pix.adjusted_pix.size} hi leaf boundaries."
+    if (yLeafBoundaries.yPointListLo_pix.adjusted_pix.size != yLeafBoundaries.yPointListHi_pix.adjusted_pix.size) {
+      val msg = s"Visually found ${yLeafBoundaries.yPointListLo_pix.adjusted_pix.size} lo leaf boundaries (sides) but ${yLeafBoundaries.yPointListHi_pix.adjusted_pix.size} hi leaf boundaries."
       logger.error(msg)
       throw new RuntimeException(msg)
     }
@@ -70,15 +52,43 @@ object Analysis extends Logging {
       throw new RuntimeException(msg)
     }
 
-    if (yAOIBorders.yPointListLo_pix.adjusted_pix.size != planAOIBorders.yLeafBoundaryList.size) {
-      val msg = s"Visually found ${yAOIBorders.yPointListLo_pix.adjusted_pix.size} leaf boundaries (sides), but plan indicates that there should be ${planAOIBorders.yLeafBoundaryList.size}"
+    if (yLeafBoundaries.yPointListLo_pix.adjusted_pix.size != planAOIBorders.yLeafBoundaryList.size) {
+      val msg = s"Visually found ${yLeafBoundaries.yPointListLo_pix.adjusted_pix.size} leaf boundaries (sides), but plan indicates that there should be ${planAOIBorders.yLeafBoundaryList.size}"
       logger.error(msg)
       throw new RuntimeException(msg)
     }
 
-    val leafEndPositionList = LeafEndPositions(extendedData, dicomImage, xAOIBorders, yAOIBorders, rtimage, rtplan, planAOIBorders).measureLeafPositions()
+  }
 
-    val analysis = Analysis(dicomImage, xAOIBorders, yAOIBorders, leafEndPositionList)
+  def analyze(extendedData: ExtendedData, rtimage: AttributeList, rtplan: AttributeList): Analysis = {
+
+    val dicomImage = new DicomImage(rtimage)
+    val trans = new IsoImagePlaneTranslator(rtimage)
+
+    val planBorders = PlanBorders.make(rtimage, rtplan)
+    val xAOIBorders = LeafEnds.xPointList(dicomImage)
+    val yLeafBoundaries = LeafBoundaries(rtimage, xAOIBorders)
+
+    validateBoundaries(planBorders, xAOIBorders, yLeafBoundaries)
+
+    val aoiList = StakittAOI.makeAOIs(xAOIBorders, yLeafBoundaries, rtimage, planBorders.xLeafEndList)
+    val xAoiPairList = XAoiBorders.makeXPairList(xAOIBorders)
+    val leafEndBySinglePixel = LeafEndBySinglePixel(xAoiPairList, yLeafBoundaries, trans, dicomImage)
+
+    val beamName = Util.getBeamNameOfRtimage(rtplan, rtimage).get
+    val rtimageSOP = Util.sopOfAl(rtimage)
+
+    val stakittList = StakittResult.constructStakittList( //
+      aoiList,
+      leafEndBySinglePixel,
+      trans,
+      extendedData,
+      beamName,
+      rtimageSOP,
+      planBorders
+    )
+
+    val analysis = Analysis(dicomImage, rtimage, xAoiPairList, yLeafBoundaries, leafEndBySinglePixel, stakittList, planBorders)
 
     analysis
   }
