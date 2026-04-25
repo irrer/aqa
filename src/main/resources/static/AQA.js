@@ -564,9 +564,11 @@ function MRprefix(chartId) {
   return content;
 }
 
+/*
 function MRsearch(chartId) {
-  console.log(chartId + " hiya"); // TODO
+  console.log(chartId + " hiya");
 }
+*/
 
 function MRsuffix(chartId) {
   var text =
@@ -762,3 +764,26 @@ function ApprovalChange(outputPK) {
   }
 
 }
+
+/* Handle zooming of images. */
+
+$(function () {
+  $('.js-zoom').each(function () {
+    const $vp = $(this);
+    const w = parseInt($vp.data('width'), 10);
+    const h = parseInt($vp.data('height'), 10);
+    const magnify = parseFloat($vp.data('magnify')) || 2;
+
+    // Set the viewport size (this is what controls cropping)
+    $vp.css({ width: w + 'px', height: h + 'px' });
+
+    // Initialize zoom for this viewport
+    $vp.zoom({
+      on: 'mouseover',
+      magnify: magnify
+    });
+  });
+});
+
+
+

@@ -259,6 +259,25 @@ object WebUtil extends Logging {
   }
 
   /**
+   * Make a image that zooms on hover, and if clicked, shows the full-sized image.
+   * @param imageUrl Points to image, e.g. myPic.png
+   * @param width Width in pixels.
+   * @param magnify Magnification factor.
+   * @return Element to be put into HTML.
+   */
+  def makeZoom(imageUrl: String, width: Int = 256, magnify: Double = 1): Elem = {
+    <a href="wedge2.png">
+      <div class="zoom-viewport js-zoom"
+           data-width={width.toString}
+           data-height="auto"
+           data-magnify={magnify.toString}>
+        <img src={imageUrl}
+             alt="Automated Quality Assurance logo"/>
+      </div>
+    </a>
+  }
+
+  /**
    * Number of digits to use when constructing anonymized file names.
    */
   private val writeUploadedFileDigits = 4

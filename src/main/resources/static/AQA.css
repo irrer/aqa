@@ -92,3 +92,18 @@ input[type="radio"] {
   display: none;
   color: #fff;
 }
+
+/* Handle zooming of images. */
+.zoom-viewport{
+  overflow: hidden;      /* crops the zoomed image */
+  display: inline-block;
+  position: relative;    /* jquery.zoom expects positioned container */
+}
+.zoom-viewport img{
+  display: block;
+  width: 100%;           /* base image fits the viewport width */
+  height: auto;
+}
+
+
+
