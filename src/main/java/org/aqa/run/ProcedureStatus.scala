@@ -39,19 +39,23 @@ private object ProcedureStatusList {
 object ProcedureStatus extends Enumeration {
 
   /** When storing a ProcedureStatus in a file, the file must have this name. */
-  val statusFileName = "status.txt"
+  private val statusFileName = "status.txt"
 
   val running: ProcedureStatus = Value("running", "Procedure is currently running.")
   val pass: ProcedureStatus = Value("pass", "All results are within acceptable limits.")
   val fail: ProcedureStatus = Value("fail", "At least one result was outside acceptable limits.")
   val done: ProcedureStatus = Value("done", "Completed, but no indication as to whether results are acceptable or not.")
   val abort: ProcedureStatus = Value("abort", "Prematurely terminated itself.")
+  //noinspection SpellCheckingInspection
   val dberr: ProcedureStatus = Value("dberr", "Problem using the database from the procedure.")
+  //noinspection SpellCheckingInspection
   val userabort: ProcedureStatus = Value("userabort", "Prematurely terminated by user.")
   val timeout: ProcedureStatus = Value("timeout", "Terminated when time limit and was exceeded.")
   val crash: ProcedureStatus = Value("crash", "Terminated itself in an uncontrolled fashion.")
+  //noinspection SpellCheckingInspection
   val servershutdown: ProcedureStatus = Value("servershutdown", "Server was shut down while the procedure was running.")
   val warning: ProcedureStatus = Value("warning", "Results were acceptable but nearly failed.")
+  val invalidData: ProcedureStatus = Value("invalidData", "The data was not appropriate for the given test procedure.")
 
   class ProcedureStatus(val name: String, val description: String) extends Val(nextId, name) {}
 
@@ -63,6 +67,7 @@ object ProcedureStatus extends Enumeration {
 
   private val maxNameLength = ProcedureStatus.values.map(s => s.toString.length).max
 
+  //noinspection ScalaWeakerAccess
   def stringToProcedureStatus(name: String): Option[ProcedureStatus.Value] = {
     val matches = ProcedureStatus.values.filter(s => name.equalsIgnoreCase(s.toString)).toList
     matches.headOption
@@ -76,6 +81,7 @@ object ProcedureStatus extends Enumeration {
   /**
     * Given a file, try to read a status (by name) from it.
     */
+  //noinspection ScalaWeakerAccess
   def fileToProcedureStatus(file: File): Option[ProcedureStatus.Value] = {
     try {
       val buf = Array.ofDim[Byte](maxNameLength)
@@ -127,6 +133,7 @@ object ProcedureStatus extends Enumeration {
   /**
     * Sort by id.
     */
+  //noinspection ScalaWeakerAccess
   def sort(seq: Seq[ProcedureStatus.Value]): Seq[run.ProcedureStatus.Value] = seq.sortWith((a, b) => a.id < b.id)
 
   def eq(a: Value, b: Value): Boolean = a.toString.equals(b.toString)
