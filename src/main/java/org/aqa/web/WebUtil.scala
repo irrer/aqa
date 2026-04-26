@@ -96,20 +96,20 @@ object WebUtil extends Logging {
   val gt = "@@gt@@"
 
   /**
-   * Tag used to indicate that this is coming from an automatic upload client, as opposed to a human using a web browser.
-   */
+    * Tag used to indicate that this is coming from an automatic upload client, as opposed to a human using a web browser.
+    */
   val autoUploadTag = "AutoUpload"
 
   /**
-   * Tag used to indicate that the call should not return until processing is complete.
-   */
+    * Tag used to indicate that the call should not return until processing is complete.
+    */
   val awaitTag = "Await"
 
   /** ID for upload file object in web page. */
   val uploadFileLabel = "uploadFile"
 
   /**
-   * Add an attribute to the element and return a new element.
+    * Add an attribute to the element and return a new element.
    *
    * @param elem  Original element.
    * @param name  Name of attribute.
@@ -266,7 +266,7 @@ object WebUtil extends Logging {
    * @return Element to be put into HTML.
    */
   def makeZoom(imageUrl: String, width: Int = 256, magnify: Double = 1): Elem = {
-    <a href="wedge2.png">
+    <a href={imageUrl}>
       <div class="zoom-viewport js-zoom"
            data-width={width.toString}
            data-height="auto"
