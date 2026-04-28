@@ -96,20 +96,20 @@ object WebUtil extends Logging {
   val gt = "@@gt@@"
 
   /**
-    * Tag used to indicate that this is coming from an automatic upload client, as opposed to a human using a web browser.
-    */
+   * Tag used to indicate that this is coming from an automatic upload client, as opposed to a human using a web browser.
+   */
   val autoUploadTag = "AutoUpload"
 
   /**
-    * Tag used to indicate that the call should not return until processing is complete.
-    */
+   * Tag used to indicate that the call should not return until processing is complete.
+   */
   val awaitTag = "Await"
 
   /** ID for upload file object in web page. */
   val uploadFileLabel = "uploadFile"
 
   /**
-    * Add an attribute to the element and return a new element.
+   * Add an attribute to the element and return a new element.
    *
    * @param elem  Original element.
    * @param name  Name of attribute.
@@ -260,19 +260,20 @@ object WebUtil extends Logging {
 
   /**
    * Make a image that zooms on hover, and if clicked, shows the full-sized image.
+   *
    * @param imageUrl Points to image, e.g. myPic.png
-   * @param width Width in pixels.
-   * @param magnify Magnification factor.
+   * @param width    Width in pixels.
+   * @param magnify  Magnification factor.
    * @return Element to be put into HTML.
    */
-  def makeZoom(imageUrl: String, width: Int = 256, magnify: Double = 1): Elem = {
+  def makeZoom(imageUrl: String, width: Int = 256, alternateText: String, magnify: Double = 1): Elem = {
     <a href={imageUrl}>
       <div class="zoom-viewport js-zoom"
            data-width={width.toString}
            data-height="auto"
            data-magnify={magnify.toString}>
         <img src={imageUrl}
-             alt="Automated Quality Assurance logo"/>
+             alt={alternateText}/>
       </div>
     </a>
   }
@@ -1802,6 +1803,18 @@ object WebUtil extends Logging {
   /**
    * If the user is logged in, then create a value map that contains their real ID.
    */
+
+
+  /**
+   * Given text, replace all the special characters that would make it an invalid HTML id.
+   *
+   * It is the responsibility of the caller to ensure that this is unique within the web page.
+   *
+   * @param text Turn this into a valid HTML id.
+   * @return A valid HTML id.
+   */
+  def textToId(text: String): String = text.replaceAll("[# \"'@<>]", "_")
+
   private def userToValueMap(request: Request): ValueMapT = {
     val cr = request.getChallengeResponse
     if (cr == null) emptyValueMap
@@ -1838,10 +1851,8 @@ object WebUtil extends Logging {
       </tr>
     }
 
-    def nameToId(name: String): String = name.replaceAll("[# \"'@<>]", "_")
-
     def sheetHeader(sheet: Sheet, active: Boolean): Elem = {
-      val id = "#" + nameToId(sheet.getSheetName)
+      val id = "#" + textToId(sheet.getSheetName)
       if (active) {
         <li class="active">
           <a data-toggle="tab" href={id}>
@@ -1870,7 +1881,7 @@ object WebUtil extends Logging {
       val classValue = if (active) "tab-pane fade in active" else "tab-pane fade"; // funny, but the Scala compiler requires a ; here
 
       {
-        <div id={nameToId(sheet.getSheetName)} class={classValue}>
+        <div id={textToId(sheet.getSheetName)} class={classValue}>
           <h3>
             {sheet.getSheetName}
           </h3>
