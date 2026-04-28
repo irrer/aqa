@@ -13,7 +13,7 @@ import java.awt.image.BufferedImage
 object MakeImage extends Logging {
 
   /** Scale of image created.  For drawing purposes only. */
-  val scale: Int = 7
+  val scale: Int = 2
 
   /**
    * Make an annotated image showing the leaf ends.

@@ -2,7 +2,6 @@ package org.aqa.webrun.stakitt
 
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ScalaUtil.DicomUtil
-import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Output
 import org.aqa.db.Procedure
 import org.aqa.run.ProcedureStatus
@@ -13,11 +12,13 @@ import org.aqa.web.WebUtil.ValueMapT
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.WebRunProcedure
 import org.aqa.Util
+import org.aqa.run.ProcedureStatus.ProcedureStatus
 import org.aqa.run.RunProcedure
 import org.aqa.web.WebUtil
 import org.aqa.web.WebUtil.emptyValueMap
 import org.aqa.web.WebUtil.getValueMap
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.webrun.stakitt.stakittHTML.StakittHTML
 import org.aqa.webrun.wl.WLImageUtil
 import org.restlet.Request
 import org.restlet.Response
@@ -33,20 +34,24 @@ class StakittRun(procedure: Procedure) extends WebRunProcedure with RunTrait[Skt
 
     logger.info("Starting stakitt analysis")
 
-    val resultList = runReq.rtimageList.par.map(rtimage => {
-      val analysis = Analysis.analyze(extendedData, rtimage, runReq.rtplan)
-      if (true) { // TODO rm
-        val bufImg = MakeImage.makeImage(analysis)
-        Trace.showInMSPaint(bufImg)
-      }
-      analysis
-    })
+    // do all the heavy lifting here, each image in parallel
+    val analysisList = runReq.rtimageList.par.map(rtimage => Analysis.analyze(extendedData, rtimage, runReq.rtplan)).toList
 
-    // put_data_in_db // TODO
+    // put data in database
+    val resultList = analysisList.filter(_.isRight).flatMap(_.right.get.stakittList).map(_.stakitt)
+    // resultList.foreach(_.insert) // TODO enable Stakitt in DB
 
-    // HTMLMain.generateHtml(extendedData, resultList, runReq.rtplan) // TODO
+    // generate HTML
+    val html = new StakittHTML(extendedData, analysisList, runReq.rtplan)
+    html.makeHTML()
 
-    ProcedureStatus.done
+    // If there was a failure, then report it. Otherwise, return 'done'.
+    val status: ProcedureStatus = {
+      val failure = analysisList.filter(_.isLeft).map(_.left.get.status) :+ ProcedureStatus.done
+      failure.head
+    }
+
+    status
   }
 
   /**
