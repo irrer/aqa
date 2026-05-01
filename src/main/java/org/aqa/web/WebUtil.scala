@@ -109,6 +109,15 @@ object WebUtil extends Logging {
   val uploadFileLabel = "uploadFile"
 
   /**
+   * When HTML is constructed in a hierarchy of functions, it is often necessary for
+   * the lower functions to pass both HTML and js content back.  This class provides
+   * a standard way to do that.
+   * @param elem HTML
+   * @param js Javascript.
+   */
+  case class ElemJS(elem: Elem, js: String = "") {}
+
+  /**
    * Add an attribute to the element and return a new element.
    *
    * @param elem  Original element.
