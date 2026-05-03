@@ -16,14 +16,16 @@ object MakeImage extends Logging {
   val scale: Int = 2
 
   /**
-   * Make an annotated image showing the leaf ends.
-   * @param analysis Data from analysis.
-   * @return An image.
-   */
+    * Make an annotated image showing the leaf ends.
+    *
+    * @param analysis Data from analysis.
+    * @return An image.
+    */
   def makeImage(analysis: Analysis): BufferedImage = {
 
     val trans = new IsoImagePlaneTranslator(analysis.rtimage)
 
+    /** One mm worth of pixels. */
     val oneMM_pix: Double = trans.iso2PixDistX(1)
 
     /** Buffered image for display to the user. */
@@ -38,6 +40,7 @@ object MakeImage extends Logging {
     val gc = ImageUtil.getGraphics(bufImg)
     gc.setColor(Color.white)
 
+    /** Make a big image so user can see details of leaf ends. */
     val si = ScaledImage(scale, 0, 0)
 
     def drawSinglePixelOfLeafEdge(x_pix: Double, y_pix: Int): Unit = {
@@ -53,6 +56,7 @@ object MakeImage extends Logging {
 
     /**
       * Annotate a leaf end with it's measured value.  Set the background color of the text to have good contrast.
+      *
       * @param xPosition_pix Leaf position.
       * @param stakittResult Final result and AOI.
       */
@@ -70,7 +74,9 @@ object MakeImage extends Logging {
 
       def rnd(d: Double): Int = d.round.toInt
 
-      gc.setColor(Color.lightGray)
+      // gc.setColor(textBackgroundColor(stakittResult.stakitt.leafEndOffset_mm))
+      gc.setColor(Color.white)
+
       gc.fillRect(
         rnd(si.scalePixelX(textX) - (textDimensions.getWidth / 2) - expansionHorizontal_pix),
         rnd(si.scalePixelY(textY) - (textDimensions.getHeight / 2) - expansionVertical_pix),
@@ -78,12 +84,13 @@ object MakeImage extends Logging {
         rnd(textDimensions.getHeight + (expansionVertical_pix * 2))
       )
 
-      gc.setColor(Color.darkGray)
+      gc.setColor(Color.black)
       si.drawTextCenteredAt(gc, textX, textY, text)
     }
 
     /**
       * Annotate a leaf end with it's measured value.  Set the background color of the text to have good contrast.
+      *
       * @param stakittAOI Containing AOI.
       */
     def annotateAOIEdge(stakittAOI: StakittAOI, top: Boolean = true): Unit = {
@@ -106,6 +113,7 @@ object MakeImage extends Logging {
 
     /**
       * Draw the thicker black line denoting the end of the leaf, and annotate it with the error in mm deviation from the plan.
+      *
       * @param stakittResult Contains final result for one leaf and AOI used.
       */
     def drawLeafEnd(stakittResult: StakittResult): Unit = {
@@ -119,6 +127,7 @@ object MakeImage extends Logging {
 
     /**
       * Draw a line that show the top and bottom bounds of the leaf boundaries.
+      *
       * @param aoiList List of all AOIs.
       */
     def annotateAoiTopAndBottomBounds(aoiList: Seq[StakittAOI]): Unit = {
@@ -136,22 +145,10 @@ object MakeImage extends Logging {
       annotateAoiTopAndBottomBounds(analysis.stakittList.map(_.stakittAOI))
     }
 
-    def drawVerticalAoiBorders(): Unit = {
-      val list = analysis.xAoiBorders.map(_.lo) :+ analysis.xAoiBorders.last.hi
-      gc.setColor(Color.black)
-      ImageUtil.setLineThickness(gc, 1.0)
-      list.foreach(x_pix => {
-        val minY_pix = 5
-        val maxY_pix = 5
-        si.drawLine(gc, x_pix, minY_pix, x_pix, maxY_pix)
-      })
-    }
-
     analysis.stakittList.foreach(drawLeafEnd)
 
     annotateLeafPositions()
 
     bufImg
-
   }
 }

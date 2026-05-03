@@ -7,11 +7,14 @@ import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.stakitt.Analysis
 import org.aqa.Util
+import org.aqa.web.WebUtil.ElemJS
 
 import java.io.File
 import scala.xml.Elem
 
 class StakittHTML(extendedData: ExtendedData, analysisList: Seq[Either[Analysis.Failure, Analysis]], rtplan: AttributeList) extends Logging {
+
+  // private case class ElemJS(elem: Elem, js: String) {}
 
   /**
     * Add tab related fields to the result of each image.
@@ -82,14 +85,14 @@ class StakittHTML(extendedData: ExtendedData, analysisList: Seq[Either[Analysis.
     elem
   }
 
-  private def makeAnalysisHtml(tab: Tab): Elem = {
+  private def makeAnalysisHtml(tab: Tab): ElemJS = {
     val ha = HtmlAnalysis(tab.foa.right.get, tab.dir, tab.id, tab.index)
-    ha.makeHtml()
+    ha.elemJs
   }
 
-  private def makeTabContent(tab: Tab): Elem = {
+  private def makeTabContent(tab: Tab): ElemJS = {
     if (tab.isFailure)
-      makeFailureHtml(tab)
+      ElemJS(makeFailureHtml(tab))
     else
       makeAnalysisHtml(tab)
   }
@@ -111,39 +114,45 @@ class StakittHTML(extendedData: ExtendedData, analysisList: Seq[Either[Analysis.
     elem
   }
 
-  private def multipleImages(): Elem = {
+  private def multipleImages(): ElemJS = {
     val tabHeaderList: Seq[Elem] = tabList.map(makeTabHeader)
-    val tabContentList: Seq[Elem] = tabList.map(makeTabContent)
-
-    <div>
-      <ul class="nav nav-tabs">
-        {tabHeaderList}
-      </ul>
-      <div class="tab-content" style="margin-right:20px;">
-        {tabContentList}
-      </div>
-    </div>
-  }
-
-  def makeHTML(): Unit = {
+    val tabContentList: Seq[ElemJS] = tabList.map(makeTabContent)
 
     val content = {
-
-      val innerElem = {
-        if (tabList.size == 1)
-          makeTabContent(tabList.head)
-        else
-          multipleImages()
-      }
-
-      <div class="row">
-        <div class="col-md-7 col-md-offset-1">
-          {innerElem}
+      <div>
+        {WebUtil.showPrecision}<p></p>
+        <ul class="nav nav-tabs">
+          {tabHeaderList}
+        </ul>
+        <div class="tab-content" style="margin-right:20px;">
+          {tabContentList.map(_.elem)}
         </div>
       </div>
     }
 
-    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), "Stakitt", refresh = None, c3 = true, runScript = None)
+    ElemJS(content, tabContentList.map(_.js).mkString("\n"))
+  }
+
+  def makeHTML(): Unit = {
+
+    val innerElem: ElemJS = {
+      if (tabList.size == 1)
+        makeTabContent(tabList.head)
+      else
+        multipleImages()
+    }
+
+    val content = {
+      <div class="row">
+        <div class="col-md-11 col-md-offset-0">
+          {innerElem.elem}
+        </div>
+      </div>
+    }
+
+    val runScript = Some(s"<script>\n${innerElem.js}</script>")
+
+    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), "Stakitt", refresh = None, c3 = true, runScript = runScript)
 
     val htmlFile = new File(extendedData.output.dir, "display.html")
     Util.writeFile(htmlFile, text)
