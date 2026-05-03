@@ -28,7 +28,13 @@ case class Analysis( //
     leafEndBySinglePixel: LeafEndBySinglePixel,
     stakittList: Seq[StakittResult],
     planBorders: PlanBorders
-) extends Logging {}
+) extends Logging {
+  /** Results sorted into rows, with each row sorted by index.. */
+  val resultRows: Seq[Seq[StakittResult]] = stakittList.groupBy(_.stakittAOI.yIndex).values.toSeq.sortBy(_.head.stakittAOI.yIndex).map(_.sortBy(_.stakittAOI.xIndex))
+
+  /** Results sorted into columns, with each column sorted by index.. */
+  val resultColumns: Seq[Seq[StakittResult]] = stakittList.groupBy(_.stakittAOI.xIndex).values.toSeq.sortBy(_.head.stakittAOI.xIndex).map(_.sortBy(_.stakittAOI.yIndex))
+}
 
 object Analysis extends Logging {
 
