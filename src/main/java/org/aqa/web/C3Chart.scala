@@ -142,7 +142,8 @@ class C3Chart(
   private val minY = allY.min
   private val maxY = allY.max
 
-  private val chartIdTag = C3Chart.makeUniqueChartIdTag
+  /** HTML id of this chart. */
+  val chartIdTag: String = C3Chart.makeUniqueChartIdTag
 
   private val yColorText = {
     val list =
