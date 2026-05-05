@@ -133,7 +133,8 @@ class C3Chart(
     yValues: Seq[Seq[Double]],
     yFormat: String = ".4g",
     yColorList: Seq[Color] = Seq(),
-    regionList: Seq[C3Chart.Region] = Seq()
+    regionList: Seq[C3Chart.Region] = Seq(),
+    chartType: String = "line"
 ) extends Logging {
 
   if (yAxisLabels.size != yValues.size) throw new RuntimeException("Must be same number of Y labels as Y data sets.  yAxisLabels.size: " + yAxisLabels.size + "    yValues.size: " + yValues.size)
@@ -191,7 +192,8 @@ var $chartIdTag = c3.generate({${C3Chart.chartSizeText(width, height)}
         columns: [
           ${column(xAxisLabel, xValueList)},
           ${yAxisLabels.indices.map(i => column(yAxisLabels(i), yValues(i))).mkString(",\n         ")}
-        ]$regionListAsJs
+        ],
+        type: '$chartType'$regionListAsJs
     },
     point: { // enlarge point on hover
         r: 0,
