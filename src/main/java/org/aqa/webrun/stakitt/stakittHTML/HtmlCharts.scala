@@ -14,7 +14,7 @@ import scala.xml.Elem
   *
   * @param analysis Results of Stakitt analysis.
   */
-case class HtmlCharts(analysis: Analysis)extends Logging {
+case class HtmlCharts(analysis: Analysis) extends Logging {
 
   /**
     * Format a Double.  If it is a rounded value, then format it as an Int.
@@ -26,6 +26,54 @@ case class HtmlCharts(analysis: Analysis)extends Logging {
       d.round.toString
     else
       Util.fmtDbl(d)
+  }
+
+  private val histogramChart = {
+
+    val numberOfBins = 25
+    val offsetList = analysis.stakittList.map(_.stakitt.leafEndOffset_mm)
+
+    val minOffset = offsetList.min
+    val maxOffset = offsetList.max
+
+    val offsetToBinA = (numberOfBins - 1) / (maxOffset - minOffset)
+    val offsetToBinB = -(offsetToBinA * minOffset)
+
+    def offsetToBinIndex(offset: Double): Int = {
+      val index = Math.clamp(((offset * offsetToBinA) + offsetToBinB).round.toInt, 0, numberOfBins - 1)
+      val binIndex = Math.clamp(index, 0, numberOfBins - 1)
+      binIndex
+    }
+
+    val binnedList = offsetList.groupBy(offsetToBinIndex).values.map(_.size)
+    val yValues = Seq(binnedList.toSeq.map(_.toDouble))
+
+    val binToOffsetA = (maxOffset - minOffset) / (binnedList.size - 1)
+    val binToOffsetB = minOffset
+    def binIndexToOffset(binIndex: Int): Double = {
+      val offset = (binIndex * binToOffsetA) + binToOffsetB
+      offset
+    }
+
+    val xValueList = yValues.head.indices.map(binIndexToOffset)
+
+    val chart = new C3Chart(
+      width = None,
+      height = None,
+      xAxisLabel = "Count",
+      xDataLabel = "",
+      xValueList = xValueList,
+      xFormat = ".4g",
+      yAxisLabels = Seq("Count"),
+      yDataLabel = "Measured-Planned mm",
+      yValues = yValues,
+      yFormat = ".4g",
+      yColorList = Seq(),
+      regionList = Seq(),
+      chartType = "bar"
+    )
+
+    chart
   }
 
   /**
@@ -123,10 +171,13 @@ case class HtmlCharts(analysis: Analysis)extends Logging {
   }
 
   private val elem: Elem = {
+    val histographTitle = s"Histograph of Offsets"
     val horzTitle = s"Horizontally (${analysis.resultColumns.size} x ${analysis.resultRows.size}) Sorted Leaf Offsets (mm)"
     val vertTitle = s"Vertically (${analysis.resultRows.size} x ${analysis.resultColumns.size}) Sorted Leaf Offsets (mm)"
     val leafBoundaryTitle = s"Leaf Boundary Offsets Measured - Planned (mm)"
     <div style="text-align: center;">
+      <h3 style="margin-top:24px;">{histographTitle}</h3>
+      {histogramChart.html}
       <h3 style="margin-top:24px;">{horzTitle}</h3>
       {horizontalChart.html}
       <h3 style="margin-top:24px;">{vertTitle}</h3>
@@ -142,6 +193,7 @@ case class HtmlCharts(analysis: Analysis)extends Logging {
        |// make sure that the charts are properly sized when switching tabs
        |function flushCharts() {
        |  setTimeout(() => {
+       |     ${histogramChart.chartIdTag}.flush();
        |     ${horizontalChart.chartIdTag}.flush();
        |     ${verticalChart.chartIdTag}.flush();
        |     ${leafBoundaryChart.chartIdTag}.flush();
@@ -153,7 +205,7 @@ case class HtmlCharts(analysis: Analysis)extends Logging {
        |
        |""".stripMargin
 
-  private val js = Seq(horizontalChart, verticalChart, leafBoundaryChart).map(_.javascript).mkString("\n") + flushJs
+  private val js = Seq(histogramChart, horizontalChart, verticalChart, leafBoundaryChart).map(_.javascript).mkString("\n") + flushJs
 
   /** HTML and JS for all charts. */
   val elemJs: ElemJS = ElemJS(elem, js)

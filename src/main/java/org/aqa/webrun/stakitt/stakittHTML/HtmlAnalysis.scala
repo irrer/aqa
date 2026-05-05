@@ -30,7 +30,7 @@ case class HtmlAnalysis(analysis: Analysis, dir: File, id: String, index: Int) e
     WebUtil.makeZoom(url, 512, "Annotated Stakitt image.")
   }
 
-  private val mainTable = HtmlTable(analysis).mainTable()
+  private val mainTable = HtmlTable(analysis, dir).mainTable()
 
   private val charts: HtmlCharts = HtmlCharts(analysis)
 
