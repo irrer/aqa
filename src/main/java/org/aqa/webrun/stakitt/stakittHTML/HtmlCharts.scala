@@ -30,11 +30,11 @@ case class HtmlCharts(analysis: Analysis) extends Logging {
 
   private val histogramChart = {
 
-    val numberOfBins = 25
     val offsetList = analysis.stakittList.map(_.stakitt.leafEndOffset_mm)
 
     val minOffset = offsetList.min
     val maxOffset = offsetList.max
+    val numberOfBins = ((maxOffset - minOffset) * 10).round.toInt + 1
 
     val offsetToBinA = (numberOfBins - 1) / (maxOffset - minOffset)
     val offsetToBinB = -(offsetToBinA * minOffset)
@@ -52,7 +52,8 @@ case class HtmlCharts(analysis: Analysis) extends Logging {
     val binToOffsetB = minOffset
     def binIndexToOffset(binIndex: Int): Double = {
       val offset = (binIndex * binToOffsetA) + binToOffsetB
-      offset
+      val roundedOffset = (offset * 10).round.toDouble / 10.0
+      roundedOffset
     }
 
     val xValueList = yValues.head.indices.map(binIndexToOffset)
@@ -60,14 +61,14 @@ case class HtmlCharts(analysis: Analysis) extends Logging {
     val chart = new C3Chart(
       width = None,
       height = None,
-      xAxisLabel = "Count",
+      xAxisLabel = "Offset mm",
       xDataLabel = "",
       xValueList = xValueList,
-      xFormat = ".4g",
+      xFormat = ".1g",
       yAxisLabels = Seq("Count"),
-      yDataLabel = "Measured-Planned mm",
+      yDataLabel = "Offset (Measured-Planned) mm",
       yValues = yValues,
-      yFormat = ".4g",
+      yFormat = ".3i",
       yColorList = Seq(),
       regionList = Seq(),
       chartType = "bar"
@@ -98,7 +99,7 @@ case class HtmlCharts(analysis: Analysis) extends Logging {
       yAxisLabels = yAxisLabels,
       yDataLabel = "Measured-Planned mm",
       yValues = yValues,
-      yFormat = ".4g",
+      yFormat = ".2g",
       yColorList = Seq(),
       regionList = Seq()
     )
@@ -126,7 +127,7 @@ case class HtmlCharts(analysis: Analysis) extends Logging {
       yAxisLabels = yAxisLabels,
       yDataLabel = "Measured-Planned mm",
       yValues = yValues,
-      yFormat = ".4g",
+      yFormat = ".2g",
       yColorList = Seq(),
       regionList = Seq()
     )
@@ -162,7 +163,7 @@ case class HtmlCharts(analysis: Analysis) extends Logging {
       yAxisLabels = Seq("Leaf"),
       yDataLabel = "mm",
       yValues = yValues,
-      yFormat = ".4g",
+      yFormat = ".2g",
       yColorList = Seq(),
       regionList = Seq()
     )
@@ -171,12 +172,12 @@ case class HtmlCharts(analysis: Analysis) extends Logging {
   }
 
   private val elem: Elem = {
-    val histographTitle = s"Histograph of Offsets"
+    val histogramTitle = s"Histogram of Offsets"
     val horzTitle = s"Horizontally (${analysis.resultColumns.size} x ${analysis.resultRows.size}) Sorted Leaf Offsets (mm)"
     val vertTitle = s"Vertically (${analysis.resultRows.size} x ${analysis.resultColumns.size}) Sorted Leaf Offsets (mm)"
     val leafBoundaryTitle = s"Leaf Boundary Offsets Measured - Planned (mm)"
     <div style="text-align: center;">
-      <h3 style="margin-top:24px;">{histographTitle}</h3>
+      <h3 style="margin-top:24px;">{histogramTitle}</h3>
       {histogramChart.html}
       <h3 style="margin-top:24px;">{horzTitle}</h3>
       {horizontalChart.html}
