@@ -18,6 +18,7 @@ case class HtmlCharts(analysis: Analysis) extends Logging {
 
   /**
     * Format a Double.  If it is a rounded value, then format it as an Int.
+    *
     * @param d Format this.
     * @return Text version.
     */
@@ -28,6 +29,11 @@ case class HtmlCharts(analysis: Analysis) extends Logging {
       Util.fmtDbl(d)
   }
 
+  /**
+    * Chart displaying a histogram reflecting the number of offsets in each category.
+    *
+    * As per the recommendation of Michael Barnes, they are in increments of 0.1 mm.
+    */
   private val histogramChart = {
 
     val offsetList = analysis.stakittList.map(_.stakitt.leafEndOffset_mm)
@@ -50,6 +56,7 @@ case class HtmlCharts(analysis: Analysis) extends Logging {
 
     val binToOffsetA = (maxOffset - minOffset) / (binnedList.size - 1)
     val binToOffsetB = minOffset
+
     def binIndexToOffset(binIndex: Int): Double = {
       val offset = (binIndex * binToOffsetA) + binToOffsetB
       val roundedOffset = (offset * 10).round.toDouble / 10.0
@@ -177,36 +184,41 @@ case class HtmlCharts(analysis: Analysis) extends Logging {
     val vertTitle = s"Vertically (${analysis.resultRows.size} x ${analysis.resultColumns.size}) Sorted Leaf Offsets (mm)"
     val leafBoundaryTitle = s"Leaf Boundary Offsets Measured - Planned (mm)"
     <div style="text-align: center;">
-      <h3 style="margin-top:24px;">{histogramTitle}</h3>
-      {histogramChart.html}
-      <h3 style="margin-top:24px;">{horzTitle}</h3>
-      {horizontalChart.html}
-      <h3 style="margin-top:24px;">{vertTitle}</h3>
-      {verticalChart.html}
-      <h3 style="margin-top:24px;">{leafBoundaryTitle}</h3>
-      {leafBoundaryChart.html}
+      <h3 style="margin-top:24px;">
+        {histogramTitle}
+      </h3>{histogramChart.html}<h3 style="margin-top:24px;">
+      {horzTitle}
+    </h3>{horizontalChart.html}<h3 style="margin-top:24px;">
+      {vertTitle}
+    </h3>{verticalChart.html}<h3 style="margin-top:24px;">
+      {leafBoundaryTitle}
+    </h3>{leafBoundaryChart.html}
     </div>
   }
 
-  private val flushJs: String =
+  private val chartList = Seq(histogramChart, horizontalChart, verticalChart, leafBoundaryChart)
+
+  /** When switching tabs, the C3 charts do not display correctly.  Doing periodic flushes fixes this. */
+  private val flushJs: String = {
+
+    val flushList = chartList.map(chart => chart.chartIdTag + ".flush();").mkString("\n    ")
+
     s"""
        |
-       |// make sure that the charts are properly sized when switching tabs
+       |// make sure that the charts are properly sized when switching tabs jjjjjjjjjjjjjjjjj
        |function flushCharts() {
        |  setTimeout(() => {
-       |     ${histogramChart.chartIdTag}.flush();
-       |     ${horizontalChart.chartIdTag}.flush();
-       |     ${verticalChart.chartIdTag}.flush();
-       |     ${leafBoundaryChart.chartIdTag}.flush();
-       |     flushCharts();
+       |    $flushList
+       |    flushCharts();
        |  }, 1000);
        |}
        |
        |flushCharts();
        |
        |""".stripMargin
+  }
 
-  private val js = Seq(histogramChart, horizontalChart, verticalChart, leafBoundaryChart).map(_.javascript).mkString("\n") + flushJs
+  private val js = chartList.map(_.javascript).mkString("\n") + flushJs
 
   /** HTML and JS for all charts. */
   val elemJs: ElemJS = ElemJS(elem, js)
