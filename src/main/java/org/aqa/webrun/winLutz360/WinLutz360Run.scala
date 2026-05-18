@@ -80,9 +80,17 @@ class WinLutz360Run(procedure: Procedure) extends WebRunProcedure with RunTrait[
 
     // list of processed images
     val resultList = {
-      def doImage(rtimage: AttributeList): WLResult = {
+      def doImage(rtimage: AttributeList): Either[WLFailure, WLResult] = {
         val wlMessage = WLMessage(runReq, rtimage)
-        Analysis(extendedData, rtimage, runReq, machineWL, Some(wlMessage)).asInstanceOf[WLResult]
+        try {
+          Right(Analysis(extendedData, rtimage, runReq, machineWL, Some(wlMessage)).asInstanceOf[WLResult])
+        } catch {
+          case t: Throwable =>
+            wlMessage.error(s"Unexpected exception: ${fmtEx(t)}")
+            val failure = WLFailure(extendedData, wlMessage)
+            failure.makeFailureDiagnostics()
+            Left(failure)
+        }
       }
       // Perform processing in parallel for speed
       runReq.epidList.par.map(doImage).toList
@@ -91,7 +99,8 @@ class WinLutz360Run(procedure: Procedure) extends WebRunProcedure with RunTrait[
 
     // make a list of entries that have credible data, whether it is within limits or not.  Not included are
     // those that failed sanity checks, such as edges having sufficient contrast.
-    val resultHasData = resultList.filter(r => WLImageStatus.hasResult(r.getImageStatus))
+
+    val resultHasData = resultList.filter(r => r.isRight && WLImageStatus.hasResult(r.right.get.getImageStatus)).map(_.right.get)
 
     val dbList = resultHasData.map(_.convertToDB)
 
@@ -118,7 +127,8 @@ class WinLutz360Run(procedure: Procedure) extends WebRunProcedure with RunTrait[
     logger.info("Wrote main HTML file " + file.getAbsolutePath)
 
     // true if all images passed.
-    val allPassed = resultList.nonEmpty && resultList.map(r => r.getImageStatus.toString).distinct.forall(text => text.equals(WLImageStatus.Passed.toString))
+    val allPassed =
+      resultList.nonEmpty && (resultList.size == resultHasData.size) && resultHasData.map(r => r.getImageStatus.toString).distinct.forall(text => text.equals(WLImageStatus.Passed.toString))
 
     WLUpdateRestlet.updateWL()
     val status =

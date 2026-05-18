@@ -26,8 +26,19 @@ case class WLRunReq(epidList: Seq[AttributeList], rtplan: Option[AttributeList])
 
   private val firstImageTimeMs = epidList.map(WLImageUtil.timeOfMs).min
 
-  def subDirName(attrList: AttributeList, processing: String): String = {
-    val name1 = "%02d".format(indexOf(attrList)) + "-" + imageName(attrList) + s"-$processing"
+  /** Adjust the formatting of the directory names to the appropriate length for the number of images.  In other words, use as few digits as possible. */
+  private val dirNumberFormat: String = {
+    val count = (epidList.size + 1).toString.length
+    s"%0${count}d"
+  }
+
+  /**
+    * Make the subdirectory name for the given image.
+    * @param attrList For this image.  Must be an image, not a plan.
+    * @return name of subdirectory.
+    */
+  def subDirName(attrList: AttributeList): String = {
+    val name1 = dirNumberFormat.format(indexOf(attrList) + 1) + "-" + imageName(attrList)
     val name2 = FileUtil.replaceInvalidFileNameCharacters(name1, '_').replaceAll(" ", "_")
     name2
   }

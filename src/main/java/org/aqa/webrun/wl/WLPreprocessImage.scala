@@ -18,7 +18,7 @@ case class WLPreprocessImage(rtimage: AttributeList, wlMsg: Option[WLMessage]) {
     *
     * @return Pixel array.
     */
-  private def fetchPixels(): IndexedSeq[IndexedSeq[Float]] = {
+  private def fetchPixels(): scala.collection.immutable.IndexedSeq[scala.collection.immutable.IndexedSeq[Float]] = {
 
     val di = new DicomImage(rtimage)
 
@@ -35,14 +35,15 @@ case class WLPreprocessImage(rtimage: AttributeList, wlMsg: Option[WLMessage]) {
 
     val minPlusMax = di.minPixelValue + di.maxPixelValue
 
-    val pixelData: IndexedSeq[IndexedSeq[Float]] = {
+    val pixelData: scala.collection.immutable.IndexedSeq[scala.collection.immutable.IndexedSeq[Float]] = {
       if (belowMeanPixelCount > (sorted.size / 2)) {
         def invert(pix: Float): Float = minPlusMax - pix
 
         val invertedDicomImage = di.fun1(invert)
         invertedDicomImage.pixelData.map(_.toIndexedSeq)
-      } else
-        di.pixelData.map(_.toIndexedSeq)
+      } else {
+        di.pixelData
+      }
     }
 
     pixelData

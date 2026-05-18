@@ -73,7 +73,7 @@ abstract class WLResult(extendedData: ExtendedData, runReq: WLRunReq) {
   private def thisType = if (this.isInstanceOf[WLImageResult]) "Cardinal" else "NonCardinal"
 
   def subDir: File = {
-    val dir = new File(extendedData.output.dir, runReq.subDirName(attrList, thisType))
+    val dir = new File(extendedData.output.dir, runReq.subDirName(attrList))
     dir.mkdirs()
     dir
   }

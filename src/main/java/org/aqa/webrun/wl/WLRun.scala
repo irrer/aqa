@@ -69,6 +69,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
 
     // Perform processing in parallel for speed
     val resultList = runReq.epidList.par.map(rtimage => new WLProcessImage(extendedData, rtimage, runReq).process.asInstanceOf[WLResult]).toList
+    // val resultList = runReq.epidList.map(rtimage => new WLProcessImage(extendedData, rtimage, runReq).process.asInstanceOf[WLResult]).toList
 
     val wlResultList = resultList.filter(r => WLImageStatus.hasResult(r.getImageStatus))
 
@@ -91,7 +92,7 @@ class WLRun(procedure: Procedure) extends WebRunProcedure with RunTrait[WLRunReq
           <span> </span>
       }
     }
-    val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, resultList, runReq, monthly)
+    val mainHtmlText = WLMainHtml.generateGroupHtml(extendedData, resultList.map(r => Right(r)), runReq, monthly)
     val file = new File(extendedData.output.dir, Output.displayFilePrefix + ".html")
     Util.writeFile(file, mainHtmlText)
     logger.info("Wrote main HTML file " + file.getAbsolutePath)
