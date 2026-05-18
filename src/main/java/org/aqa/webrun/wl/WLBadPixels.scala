@@ -13,6 +13,8 @@ case class WLBadPixels(uncorrectedImage: DicomImage, wlMsg: Option[WLMessage]) e
 
   private val rawDistinctSortedList: Seq[Float] = uncorrectedPixels.flatten.distinct.sorted
 
+  private type IS[T] = scala.collection.immutable.IndexedSeq[T]
+
   private case class UncorrectedWLBadPixel(x: Int, y: Int, rawValue: Double) {}
 
   /**
@@ -94,17 +96,20 @@ case class WLBadPixels(uncorrectedImage: DicomImage, wlMsg: Option[WLMessage]) e
     * @return A new pixel array with bad pixels fixed.
     */
   @tailrec
-  private def correctWLBadPixelsPrivate(originalPixels: IndexedSeq[IndexedSeq[Float]], badPixelList: Seq[WLBadPixel]): IndexedSeq[IndexedSeq[Float]] = {
+  private def correctWLBadPixelsPrivate(
+      originalPixels: IS[IS[Float]],
+      badPixelList: Seq[WLBadPixel]
+  ): IS[IS[Float]] = {
     if (badPixelList.isEmpty)
       originalPixels
     else {
       val bad = badPixelList.head
 
-      def fixRow(r: IndexedSeq[Float]): IndexedSeq[Float] = {
-        (0 until uncorrectedImage.width).map(col => if (col == bad.x) bad.correctedValue else r(col)).toArray
+      def fixRow(r: IS[Float]): IS[Float] = {
+        (0 until uncorrectedImage.width).map(col => if (col == bad.x) bad.correctedValue else r(col)).toIndexedSeq
       }
 
-      val o: IndexedSeq[IndexedSeq[Float]] = (0 until uncorrectedImage.height).map(row => {
+      val o: IS[IS[Float]] = (0 until uncorrectedImage.height).map(row => {
         if (row == bad.y)
           fixRow(originalPixels(row))
         else
