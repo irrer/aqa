@@ -18,7 +18,7 @@
     <h2>@@title@@</h2>
     <p>
         This performs a VMAT/RapidArc testing by taking areas of interest defined by the RTPLAN and
-        dividing the value of each pixel in the MLC image by a corresponding OPEN image. The average of
+        dividing the value of each pixel in the MLC image by a corresponding OPEN image. The mean of
         those
         ratios is reported as the
         <b>R</b>
@@ -36,43 +36,40 @@
         between EPIDs of differing resolution.
     </p>
     <p style="margin: 10px;"></p>
-    <center>
-        <p>The following image from a Millenium collimator shows the areas of interest.
+    <div style="margin-left:100px;">
+        <p>The following image from a Millennium collimator shows the areas of interest.
         </p>
 
         <b>
-            Millenium Collimator (click for full sized image)
+            Millennium Collimator (click for full sized image)
         </b>
         <table>
             <tr>
                 <td>
                     <a href="T3MLCSpeed.png" title="Example of MLC beam for VMAT analysis.  Click for full sized image."
                        style="margin: 10px;">
-                        <img src="T3MLCSpeed.png" width="300px"/>
+                        <img src="T3MLCSpeed.png" style="max-width:300px;" alt="LS"/>
                     </a>
                 </td>
                 <td>
                     <a href="T3_Open.png" title="Example of OPEN beam for VMAT analysis.  Click for full sized image."
                        style="margin: 10px;">
-                        <img src="T3_Open.png" width="300px"/>
+                        <img src="T3_Open.png" style="max-width:300px;" alt="Open"/>
                     </a>
                 </td>
             </tr>
         </table>
-    </center>
+    </div>
 
-    <!--
-        <a href="VMATReport.png" title="Example of VMAT report.  Click for full sized image." style="margin: 10px;">
-            <img src="VMATReport.png" width="600px" />
-        </a>
-    -->
     <p style="margin: 10px;"></p>
 
-    <!-- This was cut+pasted from the web.  The VMATReport.png shows the same thing but the titles don't work. -->
     <h3>
         Example of VMAT Numerical Portion of Report:
     </h3>
-    <center style="margin-left: 20px;">
+    <p>
+        <i>Note: values are shown with greater precision to better verify math.</i>
+    </p>
+    <div style="margin-left: 20px;">
 
         <table class="table table-responsive table-bordered">
             <tr>
@@ -84,143 +81,143 @@
             </tr>
             <tr>
                 <td>
-                    <b>
-                        <font size="3">R</font>
+                    <b style="font-size: 1.75rem;">
+                        R
                     </b>
                     LS : Avg CU of
                     T3MLCSpeed
                 </td>
                 <td title="0.071522">
-                    <b>
-                        <font size="3">0.072</font>
+                    <b style="font-size: 1.75rem;">
+                        0.071522
                     </b>
                 </td>
                 <td title="0.073772">
-                    <b>
-                        <font size="3">0.074</font>
+                    <b style="font-size: 1.75rem;">
+                        0.073772
                     </b>
                 </td>
                 <td title="0.073685">
-                    <b>
-                        <font size="3">0.074</font>
+                    <b style="font-size: 1.75rem;">
+                        0.073685
                     </b>
                 </td>
                 <td title="0.071354">
-                    <b>
-                        <font size="3">0.071</font>
+                    <b style="font-size: 1.75rem;">
+                        0.071354
                     </b>
                 </td>
             </tr>
             <tr>
                 <td>
-                    <b>
-                        <font size="3">R</font>
+                    <b style="font-size: 1.75rem;">
+                        R
                     </b>
                     Open : Avg CU of
                     T3 Open
                 </td>
                 <td title="0.518747">
-                    <b>
-                        <font size="3">0.519</font>
+                    <b style="font-size: 1.75rem;">
+                        0.518747
                     </b>
                 </td>
                 <td title="0.532922">
-                    <b>
-                        <font size="3">0.533</font>
+                    <b style="font-size: 1.75rem;">
+                        0.518747
                     </b>
                 </td>
                 <td title="0.532101">
-                    <b>
-                        <font size="3">0.532</font>
+                    <b style="font-size: 1.75rem;">
+                        0.532101
                     </b>
                 </td>
                 <td title="0.516463">
-                    <b>
-                        <font size="3">0.516</font>
+                    <b style="font-size: 1.75rem;">
+                        0.516463
                     </b>
                 </td>
             </tr>
             <tr>
                 <td>
-                    <b>
-                        <font size="3">R</font>
+                    <b style="font-size: 1.75rem;">
+                        R
                     </b>
                     corr : 100 * LS / Open
                 </td>
                 <td title="13.787449">
-                    <b>
-                        <font size="3">13.79</font>
+                    <b style="font-size: 1.75rem;">
+                        13.787449
                     </b>
                 </td>
                 <td title="13.842872">
-                    <b>
-                        <font size="3">13.84</font>
+                    <b style="font-size: 1.75rem;">
+                        13.842872
                     </b>
                 </td>
                 <td title="13.847978">
-                    <b>
-                        <font size="3">13.85</font>
+                    <b style="font-size: 1.75rem;">
+                        13.847978
                     </b>
                 </td>
                 <td title="13.815838">
-                    <b>
-                        <font size="3">13.82</font>
+                    <b style="font-size: 1.75rem;">
+                        13.815838
                     </b>
                 </td>
             </tr>
             <tr>
                 <td>
-                    <b>
-                        <font size="3">Diff(X)</font>
+                    <b style="font-size: 1.75rem;">
+                        Diff(X)
                     </b>
                     :
-                    <b>
-                        <font size="3">R</font>
+                    <b style="font-size: 1.75rem;">
+                        R
                     </b>
                     corr minus avg
-                    <b>
-                        <font size="3">R</font>
+                    <b style="font-size: 1.75rem;">
+                        R
                     </b>
                     corr
                 </td>
                 <td title="-0.035234">
-                    <b>
-                        <font size="3">-0.035</font>
+                    <b style="font-size: 1.75rem;">
+                        -0.035234
                     </b>
                 </td>
                 <td title="0.020189">
-                    <b>
-                        <font size="3">0.02</font>
+                    <b style="font-size: 1.75rem;">
+                        0.020189
                     </b>
                 </td>
                 <td title="0.025295">
-                    <b>
-                        <font size="3">0.025</font>
+                    <b style="font-size: 1.75rem;">
+                        0.025295
                     </b>
                 </td>
                 <td title="-0.006845">
-                    <b>
-                        <font size="3">-0.007</font>
+                    <b style="font-size: 1.75rem;">
+                        -0.006845
                     </b>
                 </td>
             </tr>
             <tr>
-                <td colspan="5">
+                <td colspan="4">
                     <p></p>
                 </td>
             </tr>
             <tr>
-                <td class="" colspan="5">
+                <td class="" colspan="4">
                     <b>
-                        <font size="3">Average of absolute deviations (Diff</font>
+                        Average of absolute deviations (Diff) :
                     </b>
                     <sub>Abs</sub>
-                    <b>
-                        <font size="3">) : </font>
+                    <b style="font-size: 1.75rem;">
+
                     </b>
                     <span title="0.021891">
-                            <b>
-                                <font size="3">0.022</font>
+                    <b style="font-size: 1.75rem;">
+                                0.021891
                             </b>
                         </span>
                 </td>
@@ -228,69 +225,126 @@
             </tr>
         </table>
 
-    </center>
+    </div>
     <p style="margin: 10px;"></p>
-    <h5>
-        <i>
-            <b>Band Center</b> (units: cm)
-        </i>
-    </h5>
-    <p style="margin: 10px;">Indicates the vertical center in the isoplane for each AOI.</p>
+
+    <!-- . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . -->
+
+    <div style="margin-top:40px;">
+        <h5>
+            <i>
+                <b>Band Center</b> (units: cm)
+            </i>
+        </h5>
+        <p style="margin-left: 25px;">Indicates the vertical center in the isoplane for each AOI.</p>
+    </div>
+
+    <!-- . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . -->
 
     <h5>
         <i>
             <b>R LS</b> (units: CU)
         </i>
     </h5>
-    <p style="margin: 10px;">Average of the pixel values for the AOI in the given MLC beam.</p>
+    <p style="margin-left: 25px;">Average of the pixel values for the AOI in the given MLC beam.</p>
+
+    <!-- . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . -->
 
     <h5>
         <i>
             <b>R Open</b> (units: CU)
         </i>
     </h5>
-    <p style="margin: 10px;">Average of the pixel values for the AOI in the given OPEN beam.</p>
+    <p style="margin-left: 25px;">Average of the pixel values for the AOI in the given OPEN beam.</p>
+
+    <!-- . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . -->
 
     <h5>
         <i>
             <b>R corr</b> (units: percent)
         </i>
     </h5>
-    <p style="margin: 10px;">To calculate this, first a third virtual plane of pixels is
-        created by dividing each pixel the the MLC plane by its corresponding pixel in the
-        OPEN plane. The <b>R corr</b> value is the average of the
-        pixels in the AOI of the virtual plane
-        multiplied by 100 to convert it to a percentage.
-    </p>
 
-    <h5>
+    <div style="margin-left: 25px;">
+        <p>To calculate this, first a third virtual plane of pixels is created by dividing each pixel the MLC plane by
+            its corresponding pixel in the OPEN plane. The <b>R corr</b> value is the mean of the pixels in the AOI of
+            the virtual plane multiplied by 100 to convert it to a percentage.
+        </p>
+        <p>
+            Note that simply dividing the mean <b>LS / Open</b> values would produce a slightly different result.
+            Calculating the values from the -4.5cm column above:
+        </p>
+        <pre>
+                               (0.071522 / 0.518747) * 100 = 13.787453
+
+            which does not equal the value used, which is:   13.787449
+        </pre>
+    </div>
+
+    <!-- . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . -->
+
+    <h5 style="margin-top: 25px;">
         <i>
             <b>Diff(X)</b> (units: percent)
         </i>
     </h5>
-    <p style="margin: 10px;">
-        The average of the
-        <b>R corr</b>
-        values is subtracted from
-        the
-        <b>R corr</b>
-        value. If the absolute value of any column is greater than the configured limit
-        (currently 1.5 percent) then the the entire test is marked as failed.
-    </p>
+    <div style="margin-left: 25px;">
+        <p>
+            The mean of the <b>R corr</b> values is subtracted from the <b>R corr</b>
+            value. If the absolute value of any column is greater than the configured limit
+            (currently 1.5 percent) then the entire test is marked as failed.
+        </p>
+        <p>
+            For the above example, the mean is:
+        </p>
 
-    <h5>
-        <i>
-            <b>Average of absolute deviations</b> (units: percent)
-        </i>
-    </h5>
-    <p style="margin: 10px;">
-        Calculated by taking the absolute value of each
-        <b>Diff(X)</b>
-        value and then taking their average. If this value exceeds the configure limit
-        (currently 3.0 percent) then the entire test is marked as failed.
-    </p>
+        <pre>
 
+            (13.787449 + 13.842872 + 13.847978 + 13.815838) / 4 = 13.823534
+        </pre>
 
-    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+        <p>
+            Yielding:
+        </p>
 
+        <pre>
+
+            13.787449 - 13.823534 = -0.035234
+
+            13.842872 - 13.823534 =  0.020189
+
+            13.847978 - 13.823534 =  0.025295
+
+            13.815838 - 13.823534 = -0.006845
+            </pre>
+    </div>
+
+    <!-- . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . -->
+
+    <div style="margin-top: 35px;">
+        <h5>
+            <i>
+                <b>Average of absolute deviations</b> (units: percent)
+            </i>
+        </h5>
+        <div style="margin-left: 25px;">
+            <p>
+                Calculated by taking the absolute value of each
+                <b>Diff(X)</b>
+                value and then taking their mean. If this value exceeds the configure limit
+                (currently 3.0 percent) then the entire test is marked as failed.
+            </p>
+            <p>For the example above, the calculation is:</p>
+
+            <pre>
+
+            (0.035234 + 0.020189 + 0.025295 + 0.006845) / 4 =  0.021891
+        </pre>
+        </div>
+
+        <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+        <div style="margin:400px;"></div>
+
+    </div>
 </div>
