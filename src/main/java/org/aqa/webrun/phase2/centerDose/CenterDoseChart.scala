@@ -16,7 +16,6 @@
 
 package org.aqa.webrun.phase2.centerDose
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -60,10 +59,6 @@ class CenterDoseChart(outputPK: Long) extends Logging {
     val before = all.filter(cd => cd.getTime < thisTime).takeRight(Config.CenterDoseHistoryRange)
     val after = all.filter(cd => cd.getTime >= thisTime).take(Config.CenterDoseHistoryRange + 1)
     val sortedBeamHistory = before ++ after
-    Trace.trace(all.size)
-    Trace.trace(before.size)
-    Trace.trace(after.size)
-    Trace.trace(sortedBeamHistory.size)
     sortedBeamHistory
   }
 
