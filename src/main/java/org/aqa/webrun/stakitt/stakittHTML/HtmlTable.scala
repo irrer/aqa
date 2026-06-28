@@ -120,7 +120,8 @@ case class HtmlTable(analysis: Analysis, dir: File) extends Logging {
   private def makeTableHead(): Elem = {
 
     def makeColumn(xIndex: Int): Elem = {
-      val result = analysis.stakittList.find(r => r.stakittAOI.xIndex == xIndex).get
+      val result =
+        analysis.stakittList.find(r => r.stakittAOI.xIndex == xIndex).get
       <th>{fmt(result.stakitt.plannedEndPosition_mm) + " mm"}</th>
     }
 

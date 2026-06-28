@@ -29,11 +29,47 @@ case class Analysis( //
     stakittList: Seq[StakittResult],
     planBorders: PlanBorders
 ) extends Logging {
+
   /** Results sorted into rows, with each row sorted by index.. */
   val resultRows: Seq[Seq[StakittResult]] = stakittList.groupBy(_.stakittAOI.yIndex).values.toSeq.sortBy(_.head.stakittAOI.yIndex).map(_.sortBy(_.stakittAOI.xIndex))
 
   /** Results sorted into columns, with each column sorted by index.. */
   val resultColumns: Seq[Seq[StakittResult]] = stakittList.groupBy(_.stakittAOI.xIndex).values.toSeq.sortBy(_.head.stakittAOI.xIndex).map(_.sortBy(_.stakittAOI.yIndex))
+
+  val x1BankResultList: Seq[StakittResult] = stakittList.filter(r => (r.stakittAOI.xIndex % 2) == 0)
+  val x2BankResultList: Seq[StakittResult] = stakittList.filter(r => (r.stakittAOI.xIndex % 2) == 1)
+
+  private def findPair(result: StakittResult): Option[StakittGap] = {
+    val bXIndex = result.stakittAOI.xIndex + 1
+    val yIndex = result.stakittAOI.yIndex
+    val mate = x2BankResultList.find(r => (r.stakittAOI.yIndex == yIndex) && (r.stakittAOI.xIndex == bXIndex))
+    if (mate.isDefined)
+      Some(StakittGap(result, mate.get))
+    else
+      None
+  }
+
+  private val gapList: Seq[StakittGap] = x1BankResultList.flatMap(a => findPair(a))
+
+  /** Gaps sorted by column then row */
+  val gapColumns: Seq[Seq[StakittGap]] = {
+    gapList
+      .groupBy(_.x1.stakitt.plannedEndPosition_mm)
+      .values
+      .toSeq
+      .sortBy(_.head.x1.stakitt.plannedEndPosition_mm)
+      .map(col => col.sortBy(_.x1.stakitt.plannedMajorSide_mm))
+  }
+
+  /** Gaps sorted by row then column */
+  val gapRows: Seq[Seq[StakittGap]] = {
+    gapList
+      .groupBy(_.x1.stakitt.plannedMinorSide_mm)
+      .values
+      .toSeq
+      .sortBy(_.head.x1.stakitt.plannedMinorSide_mm)
+      .map(col => col.sortBy(_.x1.stakitt.plannedEndPosition_mm))
+  }
 }
 
 object Analysis extends Logging {

@@ -3,19 +3,18 @@ package org.aqa.webrun.stakitt.leafBoundaries
 import com.pixelmed.dicom.AttributeList
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 
 import java.awt.Rectangle
 
 /**
- * Make DICOM images used for finding leaf boundaries.
- *
- * All calculations are done in pixels (as opposed to mm / isoplane).
- *
- * @param rtimage     Stakitt image.
- * @param xBorderList List of X coordinates for AOIs.
- */
+  * Make DICOM images used for finding leaf boundaries.
+  *
+  * All calculations are done in pixels (as opposed to mm / isoplane).
+  *
+  * @param rtimage     Stakitt image.
+  * @param xBorderList List of X coordinates for AOIs.
+  */
 case class LBDicomImages(rtimage: AttributeList, xBorderList: Seq[Double]) extends Logging {
 
   // set the span to be 1/2 the width of the narrowest known leaf.
@@ -31,8 +30,8 @@ case class LBDicomImages(rtimage: AttributeList, xBorderList: Seq[Double]) exten
   private val rawDicomImage: DicomImage = new DicomImage(rtimage)
 
   /**
-   * Make a DicomImage, fixing any bad pixels that are extremely high or low.
-   */
+    * Make a DicomImage, fixing any bad pixels that are extremely high or low.
+    */
   private val dicomImage: DicomImage = {
 
     // fix up to this many pixels
@@ -84,6 +83,5 @@ case class LBDicomImages(rtimage: AttributeList, xBorderList: Seq[Double]) exten
     val rect = new Rectangle(dicomBorderHi, 0, dicomImage.width - dicomBorderHi, dicomImage.height)
     dicomImage.getSubimage(rect)
   }
-
 
 }

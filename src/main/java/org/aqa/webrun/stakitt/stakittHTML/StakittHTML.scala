@@ -143,7 +143,7 @@ class StakittHTML(extendedData: ExtendedData, analysisList: Seq[Either[Analysis.
     }
 
     val content = {
-      <div class="row">
+      <div class="row" style="margin-bottom:250px;"><!-- Spacer at bottom of page. -->
         <div class="col-md-11 col-md-offset-0">
           {innerElem.elem}
         </div>

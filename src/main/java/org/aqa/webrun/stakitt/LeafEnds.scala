@@ -36,8 +36,6 @@ object LeafEnds extends Logging {
     */
   private def crossingPointsOfMeanSubPix(profile: Seq[Float]): Seq[Double] = {
 
-    // Trace.showChart(profile.map(_.toDouble), "X Borders")
-
     val pixIndexList = crossingPointsOfMeanPix(profile)
 
     val mean = profile.sum / profile.size
