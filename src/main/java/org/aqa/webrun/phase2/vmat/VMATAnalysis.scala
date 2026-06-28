@@ -171,13 +171,18 @@ object VMATAnalysis extends Logging {
       val openSlope = alOpen.get(TagFromName.RescaleSlope).getDoubleValues.head
       val openOffset = alOpen.get(TagFromName.RescaleIntercept).getDoubleValues.head
 
+      var zeroCount = 0
+
       /**
         * Get the value for one pixel in the final array.  Convert each to CU, then divide MLC / OPEN.
         */
       def ratio(x: Int, y: Int) = {
         val m = (mlcImage.get(x, y) * mlcSlope) + mlcOffset
         val o = (openImage.get(x, y) * openSlope) + openOffset
-        if (o == 0) 0 else (m / o).toFloat
+        if (o == 0) {
+          zeroCount = zeroCount + 1
+          0
+        } else (m / o).toFloat
       }
 
       val pixArray = for (y <- 0 until mlcImage.height) yield {
@@ -186,14 +191,19 @@ object VMATAnalysis extends Logging {
         }
       }
 
+      // val imageArea = mlcImage.width * mlcImage.height
+      // val pctZero = "%7.3f".format((zeroCount * 100.0) / imageArea)
+      // Trace.trace(s"BeamPair ${beamPair.name}   zeroCount: $zeroCount    imageArea: $imageArea    pctZero: $pctZero")
+
       new DicomImage(pixArray)
     }
 
-    val pctSeqOld = mlcAvgSeq.indices.map(i => (mlcAvgSeq(i) * 100) / openAvgSeq(i))
-    val pctSeq = pixSeq_pix.map(p => ratioOfImages.averageOfRectangle(p.toRectangle) * 100)
+    val rectangleRatioList = pixSeq_pix.map(p => VMATRectangleRatio.ratio(alMlc, alOpen, p.toRectangle))
+    val pctSeq = rectangleRatioList.map(rr => rr.mlcPerOpenRatio * 100)
 
     // log a comparison of the old way verses the new way.
     if (true) {
+      val pctSeqOld = mlcAvgSeq.indices.map(i => (mlcAvgSeq(i) * 100) / openAvgSeq(i))
       // Note: old way was to divide the average of one rectangle by another.  The new way to divide each
       // pixel in one image by its counterpart in the other and then take the average.
       def toText(dSeq: Seq[Double]) = dSeq.map(p => p.formatted("%12.8f")).mkString("    ")
@@ -206,10 +216,13 @@ object VMATAnalysis extends Logging {
     }
 
     val beamAverage_pct = pctSeq.sum / pctSeq.size
+
+    // Trace.trace(s"BeamPair ${beamPair.name}   beamAverage_pct: ${Util.fmtDbl(beamAverage_pct)}    pctSeq: ${pctSeq.map(Util.fmtDbl).mkString(" + ")}")
+
     val statusSeq = pctSeq.map(pct => if ((pct - beamAverage_pct).abs >= Config.VMATDeviationThreshold_pct) ProcedureStatus.fail else ProcedureStatus.pass)
 
-    val vmatSeq = aoiSeqFromPlan_mm.indices.map(i =>
-      new VMAT(
+    val vmatSeq = aoiSeqFromPlan_mm.indices.map(i => {
+      val vmat = new VMAT(
         vmatPK = None,
         outputPK,
         status = statusSeq(i).toString(),
@@ -217,8 +230,9 @@ object VMATAnalysis extends Logging {
         SOPInstanceUIDOpen = Util.sopOfAl(alOpen),
         beamNameMLC = beamPair.MLC,
         beamNameOpen = beamPair.OPEN,
-        doseMLC_cu = mlcAvgSeq(i),
-        doseOpen_cu = openAvgSeq(i),
+        doseMLC_cu = rectangleRatioList(i).mlcMean_cu,
+        doseOpen_cu = rectangleRatioList(i).openMean_cu,
+        doseMLCPerOpen = Some(rectangleRatioList(i).mlcPerOpenRatio),
         beamAverage_pct,
         topRtplan_mm = aoiSeqFromPlan_mm(i).top,
         bottomRtplan_mm = aoiSeqFromPlan_mm(i).bottom,
@@ -229,7 +243,9 @@ object VMATAnalysis extends Logging {
         leftAOI_mm = measuredSeq_mm(i).left,
         rightAOI_mm = measuredSeq_mm(i).right
       )
-    )
+      // Trace.trace(s"${beamPair.name}    vmat.beamAverage_pct: ${vmat.beamAverage_pct}     vmat.percent: ${pctSeq(i)}     vmat.diff_pct: ${pctSeq(i) - beamAverage_pct}")
+      vmat
+    })
     vmatSeq
   }
 

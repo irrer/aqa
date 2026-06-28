@@ -16,7 +16,6 @@
 
 package org.aqa.webrun.phase2.phase2csv
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.db.Output
 import org.aqa.db.VMAT
 
@@ -75,11 +74,11 @@ abstract class VMATCsv(metadataCache: MetadataCache) extends Phase2Csv[Seq[VMAT.
 
   private def fmtCenter(center_mm: Double) = (center_mm / 10.0).toString.trim + " cm"
 
-  def vmatValue(center: Double, vhs: VHS, h: VMAT.VMATHistory => Double): String = {
+  private def vmatValue(center: Double, vhs: VHS, h: VMAT.VMATHistory => Option[Double]): String = {
     // The VMAT entry with the correct center of AOI
     val vmatOf = vhs.find(history => (history.vmat.leftRtplan_mm < center) && (history.vmat.rightRtplan_mm > center))
     vmatOf match {
-      case Some(history) => h(history).toString
+      case Some(history) => if (h(history).isDefined) h(history).get.toString else "NA"
       case _ => "NA"
     }
   }
@@ -87,21 +86,28 @@ abstract class VMATCsv(metadataCache: MetadataCache) extends Phase2Csv[Seq[VMAT.
   private def colLS(center_mm: Double): CsvCol[VHS] = {
     val header = "R LS " + fmtCenter(center_mm)
     val doc = "Avg CU of T3MLCSpeed for AOI centered at X = " + fmtCenter(center_mm)
-    val function = (vhs: VHS) => vmatValue(center_mm, vhs, (h: VMAT.VMATHistory) => h.vmat.doseMLC_cu)
+    val function = (vhs: VHS) => vmatValue(center_mm, vhs, (h: VMAT.VMATHistory) => Some(h.vmat.doseMLC_cu))
     CsvCol(header, doc, function)
   }
 
   private def colOpen(center_mm: Double): CsvCol[VHS] = {
     val header = "R Open " + fmtCenter(center_mm)
     val doc = "Avg CU of T3 Open for AOI centered at X = " + fmtCenter(center_mm)
-    val function = (vhs: VHS) => vmatValue(center_mm, vhs, (h: VMAT.VMATHistory) => h.vmat.doseOpen_cu)
+    val function = (vhs: VHS) => vmatValue(center_mm, vhs, (h: VMAT.VMATHistory) => Some(h.vmat.doseOpen_cu))
+    CsvCol(header, doc, function)
+  }
+
+  private def colMeanCorr(center_mm: Double): CsvCol[VHS] = {
+    val header = "R Corr Area " + fmtCenter(center_mm)
+    val doc = "100 * LS / Open (mean of areas) for AOI centered at X = " + fmtCenter(center_mm) + " (provided for comparison, not recommended)"
+    val function = (vhs: VHS) => vmatValue(center_mm, vhs, (h: VMAT.VMATHistory) => Some(h.vmat.percentAreaMean))
     CsvCol(header, doc, function)
   }
 
   private def colCorr(center_mm: Double): CsvCol[VHS] = {
-    val header = "R Corr " + fmtCenter(center_mm)
-    val doc = "100 * LS / Open for AOI centered at X = " + fmtCenter(center_mm)
-    val function = (vhs: VHS) => vmatValue(center_mm, vhs, (h: VMAT.VMATHistory) => h.vmat.doseMLC_cu * 100 / h.vmat.doseOpen_cu)
+    val header = "R Corr per Pixel " + fmtCenter(center_mm)
+    val doc = "100 * LS / Open (mean of MLC/Open per pixel) for AOI centered at X = " + fmtCenter(center_mm)
+    val function = (vhs: VHS) => vmatValue(center_mm, vhs, (h: VMAT.VMATHistory) => h.vmat.percent)
     CsvCol(header, doc, function)
   }
 
@@ -112,12 +118,15 @@ abstract class VMATCsv(metadataCache: MetadataCache) extends Phase2Csv[Seq[VMAT.
     CsvCol(header, doc, function)
   }
 
+  //noinspection ScalaUnusedSymbol
   private def avgAbsDev(centerList_mm: Seq[Double]) = {
     val header = "Avg of abs Diff(X)"
     val doc = "Average of absolute deviations (Diff Abs)"
     val function = (vhs: VHS) => {
-      Trace.trace(vhs.size)
-      vhs.map(_.vmat.diff_pct.abs).sum / vhs.size
+      if (vhs.exists(_.vmat.percent.isEmpty))
+        "None"
+      else
+        vhs.map(_.vmat.diff_pct.get.abs).sum / vhs.size
     }
     CsvCol(header, doc, function)
   }
@@ -128,10 +137,11 @@ abstract class VMATCsv(metadataCache: MetadataCache) extends Phase2Csv[Seq[VMAT.
       CsvCol("Beam Name Open", "Name of RTPLAN Open beam.", (vm: VHS) => vm.head.vmat.beamNameOpen)
     )
 
-  def makeVHColList(centerList_mm: Seq[Double]): Seq[CsvCol[VHS]] = {
+  private def makeVHColList(centerList_mm: Seq[Double]): Seq[CsvCol[VHS]] = {
     beamList() ++
       centerList_mm.map(center => colLS(center)) ++
       centerList_mm.map(center => colOpen(center)) ++
+      centerList_mm.map(center => colMeanCorr(center)) ++
       centerList_mm.map(center => colCorr(center)) ++
       centerList_mm.map(center => colDiff(center)) :+ avgAbsDev(centerList_mm)
   }

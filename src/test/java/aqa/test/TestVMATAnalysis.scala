@@ -94,7 +94,7 @@ class TestVMATAnalysis extends FlatSpec with Matchers {
       "Left plan mm: " + fmt(vmat.leftRtplan_mm) +
         "    mlc cu: " + fmt(vmat.doseMLC_cu) +
         "    open cu: " + fmt(vmat.doseOpen_cu) +
-        "    percent: " + fmt(vmat.percent)
+        "    percent: " + fmt(vmat.percent.get)
     }
     println("analysis results:\n    " + vmatSeq.map(vmat => vmatFormatted(vmat)).mkString("\n    "))
   }

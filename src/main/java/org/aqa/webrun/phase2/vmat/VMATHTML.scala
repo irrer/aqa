@@ -24,6 +24,7 @@ import org.aqa.Util
 import org.aqa.db.VMAT
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.C3ChartHistory
+import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
@@ -40,19 +41,32 @@ object VMATHTML {
 
     def fmt(d: Double) = {
       val t =
-        if (d >= 1) d.formatted("%8.2f")
-        else d.formatted("%4.3f")
+        if (d >= 1) "%8.2f".format(d)
+        else "%4.3f".format(d)
 
       val text = t.trim.replaceAll("0*$", "").trim
       if (text.endsWith(".")) text + "0" else text
     }
 
-    def fmtTitle(d: Double) = d.formatted("%10.6f").trim
+    def fmtTitle(d: Double) = "%10.6f".format(d).trim
 
-    def bigFont(text: String): Elem = <b><font size="3">{text}</font></b>
-    def bigFontDbl(d: Double): Elem = <span title={fmtTitle(d)}>{bigFont(fmt(d))}</span>
-    def bigFontDblTd(d: Double): Elem = <td title={fmtTitle(d)}>{bigFont(fmt(d))}</td>
-    def bigFontDblTdDanger(d: Double): Elem = <td class="danger" title={fmtTitle(d)}>{bigFont(fmt(d))}</td>
+    def bigFontD(d: Double): Elem = {
+      <b>
+        {WebUtil.setPrecisionAttr(<font size="3">{fmt(d)}</font>, d)}
+      </b>
+    }
+
+    def bigFontTxt(text: String): Elem = {
+      <b>
+        <font size="3">{text}</font>
+      </b>
+    }
+
+    def bigFontDbl(d: Double): Elem = <span title={fmtTitle(d)}>{bigFontD(d)}</span>
+    def bigFontDblTd(d: Double): Elem = <td title={fmtTitle(d)}>{bigFontD(d)}</td>
+    def bigFontDblTdOpt(d: Option[Double]): Elem = if (d.isDefined) bigFontDblTd(d.get) else <td>{bigFontTxt("NA")}</td>
+    def bigFontDblTdDanger(d: Double): Elem = <td class="danger" title={fmtTitle(d)}>{bigFontD(d)}</td>
+    def bigFontDblTdDangerOpt(d: Option[Double]): Elem = if (d.isDefined) bigFontDblTdDanger(d.get) else <td class="danger">{bigFontTxt("NA")}</td>
 
     def makeSet(vmatList: Seq[VMAT]): (Elem, String) = {
       def textToId(text: String) = text.replaceAll("[^a-zA-Z0-9]", "_").replaceAll("__*", "_")
@@ -71,21 +85,25 @@ object VMATHTML {
         vmatList.map(vmat => bigFontDblTd(vmat.doseOpen_cu))
       }
 
+      val meanValues = {
+        vmatList.map(vmat => bigFontDblTd(100 * (vmat.doseMLC_cu / vmat.doseOpen_cu)))
+      }
+
       val corrValues = {
-        vmatList.map(vmat => bigFontDblTd(vmat.percent))
+        vmatList.map(vmat => bigFontDblTdOpt(vmat.percent))
       }
 
       val diffValues = {
         vmatList.map(vmat => {
           val pass = vmat.status.equals(ProcedureStatus.pass.toString)
           if (pass)
-            bigFontDblTd(vmat.diff_pct)
+            bigFontDblTdOpt(vmat.diff_pct)
           else
-            bigFontDblTdDanger(vmat.diff_pct)
+            bigFontDblTdDangerOpt(vmat.diff_pct)
         })
       }
 
-      val avgOfAbsoluteDeviations = vmatList.map(_.diff_pct.abs).sum / vmatList.size
+      val avgOfAbsoluteDeviations = if (vmatList.exists(_.diff_pct.isEmpty)) Double.NaN else vmatList.map(_.diff_pct.get.abs).sum / vmatList.size
 
       def makePng(name: String, dicomImage: DicomImage, translator: IsoImagePlaneTranslator): File = {
         val pngFile = new File(vmatDir, name + ".png")
@@ -160,32 +178,40 @@ object VMATHTML {
               {vmatList.sortBy(_.leftRtplan_mm).map(vmat => header(vmat))}
             </tr>
             <tr>
-              <td>{bigFont("R")}LS : Avg CU of {vmatList.head.beamNameMLC}</td>
+              <td>{bigFontTxt("R")}LS : Mean CU of {vmatList.head.beamNameMLC}</td>
               {mlcValues}
             </tr>
             <tr>
-              <td>{bigFont("R")}Open : Avg CU of {vmatList.head.beamNameOpen}</td>
+              <td>{bigFontTxt("R")}Open : Mean CU of {vmatList.head.beamNameOpen}</td>
               {openValues}
             </tr>
             <tr>
-              <td>{bigFont("R")}corr : 100 * LS / Open</td>
+              <td>{bigFontTxt("R")}corr : 100 * LS / Open (mean of areas)</td>
+              {meanValues}
+            </tr>
+            <tr>
+              <td>{bigFontTxt("R")}corr : 100 * LS / Open (mean of MLC/Open per pixel)</td>
               {corrValues}
             </tr>
             <tr>
-              <td>{bigFont("Diff(X)")} : {bigFont("R")} corr minus avg {bigFont("R")} corr</td>
+              <td>{bigFontTxt("Diff(X)")} : {bigFontTxt("R")} corr minus avg {bigFontTxt("R")} corr</td>
               {diffValues}
             </tr>
             <tr>
               <td colspan={(vmatList.size + 1).toString}><p></p></td>
             </tr>
             <tr>
-              <td class={beamAverageClass} colspan={(vmatList.size + 1).toString}>{bigFont("Average of absolute deviations (Diff")}<sub>Abs</sub> {bigFont(") : ")}{bigFontDbl(avgOfAbsoluteDeviations)}</td>
-              <td></td>
+              <td class={beamAverageClass} colspan={(vmatList.size + 1).toString}>{bigFontTxt("Average of absolute deviations (Diff")}<sub>Abs</sub> {bigFontTxt(") : ")}{
+            bigFontDbl(avgOfAbsoluteDeviations)
+          }</td>
             </tr>
           </table>
         }
 
         <div class="row" style="margin-bottom:60px;">
+          <div class="row">
+            {WebUtil.showPrecision}
+          </div>
           <div class="row">
             <div class="col-md-7">
               <h3>{vmatList.head.beamNameMLC} / {vmatList.head.beamNameOpen} <img src={statusImage} width="50"/></h3>
@@ -200,7 +226,7 @@ object VMATHTML {
           <div class="row">
             {C3ChartHistory.htmlHelp()}
             <center>
-              {bigFont("Diff(X) Trend Over Time")}
+              {bigFontTxt("Diff(X) Trend Over Time")}
             </center>
             {VMATChartHistory.chartReference(vmatList.head.beamNameMLC)}
           </div>

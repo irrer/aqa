@@ -44,13 +44,13 @@ class VMATChartHistory(outputPK: Long, beamNameMLC: String) extends Logging {
 
   private val output = Output.get(outputPK).get
   private val machine = Machine.get(output.machinePK.get).get
-  private val history = VMAT.history(machine.machinePK.get, output.procedurePK).filter(h => h.vmat.beamNameMLC.equals(beamNameMLC))
+  private val history = VMAT.history(machine.machinePK.get, output.procedurePK).filter(h => h.vmat.beamNameMLC.equals(beamNameMLC)).filter(_.vmat.doseMLCPerOpen.isDefined)
 
   /**
     * Get history of given beam as an array of sets of percents ordered by date and each set within that date sorted by X position.
     */
   private def getBeamHist =
-    history.groupBy(h => h.vmat.leftRtplan_mm).toSeq.sortBy(g => g._1).map(g => g._2).map(hSeq => hSeq.sortBy(vmat => vmat.getTime).map(h => h.vmat.diff_pct))
+    history.groupBy(h => h.vmat.leftRtplan_mm).toSeq.sortBy(g => g._1).map(g => g._2).map(hSeq => hSeq.sortBy(vmat => vmat.getTime).map(h => h.vmat.diff_pct.get))
 
   /**
     * Get index of this output in the list of output.  Used to mark the orange dot in the chart.
@@ -109,13 +109,13 @@ class VMATChartHistory(outputPK: Long, beamNameMLC: String) extends Logging {
       )
     } else {
       val min = history.minBy(h => h.vmat.leftRtplan_mm).vmat.leftRtplan_mm
-      val hist = history.filter(h => h.vmat.leftRtplan_mm == min).sortBy(h => h.getTime).map(h => h.vmat.diff_pct)
+      val hist = history.filter(h => h.vmat.leftRtplan_mm == min).sortBy(h => h.getTime).map(h => h.vmat.diff_pct.get)
 
       println(
         "hist:\n    " + history
           .filter(h => h.vmat.leftRtplan_mm == min)
           .sortBy(h => h.getTime)
-          .map(h => h.date + " : " + Util.fmtDbl(h.vmat.leftRtplan_mm) + " : " + Util.fmtDbl(h.vmat.diff_pct))
+          .map(h => h.date + " : " + Util.fmtDbl(h.vmat.leftRtplan_mm) + " : " + Util.fmtDbl(h.vmat.diff_pct.get))
           .mkString("\n    ")
       )
 

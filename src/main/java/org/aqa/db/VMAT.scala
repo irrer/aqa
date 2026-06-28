@@ -20,6 +20,7 @@ import org.aqa.Config
 import org.aqa.Util
 import org.aqa.db.Db.driver.api._
 import org.aqa.run.ProcedureStatus
+import org.aqa.Logging
 
 import java.sql.Timestamp
 
@@ -36,6 +37,7 @@ case class VMAT(
     beamNameOpen: String, // name of open beam in plan
     doseMLC_cu: Double, // average dose value in CU
     doseOpen_cu: Double, // average dose value of open in CU
+    doseMLCPerOpen: Option[Double], // result of averaging per pixel division of MLC over Open field.  Multiply this by 100 to get percent
     beamAverage_pct: Double, // average percent dose value for all VMAT readings for this beam
     // The following 4 columns are the top, bottom, left, and right positions of the
     // collimator in mm for this data as specified by the RTPLAN.
@@ -53,7 +55,7 @@ case class VMAT(
     bottomAOI_mm: Double,
     leftAOI_mm: Double,
     rightAOI_mm: Double
-) {
+) extends Logging {
 
   def insert: VMAT = {
     val insertQuery = VMAT.query returning VMAT.query.map(_.vmatPK) into
@@ -66,11 +68,17 @@ case class VMAT(
 
   def insertOrUpdate(): Int = Db.run(VMAT.query.insertOrUpdate(this))
 
-  /** Percent of DR-GS over OPEN. */
-  def percent: Double = (doseMLC_cu / doseOpen_cu) * 100
+  /** Percent determined by first calculating the mean of the MLC and Open areas, and
+   *  then dividing them, and then multiply by 100 to convert to percent.
+   *  */
+  def percentAreaMean: Double = (100 * doseMLC_cu ) / doseOpen_cu
+
+  /** Percent of DR-GS over OPEN per pixel. */
+  def percent: Option[Double] = doseMLCPerOpen.map(_ * 100)
+  // def percent: Double = (doseMLC_cu / doseOpen_cu) * 100 // TODO take out
 
   /** amount that this percentage differs from the average percent: percent - beamAverage_pct. */
-  def diff_pct: Double = percent - beamAverage_pct
+  def diff_pct: Option[Double] = percent.map(_ - beamAverage_pct)
 
   override def toString: String = {
     "    vmatPK: " + vmatPK + "\n" +
@@ -82,6 +90,7 @@ case class VMAT(
       "    left,right measured: " + leftAOI_mm + ", " + rightAOI_mm + "\n" +
       "    doseMLC_cu: " + Util.fmtDbl(doseMLC_cu) + "\n" +
       "    doseOpen_cu: " + Util.fmtDbl(doseOpen_cu) + "\n" +
+      "    doseMLCPerOpen: " + Util.fmtDbl(doseMLCPerOpen) + "\n" +
       "    percent: " + Util.fmtDbl(percent) + "\n" +
       "    diff_pct: " + Util.fmtDbl(diff_pct) + "\n"
   }
@@ -99,6 +108,7 @@ object VMAT {
     def beamNameOpen = column[String]("beamNameOpen")
     def doseMLC_cu = column[Double]("doseMLC_cu")
     def doseOpen_cu = column[Double]("doseOpen_cu")
+    def doseMLCPerOpen = column[Option[Double]]("doseMLCPerOpen")
     def beamAverage_pct = column[Double]("beamAverage_pct")
     def topRtplan_mm = column[Double]("topRtplan_mm")
     def bottomRtplan_mm = column[Double]("bottomRtplan_mm")
@@ -120,6 +130,7 @@ object VMAT {
         beamNameOpen,
         doseMLC_cu,
         doseOpen_cu,
+        doseMLCPerOpen,
         beamAverage_pct,
         topRtplan_mm,
         bottomRtplan_mm,
@@ -199,8 +210,9 @@ object VMAT {
 
   /** True if the beam as a whole passed. */
   def beamPassed(vmatList: Seq[VMAT]): Boolean = {
-    val individual = individualBeamsAllPassed(vmatList)
-    val groupPassed = vmatList.map(vmat => Config.VMATAverageOfAbsoluteDeviationThreshold_pct >= (vmat.percent - vmat.beamAverage_pct).abs).reduce(_ && _)
+    val isDefined = !vmatList.exists(_.percent.isEmpty)
+    val individual = isDefined && individualBeamsAllPassed(vmatList)
+    val groupPassed = isDefined && vmatList.map(vmat => Config.VMATAverageOfAbsoluteDeviationThreshold_pct >= (vmat.percent.get - vmat.beamAverage_pct).abs).reduce(_ && _)
     individual && groupPassed
   }
 
