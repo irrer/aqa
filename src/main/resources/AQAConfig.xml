@@ -430,6 +430,8 @@ Note that when building a package for release, the Maven build process uses the 
     <!-- Percent value of penumbra that is considered to be the actual edge of the collimator or jaw.  -->
     <PenumbraThresholdPercent>50.0</PenumbraThresholdPercent>
 
+    <!-- +++++ Bad Pixel ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
     <!-- An maximum estimate of how many bad pixels (integer >= 0) to expect per million pixels.  A good
     estimate can marginally improve results, but a bad estimate will probably still be acceptable. -->
     <MaxEstimatedBadPixelPerMillion>20</MaxEstimatedBadPixelPerMillion>
@@ -444,15 +446,17 @@ Note that when building a package for release, the Maven build process uses the 
     <MaxAllowedBadPixelsPerMillion>50</MaxAllowedBadPixelsPerMillion>
 
     <!-- Use pixels this many mm square to find and correct bad pixels.  This is used both in the determination of whether a pixel is bad by
-    defining it's neighborhood size, and determining replacement values for bad pixels. -->
+    defining its neighborhood size, and determining replacement values for bad pixels. -->
     <BadPixelRadius_mm>3.5</BadPixelRadius_mm>
 
-    <!-- When determining whether or not a pixel is bad, require it to be at least this many CU's different than it's neighbors' average.   This is
+    <!-- When determining whether or not a pixel is bad, require it to be at least this many CU's different from its neighbors' average.   This is
     an absolute value (not a percent) and is a floating point number.-->
     <BadPixelMinimumDeviation_CU>10.0</BadPixelMinimumDeviation_CU>
 
     <!-- When determining whether or not a pixel is bad, require there to be pixel values within this percent of each other.-->
     <BadPixelMaximumPercentChange>10.0</BadPixelMaximumPercentChange>
+
+    <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
     <!-- When determining the color range of an image, drop this many pixels, half from the low and half from the high end.-->
     <DeepColorPercentDrop>0.2</DeepColorPercentDrop>
@@ -1349,6 +1353,14 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- Stakitt configuration -->
 
+    <!-- If the distance between the measured Stakitt leaf end and the planned position deviates by more than this,
+    then mark the leaf as out of tolerance. Specified as a floating point numbers in mm, default is 0.5  -->
+    <StakittLeafTolerance_mm>0.5</StakittLeafTolerance_mm>
+
+    <!-- If the distance between the measured Stakitt leaf gap and the planned gap deviates by more than this,
+    then mark the leaf as out of tolerance. Specified as a floating point numbers in mm, default is 0.5  -->
+    <StakittGapTolerance_mm>0.5</StakittGapTolerance_mm>
+
     <!-- Vertical margin in mm to space between the measured leaf boundary (side of leaf) and the area of
     interest.  This can help diminish the effects of leakage between leaves. Specified as a floating point
     numbers in mm, default is 0.5  -->
@@ -1359,8 +1371,6 @@ Note that when building a package for release, the Maven build process uses the 
     is 2.5  -->
     <StakittHorizontalMinMaxSampleLength_mm>0.5</StakittHorizontalMinMaxSampleLength_mm>
 
-
-
-
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
 </AQAConfig>

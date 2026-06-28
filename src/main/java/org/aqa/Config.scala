@@ -1059,6 +1059,8 @@ object Config extends Logging {
 
   val StakittVerticalMargin_mm: Double = logMainText("StakittVerticalMargin_mm", 0.5.toString).toDouble
   val StakittHorizontalMinMaxSampleLength_mm: Double = logMainText("StakittHorizontalMinMaxSampleLength_mm", 2.5.toString).toDouble
+  val StakittLeafTolerance_mm: Double = logMainText("StakittLeafTolerance_mm", 0.5.toString).toDouble
+  val StakittGapTolerance_mm: Double = logMainText("StakittGapTolerance_mm", 0.5.toString).toDouble
 
   // =================================================================================
 
