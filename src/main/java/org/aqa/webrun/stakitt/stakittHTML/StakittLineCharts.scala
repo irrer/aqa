@@ -220,27 +220,40 @@ case class StakittLineCharts(analysis: Analysis) extends Logging {
     def horz(name: String, colSize: Int): String = s"Horizontally (${analysis.resultColumns.size} x ${colSize}) Oriented $name (mm)"
     def vert(name: String, colSize: Int): String = s"Vertically (${colSize} x ${analysis.resultColumns.size}) Oriented $name (mm)"
 
+    val sty = "margin-top:24px; margin-left:5px; border:1px solid lightgrey;"
+
     <div style="text-align: center;">
-      <div style="margin-top:24px;">
-        <h3> {horz("Leaf Offsets", analysis.resultRows.size)} </h3>
-        {horizontalLeafChart.html}
-      </div>
+      <div class="row">
+        <div class="col-md-6">
+          <div style={sty}>
+            <h3> {horz("Leaf Offsets", analysis.resultRows.size)} </h3>
+            {horizontalLeafChart.html}
+          </div>
+        </div>
 
-      <div style="margin-top:24px;">
-        <h3> {vert("Leaf Offsets", analysis.resultRows.size)} </h3>
-        {verticalLeafChart.html}
+        <div class="col-md-6">
+          <div style={sty}>
+            <h3> {vert("Leaf Offsets", analysis.resultRows.size)} </h3>
+            {verticalLeafChart.html}
+          </div>
+        </div>
       </div>
+      <div class="row">
+        <div class="col-md-6">
+          <div style={sty}>
+            <h3> {horz("Gap Errors", analysis.gapColumns.size)} </h3>
+            {horizontalGapChart.html}
+          </div>
+        </div>
 
-      <div style="margin-top:24px;">
-        <h3> {horz("Gap Errors", analysis.gapColumns.size)} </h3>
-        {horizontalGapChart.html}
+        <div class="col-md-6">
+          <div style={sty}>
+            <h3> {vert("Gap Errors", analysis.gapColumns.size)} </h3>
+            {verticalGapChart.html}
+          </div>
+        </div>
+
       </div>
-
-      <div style="margin-top:24px;">
-        <h3> {vert("Gap Errors", analysis.gapColumns.size)} </h3>
-        {verticalGapChart.html}
-      </div>
-
     </div>
   }
 
@@ -255,8 +268,10 @@ case class StakittLineCharts(analysis: Analysis) extends Logging {
 
   private val chartList: Seq[C3Chart] = Seq(horizontalLeafChart, verticalLeafChart, horizontalGapChart, verticalGapChart /* , leafBoundaryChart */ )
 
-  val chartIdList: Seq[String] = chartList.map(_.chartIdTag)
+  private val chartIdList: Seq[String] = chartList.map(_.chartIdTag)
 
-  val js: String = chartList.map(_.javascript).mkString("\n")
+  private val flush = StakittHtmlUtil.makeFlushJs(chartIdList)
+
+  val js: String = chartList.map(_.javascript).mkString("\n") + "\n" + flush
 
 }

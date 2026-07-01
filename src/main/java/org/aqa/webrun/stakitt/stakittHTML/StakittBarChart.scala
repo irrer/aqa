@@ -28,10 +28,10 @@ case class StakittBarChart(tickRange: Int, barColor: String, errorColor: String,
   // sort by X position
   private val histogram = histogramUnsorted.sortBy(_.xLo)
 
+  val id: String = C3Chart.makeUniqueChartIdTag
+
   // Make the chart.
   def elemJs: ElemJS = {
-
-    val id = C3Chart.makeUniqueChartIdTag
 
     // This is inserted into the HTML where the chart is to appear.
     val html = <div id={id}> {id} </div>
@@ -226,36 +226,42 @@ object StakittBarChart {
       * @param barColor Color for bars that are within limits.
       * @return A bar chart.
       */
-    def makeBarHistogram(stakittBinList: Seq[StakittBin], barColor: String, tolerance: Double): ElemJS = {
-      StakittBarChart(tickRange, barColor, barErrorColor, maxY, stakittBinList, tolerance).elemJs
+    def makeBarHistogram(stakittBinList: Seq[StakittBin], barColor: String, tolerance: Double): StakittBarChart = {
+      StakittBarChart(tickRange, barColor, barErrorColor, maxY, stakittBinList, tolerance)
     }
 
     val bankABarHistogram = makeBarHistogram(aBankBinList, offsetBarColor, Config.StakittLeafTolerance_mm)
     val bankBBarHistogram = makeBarHistogram(bBankBinList, offsetBarColor, Config.StakittLeafTolerance_mm)
     val gapBarHistogram = makeBarHistogram(gapBinList, gapBarColor, Config.StakittGapTolerance_mm)
 
+    val stile = "border-style:solid; border-color:lightgrey; border-width:1px; margin-top:5px;"
+
     val elem: Elem = {
       <div style="text-align: center;">
 
-        <div class="row">
+        <div class="row" style={stile}>
           <h3> Bank A (X1) Histogram </h3>
-          {bankABarHistogram.elem}
+          {bankABarHistogram.elemJs.elem}
         </div>
 
-        <div class="row">
-          <h3> Bank B (X2) istogram </h3>
-          {bankBBarHistogram.elem}
+        <div class="row" style={stile}>
+          <h3> Bank B (X2) Histogram </h3>
+          {bankBBarHistogram.elemJs.elem}
         </div>
 
-        <div class="row">
+        <div class="row" style={stile}>
           <h3> Leaf Gap Histogram </h3>
-          {gapBarHistogram.elem}
+          {gapBarHistogram.elemJs.elem}
         </div>
 
       </div>
     }
 
-    val js = Seq(bankABarHistogram, bankBBarHistogram, gapBarHistogram).map(_.js).mkString("\n")
+    val list = Seq(bankABarHistogram, bankBBarHistogram, gapBarHistogram)
+
+    val flush = StakittHtmlUtil.makeFlushJs(list.map(_.id))
+
+    val js = list.map(_.elemJs.js).mkString("\n") + "\n" + flush
 
     ElemJS(elem, js)
   }

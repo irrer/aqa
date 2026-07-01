@@ -275,10 +275,10 @@ object WebUtil extends Logging {
    * @param magnify  Magnification factor.
    * @return Element to be put into HTML.
    */
-  def makeZoom(imageUrl: String, width: Int = 256, alternateText: String, magnify: Double = 1): Elem = {
+  def makeZoom(imageUrl: String, width: String = "auto", alternateText: String, magnify: Double = 1): Elem = {
     <a href={imageUrl}>
       <div class="zoom-viewport js-zoom"
-           data-width={width.toString}
+           data-width={width}
            data-height="auto"
            data-magnify={magnify.toString}>
         <img src={imageUrl}

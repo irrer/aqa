@@ -79,7 +79,7 @@ class StakittHTML(extendedData: ExtendedData, analysisList: Seq[Either[Analysis.
             {tab.foa.left.get.msg}
           </h4>
         </div>
-        {WebUtil.makeZoom(imageUrl, width = 768, "Stakitt Full Image")}
+        {WebUtil.makeZoom(imageUrl, width = "768", "Stakitt Full Image")}
       </div>
     }
     elem
@@ -93,8 +93,10 @@ class StakittHTML(extendedData: ExtendedData, analysisList: Seq[Either[Analysis.
   private def makeTabContent(tab: Tab): ElemJS = {
     if (tab.isFailure)
       ElemJS(makeFailureHtml(tab))
-    else
-      makeAnalysisHtml(tab)
+    else {
+      val elemJs = makeAnalysisHtml(tab)
+      elemJs
+    }
   }
 
   /**
