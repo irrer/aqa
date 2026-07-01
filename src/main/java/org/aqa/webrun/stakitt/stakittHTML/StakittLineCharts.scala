@@ -99,23 +99,8 @@ case class StakittLineCharts(analysis: Analysis) extends Logging {
     logger.info("Generating Stakitt horizontalGapChart")
     val xValueList = analysis.resultColumns.map(_.head.stakitt.plannedEndPosition_mm)
 
-    /**
-      * Make a header that shows the leaf range
-      * @param gap Gap between opposing leaves.
-      * @return Description of gaps for that column.
-      */
-    def toHeader(gap: StakittGap): String = {
-      val x1 = Util.fmtDbl(gap.x1.stakitt.plannedEndPosition_mm)
-      val x2 = Util.fmtDbl(gap.x2.stakitt.plannedEndPosition_mm)
-      val arrow = rightBoldArrow
-      s"$x1 $arrow $x2 mm"
 
-      val top = Util.fmtDbl(gap.x1.stakitt.plannedMinorSide_mm)
-      val bottom = Util.fmtDbl(gap.x1.stakitt.plannedMajorSide_mm)
-      s"$top $arrow $bottom"
-    }
 
-    // val yAxisLabels: Seq[String] = analysis.gapRows.map(_.head).map(toHeader)
     val yAxisLabels = analysis.resultRows.indices.map(yIndex => (yIndex + 1).toString)
 
     val yValues = analysis.gapRows.map(col => col.map(_.error))
@@ -217,8 +202,8 @@ case class StakittLineCharts(analysis: Analysis) extends Logging {
 
   val html: Elem = {
 
-    def horz(name: String, colSize: Int): String = s"Horizontally (${analysis.resultColumns.size} x ${colSize}) Oriented $name (mm)"
-    def vert(name: String, colSize: Int): String = s"Vertically (${colSize} x ${analysis.resultColumns.size}) Oriented $name (mm)"
+    def horz(name: String, colSize: Int): String = s"Horizontally (${analysis.resultColumns.size} x $colSize) Oriented $name (mm)"
+    def vert(name: String, colSize: Int): String = s"Vertically ($colSize x ${analysis.resultColumns.size}) Oriented $name (mm)"
 
     val sty = "margin-top:24px; margin-left:5px; border:1px solid lightgrey;"
 
