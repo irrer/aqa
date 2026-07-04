@@ -9,9 +9,9 @@ import org.aqa.webrun.stakitt.StakittResult
 import scala.xml.Elem
 
 /**
- * Make statistics HTML.
- * @param analysis Results
- */
+  * Make statistics HTML.
+  * @param analysis Results
+  */
 case class HtmlStats(analysis: Analysis) extends Logging {
 
   /**
@@ -53,12 +53,26 @@ case class HtmlStats(analysis: Analysis) extends Logging {
     def endStats(name: String, resultList: Seq[StakittResult]): Elem =
       stats(name, resultList.map(_.stakitt.leafEndOffset_mm))
 
-    val x1MeanBorderOffset = analysis.resultColumns.head.map(r => (r.stakitt.measuredMajorSide_mm + r.stakitt.measuredMinorSide_mm) / 2).sum / analysis.resultColumns.head.size
-    val x2MeanBorderOffset = analysis.resultColumns.last.map(r => (r.stakitt.measuredMajorSide_mm + r.stakitt.measuredMinorSide_mm) / 2).sum / analysis.resultColumns.head.size
+    /**
+     * Show the measured rotation of the collimator.
+     * @return Description of rotation.
+     */
+    def skew(): Elem = {
 
-    def skew_mm: Double = {
-      // TODO
-      ???
+      val x1MeanBorderOffset = analysis.resultColumns.head.map(r => (r.stakitt.measuredMajorSide_mm + r.stakitt.measuredMinorSide_mm) / 2).sum / analysis.resultColumns.head.size
+      val x1X = analysis.resultColumns.head.map(r => r.stakitt.measuredEndPosition_mm).sum / analysis.resultColumns.head.size
+      val x2MeanBorderOffset = analysis.resultColumns.last.map(r => (r.stakitt.measuredMajorSide_mm + r.stakitt.measuredMinorSide_mm) / 2).sum / analysis.resultColumns.head.size
+      val x2X = analysis.resultColumns.last.map(r => r.stakitt.measuredEndPosition_mm).sum / analysis.resultColumns.head.size
+      val xDistance = x2X - x1X
+      val yDistance = x1MeanBorderOffset - x2MeanBorderOffset
+      val angle_radians = Math.atan(yDistance / xDistance)
+      val angle_degrees = Math.toDegrees(angle_radians)
+      val changePer400mm = Math.sin(angle_radians) * 400
+
+      <div style="margin-left:20px;">
+        <b>Measured Collimator Rotation Angle (degrees): </b>{WebUtil.setPrecisionAttr(<span> </span>, angle_degrees)}
+        <b style="margin-left:40px;">Rotation Angle (mm/400mm): </b>{WebUtil.setPrecisionAttr(<span> </span>, changePer400mm)}
+      </div>
     }
 
     val header = {
@@ -90,9 +104,10 @@ case class HtmlStats(analysis: Analysis) extends Logging {
       <h3>
         Statistics
       </h3>
-      <h3>
-        Skew:   mm, degrees
-      </h3>
+      {skew()}
+      <div style="margin:20px;">
+        <h4>Table Showing Differences of Measured Leaf End - Planned End,<br/> and Measured Gap - Planned Gap.</h4>
+      </div>
       <table class="table-responsive table-bordered" style="margin:25px;">
         {header}
         {endStats("Bank X1", analysis.x1BankResultList)}
