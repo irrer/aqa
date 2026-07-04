@@ -6,6 +6,7 @@ import org.aqa.Util
 import org.aqa.web.C3Chart
 import org.aqa.web.WebUtil.ElemJS
 import org.aqa.webrun.stakitt.MakeImage
+import org.aqa.Logging
 
 import java.io.File
 import scala.xml.Elem
@@ -18,7 +19,7 @@ import scala.xml.Elem
   * @param index Tab index.  0 is the first one and is set to active.
   */
 
-case class HtmlAnalysis(analysis: Analysis, dir: File, id: String, index: Int) {
+case class HtmlAnalysis(analysis: Analysis, dir: File, id: String, index: Int) extends Logging {
 
   private val annotatedImageName = "annotatedImage.png"
 
@@ -28,12 +29,6 @@ case class HtmlAnalysis(analysis: Analysis, dir: File, id: String, index: Int) {
     Util.writePng(bufImg, file)
     val url = dir.getName + "/" + file.getName
     WebUtil.makeZoom(url, width = "auto", "Annotated Stakitt image.")
-  }
-
-  private def statistics(): Elem = {
-    <h4>
-      Statistics
-    </h4>
   }
 
   private def twoDimensionalRepresentations: Elem = {
@@ -86,7 +81,7 @@ case class HtmlAnalysis(analysis: Analysis, dir: File, id: String, index: Int) {
         <div class="col-md-7">
           <div style="margin-left:5px;">
             <div class="row">
-              {statistics()}
+              {HtmlStats(analysis).elem}
             </div>
             <div class="row">
               {twoDimensionalRepresentations}
@@ -104,5 +99,3 @@ case class HtmlAnalysis(analysis: Analysis, dir: File, id: String, index: Int) {
 
   val elemJs: ElemJS = ElemJS(elem, js)
 }
-
-
