@@ -106,13 +106,13 @@ case class HtmlStats(analysis: Analysis) extends Logging {
       </h3>
       {skew()}
       <div style="margin:20px;">
-        <h4>Table Showing Differences of Measured Leaf End - Planned End,<br/> and Measured Gap - Planned Gap.</h4>
+        <h4>Table Showing Differences of <i>Measured Leaf End - Planned End</i><br/> and <i>Measured Gap - Planned Gap</i></h4>
       </div>
       <table class="table-responsive table-bordered" style="margin:25px;">
         {header}
-        {endStats("Bank X1", analysis.x1BankResultList)}
-        {endStats("Bank X2", analysis.x2BankResultList)}
-        {stats("Gap", analysis.gapRows.flatten.map(_.error))}
+        {endStats("Measured - Planned Bank X1", analysis.x1BankResultList)}
+        {endStats("Measured - Planned Bank X2", analysis.x2BankResultList)}
+        {stats("Measured - Planned Gap", analysis.gapRows.flatten.map(_.error))}
       </table>
     </div>
   }

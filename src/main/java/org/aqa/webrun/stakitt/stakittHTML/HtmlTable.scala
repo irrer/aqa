@@ -35,7 +35,7 @@ case class HtmlTable(analysis: Analysis, dir: File) extends Logging {
 
   private val minOffset = analysis.stakittList.map(r => r.stakitt.leafEndOffset_mm).min
   private val maxOffset = analysis.stakittList.map(r => r.stakitt.leafEndOffset_mm).max
-  private val midOffset = (minOffset + maxOffset) / 2
+  private val medianOffset = (minOffset + maxOffset) / 2
 
   private val palette: IndexedSeq[Int] = {
     ImageUtil.rgbColorMap(Color.white)
@@ -84,25 +84,25 @@ case class HtmlTable(analysis: Analysis, dir: File) extends Logging {
     Util.writePng(bufImg, file)
     logger.info("Wrote file " + file.getAbsolutePath)
 
-    def fmt(d: Double) = "%8.3f".format(d).trim
-
-    /*
-      display: flex; justify-content: center; align-items: center; height: 100vh;
-      <div style="width: 100%; margin-left: auto; margin-right: auto; display: block;">
-      <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
-      <div style="display: flex; justify-content: center; width:100%; object-fit:fill;">
-      <img src={dir.getName + "/" + file.getName} class="img-responsive fit-image" style="width:100%; height:auto; display:block;"/>
-     */
-
     val elem = {
       val style = s"display: grid; place-items: center; border: 1px solid lightgrey;"
       <div style={style}>
         <div style="margin:5px;">
           <b>
             <div style="display:flex; justify-content:space-between; width:100%;">
-              <span>Min: {fmt(minOffset)}</span>
-              <span>Middle:{fmt(midOffset)}</span>
-              <span>Max:{fmt(maxOffset)}</span>
+              <span> </span>
+              <span>Low values are dark, high values are light.</span>
+              <span> </span>
+            </div>
+            <div style="display:flex; justify-content:space-between; width:100%;">
+              <i>Min</i>
+              <i>Median</i>
+              <i>Max</i>
+            </div>
+            <div style="display:flex; justify-content:space-between; width:100%;">
+              {WebUtil.setPrecisionAttr(<span></span>,minOffset)}
+              {WebUtil.setPrecisionAttr(<span></span>,medianOffset)}
+              {WebUtil.setPrecisionAttr(<span></span>,maxOffset)}
             </div>
           </b>
           <img src={dir.getName + "/" + file.getName} class="img-responsive fit-image" style="width:846px; height:auto; display:block;"/>
@@ -139,11 +139,11 @@ case class HtmlTable(analysis: Analysis, dir: File) extends Logging {
     def makeColumn(result: StakittResult): Elem = {
       val offset = result.stakitt.leafEndOffset_mm
       val textColor = {
-        val rgb = if (offset >= midOffset) palette.head else palette.last
+        val rgb = if (offset >= medianOffset) palette.head else palette.last
         rgbToHtml(rgb)
       }
       val elem = {
-        val style = s"text-align: center; color:$textColor; background-color:${colorOfCellHtml(offset)}"
+        val style = s"font-size:10px; text-align: center; color:$textColor; background-color:${colorOfCellHtml(offset)}"
         <td style={style}>
           {"%8.3f".format(offset).trim}
         </td>
