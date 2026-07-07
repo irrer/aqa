@@ -61,6 +61,9 @@ case class Stakitt(
   //noinspection ScalaWeakerAccess
   val plannedLeafWidth_mm: Double = plannedMajorSide_mm - plannedMinorSide_mm
 
+  //noinspection ScalaWeakerAccess
+  val leafWidthOffset_mm: Double = measuredLeafWidth_mm - plannedLeafWidth_mm
+
   /** Index of the leaf that, paired with this leaf, forms a gap. */
   val gapPartnerLeafPositionIndex: Int = {
     if ((leafPositionIndex % 2) == 1)
