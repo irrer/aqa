@@ -61,6 +61,14 @@ case class Stakitt(
   //noinspection ScalaWeakerAccess
   val plannedLeafWidth_mm: Double = plannedMajorSide_mm - plannedMinorSide_mm
 
+  /** Index of the leaf that, paired with this leaf, forms a gap. */
+  val gapPartnerLeafPositionIndex: Int = {
+    if ((leafPositionIndex % 2) == 1)
+      leafPositionIndex + 1
+    else
+      leafPositionIndex - 1
+  }
+
   def insertOrUpdate(): Int = Db.run(Stakitt.query.insertOrUpdate(this))
 
   override def toString: String =
@@ -79,7 +87,7 @@ case class Stakitt(
 }
 
 object Stakitt extends Logging {
-  class StakittTable(tag: Tag) extends Table[Stakitt](tag, "leafPosition") {
+  class StakittTable(tag: Tag) extends Table[Stakitt](tag, "stakitt") {
 
     def stakittPK = column[Long]("stakittPK", O.PrimaryKey, O.AutoInc)
 
@@ -178,7 +186,22 @@ object Stakitt extends Logging {
     val ordering: String = output.dataDate.get.getTime + "  " + leafPosSeq.head.beamName
 
     // Facilitate the quick finding a result given leafPositionIndex and leafIndex.
-    private val leafPosMap = leafPosSeq.map(lp => ((lp.leafPositionIndex, lp.leafIndex), lp)).toMap
+    private val leafPosMap: Map[(Int, Int), Stakitt] = leafPosSeq.map(lp => ((lp.leafPositionIndex, lp.leafIndex) -> lp)).toMap
+
+    /** Fast leaf lookup by stakittPK */
+    // val pkMap: Map[Long, Stakitt] = leafPosSeq.map(l => l.stakittPK.get -> l).toMap
+
+    /**
+     * Get the gap partner for this leaf end.
+     *
+     * @param stakitt This leaf end is looking for the partner.
+     * @return Gap partner.
+     */
+    def gapPartner(stakitt: Stakitt): Stakitt = {
+      val key: (Int, Int) = (stakitt.gapPartnerLeafPositionIndex, stakitt.leafIndex)
+      val s = leafPosMap(key)
+      s
+    }
 
     /**
      * Get the entry corresponding to the leaf's position and index.
@@ -190,6 +213,19 @@ object Stakitt extends Logging {
     def get(leafPositionIndex: Int, leafIndex: Int): Option[Stakitt] = leafPosMap.get((leafPositionIndex, leafIndex))
 
     override def getOutput: Output = output
+  }
+
+  case class LeafPosHistoryGap(leafPosHistory: LeafPosHistory, x1Stakitt: Stakitt, x2Stakitt: Stakitt) extends HasOutput {
+    override def getOutput: Output = leafPosHistory.output
+
+    val measuredGap: Double = x2Stakitt.measuredEndPosition_mm - x1Stakitt.measuredEndPosition_mm
+    val plannedGap: Double = x2Stakitt.plannedEndPosition_mm - x1Stakitt.plannedEndPosition_mm
+
+    val gapOffset_mm: Double = measuredGap - plannedGap
+  }
+
+  def leafPosHistoryToLeafPosGapList(lph: LeafPosHistory): Seq[LeafPosHistoryGap] = {
+    lph.leafPosSeq.filter(s => (s.leafPositionIndex % 2) == 1).map(x1 => LeafPosHistoryGap(lph, x1, lph.gapPartner(x1)))
   }
 
   /**

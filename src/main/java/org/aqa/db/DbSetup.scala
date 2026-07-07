@@ -151,7 +151,8 @@ object DbSetup extends Logging {
     IsoCheck.query,
     FloodField.query,
     PSMBeam.query,
-    PSM.query
+    PSM.query,
+    Stakitt.query
   )
 
   /**

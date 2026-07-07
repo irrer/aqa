@@ -555,7 +555,8 @@ object Phase2Csv extends Logging {
       new WedgePointCsv(metadataCache),
       new WinstonLutzCsv(metadataCache),
       new WinLutz360Csv(metadataCache),
-      new IsoCheckCsv(metadataCache)
+      new IsoCheckCsv(metadataCache),
+      new StakittCsv(metadataCache)
     )
   }
 

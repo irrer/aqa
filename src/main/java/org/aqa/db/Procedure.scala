@@ -109,6 +109,7 @@ case class Procedure(
   final val isFocalSpot = name.toLowerCase.contains("focal") && name.toLowerCase.contains("spot")
   final val isFloodField = name.toLowerCase.contains("flood")
   final val isPSM = name.toLowerCase.contains("psm")
+  final val isStakitt = name.toLowerCase.contains("stak")
 
 }
 
@@ -188,6 +189,7 @@ object Procedure {
   lazy val ProcOfFocalSpot   : Option[Procedure] = list.filter(p => p.isFocalSpot)   .sortBy(_.version).lastOption
   lazy val ProcOfFloodField  : Option[Procedure] = list.filter(p => p.isFloodField)  .sortBy(_.version).lastOption
   lazy val ProcOfPSM         : Option[Procedure] = list.filter(p => p.isPSM)         .sortBy(_.version).lastOption
+  lazy val ProcOfStakitt     : Option[Procedure] = list.filter(p => p.isStakitt)     .sortBy(_.version).lastOption
   // @formatter:on
 
   def main(args: Array[String]): Unit = {

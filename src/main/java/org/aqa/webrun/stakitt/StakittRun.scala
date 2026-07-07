@@ -39,7 +39,7 @@ class StakittRun(procedure: Procedure) extends WebRunProcedure with RunTrait[Skt
 
     // put data in database
     val resultList = analysisList.filter(_.isRight).flatMap(_.right.get.stakittList).map(_.stakitt)
-    // resultList.foreach(_.insert) // TODO enable Stakitt in DB
+    resultList.foreach(_.insert)
 
     // generate HTML
     val html = new StakittHTML(extendedData, analysisList, runReq.rtplan)
