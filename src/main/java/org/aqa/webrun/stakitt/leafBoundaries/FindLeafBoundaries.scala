@@ -4,21 +4,19 @@ import edu.umro.ImageUtil.DicomImage
 import org.aqa.Logging
 import org.opensourcephysics.numerics.CubicSpline
 
-import java.awt.Rectangle
-
 /**
   * Calculate the Y coordinates of the AOIs for the given Stakitt image.
   *
   * All calculations are done in pixels (as opposed to mm / isoplane).
   *
-  * @param image Use this image. It will either be  the left-hand or right-hand part of the whole image.
+  * @param imageOfStaggeredLeaves Use this image. It will either be  the left-hand or right-hand part of the whole image.
   * @param name Used for diagnostics and debugging.
   */
-case class FindLeafBoundaries(image: DicomImage, name: String) extends Logging {
+case class FindLeafBoundaries(imageOfStaggeredLeaves: DicomImage, name: String, coarseVerticalFieldExtent: CoarseVerticalFieldExtent) extends Logging {
 
   /** Scale the profile to values 0 to 100 to make debugging easier. */
   private val profileScaled = {
-    val profileRaw: Seq[Float] = image.rowSums
+    val profileRaw: Seq[Float] = imageOfStaggeredLeaves.rowSums
     val min = profileRaw.min
     val max = profileRaw.max
     val range = (max - min) / 100
@@ -29,30 +27,7 @@ case class FindLeafBoundaries(image: DicomImage, name: String) extends Logging {
   private val cs = new CubicSpline(profileScaled.indices.map(_.toDouble).toArray, profileScaled.map(_.toDouble).toArray)
 
   /** List of approximate locations of peaks and valleys. */
-  private val pvList = FindPeakAndValleyCoarsely().findPeaksAndValleysCoarsely(profileScaled)
-
-  /**
-    * Find the approximate upper and lower extents of the open part of the field.
-    * @return X coordinates of top and bottom.
-    */
-  private def findVerticalBoundaries(): (Int, Int) = {
-    val span: Int = 5
-
-    val columnSums = image.columnSums
-
-    val brightest = columnSums.indices.sortBy(i => columnSums(i)).takeRight(span)
-
-    val brightestImage = image.getSubimage(new Rectangle(brightest.head, 0, brightest.last - brightest.head, image.Rows))
-
-    val verticalProfile = brightestImage.rowSums
-
-    val mid = (verticalProfile.max + verticalProfile.min) / 2
-
-    val lo = verticalProfile.indexWhere(_ > mid)
-    val hi = verticalProfile.lastIndexWhere(_ > mid)
-
-    (lo, hi)
-  }
+  private val pvList = FindPeakAndValleyCoarsely.findPeaksAndValleysCoarsely(imageOfStaggeredLeaves, coarseVerticalFieldExtent)
 
   /**
     * Given a coarsely located peak or valley, find it precisely.
@@ -112,17 +87,20 @@ case class FindLeafBoundaries(image: DicomImage, name: String) extends Logging {
     * @return New list with top and bottom boundaries added.
     */
   private def addExtrapolatedBoundaries(evenlySpaced: Seq[Double]): Seq[Double] = {
-    val verticalBounds = findVerticalBoundaries()
+    // val verticalBounds = findVerticalBoundaries()
+    // val verticalFieldExtent = VerticalFieldExtent(imageOfStaggeredLeaves)
+    val top_pix = coarseVerticalFieldExtent.top_pix
+    val bottom_pix = coarseVerticalFieldExtent.bottom_pix
 
     val wideWidth = evenlySpaced(1) - evenlySpaced.head
 
     def topList = {
-      val count = ((evenlySpaced.head - verticalBounds._1) / wideWidth).round.toInt
+      val count = ((evenlySpaced.head - top_pix) / wideWidth).round.toInt
       (0 until count).map(i => evenlySpaced.head - ((i + 1) * wideWidth))
     }
 
     def bottomList = {
-      val count = ((verticalBounds._2 - evenlySpaced.last) / wideWidth).round.toInt
+      val count = ((bottom_pix - evenlySpaced.last) / wideWidth).round.toInt
       (0 until count).map(i => evenlySpaced.last + ((i + 1) * wideWidth))
     }
 

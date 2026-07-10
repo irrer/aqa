@@ -1,6 +1,7 @@
 package org.aqa.webrun.stakitt.leafBoundaries
 
 import com.pixelmed.dicom.AttributeList
+import edu.umro.ImageUtil.DicomImage
 import org.aqa.Logging
 
 /**
@@ -15,10 +16,12 @@ case class LeafBoundaries(rtimage: AttributeList, xBorderList: Seq[Double]) exte
 
   private val di = LBDicomImages(rtimage, xBorderList)
 
+  private val verticalFieldExtent: CoarseVerticalFieldExtent = CoarseVerticalFieldExtent(new DicomImage(rtimage))
+
   /** Inflection points on the left */
-  val yPointListLo_pix: LeafBoundariesMeasuredAndAdjusted = FindLeafBoundaries(di.dicomImageLo, "Lo").findLeafBoundaries_pix()
+  val yPointListLo_pix: LeafBoundariesMeasuredAndAdjusted = FindLeafBoundaries(di.dicomImageLo, "Lo", verticalFieldExtent).findLeafBoundaries_pix()
 
   /** Inflection points on the right */
-  val yPointListHi_pix: LeafBoundariesMeasuredAndAdjusted = FindLeafBoundaries(di.dicomImageHi, "Hi").findLeafBoundaries_pix()
+  val yPointListHi_pix: LeafBoundariesMeasuredAndAdjusted = FindLeafBoundaries(di.dicomImageHi, "Hi", verticalFieldExtent).findLeafBoundaries_pix()
 
 }

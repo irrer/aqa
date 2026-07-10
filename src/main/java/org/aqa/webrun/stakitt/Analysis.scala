@@ -30,7 +30,7 @@ case class Analysis( //
     planBorders: PlanBorders
 ) extends Logging {
 
-  /** Results sorted into rows, with each row sorted by index.. */
+  /** Results sorted into rows, with each row sorted by index. */
   val resultRows: Seq[Seq[StakittResult]] = stakittList.groupBy(_.stakittAOI.yIndex).values.toSeq.sortBy(_.head.stakittAOI.yIndex).map(_.sortBy(_.stakittAOI.xIndex))
 
   /** Results sorted into columns, with each column sorted by index.. */
@@ -99,7 +99,7 @@ object Analysis extends Logging {
   ): Option[Failure] = {
 
     val rightLeftMismatch = if (yLeafBoundaries.yPointListLo_pix.adjusted_pix.size != yLeafBoundaries.yPointListHi_pix.adjusted_pix.size) {
-      val msg = s"Image analysis found ${yLeafBoundaries.yPointListLo_pix.adjusted_pix.size} lo leaf boundaries (sides) but ${yLeafBoundaries.yPointListHi_pix.adjusted_pix.size} hi leaf boundaries."
+      val msg = s"Image analysis found ${yLeafBoundaries.yPointListLo_pix.adjusted_pix.size} X1 leaf boundaries (sides) but ${yLeafBoundaries.yPointListHi_pix.adjusted_pix.size} X2 leaf boundaries."
       logger.error(msg)
       Some(Failure(ProcedureStatus.invalidData, msg, rtimage))
     } else
