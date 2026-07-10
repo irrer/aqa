@@ -103,7 +103,7 @@ case class StakittBarChart(tickRange: Int, barColor: String, errorColor: String,
          |          },
          |
          |          label: {
-         |            text: "Offset",
+         |            text: "Offset (mm)",
          |            position: "outer-center"
          |          }
          |        },
@@ -112,7 +112,7 @@ case class StakittBarChart(tickRange: Int, barColor: String, errorColor: String,
          |          min: 0,
          |          max: $maxY,
          |          label: {
-         |            text: "Value",
+         |            text: "Count",
          |            position: "outer-middle"
          |          }
          |        }

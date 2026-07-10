@@ -135,11 +135,21 @@ class StakittHTML(extendedData: ExtendedData, analysisList: Seq[Either[Analysis.
     ElemJS(content, tabContentList.map(_.js).mkString("\n"))
   }
 
+  private def singleImage(): ElemJS = {
+    val singleTabContent = makeTabContent(tabList.head)
+    val elem = {
+      <div>
+        {WebUtil.showPrecision}{singleTabContent.elem}
+      </div>
+    }
+    ElemJS(elem, singleTabContent.js)
+  }
+
   def makeHTML(): Unit = {
 
     val innerElem: ElemJS = {
       if (tabList.size == 1)
-        makeTabContent(tabList.head)
+        singleImage()
       else
         multipleImages()
     }
