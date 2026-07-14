@@ -58,16 +58,16 @@ case class Analysis( //
       .values
       .toSeq
       .sortBy(_.head.x1.stakitt.plannedEndPosition_mm)
-      .map(col => col.sortBy(_.x1.stakitt.plannedMajorSide_mm))
+      .map(col => col.sortBy(_.x1.stakitt.plannedY1Side_mm))
   }
 
   /** Gaps sorted by row then column */
   val gapRows: Seq[Seq[StakittGap]] = {
     gapList
-      .groupBy(_.x1.stakitt.plannedMinorSide_mm)
+      .groupBy(_.x1.stakitt.plannedY2Side_mm)
       .values
       .toSeq
-      .sortBy(_.head.x1.stakitt.plannedMinorSide_mm)
+      .sortBy(_.head.x1.stakitt.plannedY2Side_mm)
       .map(col => col.sortBy(_.x1.stakitt.plannedEndPosition_mm))
   }
 }

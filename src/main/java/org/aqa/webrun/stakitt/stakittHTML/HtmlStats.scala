@@ -59,9 +59,9 @@ case class HtmlStats(analysis: Analysis) extends Logging {
      */
     def skew(): Elem = {
 
-      val x1MeanBorderOffset = analysis.resultColumns.head.map(r => (r.stakitt.measuredMajorSide_mm + r.stakitt.measuredMinorSide_mm) / 2).sum / analysis.resultColumns.head.size
+      val x1MeanBorderOffset = analysis.resultColumns.head.map(r => (r.stakitt.measuredY1Side_mm + r.stakitt.measuredY2Side_mm) / 2).sum / analysis.resultColumns.head.size
       val x1X = analysis.resultColumns.head.map(r => r.stakitt.measuredEndPosition_mm).sum / analysis.resultColumns.head.size
-      val x2MeanBorderOffset = analysis.resultColumns.last.map(r => (r.stakitt.measuredMajorSide_mm + r.stakitt.measuredMinorSide_mm) / 2).sum / analysis.resultColumns.head.size
+      val x2MeanBorderOffset = analysis.resultColumns.last.map(r => (r.stakitt.measuredY1Side_mm + r.stakitt.measuredY2Side_mm) / 2).sum / analysis.resultColumns.head.size
       val x2X = analysis.resultColumns.last.map(r => r.stakitt.measuredEndPosition_mm).sum / analysis.resultColumns.head.size
       val xDistance = x2X - x1X
       val yDistance = x1MeanBorderOffset - x2MeanBorderOffset

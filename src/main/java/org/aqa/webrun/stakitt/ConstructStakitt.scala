@@ -39,11 +39,11 @@ object ConstructStakitt extends Logging {
       leafIndex = stakittAOI.yIndex + 1,
       leafPositionIndex = stakittAOI.xIndex + 1,
       measuredEndPosition_mm = edgePosition_mm,
-      measuredMinorSide_mm = trans.pix2IsoCoordY(stakittAOI.rectangle.y) - Config.StakittVerticalMargin_mm,
-      measuredMajorSide_mm = trans.pix2IsoCoordY(stakittAOI.rectangle.y + stakittAOI.rectangle.height) + (Config.StakittVerticalMargin_mm * 2),
+      measuredY2Side_mm = trans.pix2IsoCoordY(stakittAOI.rectangle.y) - Config.StakittVerticalMargin_mm,
+      measuredY1Side_mm = trans.pix2IsoCoordY(stakittAOI.rectangle.y + stakittAOI.rectangle.height) + (Config.StakittVerticalMargin_mm * 2),
       plannedEndPosition_mm = stakittAOI.plannedXEdge_mm,
-      plannedMinorSide_mm = planBorders.yLeafBoundaryList(stakittAOI.yIndex),
-      plannedMajorSide_mm = planBorders.yLeafBoundaryList(stakittAOI.yIndex + 1)
+      plannedY2Side_mm = planBorders.yLeafBoundaryList(stakittAOI.yIndex),
+      plannedY1Side_mm = planBorders.yLeafBoundaryList(stakittAOI.yIndex + 1)
     )
 
     val result = StakittResult(stakitt, stakittAOI)
