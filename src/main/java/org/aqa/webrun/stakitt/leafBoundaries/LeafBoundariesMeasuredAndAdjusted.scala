@@ -10,8 +10,8 @@ import edu.umro.ImageUtil.DicomImage
   *                               for diagnostics and debugging.
   *
   * @param adjusted_pix List boundaries derived from the <code>peakValleyMeanList_pix</code> list without the extrapolated
-  *                     values. The problem is that the profile is asymmetric, in that the peaks are 'pointier' than the
-  *                     valleys, which produces a staggered result of wide-narrow boundaries. The derivation process is to
+  *                     values. The problem is that the profile is asymmetric, in that the valleys are 'pointier' than the
+  *                     peaks, which produces a staggered result of wide-narrow boundaries. The derivation process is to
   *                     take small groups of boundaries and use the least squares method to estimate what the actual
   *                     position of the boundary in center of the group should be.
   *
