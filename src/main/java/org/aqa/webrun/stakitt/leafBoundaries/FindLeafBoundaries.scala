@@ -115,13 +115,15 @@ case class FindLeafBoundaries(imageOfStaggeredLeaves: DicomImage, name: String, 
     * @return List of leaf boundaries.
     */
   def findLeafBoundaries_pix(): LeafBoundariesMeasuredAndAdjusted = {
-    val measured_pix = pvList.indices.tail.map(findCrossingPoint)
-    val measuredWithExtrapolated_pix = addExtrapolatedBoundaries(measured_pix)
+    val peakValleyMeanList_pix = pvList.indices.tail.map(findCrossingPoint)
 
-    val adjustedSpacing_pix = HomogenizeBoundaries.homogenize(measured_pix)
+    // the outer boundaries do not have an adjacent peak and valley, so extrapolate them using the adjacent boundaries.
+    val boundaryUsingPeakValleyMeanWithExtrapolatedList_pix = addExtrapolatedBoundaries(peakValleyMeanList_pix)
 
-    if (adjustedSpacing_pix.size != measured_pix.size)
-      throw new RuntimeException(s"Started with ${measured_pix.size} boundaries but number of evenly spaced is ${adjustedSpacing_pix.size}")
+    val adjustedSpacing_pix = HomogenizeBoundaries.homogenize(peakValleyMeanList_pix)
+
+    if (adjustedSpacing_pix.size != peakValleyMeanList_pix.size)
+      throw new RuntimeException(s"Started with ${peakValleyMeanList_pix.size} boundaries but number of evenly spaced is ${adjustedSpacing_pix.size}")
 
     val boundaryList_pix = addExtrapolatedBoundaries(adjustedSpacing_pix)
 
@@ -131,7 +133,7 @@ case class FindLeafBoundaries(imageOfStaggeredLeaves: DicomImage, name: String, 
 
     logger.info(s"Number of leaf boundaries found for $name: ${boundaryList_pix.size}    min_pix: ${widths.min}    max_pix: ${widths.max}")
 
-    LeafBoundariesMeasuredAndAdjusted(measuredWithExtrapolated_pix, boundaryList_pix)
+    LeafBoundariesMeasuredAndAdjusted(boundaryUsingPeakValleyMeanWithExtrapolatedList_pix, boundaryList_pix, imageOfStaggeredLeaves, name, profileScaled, coarseVerticalFieldExtent)
   }
 
 }

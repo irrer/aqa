@@ -31,9 +31,9 @@ case class CoarseVerticalFieldExtent(image: DicomImage) extends Logging {
     val sampleSize = 10 // take enough to get a representative sample
     val verticalProfileSorted: Seq[Float] = verticalProfile.sorted
 
-    val lo = verticalProfileSorted.take(sampleSize).sum / sampleSize // lowest values
-    val hi = verticalProfileSorted.takeRight(sampleSize).sum / sampleSize // highest values
-    (lo + hi) / 2
+    val x1 = verticalProfileSorted.take(sampleSize).sum / sampleSize // X1 (lowest) values
+    val x2 = verticalProfileSorted.takeRight(sampleSize).sum / sampleSize // X2 (highest) values
+    (x1 + x2) / 2
   }
 
   private val halfHeight = centerImage.height / 2
