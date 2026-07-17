@@ -31,60 +31,66 @@ class WLCsv(resultList: Seq[WLResult], extendedData: ExtendedData) extends Loggi
 
     def listToCsv(textList: Seq[String]): String = textList.foldLeft("")((l, t) => if (l.isEmpty) t else l + ',' + t) + "\n"
 
-    def ir2csv(ir: WLResult): Seq[Dp] = {
+    def ir2csv(ir: WLResult): Option[Seq[Dp]] = {
 
-      val tongueAndGrooveOffset = new Point2d(0, 0)
+      try {
+        val tongueAndGrooveOffset = new Point2d(0, 0)
 
-      val fieldName = ir.gantryRounded_txt + " " + ir.collimatorRounded_txt + " " + ir.elapsedTime_txt
+        val fieldName = ir.gantryRounded_txt + " " + ir.collimatorRounded_txt + " " + ir.elapsedTime_txt
 
-      /**
-        * Given a tag, get the string version of the non-anonymized (decrypted) attribute.
-        *
-        * @param tag For this attribute
-        * @return
-        */
-      def deAnon(tag: AttributeTag): String = {
-        val attr = ir.attrList.get(tag)
-        val clear = AnonymizeUtil.deAnonymizeAttribute(extendedData.institution.institutionPK.get, attr)
-        if (clear.isDefined)
-          clear.get.getSingleStringValueOrEmptyString
-        else
-          "NA"
+        /**
+          * Given a tag, get the string version of the non-anonymized (decrypted) attribute.
+          *
+          * @param tag For this attribute
+          * @return
+          */
+        def deAnon(tag: AttributeTag): String = {
+          val attr = ir.attrList.get(tag)
+          val clear = AnonymizeUtil.deAnonymizeAttribute(extendedData.institution.institutionPK.get, attr)
+          if (clear.isDefined)
+            clear.get.getSingleStringValueOrEmptyString
+          else
+            "NA"
+        }
+
+        val ok = ir.offsetXY_mm >= 0
+
+        Some(
+          Seq(
+            Dp(extendedData.machine.getRealId, "machine id"),
+            Dp(fieldName, "field name"),
+            Dp(ir.getImageStatus.toString, "status"),
+            Dp(ir.attr(TagByName.PatientSupportAngle), "table angle"),
+            Dp(ir.attr(TagByName.GantryAngle), "gantry angle"),
+            Dp(ir.attr(TagByName.BeamLimitingDeviceAngle), "coll angle"),
+            new Dp(ir.offsetX_mm, "X offset corrected box-ball", ok),
+            new Dp(ir.offsetY_mm, "Y offset corrected box-ball", ok),
+            new Dp(ir.offsetXY_mm, "XY offset corrected", ok),
+            new Dp(ir.boxCenter_mm.x, "X box center corrected", ok),
+            new Dp(ir.boxCenter_mm.y, "Y box center corrected", ok),
+            new Dp(tongueAndGrooveOffset.x, "X tongue and groove correction"),
+            new Dp(tongueAndGrooveOffset.y, "Y tongue and groove correction"),
+            new Dp(ir.ballCenter_mm.map(_.x), "X ball center", ok),
+            new Dp(ir.ballCenter_mm.map(_.y), "Y ball center", ok),
+            new Dp(ir.OffsetLeft_mm, "box left uncorrected", ok),
+            new Dp(ir.OffsetRight_mm, "box right uncorrected", ok),
+            new Dp(ir.OffsetTop_mm, "box top uncorrected", ok),
+            new Dp(ir.OffsetBottom_mm, "box bottom uncorrected", ok),
+            new Dp(ir.OffsetX1_mm, "X1 distance to center", ok),
+            new Dp(ir.OffsetX2_mm, "X2 distance to center", ok),
+            new Dp(ir.OffsetY1_mm, "Y1 distance to center", ok),
+            new Dp(ir.OffsetY2_mm, "Y2 distance to center", ok),
+            // new Dp((ir.boxEdges.right + ir.boxEdges.left) / 2, "X box center uncorrected", ok),
+            // new Dp((ir.boxEdges.bottom + ir.boxEdges.top) / 2, "Y box center uncorrected", ok),
+            Dp(deAnon(TagByName.PatientID), "Patient ID"),
+            Dp(deAnon(TagByName.PatientName), "Patient Name"),
+            Dp(deAnon(TagByName.SOPInstanceUID), "Instance (slice) UID"),
+            Dp(deAnon(TagByName.SeriesInstanceUID), "Series UID")
+          )
+        )
+      } catch {
+        case _: Throwable => None
       }
-
-      val ok = ir.offsetXY_mm >= 0
-
-      Seq(
-        Dp(extendedData.machine.getRealId, "machine id"),
-        Dp(fieldName, "field name"),
-        Dp(ir.getImageStatus.toString, "status"),
-        Dp(ir.attr(TagByName.PatientSupportAngle), "table angle"),
-        Dp(ir.attr(TagByName.GantryAngle), "gantry angle"),
-        Dp(ir.attr(TagByName.BeamLimitingDeviceAngle), "coll angle"),
-        new Dp(ir.offsetX_mm, "X offset corrected box-ball", ok),
-        new Dp(ir.offsetY_mm, "Y offset corrected box-ball", ok),
-        new Dp(ir.offsetXY_mm, "XY offset corrected", ok),
-        new Dp(ir.boxCenter_mm.x, "X box center corrected", ok),
-        new Dp(ir.boxCenter_mm.y, "Y box center corrected", ok),
-        new Dp(tongueAndGrooveOffset.x, "X tongue and groove correction"),
-        new Dp(tongueAndGrooveOffset.y, "Y tongue and groove correction"),
-        new Dp(ir.ballCenter_mm.map(_.x), "X ball center", ok),
-        new Dp(ir.ballCenter_mm.map(_.y), "Y ball center", ok),
-        new Dp(ir.OffsetLeft_mm, "box left uncorrected", ok),
-        new Dp(ir.OffsetRight_mm, "box right uncorrected", ok),
-        new Dp(ir.OffsetTop_mm, "box top uncorrected", ok),
-        new Dp(ir.OffsetBottom_mm, "box bottom uncorrected", ok),
-        new Dp(ir.OffsetX1_mm, "X1 distance to center", ok),
-        new Dp(ir.OffsetX2_mm, "X2 distance to center", ok),
-        new Dp(ir.OffsetY1_mm, "Y1 distance to center", ok),
-        new Dp(ir.OffsetY2_mm, "Y2 distance to center", ok),
-        // new Dp((ir.boxEdges.right + ir.boxEdges.left) / 2, "X box center uncorrected", ok),
-        // new Dp((ir.boxEdges.bottom + ir.boxEdges.top) / 2, "Y box center uncorrected", ok),
-        Dp(deAnon(TagByName.PatientID), "Patient ID"),
-        Dp(deAnon(TagByName.PatientName), "Patient Name"),
-        Dp(deAnon(TagByName.SOPInstanceUID), "Instance (slice) UID"),
-        Dp(deAnon(TagByName.SeriesInstanceUID), "Series UID")
-      )
     }
 
     val title: String = {
@@ -94,8 +100,28 @@ class WLCsv(resultList: Seq[WLResult], extendedData: ExtendedData) extends Loggi
 
       Seq(title, data, analysis).mkString(",") + "\n"
     }
-    val header: String = listToCsv(ir2csv(resultList.head).map(dp => dp.name))
-    val content = resultList.sortBy(ir => ir.elapsedTime_ms).map(ir => ir2csv(ir).map(_.value).mkString(",")).mkString("\n")
+    val header: String = {
+      val list = ir2csv(resultList.head)
+      if (list.isDefined)
+        listToCsv(list.get.map(dp => dp.name))
+      else
+        "NA"
+    }
+    val content = {
+
+      def doIr(wlResult: WLResult): String = {
+        val ir2 = ir2csv(wlResult)
+        if (ir2.isDefined)
+          ir2.get.map(_.value).mkString(",")
+        else
+          ""
+      }
+
+      val irList = resultList.sortBy(ir => ir.elapsedTime_ms)
+      irList.map(doIr).mkString("\n")
+
+      // resultList.sortBy(ir => ir.elapsedTime_ms).map(ir => ir2csv(ir).map(_.value).mkString(",")).mkString("\n")
+    }
 
     val text = title + header + content
 

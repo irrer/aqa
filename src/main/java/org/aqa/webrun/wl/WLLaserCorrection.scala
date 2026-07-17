@@ -4,8 +4,6 @@ import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
 
-import scala.annotation.tailrec
-
 /**
   * Construct a complete set of 4 gantry angles with the same collimator angle and
   * calculate corrections to be made in the X, Y and Z axis.
@@ -52,23 +50,34 @@ class WLLaserCorrection(val resultList: Seq[WLResult]) extends Logging {
   }
 }
 
-object WLLaserCorrection {
+object WLLaserCorrection extends Logging {
 
   private val NUM_IN_SET = 4 // Number of fields in a set (covers each multiple of 90 degrees).
 
   private def startsWithSet(resultList: Seq[WLResult]): Boolean = {
     def collSame = resultList.take(NUM_IN_SET).map(ir => ir.collimatorRounded_deg).distinct.size == 1
-    def gantryDifferent = resultList.take(NUM_IN_SET).map(ir => ir.gantryRounded_deg).distinct.size == NUM_IN_SET
-    (resultList.size >= 4) && collSame && gantryDifferent
+    val gantryAngleList = resultList.take(NUM_IN_SET).map(ir => ir.gantryRounded_deg).distinct
+    def gantryDifferent = gantryAngleList.size == NUM_IN_SET
+    def hasVertAndHorizontal = {
+      val vertical = gantryAngleList.contains(0) || gantryAngleList.contains(180)
+      val horizontal = gantryAngleList.contains(90) || gantryAngleList.contains(270)
+      vertical && horizontal
+    }
+    (resultList.size >= 4) && collSame && gantryDifferent && hasVertAndHorizontal
   }
 
-  @tailrec
   def setList(resultList: Seq[WLResult], correctionList: Seq[WLLaserCorrection] = Seq()): Seq[WLLaserCorrection] = {
     if (resultList.size < NUM_IN_SET) correctionList
     else {
       if (startsWithSet(resultList.take(NUM_IN_SET))) {
-        val corList = correctionList.+:(new WLLaserCorrection(resultList.take(NUM_IN_SET)))
-        setList(resultList.drop(NUM_IN_SET), corList)
+        try {
+          val corList = correctionList.+:(new WLLaserCorrection(resultList.take(NUM_IN_SET)))
+          setList(resultList.drop(NUM_IN_SET), corList)
+        } catch {
+          case t: Throwable =>
+            logger.error(s"Unexpected exception: ${fmtEx(t)}")
+            setList(resultList.tail, correctionList)
+        }
       } else setList(resultList.tail, correctionList)
     }
   }
