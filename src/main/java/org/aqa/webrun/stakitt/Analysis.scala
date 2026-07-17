@@ -98,8 +98,8 @@ object Analysis extends Logging {
       rtimage: AttributeList
   ): Option[Failure] = {
 
-    val rightLeftMismatch = if (yLeafBoundaries.yPointListLo_pix.adjusted_pix.size != yLeafBoundaries.yPointListHi_pix.adjusted_pix.size) {
-      val msg = s"Image analysis found ${yLeafBoundaries.yPointListLo_pix.adjusted_pix.size} X1 leaf boundaries (sides) but ${yLeafBoundaries.yPointListHi_pix.adjusted_pix.size} X2 leaf boundaries."
+    val rightLeftMismatch = if (yLeafBoundaries.yPointListX1_pix.adjusted_pix.size != yLeafBoundaries.yPointListX2_pix.adjusted_pix.size) {
+      val msg = s"Image analysis found ${yLeafBoundaries.yPointListX1_pix.adjusted_pix.size} X1 leaf boundaries (sides) but ${yLeafBoundaries.yPointListX2_pix.adjusted_pix.size} X2 leaf boundaries."
       logger.error(msg)
       Some(Failure(ProcedureStatus.invalidData, msg, rtimage))
     } else
@@ -112,8 +112,8 @@ object Analysis extends Logging {
     } else
       None
 
-    val imageVersesPlanMismatch = if (yLeafBoundaries.yPointListLo_pix.adjusted_pix.size != planAOIBorders.yLeafBoundaryList.size) {
-      val msg = s"Image analysis found ${yLeafBoundaries.yPointListLo_pix.adjusted_pix.size} leaf boundaries (sides), but plan indicates that there should be ${planAOIBorders.yLeafBoundaryList.size}"
+    val imageVersesPlanMismatch = if (yLeafBoundaries.yPointListX1_pix.adjusted_pix.size != planAOIBorders.yLeafBoundaryList.size) {
+      val msg = s"Image analysis found ${yLeafBoundaries.yPointListX1_pix.adjusted_pix.size} leaf boundaries (sides), but plan indicates that there should be ${planAOIBorders.yLeafBoundaryList.size}"
       logger.error(msg)
       Some(Failure(ProcedureStatus.invalidData, msg, rtimage))
     } else

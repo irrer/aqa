@@ -6,3 +6,5 @@
 
 ALTER TABLE IF EXISTS public.vmat
     ADD COLUMN "doseMLCPerOpen" double precision;
+
+

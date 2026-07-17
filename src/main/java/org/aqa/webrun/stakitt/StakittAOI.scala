@@ -77,7 +77,7 @@ object StakittAOI extends Logging {
     val xMax = xL0 + xFilled
     val xRange = xMax - xMin
 
-    val yRange = yImageBorders.yPointListLo_pix.adjusted_pix.head - yImageBorders.yPointListHi_pix.adjusted_pix.head
+    val yRange = yImageBorders.yPointListX1_pix.adjusted_pix.head - yImageBorders.yPointListX2_pix.adjusted_pix.head
 
     def makeAOI(xIndex: Int, yIndex: Int): Rect2d = {
 
@@ -85,9 +85,9 @@ object StakittAOI extends Logging {
 
       val yDelta = yRange * (xAoi.mid / xRange)
 
-      val y = yImageBorders.yPointListLo_pix.adjusted_pix(yIndex) - yDelta
+      val y = yImageBorders.yPointListX1_pix.adjusted_pix(yIndex) - yDelta
 
-      val yHeight = yImageBorders.yPointListLo_pix.adjusted_pix(yIndex + 1) - yImageBorders.yPointListLo_pix.adjusted_pix(yIndex)
+      val yHeight = yImageBorders.yPointListX1_pix.adjusted_pix(yIndex + 1) - yImageBorders.yPointListX1_pix.adjusted_pix(yIndex)
       val rect = new Rect2d(xAoi.lo, y, xAoi.width, yHeight)
       rect
     }
@@ -109,7 +109,7 @@ object StakittAOI extends Logging {
     }
 
     def makeColumn(xIndex: Int): Seq[StakittAOI] = {
-      yImageBorders.yPointListLo_pix.adjusted_pix.indices.dropRight(1).map(yIndex => makeAOIWithYMargin_pix(xIndex, yIndex))
+      yImageBorders.yPointListX1_pix.adjusted_pix.indices.dropRight(1).map(yIndex => makeAOIWithYMargin_pix(xIndex, yIndex))
     }
 
     val list = approximateLeafEnds.indices.flatMap(makeColumn)

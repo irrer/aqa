@@ -46,6 +46,8 @@ object StakittResult extends Logging {
         measuredEndPosition_mm = edgePosition_mm,
         measuredY2Side_mm = trans.pix2IsoCoordY(stakittAOI.rectangle.y) - Config.StakittVerticalMargin_mm,
         measuredY1Side_mm = trans.pix2IsoCoordY(stakittAOI.rectangle.y + stakittAOI.rectangle.height) + (Config.StakittVerticalMargin_mm * 2),
+        collimatorCenterOffsetX_mm = 0, // TODO
+        collimatorCenterOffsetY_mm = 0, // TODO
         plannedEndPosition_mm = stakittAOI.plannedXEdge_mm,
         plannedY2Side_mm = planBorders.yLeafBoundaryList(stakittAOI.yIndex),
         plannedY1Side_mm = planBorders.yLeafBoundaryList(stakittAOI.yIndex + 1)

@@ -16,7 +16,7 @@ import org.aqa.Logging
  */
 case class LeafEndBySinglePixel(xAoiBordersList: Seq[XAoiBorders], leafBoundaries: LeafBoundaries, trans: IsoImagePlaneTranslator, dicomImage: DicomImage) extends Logging {
 
-  private val allY = leafBoundaries.yPointListLo_pix.adjusted_pix ++ leafBoundaries.yPointListHi_pix.adjusted_pix
+  private val allY = leafBoundaries.yPointListX1_pix.adjusted_pix ++ leafBoundaries.yPointListX2_pix.adjusted_pix
   private def mean(d1: Double, d2: Double) = (d1 + d2) / 2
 
   private val minMaxSampleSize_pix = trans.iso2PixDistX(Config.StakittHorizontalMinMaxSampleLength_mm).round.toInt

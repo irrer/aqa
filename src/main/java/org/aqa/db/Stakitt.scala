@@ -25,18 +25,20 @@ import scala.xml.Elem
 /**
  * Database row for a single leaf end measurement from a Stakitt test.
  *
- * @param stakittPK              : primary key
- * @param outputPK               : output primary key
- * @param SOPInstanceUID         : UID of source image
- * @param beamName               : name of beam in plan
- * @param leafIndex              : leaf number starting at 1
- * @param leafPositionIndex      : leaf position number as it moves across the field
- * @param measuredEndPosition_mm : measured position of leaf end
- * @param measuredY2Side_mm      : measured position of top side of leaf, or left side if collimator is vertical
- * @param measuredY1Side_mm      : measured position of bottom side of leaf, or right side if collimator is vertical
- * @param plannedEndPosition_mm  : planned position of leaf end
- * @param plannedY2Side_mm       : measured position of top side of leaf, or left side if collimator is vertical
- * @param plannedY1Side_mm       : measured position of bottom side of leaf, or right side if collimator is vertical
+ * @param stakittPK                  : primary key
+ * @param outputPK                   : output primary key
+ * @param SOPInstanceUID             : UID of source image
+ * @param beamName                   : name of beam in plan
+ * @param leafIndex                  : leaf number starting at 1
+ * @param leafPositionIndex          : leaf position number as it moves across the field
+ * @param measuredEndPosition_mm     : measured position of leaf end
+ * @param measuredY2Side_mm          : measured position of top side of leaf, or left side if collimator is vertical
+ * @param measuredY1Side_mm          : measured position of bottom side of leaf, or right side if collimator is vertical
+ * @param collimatorCenterOffsetX_mm : Offset of collimator in X
+ * @param collimatorCenterOffsetY_mm : Offset of collimator in Y
+ * @param plannedEndPosition_mm      : planned position of leaf end
+ * @param plannedY2Side_mm           : measured position of top side of leaf, or left side if collimator is vertical
+ * @param plannedY1Side_mm           : measured position of bottom side of leaf, or right side if collimator is vertical
  */
 
 case class Stakitt(
@@ -49,6 +51,8 @@ case class Stakitt(
                     measuredEndPosition_mm: Double, // measured position of leaf end
                     measuredY2Side_mm: Double, // measured position of Y2 top side of leaf, or left side if collimator is vertical
                     measuredY1Side_mm: Double, // measured position of Y1 bottom side of leaf, or right side if collimator is vertical
+                    collimatorCenterOffsetX_mm: Double, // Offset of collimator in X
+                    collimatorCenterOffsetY_mm: Double, // Offset of collimator in Y
                     plannedEndPosition_mm: Double, // planned position of leaf end
                     plannedY2Side_mm: Double, // measured position of Y2 top side of leaf, or left side if collimator is vertical
                     plannedY1Side_mm: Double // measured position of Y1 bottom side of leaf, or right side if collimator is vertical
@@ -93,14 +97,16 @@ case class Stakitt(
 
   override def toString: String =
     "Beam: " + beamName +
-      "  Leaf Index: " + leafIndex.formatted("%2d") +
-      "  Leaf Position Index: " + leafPositionIndex.formatted("%2d") +
+      "  Leaf Index: " + "%2d".format(leafIndex) +
+      "  Leaf Position Index: " + "%2d".format(leafPositionIndex) +
       "  leaf end offset_mm: " + Util.fmtDbl(leafEndOffset_mm) +
       "  minor side offset_mm: " + Util.fmtDbl(minorSideOffset_mm) +
       "  major side offset_mm: " + Util.fmtDbl(majorSideOffset_mm) +
       "  measuredEndPosition_mm: " + Util.fmtDbl(measuredEndPosition_mm) +
       "  measuredY2Side_mm: " + Util.fmtDbl(measuredY2Side_mm) +
       "  measuredY1Side_mm: " + Util.fmtDbl(measuredY1Side_mm) +
+      "  collimatorCenterOffsetX_mm: " + Util.fmtDbl(collimatorCenterOffsetX_mm) +
+      "  collimatorCenterOffsetY_mm: " + Util.fmtDbl(collimatorCenterOffsetY_mm) +
       "  plannedEndPosition_mm: " + Util.fmtDbl(plannedEndPosition_mm) +
       "  plannedY2Side_mm: " + Util.fmtDbl(plannedY2Side_mm) +
       "  plannedY1Side_mm: " + Util.fmtDbl(plannedY1Side_mm)
@@ -127,6 +133,10 @@ object Stakitt extends Logging {
 
     def measuredY1Side_mm = column[Double]("measuredY1Side_mm")
 
+    def collimatorCenterOffsetX_mm = column[Double]("collimatorCenterOffsetX_mm")
+
+    def collimatorCenterOffsetY_mm = column[Double]("collimatorCenterOffsetY_mm")
+
     def plannedEndPosition_mm = column[Double]("plannedEndPosition_mm")
 
     def plannedY2Side_mm = column[Double]("plannedY2Side_mm")
@@ -144,6 +154,8 @@ object Stakitt extends Logging {
         measuredEndPosition_mm,
         measuredY2Side_mm,
         measuredY1Side_mm,
+        collimatorCenterOffsetX_mm,
+        collimatorCenterOffsetY_mm,
         plannedEndPosition_mm,
         plannedY2Side_mm,
         plannedY1Side_mm
@@ -206,7 +218,7 @@ object Stakitt extends Logging {
     val ordering: String = output.dataDate.get.getTime + "  " + leafPosSeq.head.beamName
 
     // Facilitate the quick finding a result given leafPositionIndex and leafIndex.
-    private val leafPosMap: Map[(Int, Int), Stakitt] = leafPosSeq.map(lp => ((lp.leafPositionIndex, lp.leafIndex) -> lp)).toMap
+    private val leafPosMap: Map[(Int, Int), Stakitt] = leafPosSeq.map(lp => (lp.leafPositionIndex, lp.leafIndex) -> lp).toMap
 
     /** Fast leaf lookup by stakittPK */
     // val pkMap: Map[Long, Stakitt] = leafPosSeq.map(l => l.stakittPK.get -> l).toMap

@@ -19,9 +19,9 @@ case class LeafBoundaries(rtimage: AttributeList, xBorderList: Seq[Double]) exte
   private val verticalFieldExtent: CoarseVerticalFieldExtent = CoarseVerticalFieldExtent(new DicomImage(rtimage))
 
   /** Inflection points on the left */
-  val yPointListLo_pix: LeafBoundariesMeasuredAndAdjusted = FindLeafBoundaries(di.dicomImageLo, "X1", verticalFieldExtent).findLeafBoundaries_pix()
+  val yPointListX1_pix: LeafBoundariesMeasuredAndAdjusted = FindLeafBoundaries(di.dicomImageLo, "X1", verticalFieldExtent).findLeafBoundaries_pix()
 
   /** Inflection points on the right */
-  val yPointListHi_pix: LeafBoundariesMeasuredAndAdjusted = FindLeafBoundaries(di.dicomImageHi, "X2", verticalFieldExtent).findLeafBoundaries_pix()
+  val yPointListX2_pix: LeafBoundariesMeasuredAndAdjusted = FindLeafBoundaries(di.dicomImageHi, "X2", verticalFieldExtent).findLeafBoundaries_pix()
 
 }
