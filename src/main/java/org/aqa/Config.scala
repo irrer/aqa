@@ -1048,6 +1048,8 @@ object Config extends Logging {
 
   // =================================================================================
 
+  val PSMSamplePixelRectangle: Boolean = logMainText("PSMSamplePixelRectangle", "false").equalsIgnoreCase("true")
+
   val PSMWholeDetectorBeamNamePattern: String = logMainText("PSMWholeDetectorBeamNamePattern", ".*whole.*")
   private val PSMDiameter_mm: Double = logMainText("PSMDiameter_mm", "10.0").toDouble
   val PSMRadius_mm: Double = PSMDiameter_mm / 2

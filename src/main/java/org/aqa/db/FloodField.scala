@@ -17,6 +17,7 @@
 package org.aqa.db
 
 import com.pixelmed.dicom.AttributeList
+import com.pixelmed.dicom.AttributeTag
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ScalaUtil.DicomUtil
@@ -79,6 +80,21 @@ case class FloodField(
   /** Binary content as DICOM. */
   lazy val dicom: AttributeList = DicomUtil.zippedByteArrayToDicom(dicom_zip).head
 
+  private def doubleOf(tag: AttributeTag): Double = dicom.get(tag).getDoubleValues.head
+
+  /** For converting raw pixel values into scaled pixel values. */
+  lazy val RescaleSlope: Double = doubleOf(TagByName.RescaleSlope)
+
+  /** For converting raw pixel values into scaled pixel values. */
+  lazy val RescaleIntercept: Double = doubleOf(TagByName.RescaleIntercept)
+
+  /** Mean value of scaled pixels. */
+  lazy val meanScaledPixelValue: Double = FloodField.calculateMean(dicom)
+
+  lazy val dicomImageRaw: DicomImage = new DicomImage(dicom)
+
+  /** Image with pixel values scaled by dividing each pixel by the mean of the entire image. */
+  lazy val dicomImageNormalized: DicomImage = FloodField.makeNormalizedFF(dicom)
 }
 
 object FloodField extends Logging {
@@ -337,6 +353,56 @@ object FloodField extends Logging {
     )
     // @formatter:on
     floodField
+  }
+
+  /**
+   * Calculate the scaled mean value of the pixels.
+   *
+   * Do everything in Double precision to match the math of the PSM generator written in Matlab.
+   *
+   * @param al For this rtimage.
+   * @return Mean of scaled pixel values.
+   */
+  private def calculateMean(al: AttributeList): Double = {
+
+    def doubleOf(tag: AttributeTag): Double = al.get(tag).getDoubleValues.head
+
+    val slope = doubleOf(TagByName.RescaleSlope)
+    val intercept = doubleOf(TagByName.RescaleIntercept)
+
+    val img = new DicomImage(al)
+
+    val dbl = img.pixelData.map(row => row.map(p => (p * slope) + intercept))
+
+    val mean = dbl.flatten.sum / (img.width * img.height)
+
+    mean
+  }
+
+  /**
+   * Make a normalized version of the flood field.  This is done by dividing each pixel by the mean of all the FF pixels.
+   *
+   * Some care is done to do this in Double precision, because when summing the pixels with Float, some precision is lost.
+   *
+   * @param al: raw DICOM image
+   * @return New image.
+   */
+  private def makeNormalizedFF(al: AttributeList): DicomImage = {
+
+    def doubleOf(tag: AttributeTag): Double = al.get(tag).getDoubleValues.head
+
+    val slope = doubleOf(TagByName.RescaleSlope)
+    val intercept = doubleOf(TagByName.RescaleIntercept)
+
+    val img = new DicomImage(al)
+
+    val dbl = img.pixelData.map(row => row.map(p => (p * slope) + intercept))
+
+    val mean = dbl.flatten.sum / (img.width * img.height)
+
+    val flt = dbl.map(row => row.map(p => (p / mean).toFloat))
+
+    new DicomImage(flt)
   }
 
 }

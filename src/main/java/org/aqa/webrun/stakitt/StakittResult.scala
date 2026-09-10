@@ -6,6 +6,8 @@ import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.webrun.ExtendedData
 
+import java.awt.geom.Point2D
+
 case class StakittResult(stakitt: Stakitt, stakittAOI: StakittAOI) {}
 
 object StakittResult extends Logging {
@@ -20,6 +22,8 @@ object StakittResult extends Logging {
     * @param beamName Name of this beam
     * @param rtimageSOPUID RTIMAGE UID
     * @param planBorders Expected leaf positions specified in RTPLAN.
+    * @param collimatorCentering_mm Coordinates of center of collimator.
+    *
     * @return DB rows, each with AOI.
     */
   def constructStakittList( //
@@ -29,7 +33,8 @@ object StakittResult extends Logging {
       extendedData: ExtendedData,
       beamName: String,
       rtimageSOPUID: String,
-      planBorders: PlanBorders
+      planBorders: PlanBorders,
+      collimatorCentering_mm: Point2D.Double
   ): Seq[StakittResult] = {
 
     def constructOne(stakittAOI: StakittAOI): StakittResult = {
@@ -46,8 +51,8 @@ object StakittResult extends Logging {
         measuredEndPosition_mm = edgePosition_mm,
         measuredY2Side_mm = trans.pix2IsoCoordY(stakittAOI.rectangle.y) - Config.StakittVerticalMargin_mm,
         measuredY1Side_mm = trans.pix2IsoCoordY(stakittAOI.rectangle.y + stakittAOI.rectangle.height) + (Config.StakittVerticalMargin_mm * 2),
-        collimatorCenterOffsetX_mm = 0, // TODO
-        collimatorCenterOffsetY_mm = 0, // TODO
+        collimatorCenterOffsetX_mm = collimatorCentering_mm.getX,
+        collimatorCenterOffsetY_mm = collimatorCentering_mm.getY,
         plannedEndPosition_mm = stakittAOI.plannedXEdge_mm,
         plannedY2Side_mm = planBorders.yLeafBoundaryList(stakittAOI.yIndex),
         plannedY1Side_mm = planBorders.yLeafBoundaryList(stakittAOI.yIndex + 1)

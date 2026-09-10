@@ -21,6 +21,7 @@ import com.pixelmed.dicom.TagFromName
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.db.CollimatorPosition
 import org.aqa.Util
@@ -60,10 +61,12 @@ object CollimatorPositionAnalysis extends Logging {
                             rtplan: AttributeList
   ): Either[String, (CollimatorPosition, BufferedImage)] = {
     try {
+      Trace.trace()
       val collimatorAngle = Util.collimatorAngle(rtimage)
       val gantryAngle = Util.gantryAngle(rtimage)
 
       val expected_mm = MeasureTBLREdges.imageCollimatorPositions(rtimage, rtplan).toTBLR(collimatorAngle)
+      Trace.trace()
 
       val translator = new IsoImagePlaneTranslator(rtimage)
       val edges = {
@@ -78,24 +81,32 @@ object CollimatorPositionAnalysis extends Logging {
         } else
           MeasureTBLREdges.measure(pixelCorrectedImage, translator, Some(expected_mm), collimatorAngle, originalImage, new Point(0, 0), Config.PenumbraThresholdPercent / 100)
       }
+      Trace.trace()
 
       // expected edge values compensated with collimator centering.
       val expectedEdgesTBLR = MeasureTBLREdges.imageCollimatorPositions(rtimage, rtplan).toTBLR(collimatorAngle).addOffset(collimatorCenter)
+      Trace.trace()
       val floodOff = if (FloodCompensation && floodRectangle.isDefined) floodRectangle.get.getLocation else new Point(0, 0)
+      Trace.trace()
       val measuredTBLR = edges.measurementSet.floodRelative(floodOff).pix2iso(translator)
+      Trace.trace()
       val measuredX1X2Y1Y2 = measuredTBLR.toX1X2Y1Y2(collimatorAngle)
+      Trace.trace()
 
       val expMinusMeasured = expectedEdgesTBLR.minus(measuredTBLR).toX1X2Y1Y2(collimatorAngle)
+      Trace.trace()
       logger.info(
         "Beam " + beamName + " flood Comp: " + FloodCompensation +
           "\n    expected edges: " + expectedEdgesTBLR.toX1X2Y1Y2(collimatorAngle) +
           "\n    measured edges: " + measuredX1X2Y1Y2 +
           "\n    expected - measured: " + expMinusMeasured
       )
+      Trace.trace()
 
       val worst = expMinusMeasured.toSeq.map(m => m.abs).max
 
       val status = if (worst > Config.CollimatorCenteringTolerence_mm) ProcedureStatus.fail else ProcedureStatus.pass
+      Trace.trace()
 
       val uid = rtimage.get(TagFromName.SOPInstanceUID).getSingleStringValueOrEmptyString
 
@@ -121,6 +132,7 @@ object CollimatorPositionAnalysis extends Logging {
       )
 
       logger.info("CollimatorPosition\n" + colPosn)
+      Trace.trace()
 
       Right(colPosn, edges.bufferedImage)
     } catch {

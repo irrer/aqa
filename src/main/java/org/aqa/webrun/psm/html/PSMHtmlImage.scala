@@ -22,13 +22,6 @@ import java.awt.image.BufferedImage
 import java.awt.Rectangle
 import java.io.File
 import scala.collection.immutable.Seq
-import scala.collection.immutable.Seq
-import scala.collection.immutable.Seq
-import scala.collection.immutable.Seq
-import scala.collection.immutable.Seq
-import scala.collection.immutable.Seq
-import scala.collection.immutable.Seq
-import scala.collection.immutable.Seq
 import scala.xml.Elem
 
 /**
@@ -131,6 +124,7 @@ case class PSMHtmlImage(
     def show(x: Int, y: Int): Elem = {
       grid.get(x, y) match {
         case Some(beam) =>
+          // Trace.trace(s"name: $name    beam: ${beam.psmBeam.beamName}    value: ${valueGetter(beam.psmBeam)}")
           val backgroundColor = {
             if (specialBeamNameList.contains(beam.psmBeam.beamName))
               "#dddddd"
@@ -164,7 +158,7 @@ case class PSMHtmlImage(
 
     // val trans = new IsoImagePlaneTranslator(resultList.head.rtimage)
 
-    def fmt(d: Double): String = "%8.2f".format(d).trim
+    def fmt(d: Double): String = "%8.3f".format(d).trim
 
     def drawHeading(): Unit = {
       val text = "Circles show mean CU of each beam center"
@@ -186,7 +180,7 @@ case class PSMHtmlImage(
       val width = trans.iso2PixDistX(Config.PSMRadius_mm * 2).toInt
       val height = trans.iso2PixDistY(Config.PSMRadius_mm * 2).toInt
 
-      val text = fmt(result.psmBeam.mean_cu)
+      val text = fmt(valueGetter(result.psmBeam))
       val textHeight = ImageText.getTextDimensions(gc, text).getHeight.round
 
       val y = center_pix.getY - (trans.iso2PixDistY(Config.PSMRadius_mm) + textHeight)
@@ -236,8 +230,6 @@ case class PSMHtmlImage(
 
   if (center.isDefined)
     annotateMaxCoordinates(center.get, bufImage, trans)
-
-  // TODO add labeled beam values
 
   Config.applyWatermark(bufImage)
 

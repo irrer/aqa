@@ -20,7 +20,6 @@ import org.aqa.db.DicomSeries
 import org.aqa.db.FloodField
 import org.aqa.db.Machine
 import org.aqa.web.WebUtil
-import org.aqa.Config.PSMWholeDetectorBeamNamePattern
 import org.aqa.web.WebUtil.emptyValueMap
 import org.restlet.Response
 
@@ -96,25 +95,34 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
     */
   private def allBeamsPresent(rtplan: AttributeList, rtimageList: Seq[AttributeList]): Option[String] = {
     val planBeamNumberList = getPlanBeamNumberList(rtplan)
+
+    def nameOf(BeamNumber: Int): Option[String] = {
+      val beamAl = Util.getBeamOfRtimage(rtplan, BeamNumber)
+      if (beamAl.isDefined) {
+        val name = beamAl.get.get(TagByName.BeamName).getSingleStringValueOrEmptyString
+        if (name.nonEmpty)
+          Some(name)
+        else
+          None
+      } else
+        None
+    }
+
     val rtimageBeamNumberList = rtimageList.flatMap(rtimage => DicomUtil.findAllTag(rtimage, TagByName.ReferencedBeamNumber)).map(_.getIntegerValues.head).sorted
 
-    val missingBeamNumberList = planBeamNumberList.diff(rtimageBeamNumberList)
+    val missingBeamNumberList: Seq[Int] = {
+
+      def beamNumberIsWholeDetector(beamNumber: Int): Boolean = {
+        nameOf(beamNumber).isDefined && nameOf(beamNumber).get.matches(Config.PSMWholeDetectorBeamNamePattern)
+      }
+
+      val all = planBeamNumberList.diff(rtimageBeamNumberList)
+      all.filterNot(beamNumber => beamNumberIsWholeDetector(beamNumber))
+    }
 
     if (missingBeamNumberList.isEmpty)
       None
     else {
-      def nameOf(BeamNumber: Int): Option[String] = {
-        val beamAl = Util.getBeamOfRtimage(rtplan, BeamNumber)
-        if (beamAl.isDefined) {
-          val name = beamAl.get.get(TagByName.BeamName).getSingleStringValueOrEmptyString
-          if (name.nonEmpty)
-            Some(name)
-          else
-            None
-        } else
-          None
-      }
-
       val missingBeamNameList = missingBeamNumberList.flatMap(nameOf)
 
       val nl = WebUtil.titleNewline
@@ -186,7 +194,7 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
   }
 
   private def isWholeDetectorBeamName(beamName: String): Boolean = {
-    beamName.toLowerCase.matches(PSMWholeDetectorBeamNamePattern)
+    beamName.toLowerCase.matches(Config.PSMWholeDetectorBeamNamePattern)
   }
 
   override def validate(valueMap: ValueMapT, alList: Seq[AttributeList], xmlList: Seq[Elem]): Either[StyleMapT, RunReqClass] = {
@@ -198,6 +206,10 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
     def referencedSeriesList = rtimageList.map(Util.serInstOfAl).distinct
     val planUIDReferenceList: Seq[String] = rtimageList.flatMap(Util.getRtplanSop).distinct
 
+    /**
+      * Determine of all required beams are present.  If so, return None, else return a string describing the problem.
+      * @return None on success, error message on failure.
+      */
     def allBeams: Option[String] = {
       val rtplan = getRtplan(rtplanList, planUIDReferenceList.head).get
       allBeamsPresent(rtplan, rtimageList)
@@ -223,16 +235,19 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
       case _ if rtplanOpt.isEmpty                                         => formError("Could not get RTPLAN.  Upload the RTPLAN with the RTIMAGE files.")
       case _ if allBeams.nonEmpty                                         => formError(allBeams.get)
       case _ if getFloodField(rtplanOpt.get, alList, rtimageList).isEmpty => formError("Could not find compatible flood field.  Try running the 'FloodField' procedure with the latest flood field.")
-      case _ if getWholeDetector.isEmpty                                  => formError("Can not find whole detector image.")
+      // case _ if getWholeDetector.isEmpty                                  => formError("Can not find whole detector image.")
       case _ =>
         val rtplan = getRtplan(rtplanList, planUIDReferenceList.head).get
         val planBeamNumberSet = getPlanBeamNumberList(rtplan).toSet
-        val wholeDetector = getWholeDetector.get
+        val wholeDetector = getWholeDetector
         val imgList = {
           val list0 = rtimageList.filterNot(FloodUtil.isFloodField)
           val list1 = list0.filter(rtimage => planBeamNumberSet.contains(beamNumberOf(rtimage).get))
           val list2 = Util.sortByDateTime(list1)
-          val list3 = list2.filterNot(rtimage => Util.sopOfAl(rtimage).equals(Util.sopOfAl(wholeDetector)))
+          val list3 = {
+            val wdSop = if (wholeDetector.isDefined) Util.sopOfAl(wholeDetector.get) else ""
+            list2.filterNot(rtimage => Util.sopOfAl(rtimage).equals(wdSop))
+          }
           list3
         }
         val floodField = getFloodField(rtplan, alList, rtimageList).get
@@ -250,14 +265,20 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
 
     val rtplan = getRtplan(rtplanList, planUIDReferenceList.head).get
 
-    def getWholeDetector: AttributeList = rtimageList.find(rtimage => isWholeDetectorBeamName(Util.getBeamNameOfRtimage(rtplan, rtimage).get)).get
+    def getWholeDetector: Option[AttributeList] = {
+      val j = rtimageList.find(rtimage => isWholeDetectorBeamName(Util.getBeamNameOfRtimage(rtplan, rtimage).get))
+      j
+    } // .get
 
     val planBeamNumberSet = getPlanBeamNumberList(rtplan).toSet
     val wholeDetector = getWholeDetector
     val imgList = {
       val list1 = rtimageList.filter(rtimage => planBeamNumberSet.contains(beamNumberOf(rtimage).get))
       val list2 = Util.sortByDateTime(list1)
-      val list3 = list2.filterNot(rtimage => Util.sopOfAl(rtimage).equals(Util.sopOfAl(wholeDetector)))
+      val list3 = {
+        val wdSop = if (wholeDetector.isDefined) Util.sopOfAl(wholeDetector.get) else ""
+        list2.filterNot(rtimage => Util.sopOfAl(rtimage).equals(wdSop))
+      }
       list3
     }
     val floodField = getFloodField(rtplan, alList, rtimageList).get

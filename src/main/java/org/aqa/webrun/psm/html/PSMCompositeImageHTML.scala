@@ -2,36 +2,29 @@ package org.aqa.webrun.psm.html
 
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
-import edu.umro.ImageUtil.ImageText
-import edu.umro.ImageUtil.ImageUtil
-import edu.umro.ImageUtil.IsoImagePlaneTranslator
-import org.aqa.Config
-import org.aqa.Util
-import org.aqa.web.WebUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 import org.aqa.webrun.psm.PSMBeamAnalysisResult
 
-import java.awt.Color
-import java.awt.image.BufferedImage
 import java.io.File
 import javax.vecmath.Point2i
 
-class PSMCompositeImageHTML(extendedData: ExtendedData) extends Logging {
+class PSMCompositeImageHTML(extendedData: ExtendedData, fileBaseName: String) extends Logging {
 
-  val imageFileName = "compositeImage.png"
+  val imageFileName = s"$fileBaseName.png"
   val imageFile = new File(extendedData.output.dir, imageFileName)
 
-  val htmlFileName = "compositeImage.html"
+  val htmlFileName = s"$fileBaseName.html"
   val htmlFile = new File(extendedData.output.dir, htmlFileName)
 
-  private def fmt(d: Double): String = "%8.2f".format(d).trim
+  // private def fmt(d: Double): String = "%8.2f".format(d).trim
 
   /**
     * Put the CU for each image on the composite image.
-    * @param image Composite image.
-    * @param resultList List of analysis results.
+    * @ param image Composite image.
+    * @ param resultList List of analysis results.
     */
+  /*
   private def annotateCompositeImage(image: BufferedImage, resultList: Seq[PSMBeamAnalysisResult]): Unit = {
     val trans = new IsoImagePlaneTranslator(resultList.head.rtimage)
     val gc = ImageUtil.getGraphics(image)
@@ -61,6 +54,7 @@ class PSMCompositeImageHTML(extendedData: ExtendedData) extends Logging {
 
     resultList.foreach(annotateCompositeResult)
   }
+   */
 
   /**
     * Make a composite image that contains all of the
@@ -90,42 +84,8 @@ class PSMCompositeImageHTML(extendedData: ExtendedData) extends Logging {
       pa
     }
 
-    new DicomImage(pixelArray)
-  }
-
-  private def makeCompositeBufferedImage(resultList: Seq[PSMBeamAnalysisResult]): BufferedImage = {
-    val dicomImage = makeCompositeImage(resultList)
-    val bufImg = dicomImage.toBufferedImage(Color.white)
-
-    val trans = new IsoImagePlaneTranslator(resultList.head.rtimage)
-    Util.addGraticules(bufImg, trans, Color.GRAY)
-    bufImg
-
-  }
-
-  def make(resultList: Seq[PSMBeamAnalysisResult]): Unit = {
-
-    val compositeImage = makeCompositeBufferedImage(resultList)
-
-    annotateCompositeImage(compositeImage, resultList)
-    Util.writePng(compositeImage, imageFile)
-    logger.info(s"Wrote composite image file ${imageFile.getAbsolutePath}")
-
-    val content = {
-      <div class="row">
-        <div class="col-md-10 col-md-offset-1" >
-          <h4 style="text-align: center;">Mean CU Readings for each beam center</h4>
-          <img src={imageFileName} class="img-responsive" alt="Composite image showing centers of all beams."/>
-        </div>
-        <div class="row">
-          <p style="margin:75px;"> </p>
-        </div>
-      </div>
-    }
-
-    val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), pageTitle = "PSM Composite", runScript = None)
-    Util.writeFile(htmlFile, text)
-    logger.info(s"Wrote composite index file ${htmlFile.getAbsolutePath}")
+    val di = new DicomImage(pixelArray)
+    di
   }
 
 }

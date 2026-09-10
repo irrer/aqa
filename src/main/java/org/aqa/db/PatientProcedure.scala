@@ -116,7 +116,7 @@ object PatientProcedure extends Logging {
     * @param institution Institution this belongs to.
     * @param procedure Procedure to be used.
     */
-  case class ExtendedData(patientProcedure: PatientProcedure, institution: Institution, procedure: Procedure, dicomAnonymous: DicomAnonymous, mostRecentSeriesDate: Option[Timestamp]) {}
+  case class ExtendedData(patientProcedure: PatientProcedure, institution: Institution, procedure: Procedure, dicomAnonymous: DicomAnonymous, mostRecentSeriesDate: Option[Timestamp], count: Int = 0) {}
 
   /**
     * Get the listing of PatientProcedure data in web interface.
@@ -140,9 +140,11 @@ object PatientProcedure extends Logging {
         inputDate <- Input.query.filter(i => i.inputPK === ds.inputPK).map(_.dataDate)
       } yield inputDate
 
-      val date = Db.run(action.result).flatten.sortBy(_.getTime).lastOption
+      val list = Db.run(action.result).flatten
+      val count = list.size
+      val date = list.sortBy(_.getTime).lastOption
 
-      extData.copy(mostRecentSeriesDate = date)
+      extData.copy(mostRecentSeriesDate = date, count = count)
     }
 
     val list = listWithoutDates.map(addDate)

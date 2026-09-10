@@ -12,6 +12,7 @@ import org.aqa.Util
 import org.aqa.webrun.phase2.MeasureTBLREdges
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
+import org.aqa.Config
 
 import java.awt.Point
 import java.awt.geom.Point2D
@@ -128,7 +129,56 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
 
     def pixToCU(coordinate: Point2i): Double = (dicomImage.get(coordinate.getX, coordinate.getY) * RescaleSlope) + RescaleIntercept
 
-    val coordinateList = PSMUtil.pixelCoordinatesWithinRadius(rtimage, center_pix)
+    /** Make a point list that exactly matches the Matlab version. */
+    val JCoordinateList: IndexedSeq[Point2i] = { // TODO rm
+
+      val matlabCenterPointList = Seq(
+        new Point2i(596, 596),
+        new Point2i(596, 298),
+        new Point2i(298, 596),
+        new Point2i(894, 596),
+        new Point2i(596, 894)
+      )
+
+      val radius = 3
+      val range = -radius to radius
+
+      val c = matlabCenterPointList.minBy(p => center_pix.distance(p.x, p.y))
+
+      val pointList = for (x <- range; y <- range) yield new Point2i(c.x + x - 1, c.y + y - 1)
+
+      pointList
+    }
+
+    val coordinateList = {
+      if (Config.PSMSamplePixelRectangle) // TODO rm
+        JCoordinateList // TODO rm
+      else
+        PSMUtil.pixelCoordinatesWithinRadius(rtimage, center_pix) // TODO put back
+    }
+
+    /**
+     * Use the <code>coordinateList</code> to select pixels from the given attribute list, and then scale the
+     * values according to the attribute list.
+     *
+     * @param al For this DICOM.
+     * @return Mean value of pixels scaled to be in cu.
+     */
+    def meanOfFloodFieldAOI(): Double = {
+      val ff = psmRunReq.floodField
+      val list = coordinateList.map(c => ff.dicomImageRaw.get(c.getX, c.getY))
+
+      def scaleAndNormalizePix(p: Float): Double = {
+        val scaled = (p * ff.RescaleSlope) + ff.RescaleIntercept
+        scaled / ff.meanScaledPixelValue
+      }
+
+      val scaledList = list.map(scaleAndNormalizePix)
+      val sum = scaledList.sum
+      val mean = sum / coordinateList.size
+      mean
+    }
+
 
     /**
      * Use the <code>coordinateList</code> to select pixels from the given attribute list, and then scale the
@@ -140,11 +190,14 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
     def meanCuOf(al: AttributeList): Option[Double] = {
 
       val di = new DicomImage(al)
-      val unscaledMean = coordinateList.map(c => di.get(c.getX, c.getY)).sum.toDouble / coordinateList.size
+      val unscaledList = coordinateList.map(c => di.get(c.getX, c.getY).toDouble)
+      val scaledList = Phase2Util.pixToDose(unscaledList, al)
+      val scaledSum = scaledList.sum
+      val scaledMean = scaledSum / coordinateList.size
 
-      val floodFieldMean_cu = Phase2Util.pixToDose(Seq(unscaledMean), al).head
-      Some(floodFieldMean_cu)
+      Some(scaledMean)
     }
+
 
     val pixelList = coordinateList.map(coordinate => (coordinate, pixToCU(coordinate))).toMap
 
@@ -158,9 +211,9 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
 
     val ms = if (edges.isDefined) Some(edges.get.measurementSet) else None
 
-    val floodField_cu: Option[Double] = meanCuOf(psmRunReq.floodField.dicom)
+    val floodField_cu: Double = meanOfFloodFieldAOI()
 
-    val wholeDetector_cu = meanCuOf(psmRunReq.wholeDetector)
+    val wholeDetector_cu = if (psmRunReq.wholeDetector.isDefined) meanCuOf(psmRunReq.wholeDetector.get) else None
 
     // If this is a redo, then this will remove the old one from the cache.
     PSMGrid.remove(extendedData.machine.machinePK.get, extendedData.output.dataDate.get)
@@ -182,7 +235,7 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
       bottom_mm = ms.map(_.bottom),
       left_mm = ms.map(_.left),
       right_mm = ms.map(_.right),
-      floodField_cu = floodField_cu,
+      floodField_cu = Some(floodField_cu),
       wholeDetector_cu = wholeDetector_cu,
       beamResponseNormalized = None // to be replaced when all beams are calculated.
 

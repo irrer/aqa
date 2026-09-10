@@ -1340,6 +1340,8 @@ Note that when building a package for release, the Maven build process uses the 
 
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
+    <PSMSamplePixelRectangle>false</PSMSamplePixelRectangle>
+
     <!-- Regular expression to test whether the name of the beam indicates it is a Whole Detector beam.  Case-insensitive.
     Defaults to:  .*whole.*  -->
     <PSMWholeDetectorBeamNamePattern>.*whole.*</PSMWholeDetectorBeamNamePattern>

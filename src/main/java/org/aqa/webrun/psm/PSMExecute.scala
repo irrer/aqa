@@ -7,6 +7,7 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.db.PSM
+import org.aqa.db.PSMBeam
 import org.aqa.webrun.psm.html.PSMCompositeImageHTML
 import org.aqa.webrun.psm.html.PSMMainHTML
 
@@ -32,7 +33,7 @@ class PSMExecute(extendedData: ExtendedData, psmRunReq: PSMRunReq) extends Loggi
     * @param brImg  BR (Beam Response) image.
     * @return PSM image.
     */
-  private def makePsmImage(rawImg: DicomImage, brImg: DicomImage): DicomImage = {
+  private def JmakePsmImage(rawImg: DicomImage, brImg: DicomImage): DicomImage = {
     def doRow(y: Int): IndexedSeq[Float] = {
 
       /**
@@ -71,11 +72,14 @@ class PSMExecute(extendedData: ExtendedData, psmRunReq: PSMRunReq) extends Loggi
     val list = {
       val l = psmRunReq.rtimageList.par.map(process)
       val pointZero = new Point2D.Double(0.0, 0.0)
+
       def distToCenter(r: PSMBeamAnalysisResult): Double = {
         val p = new Point2D.Double(r.psmBeam.xCenter_mm, r.psmBeam.yCenter_mm)
         p.distance(pointZero)
       }
       val centerBeam = l.minBy(distToCenter)
+
+      val centerBeamResponse = centerBeam.psmBeam.mean_cu * centerBeam.psmBeam.floodField_cu.get
 
       /**
         * Fix the beamResponseNormalized.
@@ -83,8 +87,39 @@ class PSMExecute(extendedData: ExtendedData, psmRunReq: PSMRunReq) extends Loggi
         * @return A new result with the normalized beam response fixed.
         */
       def fix(result: PSMBeamAnalysisResult): PSMBeamAnalysisResult = {
-        val newPsmBeam = result.psmBeam.copy(beamResponseNormalized = Some(result.psmBeam.mean_cu / centerBeam.psmBeam.mean_cu))
+
+        /**
+          * Show a nicely formatted version of results in the log.
+          *
+          * @param newPsmBeam Log this beam.
+          */
+        def logResult(newPsmBeam: PSMBeam): Unit = {
+          def fmt(od: Option[Double]): String = { if (od.isDefined) "%32.28f".format(od.get) else " NA " }
+
+          val pc = trans.iso2Pix(result.psmBeam.center)
+          val nm = "%-6s".format(newPsmBeam.beamName)
+
+          val center = {
+            def fm(d: Double) = "%8.2f".format(d)
+            s"center pix: ${fm(pc.getX)}, ${fm(pc.getY)}"
+          }
+
+          logger.info(
+            s"PSM Beam $nm    $center" +
+              s"    floodField_cu: ${fmt(newPsmBeam.floodField_cu)}" +
+              s"    mean_cu: ${fmt(Some(newPsmBeam.mean_cu))}" +
+              s"    beamResponseNormalized: ${fmt(newPsmBeam.beamResponseNormalized)}"
+          )
+
+        }
+
+        val beamResponseNormalized = (result.psmBeam.mean_cu * result.psmBeam.floodField_cu.get) / centerBeamResponse
+
+        val newPsmBeam = result.psmBeam.copy(beamResponseNormalized = Some(beamResponseNormalized))
         val newResult = result.copy(psmBeam = newPsmBeam)
+
+        logResult(newPsmBeam)
+
         newResult
       }
       l.map(fix)
@@ -103,22 +138,33 @@ class PSMExecute(extendedData: ExtendedData, psmRunReq: PSMRunReq) extends Loggi
 
   private val gradientAscent: Option[PSMGradientAscent] = interpolator.map(new PSMGradientAscent(_))
 
+  /*
+  private val psmImage: Option[DicomImage] = {
+    if (gradientAscent.isEmpty)
+      None
+    else {
+      ???
+    }
+  }
+   */
+
   // ----------------------------------------------------------------------------------------
 
   // main processing.  Create a scaled DicomImage and Attribute list for each value.
 
-  private val ffImg = new DicomImage(psmRunReq.floodField.dicom).scalePixels(psmRunReq.floodField.dicom)
+  // private val ffImg = new DicomImage(psmRunReq.floodField.dicom).scalePixels(psmRunReq.floodField.dicom)
+  private val ffImageNormalized = psmRunReq.floodField.dicomImageNormalized
 
-  private val wdAl = psmRunReq.wholeDetector
-  private val wdImg = new DicomImage(wdAl).scalePixels(wdAl)
+  // private val wdAl = psmRunReq.wholeDetector
+  // private val wdImg = new DicomImage(wdAl).scalePixels(wdAl)
 
-  private val rawImg = makeRawImage(wdImg, ffImg)
+  // private val rawImg = makeRawImage(wdImg, ffImgNormalized)
 
-  private val cbrImg = new PSMCompositeImageHTML(extendedData).makeCompositeImage(resultList)
+  private val compositeNonNormalizedImg = new PSMCompositeImageHTML(extendedData, "compositeNonNormalized").makeCompositeImage(resultList)
 
-  private val brImg = interpolator.map(i => i.normalizedDicomImage)
+  // private val brImg = interpolator.map(i => i.normalizedDicomImage)
 
-  private val psmImg = brImg.map(makePsmImage(rawImg, _))
+  private val psmImg = interpolator.map(i => i.normalizedDicomImage)
 
   // ----------------------------------------------------------------------------------------
 
@@ -131,7 +177,7 @@ class PSMExecute(extendedData: ExtendedData, psmRunReq: PSMRunReq) extends Loggi
           image = psmImg.get,
           xMax_mm = gradientAscent.get.getMaxPoint_iso.getX,
           yMax_mm = gradientAscent.get.getMaxPoint_iso.getY,
-          wdAl
+          psmRunReq.floodField.dicom
         )
       )
     else
@@ -148,22 +194,32 @@ class PSMExecute(extendedData: ExtendedData, psmRunReq: PSMRunReq) extends Loggi
   private val insertedList = resultList.map(result => result.psmBeam.insert)
   logger.info(s"Inserted ${insertedList.length} PSMBeam rows into database.")
 
+  /* For validating against Matlab implementation.
+  if (true) {
+    PSMImitate(psmRunReq.floodField.dicom, psmRunReq.rtimageList, grid)
+  }
+   */
+
+  private val wdImg = psmRunReq.wholeDetector.map(wd => new DicomImage(wd))
+
   private val mainHTML = new PSMMainHTML(
     extendedData = extendedData,
     rtplan = rtplan,
     resultList = resultList,
     psmGradientAscent = gradientAscent,
     ffAl = psmRunReq.floodField.dicom,
-    ffImg = ffImg,
-    wdAl = wdAl,
+    ffImgNormalized = ffImageNormalized,
+    wdAl = psmRunReq.wholeDetector,
     wdImg = wdImg,
-    rawImg = rawImg,
-    cbrImg = cbrImg,
-    brImg = brImg,
+    // rawImg = rawImg,
+    beamResponsesNotNormalizedImg = compositeNonNormalizedImg,
+    // brImg = brImg,
     psmImg = psmImg,
     psmRunReq
   )
 
   mainHTML.make()
+  /*
+   */
 
 }

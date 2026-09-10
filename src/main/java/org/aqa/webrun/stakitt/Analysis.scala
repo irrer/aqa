@@ -9,6 +9,9 @@ import org.aqa.webrun.stakitt.leafBoundaries.LeafBoundaries
 import org.aqa.Util
 import org.aqa.run.ProcedureStatus
 import org.aqa.run.ProcedureStatus.ProcedureStatus
+import org.aqa.webrun.phase2.CollimatorCenteringResource
+
+import java.awt.geom.Point2D
 
 /**
   * Container for results of analysis.
@@ -129,7 +132,7 @@ object Analysis extends Logging {
     * @param rtplan DICOM plan.
     * @return result or error
     */
-  def analyze(extendedData: ExtendedData, rtimage: AttributeList, rtplan: AttributeList): Either[Failure, Analysis] = {
+  def analyze(extendedData: ExtendedData, rtimage: AttributeList, rtplan: AttributeList, collimatorCenteringResource: Option[CollimatorCenteringResource] = None): Either[Failure, Analysis] = {
 
     val dicomImage = new DicomImage(rtimage)
     val trans = new IsoImagePlaneTranslator(rtimage)
@@ -150,6 +153,20 @@ object Analysis extends Logging {
       val beamName = Util.getBeamNameOfRtimage(rtplan, rtimage).get
       val rtimageSOP = Util.sopOfAl(rtimage)
 
+      val collimatorCenter: Point2D.Double = {
+        try {
+          if (collimatorCenteringResource.isDefined) {
+            val c = collimatorCenteringResource.get.centerOfBeam(beamName)
+            c
+          } else
+            new Point2D.Double()
+        } catch {
+          case t: Throwable =>
+            logger.error(s"Unexpected error while getting collimator centering for Stakitt.  Assuming 0,0 : ${fmtEx(t)}")
+            new Point2D.Double()
+        }
+      }
+
       val stakittList = StakittResult.constructStakittList( //
         aoiList,
         leafEndBySinglePixel,
@@ -157,7 +174,8 @@ object Analysis extends Logging {
         extendedData,
         beamName,
         rtimageSOP,
-        planBorders
+        planBorders,
+        collimatorCenter
       )
 
       val analysis = Analysis(dicomImage, rtimage, xAoiPairList, yLeafBoundaries, leafEndBySinglePixel, stakittList, planBorders)

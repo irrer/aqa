@@ -4,7 +4,7 @@ import com.pixelmed.dicom.AttributeList
 import org.aqa.db.FloodField
 import org.aqa.run.RunReqClass
 
-case class PSMRunReq(rtplan: AttributeList, wholeDetector: AttributeList, rtimageList: Seq[AttributeList], floodField: FloodField) extends RunReqClass {
+case class PSMRunReq(rtplan: AttributeList, wholeDetector: Option[AttributeList], rtimageList: Seq[AttributeList], floodField: FloodField) extends RunReqClass {
 
   case class Beam(top: Double, bottom: Double, left: Double, right: Double) {
     val width: Double = (right - left).abs

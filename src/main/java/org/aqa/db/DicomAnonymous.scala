@@ -392,7 +392,25 @@ object DicomAnonymous extends Logging {
         val key = makeCacheKeyGet(institutionPK: Long, attributeHash: String)
         anonymizedDicomAttributeCache.get(key)
       }
+  }
 
+  /**
+    * Get entries that have a <code>value</code> field equal to the passed parameter.
+    * @param anonymousValue Find item with this anonymized value.
+    * @return DB entry, if it exists.
+    */
+  def getByAnonymousValue(anonymousValue: String): Option[DicomAnonymous] = {
+
+    val action = {
+      DicomAnonymous.query.filter(da => da.value === anonymousValue)
+    }
+
+    val listFromDb = Db.run(action.result)
+
+    if (listFromDb.size > 1)
+      logger.error(s"Unexpected error: Retrieval yielded multiple entries, should have only been 1 or 0, but returned ${listFromDb.size} entries. Requested: $anonymousValue  Returned: $listFromDb")
+
+    listFromDb.headOption
   }
 
 }

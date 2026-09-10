@@ -16,6 +16,17 @@ class StakittHTML(extendedData: ExtendedData, analysisList: Seq[Either[Analysis.
 
   // private case class ElemJS(elem: Elem, js: String) {}
 
+  private val stakittDir = {
+    val dir = {
+      if (extendedData.procedure.isStakitt)
+        extendedData.output.dir
+      else
+        new File(extendedData.output.dir, "stakitt")
+    }
+    dir.mkdirs()
+    dir
+  }
+
   /**
     * Add tab related fields to the result of each image.
     * @param foa Failure or Analysis
@@ -43,7 +54,7 @@ class StakittHTML(extendedData: ExtendedData, analysisList: Seq[Either[Analysis.
     val id: String = WebUtil.textToId(beamName) + "_" + index
 
     /** Put content for this beam here. */
-    val dir: File = new File(extendedData.output.dir, id)
+    val dir: File = new File(stakittDir, id)
 
     // Ensure that the directory has been created.
     dir.mkdirs()
@@ -116,13 +127,35 @@ class StakittHTML(extendedData: ExtendedData, analysisList: Seq[Either[Analysis.
     elem
   }
 
+  private def headerElem(content: Elem) = {
+    <div>
+      <div class ="row">
+        <div class ="col-md-2">
+          <h3>Stakitt</h3>
+        </div>
+        <div class ="col-md-3">
+          {WebUtil.showPrecision}
+        </div>
+      </div>
+      {content}
+    </div>
+  }
+
+  private def noImages(): ElemJS = {
+    ElemJS(headerElem(<h4>No Stakitt Images</h4>), "")
+  }
+
+  private def singleImage(): ElemJS = {
+    val singleTabContent = makeTabContent(tabList.head)
+    ElemJS(headerElem(singleTabContent.elem), singleTabContent.js)
+  }
+
   private def multipleImages(): ElemJS = {
     val tabHeaderList: Seq[Elem] = tabList.map(makeTabHeader)
     val tabContentList: Seq[ElemJS] = tabList.map(makeTabContent)
 
     val content = {
       <div>
-        {WebUtil.showPrecision}<p></p>
         <ul class="nav nav-tabs">
           {tabHeaderList}
         </ul>
@@ -132,26 +165,17 @@ class StakittHTML(extendedData: ExtendedData, analysisList: Seq[Either[Analysis.
       </div>
     }
 
-    ElemJS(content, tabContentList.map(_.js).mkString("\n"))
-  }
-
-  private def singleImage(): ElemJS = {
-    val singleTabContent = makeTabContent(tabList.head)
-    val elem = {
-      <div>
-        {WebUtil.showPrecision}{singleTabContent.elem}
-      </div>
-    }
-    ElemJS(elem, singleTabContent.js)
+    ElemJS(headerElem(content), tabContentList.map(_.js).mkString("\n"))
   }
 
   def makeHTML(): Unit = {
 
     val innerElem: ElemJS = {
-      if (tabList.size == 1)
-        singleImage()
-      else
-        multipleImages()
+      tabList.size match {
+        case 0 => noImages()
+        case 1 => singleImage()
+        case _ => multipleImages()
+      }
     }
 
     val content = {
@@ -166,7 +190,15 @@ class StakittHTML(extendedData: ExtendedData, analysisList: Seq[Either[Analysis.
 
     val text = WebUtil.wrapBody(ExtendedData.wrapExtendedData(extendedData, content), "Stakitt", refresh = None, c3 = true, runScript = runScript)
 
-    val htmlFile = new File(extendedData.output.dir, "display.html")
+    val htmlFile = {
+      val htmlFileName = {
+        if (extendedData.procedure.isStakitt)
+          "display.html"
+        else
+          "index.html"
+      }
+      new File(stakittDir, htmlFileName)
+    }
     Util.writeFile(htmlFile, text)
   }
 

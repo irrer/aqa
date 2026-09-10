@@ -15,34 +15,37 @@ import org.aqa.webrun.psm.PSMCharts
 import org.aqa.webrun.psm.PSMGradientAscent
 import org.aqa.webrun.psm.PSMGrid
 import org.aqa.webrun.psm.PSMRunReq
-import org.aqa.webrun.psm.PSMUtil
 
 import java.awt.Color
 import java.io.File
+import javax.vecmath.Point2d
 import scala.collection.immutable.Seq
 import scala.xml.Elem
 
 /**
- * Generate HTML page to show all PSM data.
- */
+  * Generate HTML page to show all PSM data.
+  */
 
 class PSMMainHTML(
-                   extendedData: ExtendedData,
-                   rtplan: AttributeList,
-                   resultList: Seq[PSMBeamAnalysisResult],
-                   psmGradientAscent: Option[PSMGradientAscent],
-                   ffAl: AttributeList,
-                   ffImg: DicomImage,
-                   wdAl: AttributeList,
-                   wdImg: DicomImage,
-                   rawImg: DicomImage,
-                   cbrImg: DicomImage,
-                   brImg: Option[DicomImage],
-                   psmImg: Option[DicomImage],
-                   psmRunReq: PSMRunReq
-                 ) extends Logging {
+    extendedData: ExtendedData,
+    rtplan: AttributeList,
+    resultList: Seq[PSMBeamAnalysisResult],
+    psmGradientAscent: Option[PSMGradientAscent],
+    ffAl: AttributeList,
+    ffImgNormalized: DicomImage,
+    wdAl: Option[AttributeList],
+    wdImg: Option[DicomImage],
+    beamResponsesNotNormalizedImg: DicomImage,
+    psmImg: Option[DicomImage],
+    psmRunReq: PSMRunReq
+) extends Logging {
 
   def make(): Unit = {
+
+    val centerResult = {
+      val centerPoint_mm = new Point2d(0, 0)
+      resultList.minBy(r => r.psmBeam.center.distance(centerPoint_mm))
+    }
 
     val resultHtml = new ResultHtml(extendedData, resultList)
 
@@ -52,47 +55,45 @@ class PSMMainHTML(
 
     def make(): (Elem, String) = {
 
-      val trans = new IsoImagePlaneTranslator(wdAl)
+      val trans = new IsoImagePlaneTranslator(centerResult.rtimage)
 
       val ffRow = PSMHtmlImage( //
         extendedData,
-        name = "Flood Field",
-        image = ffImg,
+        name = "Flood Field Normalized",
+        image = ffImgNormalized,
         grid = grid,
         trans,
         dir = dir,
-        al = Some(ffAl),
+        al = Some(centerResult.rtimage),
         valueGetter = psmBeam => psmBeam.floodField_cu.get,
         color = Some(Color.white)
       )
 
-      val wdRow = PSMHtmlImage( //
-        extendedData,
-        name = "Whole Detector",
-        image = wdImg,
-        grid = grid,
-        trans,
-        dir = dir,
-        al = Some(wdAl),
-        valueGetter = psmBeam => psmBeam.wholeDetector_cu.get,
-        color = Some(Color.white)
-      )
+      /*
+      val wdRow: Option[PSMHtmlImage] = {
+        if (wdImg.isDefined && wdAl.isDefined)
+          Some(
+            PSMHtmlImage( //
+              extendedData,
+              name = "Whole Detector",
+              image = wdImg.get,
+              grid = grid,
+              trans,
+              dir = dir,
+              al = wdAl,
+              valueGetter = psmBeam => psmBeam.wholeDetector_cu.get,
+              color = Some(Color.white)
+            )
+          )
+        else
+          None
+      }
+       */
 
-      val rawRow = PSMHtmlImage( //
+      val beamResponsesNotNormalizedRow = PSMHtmlImage( //
         extendedData,
-        name = "Raw Image = Flood Field * Whole Detector",
-        image = rawImg,
-        grid = grid,
-        trans,
-        dir = dir,
-        valueGetter = psmBeam => psmBeam.rawImage,
-        color = Some(Color.white)
-      )
-
-      val cbrRow = PSMHtmlImage( //
-        extendedData,
-        name = "Beam Response Beam Centers",
-        image = cbrImg,
+        name = "Beam Responses Not Normalized",
+        image = beamResponsesNotNormalizedImg,
         grid = grid,
         trans,
         dir = dir,
@@ -101,19 +102,41 @@ class PSMMainHTML(
         color = Some(Color.white)
       )
 
-      val brRow: Option[PSMHtmlImage] = {
-        if (psmGradientAscent.isDefined && brImg.isDefined)
+      val beamResponsesWithNormalizationImg: DicomImage = {
+
+        val centerResponse = grid.centerBeam.mean_cu.toFloat
+
+        def func(p: Float): Float = {
+          p / centerResponse
+        }
+
+        beamResponsesNotNormalizedImg.fun1(func)
+      }
+
+      val beamResponsesWithNormalizationRow = PSMHtmlImage( //
+        extendedData,
+        name = "Beam Responses With Normalization",
+        image = beamResponsesWithNormalizationImg,
+        grid = grid,
+        trans,
+        dir = dir,
+        valueGetter = psmBeam => psmBeam.beamResponseNormalized.get,
+        resultList = resultList,
+        color = Some(Color.white)
+      )
+
+      val psmRow: Option[PSMHtmlImage] = {
+        if (psmImg.isDefined)
           Some(
-            PSMHtmlImage(
+            PSMHtmlImage( //
               extendedData,
-              name = "Beam Response Interpolated and Normalized",
-              image = brImg.get,
+              name = "PSM Interpolated",
+              image = psmImg.get,
               grid = grid,
               trans,
               dir = dir,
+              al = None,
               valueGetter = psmBeam => psmBeam.beamResponseNormalized.get,
-              center = Some(psmGradientAscent.get.getMaxPoint_iso),
-              resultList = resultList,
               color = Some(Color.white)
             )
           )
@@ -121,12 +144,13 @@ class PSMMainHTML(
           None
       }
 
-      val psmRow: Option[PSMHtmlImage] = {
-        if (psmImg.isDefined)
-          Some(PSMHtmlImage(extendedData, name = "PSM = Raw / Beam Response", image = psmImg.get, grid = grid, trans, dir = dir, valueGetter = psmBeam => psmBeam.psm, color = Some(Color.white)))
-        else
-          None
-      }
+      val rowList: Seq[PSMHtmlImage] = Seq(
+        Some(ffRow),
+        // wdRow,
+        Some(beamResponsesNotNormalizedRow),
+        Some(beamResponsesWithNormalizationRow),
+        psmRow
+      ).flatten
 
       val content = {
         <table class="table responsive table-bordered" style="margin-top:25px;">
@@ -141,20 +165,12 @@ class PSMMainHTML(
               <th>
                 Profiles
               </th>
-            </tr>{}
-          </thead>{ffRow.elem}{wdRow.elem}{rawRow.elem}{cbrRow.elem}{if (brRow.isDefined) brRow.get.elem}{if (psmRow.isDefined) psmRow.get.elem}
+            </tr>
+          </thead>{rowList.map(_.elem)}
         </table>
       }
 
-      val list: Seq[PSMHtmlImage] = Seq( //
-        ffRow,
-        wdRow,
-        rawRow,
-        cbrRow
-      ) ++
-        Seq(brRow, psmRow).flatten
-
-      val js = list.map(_.js).mkString("\n")
+      val js = rowList.map(_.js).mkString("\n")
 
       (content, js)
     }
@@ -165,20 +181,7 @@ class PSMMainHTML(
 
     val planHtml = PlanHTML(extendedData, rtplan)
 
-    val brDicomFile = new File(dir, "BRDicom.dcm")
     val psmDicomFile = new File(dir, "PSMDicom.dcm")
-
-    if (brImg.isDefined) {
-      val brDicom = PSMUtil.DicomImageToDicom(brImg.get, wdAl, RTImageLabel = "Beam Response", RTImageDescription = "Only the pixel data is relevant.")
-      DicomUtil.writeAttributeListToFile(brDicom, brDicomFile, "AQA")
-      logger.info("Wrote Beam Response as DICOM to: " + brDicomFile.getAbsolutePath)
-    }
-
-    if (psmImg.isDefined) {
-      val psmDicom = PSMUtil.DicomImageToDicom(psmImg.get, wdAl, RTImageLabel = "PSM as DICOM", RTImageDescription = "Only the pixel data is relevant.")
-      DicomUtil.writeAttributeListToFile(psmDicom, psmDicomFile, "AQA")
-      logger.info("Wrote PSM as DICOM to: " + psmDicomFile.getAbsolutePath)
-    }
 
     val beamType: Elem = {
       val fffText = {
@@ -186,10 +189,10 @@ class PSMMainHTML(
         if (isFFF) "FFF" else "non-FFF"
       }
       val kvpText = {
-        val k = DicomUtil.findAllTag(wdAl, TagByName.KVP).head.getDoubleValues.head
+        val k = DicomUtil.findAllTag(ffAl, TagByName.KVP).head.getDoubleValues.head
         0 match {
           case _ if (k.round == k) && ((k.round % 1000) == 0) => (k / 1000).round.toString + " MV"
-          case _ => Util.fmtDbl(k / 1000) + " MV"
+          case _                                              => Util.fmtDbl(k / 1000) + " MV"
         }
       }
 
@@ -201,6 +204,27 @@ class PSMMainHTML(
     }
 
     val content = {
+
+      // placeholder for a link for a downloadable DICOM version of the PSM.  Maybe do this someday if people want it.
+      val psmElem: Elem = {
+        <span></span>
+        /*
+          if (psmImg.isDefined) {
+            val elem = {
+              <div class="col-md-2" title="Note that only the pixel data is relevant, not energy or other parametes..">
+                <p style="margin-top:9px;">
+                  <a href={psmDicomFile.getName}>Download PSM
+                    <br>as DICOM</br>
+                  </a>
+                </p>
+              </div>
+            }
+            elem
+          } else
+            <span></span>
+         */
+      }
+
       <div>
         <div class="row">
           <div class="col-md-2">
@@ -218,24 +242,8 @@ class PSMMainHTML(
             <p style="margin-top:9px;">
               <a href={planHtml.fileName}>View RTPLAN</a>
             </p>
-          </div>{// @formatter:off
-          if (brImg.isDefined) {
-            <div class="col-md-2" title="Note that only the pixel data is relevant, not energy or other parametes..">
-              <p style="margin-top:9px;">
-                <a href={brDicomFile.getName}>Download Beam<br>Response as DICOM</br></a>
-              </p>
-            </div>
-            // @formatter:on}
-          }}{// @formatter:off
-            if (psmImg.isDefined) {
-              <div class="col-md-2" title="Note that only the pixel data is relevant, not energy or other parametes..">
-                <p style="margin-top:9px;">
-                  <a href={psmDicomFile.getName}>Download PSM<br>as DICOM</br></a>
-                </p>
-               </div>
-          // @formatter:on}
-            }}
-
+          </div>
+          {psmElem}
         </div>
         <div class="row">
           <div class="col-md-10">
@@ -246,7 +254,9 @@ class PSMMainHTML(
         </div>
         <div class="row">
           <div class="col-md-10 col-md-offset-1">
-            <h3>Mean Beam Values</h3>{historyCharts.meanChart.html}<h3>Standard Deviation of Beam Center Pixels</h3>{historyCharts.stdDevChart.html}<h3>Coordinates of Max Interpolated Points</h3>{historyCharts.maxInterpolationCoordinates.html}
+            <h3>Mean Beam Values</h3>{historyCharts.meanChart.html}<h3>Standard Deviation of Beam Center Pixels</h3>{historyCharts.stdDevChart.html}<h3>Coordinates of Max Interpolated Points</h3>{
+        historyCharts.maxInterpolationCoordinates.html
+      }
           </div>
         </div>
         <div class="row">

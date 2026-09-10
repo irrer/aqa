@@ -68,13 +68,13 @@ case class Stakitt(
 
   /** Positioning error of leaf end: planned - measured */
   //noinspection ScalaWeakerAccess
-  val leafEndOffset_mm: Double = measuredEndPosition_mm - plannedEndPosition_mm
+  val leafEndOffset_mm: Double = (measuredEndPosition_mm - collimatorCenterOffsetX_mm) - plannedEndPosition_mm
 
   //noinspection ScalaWeakerAccess
-  val minorSideOffset_mm: Double = measuredY2Side_mm - plannedY2Side_mm
+  val minorSideOffset_mm: Double = (measuredY2Side_mm - collimatorCenterOffsetY_mm) - plannedY2Side_mm
 
   //noinspection ScalaWeakerAccess
-  val majorSideOffset_mm: Double = measuredY1Side_mm - plannedY1Side_mm
+  val majorSideOffset_mm: Double = (measuredY1Side_mm - collimatorCenterOffsetY_mm) - plannedY1Side_mm
 
   //noinspection ScalaWeakerAccess
   val measuredLeafWidth_mm: Double = measuredY1Side_mm - measuredY2Side_mm

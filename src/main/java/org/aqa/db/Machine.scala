@@ -402,14 +402,32 @@ object Machine extends Logging {
 
   /**
     * Find the machines that have serial numbers that match the given serial number.
-    * @param serialNumber Serial number to look for.
+    * @param anonymizedSerialNumber Anonymized serial number to look for.
     * @return List of machines with that serial number.  Usually 0 or 1.
     */
-  def findMachinesBySerialNumber(serialNumber: String): Seq[Machine] = {
-    val sn = serialNumber.trim
+  def findMachinesBySerialNumber(anonymizedSerialNumber: String): Seq[Machine] = {
+    val sn = anonymizedSerialNumber.trim
     val action = query.filter(m => m.serialNumber === sn)
     val seq = Db.run(action.result)
-    seq.toIndexedSeq
+    val list = seq.toIndexedSeq
+    if (list.nonEmpty)
+      list
+    else {
+      val dicomAnonymous = DicomAnonymous.getByAnonymousValue(anonymizedSerialNumber)
+
+      if (dicomAnonymous.isEmpty)
+        Seq()
+      else {
+        val realSerialNumber = dicomAnonymous.get.originalValue
+
+        def serMatches(mach: Machine): Boolean = {
+          val real = mach.getRealDeviceSerialNumber
+          real.isDefined && real.get.equals(realSerialNumber)
+        }
+        val machineList = getForInstitution(dicomAnonymous.get.institutionPK).filter(serMatches)
+        machineList
+      }
+    }
   }
 
   /**

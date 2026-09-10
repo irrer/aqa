@@ -26,26 +26,26 @@ import java.sql.Timestamp
 import javax.vecmath.Point2d
 
 case class PSMBeam(
-    psmBeamPK: Option[Long], // primary key
-    outputPK: Long, // output primary key
-    xCenter_mm: Double, // X coordinate of beam's center in mm
-    yCenter_mm: Double, // Y coordinate of beam's center in mm
-    SOPInstanceUID: String, // SOPInstanceUID if it is in the DICOM
-    beamName: String, // name of beam
-    Rows: Int, // Number of rows in the image.  DICOM metadata 0028,0010
-    Columns: Int, // Number of columns in the image.  DICOM metadata 0028,0011
-    ImagePlanePixelSpacingX: Double, // Physical distance (in mm) between the center of each image pixel in the X axis.  DICOM metadata 3002,0011 first value
-    ImagePlanePixelSpacingY: Double, // Physical distance (in mm) between the center of each image pixel in the Y axis.  DICOM metadata 3002,0011 second value
-    mean_cu: Double, // average value of pixels in CU
-    stdDev_cu: Double, // standard deviation of pixels in CU
-    top_mm: Option[Double], // top of field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
-    bottom_mm: Option[Double], // bottom of field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
-    left_mm: Option[Double], // left field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
-    right_mm: Option[Double], // right field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.m
-    floodField_cu: Option[Double], // value of flood field pixels that correspond to this point
-    wholeDetector_cu: Option[Double], // value of whole detector pixels that correspond to this point
-    beamResponseNormalized: Option[Double] // normalized value mean_cu:  mean_cu / (mean_cu of center beam)
-) {
+                    psmBeamPK: Option[Long], // primary key
+                    outputPK: Long, // output primary key
+                    xCenter_mm: Double, // X coordinate of beam's center in mm
+                    yCenter_mm: Double, // Y coordinate of beam's center in mm
+                    SOPInstanceUID: String, // SOPInstanceUID if it is in the DICOM
+                    beamName: String, // name of beam
+                    Rows: Int, // Number of rows in the image.  DICOM metadata 0028,0010
+                    Columns: Int, // Number of columns in the image.  DICOM metadata 0028,0011
+                    ImagePlanePixelSpacingX: Double, // Physical distance (in mm) between the center of each image pixel in the X axis.  DICOM metadata 3002,0011 first value
+                    ImagePlanePixelSpacingY: Double, // Physical distance (in mm) between the center of each image pixel in the Y axis.  DICOM metadata 3002,0011 second value
+                    mean_cu: Double, // average value of pixels in CU
+                    stdDev_cu: Double, // standard deviation of pixels in CU
+                    top_mm: Option[Double], // top of field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
+                    bottom_mm: Option[Double], // bottom of field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
+                    left_mm: Option[Double], // left field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
+                    right_mm: Option[Double], // right field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.m
+                    floodField_cu: Option[Double], // value of flood field pixels that correspond to this point
+                    wholeDetector_cu: Option[Double], // value of whole detector pixels that correspond to this point
+                    beamResponseNormalized: Option[Double] // normalized value mean_cu:  mean_cu / (mean_cu of center beam)
+                  ) {
 
   def insert: PSMBeam = {
     val insertQuery = PSMBeam.query returning PSMBeam.query.map(_.psmBeamPK) into
@@ -80,6 +80,13 @@ case class PSMBeam(
       "    floodField_cu: " + Util.fmtDbl(floodField_cu) + "\n" +
       "    wholeDetector_cu: " + Util.fmtDbl(wholeDetector_cu) + "\n" +
       "    beamResponseNormalized: " + Util.fmtDbl(beamResponseNormalized)
+  }
+
+  val beamResponse: Option[Double] = {
+    if (floodField_cu.isDefined && beamResponseNormalized.isDefined)
+      Some(floodField_cu.get * beamResponseNormalized.get)
+    else
+      None
   }
 
   def rawImage: Double = wholeDetector_cu.get * floodField_cu.get // multiply
@@ -165,12 +172,12 @@ object PSMBeam extends Logging {
   }
 
   /**
-    * Get PSM beams by machine and data date time.
-    *
-    * @param machinePK Machine.
-    * @param dataDate  Data data from PSM output.
-    * @return List of beams for that machine and data date.
-    */
+   * Get PSM beams by machine and data date time.
+   *
+   * @param machinePK Machine.
+   * @param dataDate  Data data from PSM output.
+   * @return List of beams for that machine and data date.
+   */
   def getByMachineAndTime(machinePK: Long, dataDate: Timestamp): Seq[PSMBeam] = {
     val action = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.dataDate === dataDate))
@@ -181,8 +188,8 @@ object PSMBeam extends Logging {
   }
 
   /**
-    * Get a list of all rows for the given output
-    */
+   * Get a list of all rows for the given output
+   */
   def getByOutput(outputPK: Long): Seq[PSMBeam] = {
     val action = for {
       inst <- PSMBeam.query if inst.outputPK === outputPK

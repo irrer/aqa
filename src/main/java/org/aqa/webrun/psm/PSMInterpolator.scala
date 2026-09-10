@@ -26,7 +26,7 @@ class PSMInterpolator(psmList: Seq[PSMBeamAnalysisResult]) extends Logging {
 
   private val valueList: Array[Array[Double]] = {
     def doRow(row: Seq[Option[PSMBeamAnalysisResult]]): Array[Double] = {
-      row.map(r => r.get.psmBeam.mean_cu).toArray
+      row.map(r => r.get.psmBeam.beamResponseNormalized.get).toArray
     }
     (0 until grid.height).map(y => doRow(grid.grid(y))).toArray
   }
@@ -80,14 +80,24 @@ class PSMInterpolator(psmList: Seq[PSMBeamAnalysisResult]) extends Logging {
     * @return DICOM image.
     */
   private def makeDicomImage(): DicomImage = {
-    val min = psmList.map(_.psmBeam.mean_cu).min.toFloat
+
+    val centerBeamMean_cu = grid.centerBeam.mean_cu
+
+    val min = {
+      val pointsInBounds_pix = for (x <- 0 until trans.width; y <- 0 until trans.height; if isInBounds(trans.pix2Iso(new Point2D.Double(x, y)))) yield { trans.pix2Iso(new Point2D.Double(x, y)) }
+      val pixValueList = pointsInBounds_pix.map(p => interpolate(p) / centerBeamMean_cu)
+      pixValueList.min.toFloat
+
+      // val meanList_cu = psmList.map(_.psmBeam.beamResponseNormalized.get)
+      // meanList_cu.min.toFloat
+    }
 
     def makeRow(y: Int): IndexedSeq[Float] = {
       val y_iso = trans.pix2IsoCoordY(y)
       (0 until trans.width).map(x => {
         val x_iso = trans.pix2IsoCoordX(x)
         if (isInBounds(x_iso, y_iso))
-          interpolate(x_iso, y_iso).toFloat
+          (interpolate(x_iso, y_iso) / centerBeamMean_cu).toFloat
         else
           min
       })
@@ -102,7 +112,5 @@ class PSMInterpolator(psmList: Seq[PSMBeamAnalysisResult]) extends Logging {
     di
   }
 
-  private val dicomImage: DicomImage = makeDicomImage()
-
-  val normalizedDicomImage: DicomImage = PSMUtil.normalize(trans, dicomImage)
+  val normalizedDicomImage: DicomImage = makeDicomImage()
 }

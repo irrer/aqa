@@ -45,6 +45,7 @@ import org.aqa.webrun.phase2.metadataCheck.MetadataCheckAnalysis
 import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessRun
 import org.aqa.webrun.phase2.vmat.VMATAnalysis
 import org.aqa.webrun.phase2.wedge.WedgeAnalysis
+import org.aqa.webrun.stakitt.StakittAnalysis
 import org.restlet.Request
 import org.restlet.Response
 
@@ -421,7 +422,8 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
                         () => WedgeAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
                         () => SymmetryAndFlatnessRun.runProcedure(extendedData, runReq, collimatorCenteringResource),
                         () => LeafPositionAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
-                        () => VMATAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource)
+                        () => VMATAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource),
+                        () => StakittAnalysis.runProcedure(extendedData, runReq, collimatorCenteringResource)
                       )
 
                       if (extendedData.procedure.isPhase3) { // include Focal Spot for Phase3, but not Phase2
