@@ -178,8 +178,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
           {symFlatDataSet.symmetryAndFlatness.beamName}<br>
           {Phase2Util.jawDescription(symFlatDataSet.al, symFlatDataSet.rtplan)}
         </br>{Phase2Util.angleDescription(symFlatDataSet.al)}{psmElem}
-        </a> <br></br> <label title="Check to use this beam as a baseline." for={id}>Baseline</label>{input}
-        <br></br>
+        </a> <br></br> <label title="Check to use this beam as a baseline." for={id}>Baseline</label>{input}<br></br>
         <a href={baselineUrl}>View Baseline</a>
       </td>
     }
@@ -558,8 +557,10 @@ object SymmetryAndFlatnessSubHTML extends Logging {
             <p></p>
           </span>
         else {
-          <p>
-            <span>with PSM</span>
+          val psmOutputPK = beamData.psmGrid.get.centerBeam.outputPK
+          val j = beamData.psmGrid.get
+          <p title="Click to view PSM">
+            <a href={ViewOutput.viewOutputUrl(psmOutputPK)}>with PSM</a>
           </p>
         }
       }
