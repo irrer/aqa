@@ -20,7 +20,7 @@ object FSsubHTML extends Logging {
   private def matlabFileName(fsSet: FSSet) = s"matlabMV${fsSet.mvText}.txt"
 
   private def fmtTd(d: Double): Elem = {
-    <td title={FSHTML.fmtHi(d)}>{FSHTML.fmtLo(d)}</td>
+    WebUtil.setPrecisionAttr(<td></td>, d)
   }
 
   private def row(fsMeasure: FSMeasure): Elem = {
@@ -54,7 +54,8 @@ object FSsubHTML extends Logging {
       val x = fsSet.focalSpotAlignmentX_mm
       val y = fsSet.focalSpotAlignmentY_mm
       <span title={FSHTML.fmtHi(x) + ", " + FSHTML.fmtHi(y)}>
-      {FSHTML.fmtLo(x) + ", " + FSHTML.fmtLo(y)}
+        {WebUtil.setPrecisionAttr(<span></span>, x)},
+        {WebUtil.setPrecisionAttr(<span></span>, y)}
       </span>
     }
 
@@ -176,6 +177,8 @@ object FSsubHTML extends Logging {
 
     <div class="row">
       <center>
+        {WebUtil.showPrecision}
+        <br></br>
         <h2>{mvText} {fluenceText}MV Alignment: {alignment}</h2>
         <a href={FSHTML.htmlFileName} title="Return to focal spot summary page.">Focal Spot Summary</a>
         <a href={matlabFileName(fsSet)} title="Download Matlab code demonstrating calculations." style="margin-left:50px;">Matlab</a>

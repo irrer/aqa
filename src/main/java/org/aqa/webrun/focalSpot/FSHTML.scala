@@ -14,6 +14,7 @@ import org.aqa.db.Output
 import org.aqa.web.C3ChartHistory
 import org.aqa.web.WebUtil
 import org.aqa.Logging
+import org.aqa.db.FocalSpotSet
 
 import java.io.File
 import java.text.SimpleDateFormat
@@ -62,7 +63,7 @@ object FSHTML extends Logging {
       <div>
         <a href={WebServer.urlOfResultsFile(mainHtmlFile)}>
           Focal Spot
-          { /*  fsSetLis1.map(formatFsSet)  TODO put back */ }
+          {fsSetLis1.map(formatFsSet)}
           <img src={iconImage} height="32"/>
         </a>
       </div>
@@ -72,7 +73,7 @@ object FSHTML extends Logging {
 
   private def fsRow(fsSet: FSSet): Elem = {
     def fmt(d: Double) = {
-      <td title={fmtHi(d)}>{fmtLo(d)}</td>
+      WebUtil.setPrecisionAttr(<td></td>, d)
     }
 
     val id = fsSet.jaw090.mvText + (if (fsSet.jaw090.isFFF) "-FFF" else "")
@@ -185,11 +186,23 @@ object FSHTML extends Logging {
     * @return Report for all focal spot sets.
     */
   private def makeContent(extendedData: ExtendedData, fsRunReq: FSRunReq, fsSetLis4: Seq[FSSet], chartHtml: Elem): Elem = {
+    val rtplanElem = {
+      val history = FocalSpotSet.history(extendedData.output.machinePK.get)
+      if (history.isEmpty) {
+        <div>No Focal Spot Data</div>
+      } else { rtplanHtml(extendedData, fsRunReq, fsSetLis4) }
+    }
+
     <div class="row">
       <div class="row">
         <div class="col-md-3 col-md-offset-4">
+          {WebUtil.showPrecision}
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-3 col-md-offset-4">
           {htmlTable(fsSetLis4)}
-          <p>{rtplanHtml(extendedData, fsRunReq, fsSetLis4)}</p>
+          <p>{rtplanElem}</p>
         </div>
       </div>
       <div class="row">
@@ -211,11 +224,20 @@ object FSHTML extends Logging {
     val dir = focalSpotDir(extendedData)
     dir.mkdirs()
 
-    val mainChart = new FSMainChart(outputPK = extendedData.output.outputPK.get).chart
+    val history = FocalSpotSet.history(extendedData.output.machinePK.get)
+
+    val mainChartHtml = {
+      if (history.isEmpty) {
+        <div>No Focal Spot Data</div>
+      } else {
+        val mainChart = new FSMainChart(outputPK = extendedData.output.outputPK.get).chart
+        mainChart.html
+      }
+    }
 
     fsSetLis5.foreach(fsSet => FSsubHTML.makeHtml(extendedData, fsRunReq, fsSet))
 
-    val content = makeContent(extendedData, fsRunReq, fsSetLis5.sortBy(fsSet => "%020.2f".format(fsSet.jaw090.NominalBeamEnergy) + fsSet.jaw090.isFFF), mainChart.html)
+    val content = makeContent(extendedData, fsRunReq, fsSetLis5.sortBy(fsSet => "%020.2f".format(fsSet.jaw090.NominalBeamEnergy) + fsSet.jaw090.isFFF), mainChartHtml)
     val javascript = s"""<script src="${FSHistoryRestlet.path}?${FSHistoryRestlet.outputPKTag}=${extendedData.output.outputPK.get}"></script>"""
     val text = Phase2Util.wrapSubProcedure(extendedData, content, FSAnalysis.subProcedureName, ProcedureStatus.done, runScript = Some(javascript), rtimageMap = fsRunReq.rtimageMap)
     val mainHtmlFile = new File(dir, htmlFileName)
@@ -224,10 +246,4 @@ object FSHTML extends Logging {
     summary(mainHtmlFile, fsSetLis5)
   }
 
-  def main(args: Array[String]): Unit = { // TODO rm
-    println("hey")
-    println(htmlFileName)
-    println(FSMeasure.j)
-    println("done")
-  }
 }
