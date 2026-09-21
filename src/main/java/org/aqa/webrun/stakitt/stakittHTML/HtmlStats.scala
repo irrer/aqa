@@ -70,7 +70,7 @@ case class HtmlStats(analysis: Analysis) extends Logging {
       val changePer400mm = Math.sin(angle_radians) * 400
 
       <div style="margin-left:20px;">
-        <b>Measured Collimator Rotation Angle (degrees): </b>{WebUtil.setPrecisionAttr(<span> </span>, angle_degrees)}
+        <b>Measured Collimator:: Rotation Angle (degrees): </b>{WebUtil.setPrecisionAttr(<span> </span>, angle_degrees)}
         <b style="margin-left:40px;">Rotation Angle (mm/400mm): </b>{WebUtil.setPrecisionAttr(<span> </span>, changePer400mm)}
       </div>
     }

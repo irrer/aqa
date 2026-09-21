@@ -155,8 +155,12 @@ object CollimatorCenteringAnalysis extends Logging {
       */
     def group(nameList: Seq[String]): Seq[BeamPair] = {
       val list = runReq.rtimageMap.keys.filter(nameList.contains)
-      if (list.size == nameList.size) {
-        val groupList = nameList.map(beamName => CenteringBeam(beamName, runReq.rtimageMap(beamName))).groupBy(_.gantryAngle).values.map(pair => new BeamPair(pair))
+      if (list.size > 1) {
+        val groupList = {
+          val cbList = nameList.filter(runReq.rtimageMap.isDefinedAt).map(beamName => CenteringBeam(beamName, runReq.rtimageMap(beamName)))
+          val pairList = cbList.groupBy(_.gantryAngle).values
+          pairList.map(pair => new BeamPair(pair))
+        }
         groupList.toSeq
       } else
         Seq()
@@ -165,11 +169,13 @@ object CollimatorCenteringAnalysis extends Logging {
     val phase3List = group(Config.collimatorCenteringPhase3List)
     val phase2List = group(Config.collimatorCenteringPhase2List)
 
-    (phase3List, phase2List) match {
-      case _ if phase3List.nonEmpty => phase3List // match for Phase3
+    val beamPairList = (phase3List, phase2List) match {
       case _ if phase2List.nonEmpty => phase2List // match for Phase2
+      case _ if phase3List.nonEmpty => phase3List // match for Phase3
       case _                        => Seq() // could not find complete list for either Phase2 or Phase3
     }
+
+    beamPairList
   }
 
   private def processBeamPair(extendedData: ExtendedData, runReq: RunReq, beamPair: BeamPair): AnalysisResult = {

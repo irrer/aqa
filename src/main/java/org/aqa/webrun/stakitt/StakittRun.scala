@@ -35,7 +35,7 @@ class StakittRun(procedure: Procedure) extends WebRunProcedure with RunTrait[Skt
     logger.info("Starting stakitt analysis")
 
     // do all the heavy lifting here, each image in parallel
-    val analysisList = runReq.rtimageList.par.map(rtimage => Analysis.analyze(extendedData, rtimage, runReq.rtplan)).toList
+    val analysisList = runReq.rtimageList.par.map(rtimage => Analysis.analyze(extendedData, rtimage, runReq.rtplan, collimatorCenteringResource = None)).toList
 
     // put data in database
     val resultList = analysisList.filter(_.isRight).flatMap(_.right.get.stakittList).map(_.stakitt)

@@ -27,17 +27,17 @@ import scala.xml.Elem
   */
 
 class PSMMainHTML(
-    extendedData: ExtendedData,
-    rtplan: AttributeList,
-    resultList: Seq[PSMBeamAnalysisResult],
-    psmGradientAscent: Option[PSMGradientAscent],
-    ffAl: AttributeList,
-    ffImgNormalized: DicomImage,
-    wdAl: Option[AttributeList],
-    wdImg: Option[DicomImage],
-    beamResponsesNotNormalizedImg: DicomImage,
-    psmImg: Option[DicomImage],
-    psmRunReq: PSMRunReq
+                   extendedData: ExtendedData,
+                   rtplan: AttributeList,
+                   resultList: Seq[PSMBeamAnalysisResult],
+                   psmGradientAscent: Option[PSMGradientAscent],
+                   ffAl: AttributeList,
+                   ffImgNormalized: DicomImage,
+                   wdAl: Option[AttributeList],
+                   wdImg: Option[DicomImage],
+                   beamResponsesImg: DicomImage,
+                   psmImg: Option[DicomImage],
+                   psmRunReq: PSMRunReq
 ) extends Logging {
 
   def make(): Unit = {
@@ -90,10 +90,10 @@ class PSMMainHTML(
       }
        */
 
-      val beamResponsesNotNormalizedRow = PSMHtmlImage( //
+      val beamResponsesRow = PSMHtmlImage( //
         extendedData,
-        name = "Beam Responses Not Normalized",
-        image = beamResponsesNotNormalizedImg,
+        name = "Beam Responses",
+        image = beamResponsesImg,
         grid = grid,
         trans,
         dir = dir,
@@ -101,6 +101,30 @@ class PSMMainHTML(
         resultList = resultList,
         color = Some(Color.white)
       )
+
+      val ffNormalizedTimesBeamResponsesRow = {
+
+        val image = {
+          def doRow(yIndex: Int): IndexedSeq[Float] = {
+            ffImgNormalized.pixelData(yIndex).indices.map(xIndex => ffImgNormalized.get(xIndex, yIndex) * beamResponsesImg.get(xIndex, yIndex))
+
+          }
+          val pixelData = ffImgNormalized.pixelData.indices.map(doRow)
+          new DicomImage(pixelData)
+        }
+
+        PSMHtmlImage( //
+          extendedData,
+          name = "Flood Field Normalized * Beam Responses",
+          image = image,
+          grid = grid,
+          trans,
+          dir = dir,
+          valueGetter = psmBeam => psmBeam.floodField_cu.get * psmBeam.mean_cu,
+          resultList = resultList,
+          color = Some(Color.white)
+        )
+      }
 
       val beamResponsesWithNormalizationImg: DicomImage = {
 
@@ -110,12 +134,12 @@ class PSMMainHTML(
           p / centerResponse
         }
 
-        beamResponsesNotNormalizedImg.fun1(func)
+        beamResponsesImg.fun1(func)
       }
 
       val beamResponsesWithNormalizationRow = PSMHtmlImage( //
         extendedData,
-        name = "Beam Responses With Normalization",
+        name = "Beam Responses With Normalization : (Flood Field Normalized * Beam Responses) / center",
         image = beamResponsesWithNormalizationImg,
         grid = grid,
         trans,
@@ -147,7 +171,8 @@ class PSMMainHTML(
       val rowList: Seq[PSMHtmlImage] = Seq(
         Some(ffRow),
         // wdRow,
-        Some(beamResponsesNotNormalizedRow),
+        Some(beamResponsesRow),
+        Some(ffNormalizedTimesBeamResponsesRow),
         Some(beamResponsesWithNormalizationRow),
         psmRow
       ).flatten

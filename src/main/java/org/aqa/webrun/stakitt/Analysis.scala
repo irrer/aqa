@@ -132,7 +132,7 @@ object Analysis extends Logging {
     * @param rtplan DICOM plan.
     * @return result or error
     */
-  def analyze(extendedData: ExtendedData, rtimage: AttributeList, rtplan: AttributeList, collimatorCenteringResource: Option[CollimatorCenteringResource] = None): Either[Failure, Analysis] = {
+  def analyze(extendedData: ExtendedData, rtimage: AttributeList, rtplan: AttributeList, collimatorCenteringResource: Option[CollimatorCenteringResource]): Either[Failure, Analysis] = {
 
     val dicomImage = new DicomImage(rtimage)
     val trans = new IsoImagePlaneTranslator(rtimage)

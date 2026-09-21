@@ -212,7 +212,7 @@ class PSMExecute(extendedData: ExtendedData, psmRunReq: PSMRunReq) extends Loggi
     wdAl = psmRunReq.wholeDetector,
     wdImg = wdImg,
     // rawImg = rawImg,
-    beamResponsesNotNormalizedImg = compositeNonNormalizedImg,
+    beamResponsesImg = compositeNonNormalizedImg,
     // brImg = brImg,
     psmImg = psmImg,
     psmRunReq

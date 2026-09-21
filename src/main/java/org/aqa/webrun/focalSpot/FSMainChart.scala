@@ -23,7 +23,6 @@ import org.aqa.db.Machine
 import org.aqa.db.MaintenanceCategory
 import org.aqa.db.MaintenanceRecord
 import org.aqa.db.Output
-import org.aqa.db.Procedure
 import org.aqa.web.C3Chart
 import org.aqa.web.C3ChartHistory
 
@@ -37,7 +36,6 @@ import scala.xml.Elem
 class FSMainChart(outputPK: Long) extends Logging {
 
   private val output: Output = Output.get(outputPK).get
-  private val procedure: Procedure = Procedure.get(output.procedurePK).get
   private val machine: Machine = Machine.get(output.machinePK.get).get
 
   def chartId: String = C3Chart.idTagPrefix + Util.textToId(machine.id)
@@ -64,8 +62,14 @@ class FSMainChart(outputPK: Long) extends Logging {
   private val allDates = setList.map(_.head.output.dataDate.get).groupBy(_.getTime).values.map(_.head).toSeq.sortBy(_.getTime)
 
   /** All maintenance records for the entire history interval for all beams except for 'Set Baseline' to reduce clutter. */
-  private val maintenanceRecordList =
-    MaintenanceRecord.getRange(machine.machinePK.get, allDates.minBy(_.getTime), allDates.maxBy(_.getTime)).filter(m => !m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline))
+  private val maintenanceRecordList: Seq[MaintenanceRecord] = {
+    if (allDates.isEmpty) {
+      Seq()
+    } else {
+      val list = MaintenanceRecord.getRange(machine.machinePK.get, allDates.minBy(_.getTime), allDates.maxBy(_.getTime)).filter(m => !m.category.equalsIgnoreCase(MaintenanceCategory.setBaseline))
+      list
+    }
+  }
 
   private def chartOf: C3ChartHistory = {
     val index = setList.indexWhere(sh => sh.head.focalSpotSet.outputPK == output.outputPK.get)

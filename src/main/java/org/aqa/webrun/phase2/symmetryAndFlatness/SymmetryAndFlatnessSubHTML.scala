@@ -715,10 +715,10 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   // @formatter:off
   private def psmCalcTable(psmGrid: PSMGrid, beamData: SymmetryAndFlatness.SymmetryAndFlatnessHistory): Elem = {
 
-    def psmToTr(name: String, beamToValue: PSMBeam => Double ) : Elem = {
+    def psmToTr(index: Int, name: String, beamToValue: PSMBeam => Double ) : Elem = {
 
       <tr>
-        <td>{name}</td>
+        <td><b>{index.toString}</b> : {name}</td>
         {td(beamToValue(psmGrid.topBeam   ))}
         {td(beamToValue(psmGrid.bottomBeam))}
         {td(beamToValue(psmGrid.leftBeam  ))}
@@ -735,25 +735,25 @@ object SymmetryAndFlatnessSubHTML extends Logging {
         <thead>
           <tr>
             <th>Source</th>
-            <th>Top CU</th>
-            <th>Bottom CU</th>
-            <th>Left CU</th>
-            <th>Right CU</th>
-            <th>Center CU</th>
+            <th>A <br/> Top CU</th>
+            <th>B <br/>Bottom CU</th>
+            <th>C <br/>Left CU</th>
+            <th>D <br/>Right CU</th>
+            <th>E <br/>Center CU</th>
           </tr>
         </thead>
 
-        {psmToTr("PSM Flood Field"   , (pb: PSMBeam) => pb.floodField_cu.get)}
+        {psmToTr(1, "Flood Field Normalized (from PSM)"   , (pb: PSMBeam) => pb.floodField_cu.get)}
 
-        {psmToTr("PSM Whole Detector", (pb: PSMBeam) => pb.wholeDetector_cu.get)}
+        {psmToTr(2, "Whole Detector (from PSM)"           , (pb: PSMBeam) => pb.wholeDetector_cu.get)}
 
-        {psmToTr("PSM Raw Image"     , (pb: PSMBeam) => pb.rawImage)}
+        {psmToTr(3, "PSM Raw Image (row 1 * row 2)"       , (pb: PSMBeam) => pb.rawImage)}
 
-        {psmToTr("PSM Beam Response" , (pb: PSMBeam) => pb.mean_cu)}
+        {psmToTr(4, "Beam Response (from 5 PSM beams)"            , (pb: PSMBeam) => pb.mean_cu)}
 
-        {psmToTr("PSM Beam Response Normalized" , (pb: PSMBeam) => pb.beamResponseNormalized.get)}
+        {psmToTr(5, "PSM Beam Response Normalized (row 4 / 4E Center CU)" , (pb: PSMBeam) => pb.beamResponseNormalized.get)}
 
-        {psmToTr("PSM = Raw / Beam Response" , (pb: PSMBeam) => pb.psm )}
+        {psmToTr(6, "PSM = Raw / Beam Response Normalized "    , (pb: PSMBeam) => pb.psm )}
 
         <tr>
           <td>{beamData.symmetryAndFlatness.beamName} WD(QA)</td>

@@ -216,9 +216,14 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
 
     val allBeamNames = basicData.rtimageListByBeam.flatten(bd => bd._1)
 
-    val sep = " | "
-    val uploaded = requiredBeamList.map(_.trim).filter(allBeamNames.contains).sorted.mkString(sep)
-    val expected = requiredBeamList.map(_.trim).sorted.mkString(sep)
+    val nl = WebUtil.titleNewline
+    val sep = s"$nl    "
+
+    val uploaded = "    " + requiredBeamList.map(_.trim).filter(allBeamNames.contains).sorted.mkString(sep)
+    val expected = "    " + requiredBeamList.map(_.trim).sorted.mkString(sep)
+
+    def ga(img: AttributeList) = Util.angleRoundedTo90(Util.gantryAngle(img))
+    def ca(img: AttributeList) = Util.angleRoundedTo90(Util.collimatorAngle(img))
 
     /**
       * Check to make sure that there is a collimator centering beam at collimator angle 90 and 270 for each of the gantry angles.
@@ -226,8 +231,6 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
       * @return None if everything is ok, or, a message indicating the problem.
       */
     def allAreOpposingPairs(list: Seq[AttributeList]): Option[String] = {
-      def ga(img: AttributeList) = Util.angleRoundedTo90(Util.gantryAngle(img))
-      def ca(img: AttributeList) = Util.angleRoundedTo90(Util.collimatorAngle(img))
 
       val gantryAngleGroupList = list.groupBy(ga)
 
@@ -247,14 +250,42 @@ class PhaseAny(procedure: Procedure) extends WebRunProcedure with RunTrait[RunRe
       errorList.headOption
     }
 
-    if (uploaded.equals(expected)) {
+    def hasMinimumForPhase3: Boolean = {
+
+      val neededGantryAngleList = {
+        def anglesOf(beam: (Option[String], AttributeList)): Seq[Int] = {
+          val gantryAngleList = DicomUtil.findAllTag(beam._2, TagByName.GantryAngle).flatMap(_.getDoubleValues)
+          gantryAngleList.map(Util.angleRoundedTo90)
+        }
+
+        basicData.rtimageListByBeam.flatMap(anglesOf).distinct.sorted.mkString
+      }
+
+      def hasAngle(nameC090: String, nameC270: String, gantryAngle: Int): Option[Int] = {
+        if (allBeamNames.contains(nameC090) && allBeamNames.contains(nameC270))
+          Some(gantryAngle)
+        else
+          None
+      }
+
+      def hasAngleList =
+        Seq( //
+          hasAngle(Config.CollimatorCenteringBeamNameG000C090, Config.CollimatorCenteringBeamNameG000C270, 0),
+          hasAngle(Config.CollimatorCenteringBeamNameG090C090, Config.CollimatorCenteringBeamNameG090C270, 90),
+          hasAngle(Config.CollimatorCenteringBeamNameG180C090, Config.CollimatorCenteringBeamNameG180C270, 180),
+          hasAngle(Config.CollimatorCenteringBeamNameG270C090, Config.CollimatorCenteringBeamNameG270C270, 270)
+        ).flatten.sorted.mkString
+
+      procedure.isPhase3 && neededGantryAngleList.equals(hasAngleList)
+    }
+
+    if (uploaded.equals(expected) || hasMinimumForPhase3) {
       val rtimageList = basicData.rtimageListByBeam.filter(rtimage => rtimage._1.isDefined && requiredBeamList.contains(rtimage._1.get)).map(_._2)
       allAreOpposingPairs(rtimageList)
     } else {
-      val nl = WebUtil.titleNewline
       val text = {
         s"Did not find required collimator centering beams.$nl" +
-          s"  Expected beams:$nl$expected$nl Uploaded beams:$uploaded$nl"
+          s"${nl}Expected beams:$nl$expected $nl${nl}Uploaded beams:$nl $uploaded$nl"
       }
       Some(text)
     }

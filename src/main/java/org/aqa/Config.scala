@@ -806,14 +806,14 @@ object Config extends Logging {
   private val CollimatorCentering090BeamName: String = logMainText("CollimatorCentering090BeamName", "J10G0C90-6X")
   private val CollimatorCentering270BeamName: String = logMainText("CollimatorCentering270BeamName", "J10G0C270-6X")
 
-  private val CollimatorCenteringBeamNameG000C090: String = logMainText(name = "CollimatorCenteringBeamNameG000C090", default = "M10G0C90")
-  private val CollimatorCenteringBeamNameG000C270: String = logMainText(name = "CollimatorCenteringBeamNameG000C270", default = "M10G0C270")
-  private val CollimatorCenteringBeamNameG180C090: String = logMainText(name = "CollimatorCenteringBeamNameG180C090", default = "M10G180C90")
-  private val CollimatorCenteringBeamNameG080C270: String = logMainText(name = "CollimatorCenteringBeamNameG080C270", default = "M10G180C270")
-  private val CollimatorCenteringBeamNameG270C090: String = logMainText(name = "CollimatorCenteringBeamNameG270C090", default = "M10G270C90")
-  private val CollimatorCenteringBeamNameG270C270: String = logMainText(name = "CollimatorCenteringBeamNameG270C270", default = "M10G270C270")
-  private val CollimatorCenteringBeamNameG090C090: String = logMainText(name = "CollimatorCenteringBeamNameG090C090", default = "M10G90C90")
-  private val CollimatorCenteringBeamNameG090C270: String = logMainText(name = "CollimatorCenteringBeamNameG090C270", default = "M10G90C270")
+  val CollimatorCenteringBeamNameG000C090: String = logMainText(name = "CollimatorCenteringBeamNameG000C090", default = "M10G0C90")
+  val CollimatorCenteringBeamNameG000C270: String = logMainText(name = "CollimatorCenteringBeamNameG000C270", default = "M10G0C270")
+  val CollimatorCenteringBeamNameG180C090: String = logMainText(name = "CollimatorCenteringBeamNameG180C090", default = "M10G180C90")
+  val CollimatorCenteringBeamNameG180C270: String = logMainText(name = "CollimatorCenteringBeamNameG080C270", default = "M10G180C270")
+  val CollimatorCenteringBeamNameG270C090: String = logMainText(name = "CollimatorCenteringBeamNameG270C090", default = "M10G270C90")
+  val CollimatorCenteringBeamNameG270C270: String = logMainText(name = "CollimatorCenteringBeamNameG270C270", default = "M10G270C270")
+  val CollimatorCenteringBeamNameG090C090: String = logMainText(name = "CollimatorCenteringBeamNameG090C090", default = "M10G90C90")
+  val CollimatorCenteringBeamNameG090C270: String = logMainText(name = "CollimatorCenteringBeamNameG090C270", default = "M10G90C270")
 
   val collimatorCenteringPhase2List: Seq[String] = Seq(CollimatorCentering090BeamName, CollimatorCentering270BeamName)
 
@@ -821,7 +821,7 @@ object Config extends Logging {
     CollimatorCenteringBeamNameG000C090,
     CollimatorCenteringBeamNameG000C270,
     CollimatorCenteringBeamNameG180C090,
-    CollimatorCenteringBeamNameG080C270,
+    CollimatorCenteringBeamNameG180C270,
     CollimatorCenteringBeamNameG270C090,
     CollimatorCenteringBeamNameG270C270,
     CollimatorCenteringBeamNameG090C090,

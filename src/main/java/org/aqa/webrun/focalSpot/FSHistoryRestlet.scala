@@ -17,6 +17,8 @@
 package org.aqa.webrun.focalSpot
 
 import org.aqa.Logging
+import org.aqa.db.FocalSpotSet
+import org.aqa.db.Output
 import org.aqa.web.WebUtil._
 import org.restlet.Request
 import org.restlet.Response
@@ -60,7 +62,13 @@ class FSHistoryRestlet extends Restlet with SubUrlRoot with Logging {
         response.setStatus(Status.SUCCESS_OK)
         response.setEntity(javascript + edgeJavascript, MediaType.APPLICATION_JAVASCRIPT)
       } else {
-        val javascript = new FSMainChart(outputPK).chart.javascript
+        val javascript = {
+          val output = Output.get(outputPK)
+          if (output.isDefined && FocalSpotSet.history(output.get.machinePK.get).nonEmpty)
+            new FSMainChart(outputPK).chart.javascript
+          else
+            ""
+        }
         response.setStatus(Status.SUCCESS_OK)
         response.setEntity(javascript, MediaType.APPLICATION_JAVASCRIPT)
       }
