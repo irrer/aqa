@@ -70,52 +70,32 @@ case class SymmetryAndFlatness(
 
   // - - - - - - - - - - - - - - - - - - - - - - - -
 
-  def rawImageQaTop(psmGrid: PSMGrid): Double = {
-    psmGrid.topBeam.rawImage * top_cu
-  }
-
-  def beamResponseQaTop(psmGrid: PSMGrid): Double = {
-    rawImageQaTop(psmGrid) / psmGrid.topBeam.psm
+  def beamWithPsmTop(psmGrid: PSMGrid): Double = {
+    (psmGrid.topBeam.floodField_cu.get * top_cu) / psmGrid.topBeam.beamResponseNormalized.get
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - -
 
-  def rawImageQaBottom(psmGrid: PSMGrid): Double = {
-    psmGrid.bottomBeam.rawImage * bottom_cu
-  }
-
-  def beamResponseQaBottom(psmGrid: PSMGrid): Double = {
-    rawImageQaBottom(psmGrid) / psmGrid.bottomBeam.psm
+  def beamWithPsmBottom(psmGrid: PSMGrid): Double = {
+    (psmGrid.bottomBeam.floodField_cu.get * bottom_cu) / psmGrid.bottomBeam.beamResponseNormalized.get
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - -
 
-  def rawImageQaLeft(psmGrid: PSMGrid): Double = {
-    psmGrid.leftBeam.rawImage * left_cu
-  }
-
-  def beamResponseQaLeft(psmGrid: PSMGrid): Double = {
-    rawImageQaLeft(psmGrid) / psmGrid.leftBeam.psm
+  def beamWithPsmLeft(psmGrid: PSMGrid): Double = {
+    (psmGrid.leftBeam.floodField_cu.get * left_cu) / psmGrid.leftBeam.beamResponseNormalized.get
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - -
 
-  def rawImageQaRight(psmGrid: PSMGrid): Double = {
-    psmGrid.rightBeam.rawImage * right_cu
-  }
-
-  def beamResponseQaRight(psmGrid: PSMGrid): Double = {
-    rawImageQaRight(psmGrid) / psmGrid.rightBeam.psm
+  def beamWithPsmRight(psmGrid: PSMGrid): Double = {
+    (psmGrid.rightBeam.floodField_cu.get * right_cu) / psmGrid.rightBeam.beamResponseNormalized.get
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - -
 
-  def rawImageQaCenter(psmGrid: PSMGrid): Double = {
-    psmGrid.centerBeam.rawImage * center_cu
-  }
-
-  def beamResponseQaCenter(psmGrid: PSMGrid): Double = {
-    rawImageQaCenter(psmGrid) / psmGrid.centerBeam.psm
+  def beamWithPsmCenter(psmGrid: PSMGrid): Double = {
+    (psmGrid.centerBeam.floodField_cu.get * center_cu) / psmGrid.centerBeam.beamResponseNormalized.get
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - -
@@ -137,8 +117,8 @@ case class SymmetryAndFlatness(
         val sym = ((top_cu - bottom_cu) / bottom_cu) * 100
         Some(sym)
       } else {
-        val t = beamResponseQaTop(psmGrid.get)
-        val b = beamResponseQaBottom(psmGrid.get)
+        val t = beamWithPsmTop(psmGrid.get)
+        val b = beamWithPsmBottom(psmGrid.get)
         val sym = ((t - b) / b) * 100
         Some(sym)
       }
@@ -152,8 +132,8 @@ case class SymmetryAndFlatness(
         val ts = ((right_cu - left_cu) / left_cu) * 100
         Some(ts)
       } else {
-        val r = beamResponseQaRight(psmGrid.get)
-        val l = beamResponseQaLeft(psmGrid.get)
+        val r = beamWithPsmRight(psmGrid.get)
+        val l = beamWithPsmLeft(psmGrid.get)
         val ts = ((r - l) / l) * 100
         Some(ts)
       }
@@ -166,11 +146,11 @@ case class SymmetryAndFlatness(
 
   private def psmList(psmGrid: Option[PSMGrid]): Seq[Double] = {
     Seq( //
-      beamResponseQaTop(psmGrid.get),
-      beamResponseQaBottom(psmGrid.get),
-      beamResponseQaLeft(psmGrid.get),
-      beamResponseQaRight(psmGrid.get),
-      beamResponseQaCenter(psmGrid.get)
+      beamWithPsmTop(psmGrid.get),
+      beamWithPsmBottom(psmGrid.get),
+      beamWithPsmLeft(psmGrid.get),
+      beamWithPsmRight(psmGrid.get),
+      beamWithPsmCenter(psmGrid.get)
     )
   }
 
@@ -252,17 +232,17 @@ case class SymmetryAndFlatness(
           {
             // process for PSM
 
-            val tCu = beamResponseQaTop(psmGrid.get)
-            val bCu = beamResponseQaBottom(psmGrid.get)
-            val lCu = beamResponseQaLeft(psmGrid.get)
-            val rCu = beamResponseQaRight(psmGrid.get)
-            val cCu = beamResponseQaCenter(psmGrid.get)
+            val tCu = beamWithPsmTop(psmGrid.get)
+            val bCu = beamWithPsmBottom(psmGrid.get)
+            val lCu = beamWithPsmLeft(psmGrid.get)
+            val rCu = beamWithPsmRight(psmGrid.get)
+            val cCu = beamWithPsmCenter(psmGrid.get)
 
-            val tCuBase = baseline.beamResponseQaTop(baselinePsmGrid.get)
-            val bCuBase = baseline.beamResponseQaBottom(baselinePsmGrid.get)
-            val lCuBase = baseline.beamResponseQaLeft(baselinePsmGrid.get)
-            val rCuBase = baseline.beamResponseQaRight(baselinePsmGrid.get)
-            val cCuBase = baseline.beamResponseQaCenter(baselinePsmGrid.get)
+            val tCuBase = baseline.beamWithPsmTop(baselinePsmGrid.get)
+            val bCuBase = baseline.beamWithPsmBottom(baselinePsmGrid.get)
+            val lCuBase = baseline.beamWithPsmLeft(baselinePsmGrid.get)
+            val rCuBase = baseline.beamWithPsmRight(baselinePsmGrid.get)
+            val cCuBase = baseline.beamWithPsmCenter(baselinePsmGrid.get)
 
             val t = (tCu / cCu) - (tCuBase / cCuBase)
             val b = (bCu / cCu) - (bCuBase / cCuBase)
