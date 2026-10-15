@@ -1,8 +1,10 @@
 package org.aqa.webrun.psm
 
 import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.webrun.ExtendedData
 import org.aqa.Logging
 import org.aqa.Util
@@ -79,7 +81,7 @@ class PSMExecute(extendedData: ExtendedData, psmRunReq: PSMRunReq) extends Loggi
       }
       val centerBeam = l.minBy(distToCenter)
 
-      val centerBeamResponse = centerBeam.psmBeam.mean_cu * centerBeam.psmBeam.floodField_cu.get
+      val centerBeamResponse = centerBeam.psmBeam.mean_cu
 
       /**
         * Fix the beamResponseNormalized.
@@ -87,6 +89,9 @@ class PSMExecute(extendedData: ExtendedData, psmRunReq: PSMRunReq) extends Loggi
         * @return A new result with the normalized beam response fixed.
         */
       def fix(result: PSMBeamAnalysisResult): PSMBeamAnalysisResult = {
+
+        val KVP = DicomUtil.findAllTag(result.rtimage, TagByName.KVP).head.getDoubleValues.head
+        val isFFF = Util.isFFF(DicomUtil.getBeamOfRtimage(plan = rtplan, rtimage = result.rtimage).get)
 
         /**
           * Show a nicely formatted version of results in the log.
@@ -96,7 +101,7 @@ class PSMExecute(extendedData: ExtendedData, psmRunReq: PSMRunReq) extends Loggi
         def logResult(newPsmBeam: PSMBeam): Unit = {
           def fmt(od: Option[Double]): String = { if (od.isDefined) "%32.28f".format(od.get) else " NA " }
 
-          val pc = trans.iso2Pix(result.psmBeam.center)
+          val pc = trans.iso2Pix(result.psmBeam.center_iso)
           val nm = "%-6s".format(newPsmBeam.beamName)
 
           val center = {
@@ -106,14 +111,13 @@ class PSMExecute(extendedData: ExtendedData, psmRunReq: PSMRunReq) extends Loggi
 
           logger.info(
             s"PSM Beam $nm    $center" +
-              s"    floodField_cu: ${fmt(newPsmBeam.floodField_cu)}" +
               s"    mean_cu: ${fmt(Some(newPsmBeam.mean_cu))}" +
               s"    beamResponseNormalized: ${fmt(newPsmBeam.beamResponseNormalized)}"
           )
 
         }
 
-        val beamResponseNormalized = (result.psmBeam.mean_cu * result.psmBeam.floodField_cu.get) / centerBeamResponse
+        val beamResponseNormalized = result.psmBeam.mean_cu / centerBeamResponse
 
         val newPsmBeam = result.psmBeam.copy(beamResponseNormalized = Some(beamResponseNormalized))
         val newResult = result.copy(psmBeam = newPsmBeam)

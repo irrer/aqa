@@ -67,7 +67,7 @@ class SSReport(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Optio
 
   private def makeRow2: Elem = {
     <tr>
-      {makeRowIndex(1)}
+      {makeRowIndex(2)}
       {blankCells(2) /*               A2 to B2 */}
       {toHtml("Gantry Isocenter", style = { bL }) /*  C2 */}
       {toHtml("Gantry Isocenter") /*  D2 */}
@@ -84,7 +84,7 @@ class SSReport(extendedData: ExtendedData, isoCheck: WLIsoCheck, isoTable: Optio
 
   private def makeRow3: Elem = {
     <tr>
-      {makeRowIndex(2)}
+      {makeRowIndex(3)}
       {blankCells(2) /*                     A3 to B3 */}
       {toHtml("X (mm)", style = { bL }) /*  C3 */}
       {toHtml("Y (mm)") /*                  D3 */}

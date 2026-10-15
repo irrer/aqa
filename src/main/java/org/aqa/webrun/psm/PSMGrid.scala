@@ -1,6 +1,7 @@
 package org.aqa.webrun.psm
 
 import com.pixelmed.dicom.AttributeList
+import org.aqa.db.Output
 import org.aqa.db.PSMBeam
 
 import java.awt.image.BufferedImage
@@ -9,10 +10,10 @@ import java.sql.Timestamp
 import javax.vecmath.Point2d
 
 /**
- * Organize beams into a two-dimensional grid.
- *
- * @param resultList List of beam measurements.
- */
+  * Organize beams into a two-dimensional grid.
+  *
+  * @param resultList List of beam measurements.
+  */
 case class PSMGrid(resultList: Seq[PSMBeamAnalysisResult]) {
 
   /** Centers (either X or Y) must be this close in mm to be considered to be in the same row or column. */
@@ -37,9 +38,9 @@ case class PSMGrid(resultList: Seq[PSMBeamAnalysisResult]) {
   }
 
   /**
-   * A two-dimensional array containing all results, positionally sorted vertically and horizontally.  If there
-   * is no result for the given position, then it will be None.
-   */
+    * A two-dimensional array containing all results, positionally sorted vertically and horizontally.  If there
+    * is no result for the given position, then it will be None.
+    */
   val grid: Seq[Seq[Option[PSMBeamAnalysisResult]]] = {
     def makeRow(y: Int): Seq[Option[PSMBeamAnalysisResult]] = (0 until width).map(x => findResult(x, y))
 
@@ -58,18 +59,18 @@ case class PSMGrid(resultList: Seq[PSMBeamAnalysisResult]) {
 
     val zero = new Point2d(0, 0)
 
-    val c = resultList.minBy(p => p.psmBeam.center.distance(zero))
+    val c = resultList.minBy(p => p.psmBeam.center_iso.distance(zero))
     c.psmBeam
   }
 
   /**
-   * The grid coordinates of the center point.
-   */
+    * The grid coordinates of the center point.
+    */
   private val centerGridPoint: Point = {
     def coordinatesMatch(x: Int, y: Int): Boolean = {
       get(x, y) match {
         case Some(r) => (r.psmBeam.xCenter_mm == centerPsmBeam.xCenter_mm) && (r.psmBeam.yCenter_mm == centerPsmBeam.yCenter_mm)
-        case _ => false
+        case _       => false
       }
     }
 
@@ -96,6 +97,12 @@ case class PSMGrid(resultList: Seq[PSMBeamAnalysisResult]) {
   // @formatter:on
 
   val span: Double = Math.min(vertSpan, horzSpan)
+
+  /** The output for this grid. */
+  lazy val output: Output = Output.get(resultList.head.psmBeam.outputPK).get
+
+  /** Time when this was captured. */
+  lazy val dataDate_ms: Long = output.dataDate.get.getTime
 
   // ----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -141,6 +148,7 @@ object PSMGrid {
   /**
    * Make a grid from a list of beams.
    * Only the PSMBeam fields will be valid.
+   *
    * @param psmBeamList List of beams comprising the grid.
    * @return A grid of beams.
    */
@@ -153,6 +161,7 @@ object PSMGrid {
 
   /**
    * Get the PSM grid with the given specification.
+   *
    * @param machinePK This machine.
    * @param timestamp This data date timestamp.
    * @return The PSM grid, or None.
@@ -178,6 +187,7 @@ object PSMGrid {
 
   /**
    * If the given entry is in the cache, remove it.
+   *
    * @param machinePK This machine.
    * @param timestamp This data date timestamp.
    * @return The PSMGrid, if it was in the cache.
@@ -185,8 +195,8 @@ object PSMGrid {
   def remove(machinePK: Long, timestamp: Timestamp): Option[PSMGrid] = {
     val key = makeKey(machinePK, timestamp)
 
-    cache.synchronized{
-    cache.remove(key)
+    cache.synchronized {
+      cache.remove(key)
     }
   }
 

@@ -35,6 +35,7 @@ import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.DicomFile
 import org.aqa.db.PSMBeam
 import org.aqa.web.ViewOutput
+import org.aqa.webrun.psm.PSMCache
 import org.aqa.webrun.psm.PSMGrid
 import org.restlet.Request
 import org.restlet.Response
@@ -47,8 +48,8 @@ import scala.collection.immutable
 import scala.xml.Elem
 
 /**
- * Analyze DICOM files for symmetry and flatness.
- */
+  * Analyze DICOM files for symmetry and flatness.
+  */
 object SymmetryAndFlatnessSubHTML extends Logging {
 
   private def titleDetails = "Click to view graphs and other details"
@@ -124,9 +125,9 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   }
 
   private def detailsColumn(
-                             subDir: File,
-                             symFlatDataSet: SymmetryAndFlatnessDataSet
-                           ): Elem = {
+      subDir: File,
+      symFlatDataSet: SymmetryAndFlatnessDataSet
+  ): Elem = {
 
     val psmGridOf: Option[PSMGrid] = {
       if (symFlatDataSet.symmetryAndFlatness.psmDataDate.isDefined)
@@ -142,7 +143,11 @@ object SymmetryAndFlatnessSubHTML extends Logging {
         None
     }
 
-    val errorClass = if (symFlatDataSet.symmetryAndFlatness.allPass(symFlatDataSet.baseline, psmGridOf, psmGridBaselineOf)) "normal" else "danger"
+    val errorClass = {
+      val noPSM = symFlatDataSet.symmetryAndFlatness.allNoPSMPass(symFlatDataSet.baseline)
+      val withPSM = symFlatDataSet.symmetryAndFlatness.allWithPSMPass(symFlatDataSet.baseline)
+      if (symFlatDataSet.symmetryAndFlatness.allNoPSMPass(symFlatDataSet.baseline)) "normal" else "danger"
+    }
     val detailUrl = WebServer.urlOfResultsFile(
       SymmetryAndFlatnessHTML.beamHtmlFile(subDir, symFlatDataSet.symmetryAndFlatness.beamName, symFlatDataSet.symmetryAndFlatness.psmDataDate.isDefined)
     )
@@ -161,17 +166,19 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 
     val input =
       if (symFlatDataSet.symmetryAndFlatness.isBaseline) {
-          <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"} checked={baseline}/>
+        <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"} checked={baseline}/>
       } else {
-          <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"}/>
+        <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"}/>
       }
 
     val elem = {
       val baselineUrl = ViewOutput.viewOutputUrl(symFlatDataSet.baseline.outputPK)
 
-      <td style={"vertical-align: middle;" + {
-        if (isPsm) psmStyle else ""
-      }} class={errorClass} rowspan="4">
+      <td style={
+        "vertical-align: middle;" + {
+          if (isPsm) psmStyle else ""
+        }
+      } class={errorClass} rowspan="4">
         <a href={detailUrl} title={titleDetails}>
           {symFlatDataSet.symmetryAndFlatness.beamName}<br>
           {Phase2Util.jawDescription(symFlatDataSet.al, symFlatDataSet.rtplan)}
@@ -198,7 +205,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       )
     )
     val imgSmall = {
-        <img src={imgUrl} width="100"/>
+      <img src={imgUrl} width="100"/>
     }
     val ref = {
       <a href={dicomHref}>
@@ -254,6 +261,10 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     } else <td></td>
   }
 
+  private def fmtBaselineColumn(baseline: Double): Elem = {
+    fmtBaselineColumn(Some(baseline))
+  }
+
   private def fmtDifferenceColumn(percent: Double, limit: Double): Elem = {
     val errorClass = if (percent.abs > limit.abs) "danger" else "normal"
     val v = pctRounded(percent)
@@ -275,6 +286,8 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     } else
       <td></td>
   }
+
+  private def fmtValueColumn(value: Double): Elem = fmtValueColumn(Some(value))
 
   private def psmGridOf(sf: SymmetryAndFlatnessDataSet): Option[PSMGrid] = {
     if (sf.symmetryAndFlatness.psmDataDate.isDefined)
@@ -304,66 +317,52 @@ object SymmetryAndFlatnessSubHTML extends Logging {
           {detailsColumn(subDir, symFlatData)}
           {imageColumn(symFlatData)}
           <td style="text-align: center;" title={titleAxialSymmetry}>Axial Symmetry</td>
-          {fmtBaselineColumn(symFlatData.baseline.axialSymmetry(psmGridOf(symFlatData)))}
+          {fmtBaselineColumn(symFlatData.baseline.axialSymmetryNoPSM())}
           {
             val pct = {
-              (symFlatData.symmetryAndFlatness.axialSymmetry(psmGridOf(symFlatData)) , symFlatData.baseline.axialSymmetry(psmGridBaselineOf(symFlatData))) match {
-                case (Some(a), Some(b)) => a - b
-                case _ => 0.0
-              }
+              symFlatData.symmetryAndFlatness.axialSymmetryNoPSM() - symFlatData.baseline.axialSymmetryNoPSM()
             }
             fmtDifferenceColumn(pct, Config.SymmetryPercentLimit)}
           { symmetryPercentLimitColumn }
-          { fmtValueColumn(symFlatData.symmetryAndFlatness.axialSymmetry(psmGridOf(symFlatData))) }
+          { fmtValueColumn(symFlatData.symmetryAndFlatness.axialSymmetryNoPSM()) }
         </tr>
       }, {
         <tr>
           <td style="text-align: center;" title={titleTransverseSymmetry}>Transverse Symmetry</td>
-          {fmtBaselineColumn(symFlatData.baseline.transverseSymmetry(psmGridOf(symFlatData)))}
+          {fmtBaselineColumn(symFlatData.baseline.transverseSymmetryNoPSM())}
           {
-            val pct = (symFlatData.symmetryAndFlatness.transverseSymmetry(psmGridOf(symFlatData)) , symFlatData.baseline.transverseSymmetry(psmGridBaselineOf(symFlatData))) match {
-              case (Some(a), Some(b)) => a - b
-              case _ => 0.0
-            }
-
+            val pct = symFlatData.symmetryAndFlatness.transverseSymmetryNoPSM() - symFlatData.baseline.transverseSymmetryNoPSM()
             fmtDifferenceColumn(pct, Config.SymmetryPercentLimit)
           }
           { symmetryPercentLimitColumn }
-          {fmtValueColumn(symFlatData.symmetryAndFlatness.transverseSymmetry(psmGridOf(symFlatData)))}
+          {fmtValueColumn(symFlatData.symmetryAndFlatness.transverseSymmetryNoPSM())}
         </tr>
       }, {
         <tr>
           <td style="text-align: center;" title={titleFlatness}>Flatness</td>
-          {fmtBaselineColumn(symFlatData.baseline.flatness(psmGridBaselineOf(symFlatData)))}
+          {fmtBaselineColumn(symFlatData.baseline.flatnessNoPSM())}
           {
-            val pct = (symFlatData.symmetryAndFlatness.flatness(psmGridOf(symFlatData)) , symFlatData.baseline.flatness(psmGridBaselineOf(symFlatData))) match {
-              case (Some(a), Some(b)) => a - b
-              case _ => 0.0
-          }
+            val pct = symFlatData.symmetryAndFlatness.flatnessNoPSM() - symFlatData.baseline.flatnessNoPSM()
             fmtDifferenceColumn(pct, Config.FlatnessPercentLimit)}
           { flatnessPercentLimitColumn }
-          {fmtValueColumn(symFlatData.symmetryAndFlatness.flatness(psmGridBaselineOf(symFlatData)))}
+          {fmtValueColumn(symFlatData.symmetryAndFlatness.flatnessNoPSM())}
         </tr>
       }, {
         <tr>
           <td style="text-align: center;" title={titleProfileConstancy}>Profile Constancy</td>
-          { fmtBaselineColumn(symFlatData.baseline.profileConstancy(psmGridOf(symFlatData), symFlatData.baseline, psmGridBaselineOf(symFlatData) )) }
+          { fmtBaselineColumn(symFlatData.baseline.profileConstancyNoPSM( symFlatData.baseline )) }
           {
             val pct = {
 
-              val a = symFlatData.symmetryAndFlatness.profileConstancy( psmGridOf(symFlatData), symFlatData.baseline,psmGridBaselineOf(symFlatData)  )
-              val b = symFlatData.baseline.profileConstancy( psmGridBaselineOf(symFlatData), symFlatData.baseline,psmGridBaselineOf(symFlatData)  )
-
-              (a, b) match {
-                case (Some(aa), Some(bb)) => aa - bb
-                case _ => 0.0
-              }
+              val a = symFlatData.symmetryAndFlatness.profileConstancyNoPSM( symFlatData.baseline  )
+              val b = symFlatData.baseline.profileConstancyNoPSM( symFlatData.baseline  )
+              a - b
             }
 
             fmtDifferenceColumn(pct, Config.ProfileConstancyPercentLimit)
           }
           { profileConstancyPercentLimitColumn }
-          { fmtValueColumn(symFlatData.symmetryAndFlatness.profileConstancy(psmGridOf(symFlatData), symFlatData.baseline, psmGridBaselineOf(symFlatData))) }
+          { fmtValueColumn(symFlatData.symmetryAndFlatness.profileConstancyNoPSM(symFlatData.baseline)) }
         </tr>
       }
     )
@@ -378,6 +377,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
    * @return Formatted report
    */
   def makeContent(output: Output, symFlatDataList: Seq[SymmetryAndFlatnessDataSet]): Elem = {
+
     // show link to CSV
     val csv: Elem = {
       val url = (new SymmetryAndFlatnessSubHTML).pathOf + "/SymmetryFlatnessAndConstancy.csv?" + csvTag + "=true&" + outputPKTag + "=" + output.outputPK.get
@@ -474,7 +474,8 @@ object SymmetryAndFlatnessSubHTML extends Logging {
             beamName = sf.beamName,
             hasPsm = sf.psmDataDate.isDefined,
             dataDate = dataDate,
-            procedurePK = output.procedurePK)
+            procedurePK = output.procedurePK
+          )
           bl.get.baseline
         }
 
@@ -576,18 +577,18 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 
     val analysisElem =
       Seq(
-        td(beamData.symmetryAndFlatness.transverseSymmetry(beamData.psmGrid)),
-        td(beamData.symmetryAndFlatness.axialSymmetry(beamData.psmGrid)),
-        td(beamData.symmetryAndFlatness.flatness(beamData.psmGrid)),
-        td(beamData.symmetryAndFlatness.profileConstancy(beamData.psmGrid, beamData.baseline, beamData.psmGridBaseline))
+        td(beamData.symmetryAndFlatness.transverseSymmetryNoPSM()),
+        td(beamData.symmetryAndFlatness.axialSymmetryNoPSM()),
+        td(beamData.symmetryAndFlatness.flatnessNoPSM()),
+        td(beamData.symmetryAndFlatness.profileConstancyNoPSM(beamData.baseline))
       )
 
     val baselineElem =
       Seq(
-        td(beamData.baseline.transverseSymmetry(beamData.psmGrid)),
-        td(beamData.baseline.axialSymmetry(beamData.psmGrid)),
-        td(beamData.baseline.flatness(beamData.psmGrid)),
-        td(beamData.baseline.profileConstancy(beamData.psmGridBaseline, beamData.baseline, beamData.psmGridBaseline))
+        td(beamData.baseline.transverseSymmetryNoPSM()),
+        td(beamData.baseline.axialSymmetryNoPSM()),
+        td(beamData.baseline.flatnessNoPSM()),
+        td(beamData.baseline.profileConstancyNoPSM(beamData.baseline))
       )
 
     <div style="margin:20px;">
@@ -620,18 +621,20 @@ object SymmetryAndFlatnessSubHTML extends Logging {
    * @param beamData Data to show.
    * @return HTML to display.
    */
-  private def inputTable(beamData: SymmetryAndFlatness.SymmetryAndFlatnessHistory, grid: Option[PSMGrid]): Elem = {
+  private def inputTable(beamData: SymmetryAndFlatness.SymmetryAndFlatnessHistory): Elem = {
+
+    val grid = PSMCache.get(beamData.symmetryAndFlatness)
 
     val analysis = {
       if (grid.isDefined) {
         // @formatter:off
         <tr>
           <td>Analysis</td>
-          {td(beamData.symmetryAndFlatness.beamWithPsmTop   (grid.get))}
-          {td(beamData.symmetryAndFlatness.beamWithPsmBottom(grid.get))}
-          {td(beamData.symmetryAndFlatness.beamWithPsmLeft  (grid.get))}
-          {td(beamData.symmetryAndFlatness.beamWithPsmRight (grid.get))}
-          {td(beamData.symmetryAndFlatness.beamWithPsmCenter(grid.get))}
+          {td(beamData.symmetryAndFlatness.topWithPSM_cu   ())}
+          {td(beamData.symmetryAndFlatness.bottomWithPSM_cu())}
+          {td(beamData.symmetryAndFlatness.leftWithPSM_cu  ())}
+          {td(beamData.symmetryAndFlatness.rightWithPSM_cu ())}
+          {td(beamData.symmetryAndFlatness.centerWithPSM_cu())}
         </tr>
         // @formatter:on
       }
@@ -655,11 +658,11 @@ object SymmetryAndFlatnessSubHTML extends Logging {
         // @formatter:off
         <tr>
           <td>Baseline</td>
-          {td(beamData.baseline.beamWithPsmTop   (grid.get))}
-          {td(beamData.baseline.beamWithPsmBottom(grid.get))}
-          {td(beamData.baseline.beamWithPsmLeft  (grid.get))}
-          {td(beamData.baseline.beamWithPsmRight (grid.get))}
-          {td(beamData.baseline.beamWithPsmCenter(grid.get))}
+          {td(beamData.baseline.topWithPSM_cu   ())}
+          {td(beamData.baseline.bottomWithPSM_cu())}
+          {td(beamData.baseline.leftWithPSM_cu  ())}
+          {td(beamData.baseline.rightWithPSM_cu ())}
+          {td(beamData.baseline.centerWithPSM_cu())}
         </tr>
         // @formatter:on
       }
@@ -702,44 +705,69 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     // @formatter:on
   }
 
+  /** Optionally show the formulas for sym/flat/const calculations. */
   private val formulas: Elem = {
-    <div>
-      <h3>Calculation of Symmetry</h3>
-      Symmetry is calculated both axially and transversely as a percentage with:
-      <pre>axial = ((top - bottom) / bottom) * 100</pre>
-      <pre>transverse = ((right - left ) / left ) * 100</pre>
+    val elem = {
+      <div>
+        <h3>Calculation of Symmetry</h3>
+        Symmetry is calculated both axially and transversely as a percentage with:
+        <pre>axial = ((top - bottom) / bottom) * 100</pre>
+        <pre>transverse = ((right - left ) / left ) * 100</pre>
 
-      <h3>Calculation of Flatness</h3>
-      Flatness is calculated over the image as a percentage using the maximum and minimum values of the 5 measured
-      circles:
-      <pre>(max - min) / (max + min) * 100</pre>
+        <h3>Calculation of Flatness</h3>
+        Flatness is calculated over the image as a percentage using the maximum and minimum values of the 5 measured
+        circles:
+        <pre>(max - min) / (max + min) * 100</pre>
 
-      <h3>Calculation of Constancy</h3>
-      Constancy is calculated over the image by dividing each of the outer values by the
-      center value then subtracting each from the baseline values, processed similarly:
+        <h3>Calculation of Constancy</h3>
+        Constancy is calculated over the image by dividing each of the outer values by the
+        center value then subtracting each from the baseline values, processed similarly:
 
-      <pre>t = (top / center) - (baseline top / baseline center)</pre>
-      <pre>b = (bottom / center) - (baseline bottom / baseline center)</pre>
-      <pre>l = (left / center) - (baseline left / baseline center)</pre>
-      <pre>r = (right / center) - (baseline right / baseline center)</pre>
+        <pre>t = (top / center) - (baseline top / baseline center)</pre>
+        <pre>b = (bottom / center) - (baseline bottom / baseline center)</pre>
+        <pre>l = (left / center) - (baseline left / baseline center)</pre>
+        <pre>r = (right / center) - (baseline right / baseline center)</pre>
 
-      The sum of these is taken, multiplied by 100 and averaged:
+        The sum of these is taken, multiplied by 100 and averaged:
 
-      <pre>((t + r + b + l) * 100) / 4</pre>
-    </div>
+        <pre>((t + r + b + l) * 100) / 4</pre>
+      </div>
+    }
+    val id = "SymFlatEquations"
+
+    val elem2 = {
+      <div class="container" style="border: 1px solid lightgrey;">
+        <div style="margin:10px;">
+          <button type="button" class="btn btn-info" data-toggle="collapse" data-target={"#" + id}>
+            {WebUtil.magnify}
+          </button>
+          <span style="white-space: pre-line;">
+            Click magnifying glass icon to show/hide formulas
+          </span>
+          <div id={id} class="collapse">
+            {elem}
+          </div>
+        </div>
+      </div>
+    }
+
+    elem2
   }
 
 
   /**
    * Make HTML to show the raw beam data.
    *
-   * @param beamData Data to show.
+   * @param symFlatHistory Data to show.
    * @return HTML to display.
    */
   // @formatter:off
-  private def psmCalcTable(psmGrid: PSMGrid, beamData: SymmetryAndFlatness.SymmetryAndFlatnessHistory): Elem = {
+  private def psmCalcTable(symFlatHistory: SymmetryAndFlatness.SymmetryAndFlatnessHistory): Elem = {
 
-    val beamName = beamData.symmetryAndFlatness.beamName
+    val beamName = symFlatHistory.symmetryAndFlatness.beamName
+
+    val psmGridWithFF = PSMCache.get(symFlatHistory.symmetryAndFlatness).get
+    val psmGrid = psmGridWithFF.psmGrid
 
     def psmToTr(index: Int, name: Elem, beamToValue: PSMBeam => Double ) : Elem = {
 
@@ -766,42 +794,67 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       </thead>
     }
 
+
+
+    val beamTimesFFOverPSMOverCenter = {
+
+       def ffTimesPSM(pb: PSMBeam) = { pb.getFloodField_cu(psmGridWithFF) * pb.mean_cu }
+
+       val center = ffTimesPSM(psmGrid.centerBeam)
+
+       val top =    ffTimesPSM(psmGrid.topBeam)
+       val bottom = ffTimesPSM(psmGrid.bottomBeam)
+       val left =   ffTimesPSM(psmGrid.leftBeam)
+       val right =  ffTimesPSM(psmGrid.rightBeam)
+
+      <tr>
+        <td><span><b>4 : PSM</b> : <br>(row <b>3</b> / row <b>3</b> column <b>E Center CU</b> )</br></span> </td>
+        {td(psmGridWithFF.normalizedTop)}
+        {td(psmGridWithFF.normalizedBottom)}
+        {td(psmGridWithFF.normalizedLeft)}
+        {td(psmGridWithFF.normalizedRight)}
+        {td(psmGridWithFF.normalizedCenter)}
+      </tr>
+    }
+
     val beamValues = {
       <tr>
         <td><b>5</b> : <b>{beamName}</b> </td>
-        {td(beamData.symmetryAndFlatness.top_cu   )}
-        {td(beamData.symmetryAndFlatness.bottom_cu)}
-        {td(beamData.symmetryAndFlatness.left_cu  )}
-        {td(beamData.symmetryAndFlatness.right_cu )}
-        {td(beamData.symmetryAndFlatness.center_cu)}
+        {td(symFlatHistory.symmetryAndFlatness.top_cu   )}
+        {td(symFlatHistory.symmetryAndFlatness.bottom_cu)}
+        {td(symFlatHistory.symmetryAndFlatness.left_cu  )}
+        {td(symFlatHistory.symmetryAndFlatness.right_cu )}
+        {td(symFlatHistory.symmetryAndFlatness.center_cu)}
       </tr>
     }
 
     val beamTimesFF = {
       <tr>
         <td><b>6</b> : <b>{beamName}</b> * <b>FF</b> (row <b>1</b>)</td>
-        {td(beamData.symmetryAndFlatness.top_cu     * psmGrid.topBeam.floodField_cu.get    )}
-        {td(beamData.symmetryAndFlatness.bottom_cu  * psmGrid.bottomBeam.floodField_cu.get )}
-        {td(beamData.symmetryAndFlatness.left_cu    * psmGrid.leftBeam.floodField_cu.get   )}
-        {td(beamData.symmetryAndFlatness.right_cu   * psmGrid.rightBeam.floodField_cu.get  )}
-        {td(beamData.symmetryAndFlatness.center_cu  * psmGrid.centerBeam.floodField_cu.get )}
+        {td(symFlatHistory.symmetryAndFlatness.top_cu     * psmGrid.topBeam   .getFloodField_cu(psmGridWithFF))}
+        {td(symFlatHistory.symmetryAndFlatness.bottom_cu  * psmGrid.bottomBeam.getFloodField_cu(psmGridWithFF))}
+        {td(symFlatHistory.symmetryAndFlatness.left_cu    * psmGrid.leftBeam  .getFloodField_cu(psmGridWithFF))}
+        {td(symFlatHistory.symmetryAndFlatness.right_cu   * psmGrid.rightBeam .getFloodField_cu(psmGridWithFF))}
+        {td(symFlatHistory.symmetryAndFlatness.center_cu  * psmGrid.centerBeam.getFloodField_cu(psmGridWithFF))}
       </tr>
     }
 
     val beamTimesFFOverPSM = {
       <tr>
         <td><b>7</b> : <b>{beamName}</b> with <b>PSM</b> = ({beamName} * <b>FF</b>) / <b>PSM</b> </td>
-        {td(beamData.symmetryAndFlatness.beamWithPsmTop   (psmGrid))}
-        {td(beamData.symmetryAndFlatness.beamWithPsmBottom(psmGrid))}
-        {td(beamData.symmetryAndFlatness.beamWithPsmLeft  (psmGrid))}
-        {td(beamData.symmetryAndFlatness.beamWithPsmRight (psmGrid))}
-        {td(beamData.symmetryAndFlatness.beamWithPsmCenter(psmGrid))}
+        {td(symFlatHistory.symmetryAndFlatness.topWithPSM_cu   ())}
+        {td(symFlatHistory.symmetryAndFlatness.bottomWithPSM_cu())}
+        {td(symFlatHistory.symmetryAndFlatness.leftWithPSM_cu  ())}
+        {td(symFlatHistory.symmetryAndFlatness.rightWithPSM_cu ())}
+        {td(symFlatHistory.symmetryAndFlatness.centerWithPSM_cu())}
       </tr>
     }
 
-
-
     {
+
+    val pb: PSMBeam = psmGrid.centerBeam
+    val jCenter_cu =pb.getFloodField_cu(psmGridWithFF) * pb.mean_cu
+
     <div style="margin:20px;">
       <center>
         <h3>PSM Processing</h3>
@@ -809,13 +862,13 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       <table class="table table-bordered" title="Input values from this data set and from baseline.">
         {tableHead}
 
-        {psmToTr(1, <span><b>FF</b> : Flood Field Normalized (from PSM)</span>                  , (pb: PSMBeam) => pb.floodField_cu.get)}
+        {psmToTr(1, <span><b>FF</b> : Flood Field Normalized</span>                                             , (pb: PSMBeam) => pb.getFloodField_cu(psmGridWithFF))}
 
-        {psmToTr(2, <span><b>BR </b> : Beam Response (from 5 PSM beams)</span>                  , (pb: PSMBeam) => pb.mean_cu)}
+        {psmToTr(2, <span><b>BR </b> : Beam Response (from 5 PSM beams)</span>                                  , (pb: PSMBeam) => pb.mean_cu)}
 
-        {psmToTr(3, <span><b>FF*BR </b> : row <b>1</b> * row <b>2</b></span>                    , (pb: PSMBeam) => pb.floodField_cu.get * pb.mean_cu)}
+        {psmToTr(3, <span><b>FF*BR </b> : row <b>1</b> * row <b>2</b></span>                                    , (pb: PSMBeam) => pb.ffTimesPSM(psmGridWithFF))}
 
-        {psmToTr(4, <span><b>PSM</b> : <br>(row <b>3</b> / row <b>3</b> column <b>E Center CU</b> )</br></span> , (pb: PSMBeam) => pb.beamResponseNormalized.get)}
+        {beamTimesFFOverPSMOverCenter}
 
         {beamValues}
 
@@ -883,13 +936,13 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       <div class="row">
         <div class="col-md-4 col-md-offset-4">
           {resultTable(beamData)}
-          {inputTable(beamData, psmGrid)}
+          {inputTable(beamData)}
         </div>
         <div class="col-md-4 col-md-offset-4">
           {formulas}
         </div>
         <div class="col-md-6 col-md-offset-3" style="margin-bottom:70px;">
-          {if (psmGrid.isDefined) psmCalcTable(psmGrid.get, beamData)}
+          {if (psmGrid.isDefined) psmCalcTable(beamData)}
         </div>
       </div>
     }

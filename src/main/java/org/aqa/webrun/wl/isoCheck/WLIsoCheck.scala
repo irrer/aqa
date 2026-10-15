@@ -1,7 +1,6 @@
 package org.aqa.webrun.wl.isoCheck
 
 import org.aqa.Logging
-import org.aqa.db.WinstonLutz
 import org.aqa.db.WinstonLutzGeneric
 
 /**

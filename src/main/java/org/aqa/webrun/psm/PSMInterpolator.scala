@@ -39,7 +39,7 @@ class PSMInterpolator(psmList: Seq[PSMBeamAnalysisResult]) extends Logging {
   private val function: PiecewiseBicubicSplineInterpolatingFunction = {
     val centerValue: Double = {
       val zero = new Point2d(0, 0)
-      val c = psmList.minBy(p => p.psmBeam.center.distance(zero))
+      val c = psmList.minBy(p => p.psmBeam.center_iso.distance(zero))
       c.psmBeam.mean_cu
     }
 

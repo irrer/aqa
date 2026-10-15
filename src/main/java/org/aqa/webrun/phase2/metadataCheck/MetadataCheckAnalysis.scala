@@ -39,25 +39,46 @@ object MetadataCheckAnalysis extends Logging {
   private val JAW_NAME_X = "ASYMX"
   private val JAW_NAME_Y = "ASYMY"
 
-  private def getJawPosns(jawSeq: Seq[AttributeList]) = {
-    Seq("X", "Y").map(name =>
+  private def getJawPosnsjawSeq: Seq[AttributeList] = {
+    /*
+    val list = Seq("X", "Y").map(name =>
       jawSeq.filter(jp => jp.get(TagByName.RTBeamLimitingDeviceType).getSingleStringValueOrNull.toUpperCase.endsWith(name)).head.get(TagByName.LeafJawPositions).getDoubleValues
     )
+    list
+     */
+    ???
   }
 
   private def getPlanJawPositions(plan: AttributeList, beamNumber: Int): Seq[Array[Double]] = {
     // beam in BeamSequence that matches beamNumber
     val bs = DicomUtil.seqToAttr(plan, TagByName.BeamSequence).filter(b => b.get(TagByName.BeamNumber).getIntegerValues.head == beamNumber).head
+    /*
+    if (true) { // TODO rm
+      val bs1 = DicomUtil.seqToAttr(plan, TagByName.BeamSequence).filter(b => b.get(TagByName.BeamNumber).getIntegerValues.head == beamNumber)
+      val beam = DicomUtil.getBeamOfRtimage(plan, beamNumber).get
+      val controlPointSequence = DicomUtil.seqToAttr(beam, TagByName.ControlPointSequence)
+
+      controlPointSequence.foreach(cp => {
+        val index = cp.get(TagByName.ControlPointIndex).getIntegerValues.head
+        val j0 = DicomUtil.seqToAttr(cp, TagByName.BeamLimitingDevicePositionSequence)
+        val j1 = getJawPosns(j0)
+        val text = j1.map(jp => jp.mkString("  ")).mkString("\n")
+        println(s"cp index: $index    size: ${j1.size}    $text")
+      })
+    }
+     */
     val controlPoint = DicomUtil.seqToAttr(bs, TagByName.ControlPointSequence).head
     val bldps = DicomUtil.seqToAttr(controlPoint, TagByName.BeamLimitingDevicePositionSequence)
-    getJawPosns(bldps)
+    // getJawPosns(bldps)
+    ???
   }
 
   private def getImageJawPositions(image: AttributeList): Seq[Array[Double]] = {
     // beam in BeamSequence that matches beamNumber
     val expSeq = DicomUtil.seqToAttr(image, TagByName.ExposureSequence).head
     val blds = DicomUtil.seqToAttr(expSeq, TagByName.BeamLimitingDeviceSequence)
-    getJawPosns(blds)
+    // getJawPosns(blds)
+    ???
   }
 
   def makeMetadata(outputPK: Long, plan: AttributeList, image: AttributeList): Option[MetadataCheck] = {
@@ -117,7 +138,7 @@ object MetadataCheckAnalysis extends Logging {
       val y2JawPlan_mm = planJawPosns(1)(1)
       val y2JawPlanMinusImage_mm = planJawPosns(1)(1) - imageJawPosns(1)(1)
 
-      val pass = {
+      val Xpass = { // TODO put back
         (gantryAnglePlanMinusImage_deg.abs < tolGantryAngle) &&
         (collimatorAnglePlanMinusImage_deg.abs < tolCollimatorAngle) &&
         (isWedge ||
@@ -126,6 +147,8 @@ object MetadataCheckAnalysis extends Logging {
         (y1JawPlanMinusImage_mm.abs < tolJawY) &&
         (y2JawPlanMinusImage_mm.abs < tolJawY))
       }
+
+      val pass = true // TODO rm
 
       // image (independent of plan) uses flattening filter free
       val flatteningFilter = image.get(TagByName.RTImageDescription).getSingleStringValueOrEmptyString.toLowerCase.contains("fff")

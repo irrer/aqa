@@ -110,19 +110,19 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
             </div>
             <div class="row">
               <h2>Transverse Symmetry History</h2>
-              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.transverseSymmetryName))}
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.transverseSymmetryNameNoPSM))}
             </div>
             <div class="row">
               <h2>Axial Symmetry History</h2>
-              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.axialSymmetryName))}
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.axialSymmetryNameNoPSM))}
             </div>
             <div class="row">
               <h2>Flatness History</h2>
-              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.flatnessName))}
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.flatnessNameNoPSM))}
             </div>
             <div class="row">
               <h2>Profile Constancy History</h2>
-              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.profileConstancyName))}
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.profileConstancyNameNoPSM))}
             </div>
             <div class="row">
               <h2>EPID CU History</h2>
@@ -170,7 +170,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
     }
 
     val status =
-      if (result.symmetryAndFlatness.allPass(result.baseline, psmGrid, psmGridBaseline))
+      if (result.symmetryAndFlatness.allNoPSMPass(result.baseline))
         ProcedureStatus.pass
       else
         ProcedureStatus.fail

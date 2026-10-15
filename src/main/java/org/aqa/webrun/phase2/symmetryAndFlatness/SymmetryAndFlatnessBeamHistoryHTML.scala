@@ -220,48 +220,50 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, hasPs
       .get
 
     val chartAxial = {
-      val valueList = history.flatMap(h => h.axialSymmetry)
+      val valueList = history.map(h => h.symmetryAndFlatness.axialSymmetryNoPSM())
       makeChart(
-        axialSymmetryName,
+        axialSymmetryNameNoPSM,
         toleranceRange = Config.SymmetryPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
-        sfAndBaseline.axialSymmetry,
+        Some(sfAndBaseline.symmetryAndFlatness.axialSymmetryNoPSM()),
         valueList
       )
     }
 
     val chartTransverse = {
-      val valueList = history.flatMap(h => h.transverseSymmetry)
+      val valueList = history.map(h => h.symmetryAndFlatness.transverseSymmetryNoPSM())
       makeChart(
-        transverseSymmetryName,
+        transverseSymmetryNameNoPSM,
         toleranceRange = Config.SymmetryPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
-        sfAndBaseline.transverseSymmetry,
+        Some(sfAndBaseline.symmetryAndFlatness.transverseSymmetryNoPSM()),
         valueList
       )
     }
 
     val chartFlatness = {
-      val valueList = history.flatMap(h => h.flatness)
+      val valueList = history.map(h => h.symmetryAndFlatness.flatnessNoPSM())
       makeChart(
-        flatnessName,
+        flatnessNameNoPSM,
         toleranceRange = Config.FlatnessPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
-        sfAndBaseline.flatness,
+        Some(sfAndBaseline.symmetryAndFlatness.flatnessNoPSM()),
         valueList
       )
     }
 
     val chartProfileConstancy = {
-      val valueList = history.flatMap(h => h.profileConstancy)
+      val valueList = history.map(h => h.symmetryAndFlatness.profileConstancyNoPSM(sfAndBaseline.symmetryAndFlatness))
       makeChart(
-        profileConstancyName,
+        profileConstancyNameNoPSM,
         toleranceRange = Config.ProfileConstancyPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
-        sfAndBaseline.profileConstancy,
+        Some(sfAndBaseline.symmetryAndFlatness.profileConstancyNoPSM(sfAndBaseline.symmetryAndFlatness)),
         valueList
       )
     }
+
+    // TODO add charts for With PSM
 
     val chartEpidCU = {
 

@@ -58,7 +58,8 @@ object SymmetryAndFlatnessHTML extends Logging {
     * Get the file of the HTML for the given beam.
     */
   def beamHtmlFile(subDir: File, beamName: String, hasPsm: Boolean): File = {
-    val fileName = WebUtil.stringToUrlSafe(beamName) + "__" + hasPsm + ".html"
+    val psmUrl = if (hasPsm) "_PSM" else ""
+    val fileName = WebUtil.stringToUrlSafe(beamName) + psmUrl + ".html"
     new File(subDir, fileName)
   }
 

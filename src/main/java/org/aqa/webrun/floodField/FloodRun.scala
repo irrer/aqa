@@ -12,6 +12,7 @@ import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.WebRunProcedure
 import org.aqa.Util
 import org.aqa.db.FloodField
+import org.aqa.webrun.psm.PSMCache
 import org.restlet.Response
 
 import java.sql.Timestamp
@@ -26,12 +27,14 @@ class FloodRun(procedure: Procedure) extends WebRunProcedure with RunTrait[Flood
 
   override def run(extendedData: ExtendedData, runReq: FloodRunReq, response: Response): ProcedureStatus.Value = {
 
+    // invalidate any cached PSM related data for this machine
+    PSMCache.clearMachine(extendedData.machine.machinePK.get)
+
     // create a new record
     val floodField = FloodField.makeFloodField(extendedData.outputPK, runReq.floodField)
 
     // insert into database
     floodField.insert
-
 
     logger.info(s"Inserted FloodField into database: $floodField")
     FloodHtml.makeHtml(extendedData: ExtendedData, runReq: FloodRunReq, response: Response)

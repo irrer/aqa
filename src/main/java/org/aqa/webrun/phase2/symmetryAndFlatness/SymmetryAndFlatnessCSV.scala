@@ -25,6 +25,7 @@ import org.aqa.db.SymmetryAndFlatness
 import org.aqa.db.User
 import org.aqa.run.ProcedureStatus
 
+@deprecated("Replaced by general CSV dump for all symmetry flatness data.")
 object SymmetryAndFlatnessCSV {
 
   /**
@@ -81,18 +82,18 @@ object SymmetryAndFlatnessCSV {
       ("delivery Time", (sfb: SFB) => Util.standardDateFormat.format(sfb.output.dataDate.get)),
       ("beamName", (sfb: SFB) => sfb.symmetryAndFlatness.beamName),
       ("SOPInstanceUID", (sfb: SFB) => sfb.symmetryAndFlatness.SOPInstanceUID),
-      ("axialSymmetry CU", (sfb: SFB) => sfb.axialSymmetry),
-      ("axialSymmetryBaseline CU", (sfb: SFB) => sfb.baseline.axialSymmetry(sfb.psmGrid)),
-      ("axialSymmetryStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.axialSymmetryPass(sfb.baseline, sfb.psmGrid, sfb.psmGridBaseline))),
-      ("transverseSymmetry CU", (sfb: SFB) => sfb.transverseSymmetry),
-      ("transverseSymmetryBaseline CU", (sfb: SFB) => sfb.baseline.transverseSymmetry(sfb.psmGrid)),
-      ("transverseSymmetryStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.transverseSymmetryPass(sfb.baseline, sfb.psmGrid, sfb.psmGridBaseline))),
-      ("flatness CU", (sfb: SFB) => sfb.flatness),
-      ("flatnessBaseline CU", (sfb: SFB) => sfb.baseline.flatness(sfb.psmGrid)),
-      ("flatnessStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.flatnessPass(sfb.baseline, sfb.psmGrid, sfb.psmGridBaseline))),
-      ("profileConstancy CU", (sfb: SFB) => sfb.profileConstancy),
-      ("profileConstancyBaseline CU", (sfb: SFB) => sfb.baseline.profileConstancy(sfb.psmGrid, sfb.baseline, sfb.psmGridBaseline)),
-      ("profileConstancyStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.profileConstancyPass(sfb.baseline, sfb.psmGrid, sfb.psmGridBaseline))),
+      ("axialSymmetry CU", (sfb: SFB) => sfb.symmetryAndFlatness.axialSymmetryNoPSM()),
+      ("axialSymmetryBaseline CU", (sfb: SFB) => sfb.baseline.axialSymmetryNoPSM()),
+      ("axialSymmetryStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.axialSymmetryNoPSMPass(sfb.baseline))),
+      ("transverseSymmetry CU", (sfb: SFB) => sfb.symmetryAndFlatness.transverseSymmetryNoPSM()),
+      ("transverseSymmetryBaseline CU", (sfb: SFB) => sfb.baseline.transverseSymmetryNoPSM()),
+      ("transverseSymmetryStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.transverseSymmetryNoPSMPass(sfb.baseline))),
+      ("flatness CU", (sfb: SFB) => sfb.symmetryAndFlatness.flatnessNoPSM()),
+      ("flatnessBaseline CU", (sfb: SFB) => sfb.baseline.flatnessNoPSM()),
+      ("flatnessStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.flatnessNoPSMPass(sfb.baseline))),
+      ("profileConstancy CU", (sfb: SFB) => sfb.symmetryAndFlatness.profileConstancyNoPSM(sfb.baseline)),
+      ("profileConstancyBaseline CU", (sfb: SFB) => sfb.baseline.profileConstancyNoPSM(sfb.baseline)),
+      ("profileConstancyStatus", (sfb: SFB) => boolToStatus(sfb.symmetryAndFlatness.profileConstancyNoPSMPass(sfb.baseline))),
       ("top CU", (sf: SFB) => sf.symmetryAndFlatness.top_cu),
       ("bottom CU", (sf: SFB) => sf.symmetryAndFlatness.bottom_cu),
       ("left CU", (sf: SFB) => sf.symmetryAndFlatness.left_cu),

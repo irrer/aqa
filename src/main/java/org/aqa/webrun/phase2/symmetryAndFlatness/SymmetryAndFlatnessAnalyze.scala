@@ -6,6 +6,7 @@ import edu.umro.ImageUtil.DicomImage
 import edu.umro.ImageUtil.ImageText
 import edu.umro.ImageUtil.ImageUtil
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
+import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.Util
 import org.aqa.db.SymmetryAndFlatness
@@ -34,6 +35,7 @@ import java.sql.Timestamp
  * @param collimatorCenter                        Collimator centering offset.
  * @param floodField                              PhaseAny flood field.
  * @param symmetryAndFlatnessBaselineRedoBeamList List of beams that were marked as baselines by the user.
+ * @param isFlatteningFilterFree                  True if this is an FFF beam.
  */
 case class SymmetryAndFlatnessAnalyze( //
                                        outputPK: Long,
@@ -43,14 +45,21 @@ case class SymmetryAndFlatnessAnalyze( //
                                        attributeList: AttributeList,
                                        beamName: String,
                                        collimatorCenter: Point2D.Double,
-                                       floodField: Option[AttributeList],
-                                       symmetryAndFlatnessBaselineRedoBeamList: Seq[String]
+                                       // floodField: Option[AttributeList],
+                                       symmetryAndFlatnessBaselineRedoBeamList: Seq[String],
+                                       isFlatteningFilterFree: Boolean
                                      ) extends Logging {
 
   private def circleRadiusInPixels(isoImageTrans: IsoImagePlaneTranslator, radius_mm: Double): Double = {
     val imagePlaneCenterInPixels = isoImageTrans.iso2Pix(0, 0)
     val radiusInPixels = isoImageTrans.iso2Pix(radius_mm, radius_mm).distance(imagePlaneCenterInPixels)
     radiusInPixels
+  }
+
+  /** Energy for this beam. */
+  private val KVP: Double = {
+    val v = DicomUtil.findAllTag(attributeList, TagByName.KVP).head.getDoubleValues.head
+    v
   }
 
   // val attributeList: AttributeList = getAttributeList(beamName, runReq)
@@ -255,7 +264,9 @@ case class SymmetryAndFlatnessAnalyze( //
         psmDataDate = psmDataDate, // psmImageHash_md5,
         span_mm = Some(span_mm),
         diameter_mm = Some(diameter_mm),
-        RTImageSID_mm = Some(attributeList.get(TagByName.RTImageSID).getDoubleValues.head)
+        RTImageSID_mm = Some(attributeList.get(TagByName.RTImageSID).getDoubleValues.head),
+        KVP = Some(KVP),
+        isFlatteningFilterFree = Some(isFlatteningFilterFree)
       )
       // @formatter:on
     }
@@ -270,7 +281,8 @@ case class SymmetryAndFlatnessAnalyze( //
       beamName = beamName,
       hasPsm = psmGrid.isDefined,
       dataDate = dataDate,
-      procedurePK = procedurePK) match {
+      procedurePK = procedurePK
+    ) match {
       case Some(bl) => bl.baseline
       case _ => symmetryAndFlatness
     }

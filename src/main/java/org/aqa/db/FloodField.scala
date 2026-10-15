@@ -20,6 +20,7 @@ import com.pixelmed.dicom.AttributeList
 import com.pixelmed.dicom.AttributeTag
 import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.DicomImage
+import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.ScalaUtil.FileUtil.ToZipOutputStream
 import org.aqa.db.Db.driver.api._
@@ -95,6 +96,16 @@ case class FloodField(
 
   /** Image with pixel values scaled by dividing each pixel by the mean of the entire image. */
   lazy val dicomImageNormalized: DicomImage = FloodField.makeNormalizedFF(dicom)
+
+  /** Convenience for translating pixel to and from iso coordinates. */
+  lazy val trans = new IsoImagePlaneTranslator(dicom)
+
+  /** The output for this grid. */
+  lazy val output: Output = Output.get(outputPK).get
+
+  /** Time when this was captured. */
+  lazy val dataDate_ms: Long = output.dataDate.get.getTime
+
 }
 
 object FloodField extends Logging {
@@ -186,23 +197,15 @@ object FloodField extends Logging {
   /**
    * Get all flood field entries that match passed parameters.
    *
-   * @param machinePK               For this machine
-   * @param Rows                    Number of rows of pixels
-   * @param Columns                 Number of columns of pixels
-   * @param ImagePlanePixelSpacingX Horizontal spacing of pixels in mm
-   * @param ImagePlanePixelSpacingY Vertical spacing of pixels in mm
-   * @param kvp                     Energy level
-   * @param fff                     True if Flattening Filter Free
-   * @param minDate                 On or before this
-   * @param maxDate                 On or after this
+   * @param machinePK For this machine
+   * @param kvp       Energy level
+   * @param fff       True if Flattening Filter Free
+   * @param minDate   On or before this
+   * @param maxDate   On or after this
    * @return List of all matching flood fields, sorted by delivery date.
    */
   def getMatching(
                    machinePK: Long,
-                   Rows: Int,
-                   Columns: Int,
-                   ImagePlanePixelSpacingX: Double,
-                   ImagePlanePixelSpacingY: Double,
                    kvp: Double,
                    fff: Boolean,
                    minDate: Timestamp,
@@ -211,11 +214,7 @@ object FloodField extends Logging {
     val action = for {
       output <- Output.query if output.machinePK === machinePK
       ff <- FloodField.query
-      if (ff.Rows === Rows) &&
-        (ff.Columns === Columns) &&
-        (ff.ImagePlanePixelSpacingX === ImagePlanePixelSpacingX) &&
-        (ff.ImagePlanePixelSpacingY === ImagePlanePixelSpacingY) &&
-        (ff.KVP === kvp) &&
+      if (ff.KVP === kvp) &&
         (ff.FlatteningFilterFree === fff) &&
         (ff.outputPK === output.outputPK) &&
         (output.dataDate >= minDate) &&
@@ -226,6 +225,24 @@ object FloodField extends Logging {
 
     floodList
   }
+
+  /**
+   * Get a list of all rows for the given output
+   */
+  def getByMachine(machinePK: Long): Seq[FloodField] = {
+    if (Procedure.ProcOfFloodField.isEmpty)
+      Seq()
+    else {
+      val floodFieldPK = Procedure.ProcOfFloodField.get.procedurePK
+      val action = for {
+        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === floodFieldPK))
+        floodField <- FloodField.query.filter(f => f.outputPK === output.outputPK)
+      } yield floodField
+      val ffList = Db.run(action.result)
+      ffList
+    }
+  }
+
 
   def delete(floodFieldPK: Long): Int = {
     val q = query.filter(_.floodFieldPK === floodFieldPK)
@@ -384,7 +401,7 @@ object FloodField extends Logging {
    *
    * Some care is done to do this in Double precision, because when summing the pixels with Float, some precision is lost.
    *
-   * @param al: raw DICOM image
+   * @param al : raw DICOM image
    * @return New image.
    */
   private def makeNormalizedFF(al: AttributeList): DicomImage = {

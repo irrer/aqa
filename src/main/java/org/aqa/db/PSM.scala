@@ -184,6 +184,23 @@ object PSM extends Logging {
     Db.run(action.result)
   }
 
+  /**
+    * Get a list of all rows for the given output
+    */
+  def getByMachine(machinePK: Long): Seq[PSM] = {
+    if (Procedure.ProcOfPSM.isEmpty)
+      Seq()
+    else {
+      val psmPK = Procedure.ProcOfPSM.get.procedurePK
+      val action = for {
+        output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.procedurePK === psmPK))
+        psm <- PSM.query.filter(p => p.outputPK === output.outputPK)
+      } yield psm
+      val psmList = Db.run(action.result)
+      psmList
+    }
+  }
+
   def delete(psmPK: Long): Int = {
     val q = query.filter(_.psmPK === psmPK)
     val action = q.delete

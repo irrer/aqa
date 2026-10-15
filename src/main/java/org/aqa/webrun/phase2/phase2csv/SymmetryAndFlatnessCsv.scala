@@ -19,7 +19,6 @@ package org.aqa.webrun.phase2.phase2csv
 import org.aqa.Util
 import org.aqa.db.Output
 import org.aqa.db.SymmetryAndFlatness
-import org.aqa.webrun.psm.PSMGrid
 
 import java.sql.Timestamp
 
@@ -59,6 +58,7 @@ class SymmetryAndFlatnessCsv(metadataCache: MetadataCache) extends Phase2Csv[Sym
       "NA"
   }
 
+  /*
   private def psmGridOf(sf: SF): Option[PSMGrid] = {
     if (sf.symmetryAndFlatness.psmDataDate.isDefined)
       PSMGrid.get(sf.output.machinePK.get, sf.symmetryAndFlatness.psmDataDate.get)
@@ -79,36 +79,49 @@ class SymmetryAndFlatnessCsv(metadataCache: MetadataCache) extends Phase2Csv[Sym
     else
       "NA"
   }
+   */
 
-  private def axialSym(sf: SF): Any = {
-    optDouble(sf.symmetryAndFlatness.axialSymmetry(psmGridOf(sf)))
+  /*
+  private def axialSym(sf: SF, floodField: FloodField): Any = {
+    optDouble(sf.symmetryAndFlatness.axialSymmetry(psmGridOf(sf), floodField))
   }
 
-  private def transSym(sf: SF): Any = {
-    optDouble(sf.symmetryAndFlatness.transverseSymmetry(psmGridOf(sf)))
+  private def transSym(sf: SF, floodField: FloodField): Any = {
+    optDouble(sf.symmetryAndFlatness.transverseSymmetry(psmGridOf(sf), floodField))
   }
 
-  private def flat(sf: SF): Any = {
-    optDouble(sf.symmetryAndFlatness.flatness(psmGridOf(sf)))
+  private def flat(sf: SF, floodField: FloodField): Any = {
+    optDouble(sf.symmetryAndFlatness.flatness(psmGridOf(sf), floodField))
   }
 
-  private def constancy(sf: SF): Any = {
-    optDouble(sf.symmetryAndFlatness.profileConstancy(psmGridOf(sf), sf.baseline, psmGridBaselineOf(sf)))
+  private def constancy(sf: SF, floodField: FloodField): Any = {
+    optDouble(sf.symmetryAndFlatness.profileConstancy(psmGridOf(sf), sf.baseline, psmGridBaselineOf(sf), floodField))
   }
+   */
 
   override protected def makeColList: Seq[CsvCol[SF]] = {
 
     Seq(
       CsvCol("Beam Name", "Common name of RTPLAN beam.", (sf: SF) => sf.symmetryAndFlatness.beamName),
-      CsvCol("Uses PSM", "True if PSM (Pixel Sensitivity Matrix) was used to correct image.", (sf: SF) => sf.symmetryAndFlatness.psmDataDate.isDefined.toString),
-      CsvCol("Axial Symmetry", "((top - bottom) / bottom) * 100", axialSym),
-      CsvCol("Transverse Symmetry", "((right - left ) / left ) * 100", transSym),
-      CsvCol("Flatness", "(max - min) / (max + min) * 100", flat),
+      //
+      CsvCol("Axial Symmetry with PSM", "((top - bottom) / bottom) * 100", (sf: SF) => sf.symmetryAndFlatness.axialSymmetryWithPSM()),
+      CsvCol("Transverse Symmetry with PSM", "((right - left ) / left ) * 100", (sf: SF) => sf.symmetryAndFlatness.transverseSymmetryWithPSM()),
+      CsvCol("Flatness with PSM", "(max - min) / (max + min) * 100", (sf: SF) => sf.symmetryAndFlatness.flatnessWithPSM()),
       CsvCol(
-        "Profile Constancy",
+        "Profile Constancy with PSM",
         "average of (X / center) - (baseline X / baseline center), where X iterates through top, bottom, right, left",
-        constancy
+        (sf: SF) => sf.symmetryAndFlatness.profileConstancyWithPSM(sf.baseline)
       ),
+      //
+      CsvCol("Axial Symmetry No PSM", "((top - bottom) / bottom) * 100", (sf: SF) => sf.symmetryAndFlatness.axialSymmetryNoPSM()),
+      CsvCol("Transverse Symmetry No PSM", "((right - left ) / left ) * 100", (sf: SF) => sf.symmetryAndFlatness.transverseSymmetryNoPSM()),
+      CsvCol("Flatness No PSM", "(max - min) / (max + min) * 100", (sf: SF) => sf.symmetryAndFlatness.flatnessNoPSM()),
+      CsvCol(
+        "Profile Constancy No PSM",
+        "average of (X / center) - (baseline X / baseline center), where X iterates through top, bottom, right, left",
+        (sf: SF) => sf.symmetryAndFlatness.profileConstancyNoPSM(sf.baseline)
+      ),
+      //
       CsvCol(
         "Baseline Designation",
         "explicit: Designated by user as a baseline.  implicit: Used as baseline when an explicit one is not defined.  If blank, then it is not used as a baseline.",
@@ -116,20 +129,37 @@ class SymmetryAndFlatnessCsv(metadataCache: MetadataCache) extends Phase2Csv[Sym
       ),
       CsvCol("PSM Date", "Date and time that PSM was delivered.  Used only when available.", (sf: SF) => optDate(sf.symmetryAndFlatness.psmDataDate)),
       CsvCol("Span", "Distance in mm between centers of opposing sample points.", (sf: SF) => sf.symmetryAndFlatness.span_mm.get),
-      CsvCol("Diameter", "Diameter in mm in the isoplane of the circle of pixels sampled at each of the five points.", (sf: SF) => sf.symmetryAndFlatness.diameter_mm.get),
+      CsvCol(
+        "Diameter",
+        "Diameter in mm in the isoplane of the circle of pixels sampled at each of the five points.",
+        (sf: SF) => sf.symmetryAndFlatness.diameter_mm.get
+      ),
       CsvCol("RTImageSID", "Distance mm from source to image DICOM tag 3002,0026.", (sf: SF) => sf.symmetryAndFlatness.RTImageSID_mm.get),
-      CsvCol("Top CU", "Average CU of pixel values in the top circle of the image.", (sf: SF) => sf.symmetryAndFlatness.top_cu),
-      CsvCol("Bottom CU", "Average CU of pixel values in the bottom circle of the image.", (sf: SF) => sf.symmetryAndFlatness.bottom_cu),
-      CsvCol("Left CU", "Average CU of pixel values in the left hand circle of the image.", (sf: SF) => sf.symmetryAndFlatness.left_cu),
-      CsvCol("Right CU", "Average CU of pixel values in the right hand circle of the image.", (sf: SF) => sf.symmetryAndFlatness.right_cu),
-      CsvCol("Center CU", "Average CU of pixel values in center circle of the image.", (sf: SF) => sf.symmetryAndFlatness.center_cu),
       CsvCol("Baseline Acquisition", "When data for baseline was acquired", (sf: SF) => Util.standardDateFormat.format(sf.baselineOutput.dataDate.get)),
       CsvCol("Baseline Analysis", "When data for baseline was analyzed", (sf: SF) => Util.standardDateFormat.format(sf.baselineOutput.startDate)),
-      CsvCol("Baseline Top CU", "For baseline image, average CU of pixel values in the top circle.", (sf: SF) => sf.baseline.top_cu),
-      CsvCol("Baseline Bottom CU", "For baseline image, average CU of pixel values in the bottom circle.", (sf: SF) => sf.baseline.bottom_cu),
-      CsvCol("Baseline Left CU", "For baseline image, average CU of pixel values in the left circle.", (sf: SF) => sf.baseline.left_cu),
-      CsvCol("Baseline Right CU", "For baseline image, average CU of pixel values in the right circle.", (sf: SF) => sf.baseline.right_cu),
-      CsvCol("Baseline Center CU", "For baseline image, average CU of pixel values in the center circle.", (sf: SF) => sf.baseline.center_cu),
+      //
+      CsvCol("Top CU with PSM", "Average CU of pixel values in the top circle of the image.", (sf: SF) => sf.symmetryAndFlatness.topWithPSM_cu()),
+      CsvCol("Bottom CU with PSM", "Average CU of pixel values in the bottom circle of the image.", (sf: SF) => sf.symmetryAndFlatness.bottomWithPSM_cu()),
+      CsvCol("Left CU with PSM", "Average CU of pixel values in the left hand circle of the image.", (sf: SF) => sf.symmetryAndFlatness.leftWithPSM_cu()),
+      CsvCol("Right CU with PSM", "Average CU of pixel values in the right hand circle of the image.", (sf: SF) => sf.symmetryAndFlatness.rightWithPSM_cu()),
+      CsvCol("Center CU with PSM", "Average CU of pixel values in center circle of the image.", (sf: SF) => sf.symmetryAndFlatness.centerWithPSM_cu()),
+      CsvCol("Baseline Top CU with PSM", "For baseline image, average CU of pixel values in the top circle.", (sf: SF) => sf.baseline.topWithPSM_cu()),
+      CsvCol("Baseline Bottom CU with PSM", "For baseline image, average CU of pixel values in the bottom circle.", (sf: SF) => sf.baseline.bottomWithPSM_cu()),
+      CsvCol("Baseline Left CU with PSM", "For baseline image, average CU of pixel values in the left circle.", (sf: SF) => sf.baseline.leftWithPSM_cu()),
+      CsvCol("Baseline Right CU with PSM", "For baseline image, average CU of pixel values in the right circle.", (sf: SF) => sf.baseline.rightWithPSM_cu()),
+      CsvCol("Baseline Center CU with PSM", "For baseline image, average CU of pixel values in the center circle.", (sf: SF) => sf.baseline.centerWithPSM_cu()),
+      //
+      CsvCol("Top CU No PSM", "Average CU of pixel values in the top circle of the image.", (sf: SF) => sf.symmetryAndFlatness.top_cu),
+      CsvCol("Bottom CU No PSM", "Average CU of pixel values in the bottom circle of the image.", (sf: SF) => sf.symmetryAndFlatness.bottom_cu),
+      CsvCol("Left CU No PSM", "Average CU of pixel values in the left hand circle of the image.", (sf: SF) => sf.symmetryAndFlatness.left_cu),
+      CsvCol("Right CU No PSM", "Average CU of pixel values in the right hand circle of the image.", (sf: SF) => sf.symmetryAndFlatness.right_cu),
+      CsvCol("Center CU No PSM", "Average CU of pixel values in center circle of the image.", (sf: SF) => sf.symmetryAndFlatness.center_cu),
+      CsvCol("Baseline Top CU No PSM", "For baseline image, average CU of pixel values in the top circle.", (sf: SF) => sf.baseline.top_cu),
+      CsvCol("Baseline Bottom CU No PSM", "For baseline image, average CU of pixel values in the bottom circle.", (sf: SF) => sf.baseline.bottom_cu),
+      CsvCol("Baseline Left CU No PSM", "For baseline image, average CU of pixel values in the left circle.", (sf: SF) => sf.baseline.left_cu),
+      CsvCol("Baseline Right CU No PSM", "For baseline image, average CU of pixel values in the right circle.", (sf: SF) => sf.baseline.right_cu),
+      CsvCol("Baseline Center CU No PSM", "For baseline image, average CU of pixel values in the center circle.", (sf: SF) => sf.baseline.center_cu),
+      //
       CsvCol("Top Std Dev CU", "Standard Deviation in CU of pixel values in the top circle of the image.", (sf: SF) => sf.symmetryAndFlatness.topStdDev_cu),
       CsvCol("Bottom Std Dev CU", "Standard Deviation in CU of pixel values in the bottom circle of the image.", (sf: SF) => sf.symmetryAndFlatness.bottomStdDev_cu),
       CsvCol("Left Std Dev CU", "Standard Deviation in CU of pixel values in the left hand circle of the image.", (sf: SF) => sf.symmetryAndFlatness.leftStdDev_cu),
@@ -156,13 +186,18 @@ class SymmetryAndFlatnessCsv(metadataCache: MetadataCache) extends Phase2Csv[Sym
   }
 
   /**
-    * Get the data for a particular machine.
-    *
-    * @param machinePK Machine to get data for.
-    * @return List of data for the particular machine.
-    */
+   * Get the data for a particular machine.
+   *
+   * @param machinePK Machine to get data for.
+   * @return List of data for the particular machine.
+   */
   override protected def getData(metadataCache: MetadataCache, machinePK: Long): Seq[SF] = {
-    val data = SymmetryAndFlatness.historyForMachine(machinePK, metadataCache.phase2ProcedurePK) ++ SymmetryAndFlatness.historyForMachine(machinePK, metadataCache.phase3ProcedurePK)
+    val data =
+      // @formatter:off
+        SymmetryAndFlatness.historyForMachine(machinePK, metadataCache.phase2ProcedurePK) ++
+        SymmetryAndFlatness.historyForMachine(machinePK, metadataCache.phase3ProcedurePK)
+      // @formatter:on
+
     val symFlat = data.sortBy(h => h.output.dataDate.get.getTime + h.symmetryAndFlatness.beamName)
     symFlat
   }
@@ -170,5 +205,6 @@ class SymmetryAndFlatnessCsv(metadataCache: MetadataCache) extends Phase2Csv[Sym
   override def getSopUidList(data: SF): Seq[String] = Seq(data.symmetryAndFlatness.SOPInstanceUID)
 
   override protected val dicomHeaderPrefixList: Seq[String] = Seq("")
+
   override def getOutput(data: SF): Output = data.output
 }

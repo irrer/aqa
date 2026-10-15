@@ -12,6 +12,9 @@ import java.awt.Color
 import javax.vecmath.Point2d
 import javax.vecmath.Point2i
 
+/**
+ * Imitate the Matlab program that processes PSMs.  This is for investigation only, not for production.
+ */
 case class PSMImitate(ff: AttributeList, response: Seq[AttributeList], grid: PSMGrid) {
 
   private val prefix = "Imitate"
@@ -144,10 +147,10 @@ case class PSMImitate(ff: AttributeList, response: Seq[AttributeList], grid: PSM
 
 
   // @formatter:off
-  val    topBeam: PSMBeamAnalysisResult = grid.resultList.minBy(r => r.psmBeam.center.getY)
-  val bottomBeam: PSMBeamAnalysisResult = grid.resultList.maxBy(r => r.psmBeam.center.getY)
-  val   leftBeam: PSMBeamAnalysisResult = grid.resultList.minBy(r => r.psmBeam.center.getX)
-  val  rightBeam: PSMBeamAnalysisResult = grid.resultList.maxBy(r => r.psmBeam.center.getX)
+  val    topBeam: PSMBeamAnalysisResult = grid.resultList.minBy(r => r.psmBeam.center_iso.getY)
+  val bottomBeam: PSMBeamAnalysisResult = grid.resultList.maxBy(r => r.psmBeam.center_iso.getY)
+  val   leftBeam: PSMBeamAnalysisResult = grid.resultList.minBy(r => r.psmBeam.center_iso.getX)
+  val  rightBeam: PSMBeamAnalysisResult = grid.resultList.maxBy(r => r.psmBeam.center_iso.getX)
   val centerBeam: PSMBeamAnalysisResult = grid.resultList.find(r => r.psmBeam.SOPInstanceUID.equals(grid.centerBeam.SOPInstanceUID)).get
 
   val centerCROI = meanPix(centerPoint, scaleImg(centerBeam.rtimage))
@@ -220,7 +223,7 @@ case class PSMImitate(ff: AttributeList, response: Seq[AttributeList], grid: PSM
 
     val AQAFFcor = AQACorA * AQAFFCorB
 
-    doText(20, s"$nam x: ${beam.psmBeam.center.getX}    y: ${beam.psmBeam.center.getY}")
+    doText(20, s"$nam x: ${beam.psmBeam.center_iso.getX}    y: ${beam.psmBeam.center_iso.getY}")
     doText(40, s"pointX: ${point.getX}    pointY: ${point.getY}")
     doText(60, s"Matlab FFcorA: ${fmt(matlab_cu)} $FFcorAText")
     doText(80, s"   AQA FFcorA: ${fmt(beam.psmBeam.mean_cu)}")
@@ -232,8 +235,6 @@ case class PSMImitate(ff: AttributeList, response: Seq[AttributeList], grid: PSM
 
     val s = (radius * 2) + 1
     gc.drawRect(point.getX - radius, point.getY - radius, s, s)
-
-    // Trace.showInMSPaint(bufImg)
 
     matlab_cu
   }

@@ -70,6 +70,9 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
   }
 
   override def run(extendedData: ExtendedData, runReq: PSMRunReq, response: Response): ProcedureStatus.Value = {
+    // invalidate any cached PSM related data for this machine
+    PSMCache.clearMachine(extendedData.machine.machinePK.get)
+
     new PSMExecute(extendedData, runReq)
     ProcedureStatus.done
   }
@@ -178,10 +181,6 @@ class PSMRun(procedure: Procedure) extends WebRunProcedure with RunTrait[PSMRunR
       FloodField
         .getMatching( //
           machinePK = machinePK,
-          Rows = Rows,
-          Columns = Columns,
-          ImagePlanePixelSpacingX = ImagePlanePixelSpacing.head,
-          ImagePlanePixelSpacingY = ImagePlanePixelSpacing(1),
           kvp = kvp,
           fff = fff,
           minDate = minDate,

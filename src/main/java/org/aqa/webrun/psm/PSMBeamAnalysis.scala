@@ -154,7 +154,7 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
       if (Config.PSMSamplePixelRectangle) // TODO rm
         JCoordinateList // TODO rm
       else
-        PSMUtil.pixelCoordinatesWithinRadius(rtimage, center_pix) // TODO put back
+        PSMUtil.pixelCoordinatesWithinRadius(rtimage, center_pix) // TODO keep
     }
 
     /**
@@ -215,6 +215,10 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
 
     val wholeDetector_cu = if (psmRunReq.wholeDetector.isDefined) meanCuOf(psmRunReq.wholeDetector.get) else None
 
+    val RTImageSID = rtimage.get(TagByName.RTImageSID).getDoubleValues.headOption
+
+    val RadiationMachineSAD = rtimage.get(TagByName.RadiationMachineSAD).getDoubleValues.headOption
+
     // If this is a redo, then this will remove the old one from the cache.
     PSMGrid.remove(extendedData.machine.machinePK.get, extendedData.output.dataDate.get)
 
@@ -235,10 +239,10 @@ case class PSMBeamAnalysis(rtplan: AttributeList, extendedData: ExtendedData, tr
       bottom_mm = ms.map(_.bottom),
       left_mm = ms.map(_.left),
       right_mm = ms.map(_.right),
-      floodField_cu = Some(floodField_cu),
       wholeDetector_cu = wholeDetector_cu,
-      beamResponseNormalized = None // to be replaced when all beams are calculated.
-
+      beamResponseNormalized = None, // to be replaced when all beams are calculated.
+      RTImageSID = RTImageSID,
+      RadiationMachineSAD = RadiationMachineSAD
     )
 
     val bufferedImage: BufferedImage = {

@@ -17,35 +17,40 @@
 package org.aqa.db
 
 import com.pixelmed.dicom.AttributeList
+import edu.umro.DicomDict.TagByName
 import edu.umro.ImageUtil.IsoImagePlaneTranslator
 import org.aqa.db.Db.driver.api._
 import org.aqa.Logging
 import org.aqa.Util
+import org.aqa.webrun.psm.PSMCache.PSMGridWithFF
+import org.aqa.webrun.psm.PSMUtil
 
+import java.awt.geom.Point2D
 import java.sql.Timestamp
 import javax.vecmath.Point2d
 
 case class PSMBeam(
-                    psmBeamPK: Option[Long], // primary key
-                    outputPK: Long, // output primary key
-                    xCenter_mm: Double, // X coordinate of beam's center in mm
-                    yCenter_mm: Double, // Y coordinate of beam's center in mm
-                    SOPInstanceUID: String, // SOPInstanceUID if it is in the DICOM
-                    beamName: String, // name of beam
-                    Rows: Int, // Number of rows in the image.  DICOM metadata 0028,0010
-                    Columns: Int, // Number of columns in the image.  DICOM metadata 0028,0011
-                    ImagePlanePixelSpacingX: Double, // Physical distance (in mm) between the center of each image pixel in the X axis.  DICOM metadata 3002,0011 first value
-                    ImagePlanePixelSpacingY: Double, // Physical distance (in mm) between the center of each image pixel in the Y axis.  DICOM metadata 3002,0011 second value
-                    mean_cu: Double, // average value of pixels in CU
-                    stdDev_cu: Double, // standard deviation of pixels in CU
-                    top_mm: Option[Double], // top of field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
-                    bottom_mm: Option[Double], // bottom of field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
-                    left_mm: Option[Double], // left field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
-                    right_mm: Option[Double], // right field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.m
-                    floodField_cu: Option[Double], // value of flood field pixels that correspond to this point
-                    wholeDetector_cu: Option[Double], // value of whole detector pixels that correspond to this point
-                    beamResponseNormalized: Option[Double] // normalized value mean_cu:  mean_cu / (mean_cu of center beam)
-                  ) {
+    psmBeamPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    xCenter_mm: Double, // X coordinate of beam's center in mm
+    yCenter_mm: Double, // Y coordinate of beam's center in mm
+    SOPInstanceUID: String, // SOPInstanceUID if it is in the DICOM
+    beamName: String, // name of beam
+    Rows: Int, // Number of rows in the image.  DICOM metadata 0028,0010
+    Columns: Int, // Number of columns in the image.  DICOM metadata 0028,0011
+    ImagePlanePixelSpacingX: Double, // Physical distance (in mm) between the center of each image pixel in the X axis.  DICOM metadata 3002,0011 first value
+    ImagePlanePixelSpacingY: Double, // Physical distance (in mm) between the center of each image pixel in the Y axis.  DICOM metadata 3002,0011 second value
+    mean_cu: Double, // average value of pixels in CU
+    stdDev_cu: Double, // standard deviation of pixels in CU
+    top_mm: Option[Double], // top of field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
+    bottom_mm: Option[Double], // bottom of field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
+    left_mm: Option[Double], // left field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.
+    right_mm: Option[Double], // right field edge measurement.  Possibly None if the point was too close to one of the edges making the measurement of all four edges impossible.m
+    wholeDetector_cu: Option[Double], // value of whole detector pixels that correspond to this point
+    beamResponseNormalized: Option[Double], // normalized value mean_cu:  mean_cu / (mean_cu of center beam)
+    RTImageSID: Option[Double], // Source to image distance.  DICOM metadata 3002,0026
+    RadiationMachineSAD: Option[Double] // Source to gantry axis distance.   DICOM metadata 3002,0022
+) {
 
   def insert: PSMBeam = {
     val insertQuery = PSMBeam.query returning PSMBeam.query.map(_.psmBeamPK) into
@@ -58,7 +63,9 @@ case class PSMBeam(
 
   def insertOrUpdate(): Int = Db.run(PSMBeam.query.insertOrUpdate(this))
 
-  val center: Point2d = new Point2d(xCenter_mm, yCenter_mm)
+  val center_iso: Point2d = new Point2d(xCenter_mm, yCenter_mm)
+
+  val center2DDouble_iso: Point2D.Double = new Point2D.Double(xCenter_mm, yCenter_mm)
 
   override def toString: String = {
     "    psmBeamPK: " + psmBeamPK + "\n" +
@@ -77,21 +84,63 @@ case class PSMBeam(
       "    bottom_mm: " + Util.fmtDbl(bottom_mm) + "\n" +
       "    left_mm: " + Util.fmtDbl(left_mm) + "\n" +
       "    right_mm: " + Util.fmtDbl(right_mm) + "\n" +
-      "    floodField_cu: " + Util.fmtDbl(floodField_cu) + "\n" +
       "    wholeDetector_cu: " + Util.fmtDbl(wholeDetector_cu) + "\n" +
-      "    beamResponseNormalized: " + Util.fmtDbl(beamResponseNormalized)
+      "    beamResponseNormalized: " + Util.fmtDbl(beamResponseNormalized) +
+      "    RTImageSID: " + Util.fmtDbl(RTImageSID) +
+      "    RadiationMachineSAD: " + Util.fmtDbl(RadiationMachineSAD)
   }
 
+  /*
   val beamResponse: Option[Double] = {
     if (floodField_cu.isDefined && beamResponseNormalized.isDefined)
       Some(floodField_cu.get * beamResponseNormalized.get)
     else
       None
   }
+   */
 
-  def rawImage: Double = wholeDetector_cu.get * floodField_cu.get // multiply
+  // def rawImage: Double = wholeDetector_cu.get * floodField_cu.get // multiply
 
-  def psm: Double = rawImage / beamResponseNormalized.get
+  // def psm: Double = rawImage / beamResponseNormalized.get
+
+  def getFloodField_cu(psmGridWithFF: PSMGridWithFF): Double = {
+
+    val floodField = psmGridWithFF.floodField
+
+    val trans: IsoImagePlaneTranslator = {
+
+      if (RTImageSID.isDefined && RadiationMachineSAD.isDefined) {
+        val ffAl = floodField.dicom
+        val RTImageSIDAttr = ffAl.get(TagByName.RTImageSID)
+        RTImageSIDAttr.removeValues()
+        RTImageSIDAttr.addValue(RTImageSID.get)
+
+        val RadiationMachineSADAttr = ffAl.get(TagByName.RadiationMachineSAD)
+        RadiationMachineSADAttr.removeValues()
+        RadiationMachineSADAttr.addValue(RadiationMachineSAD.get)
+        new IsoImagePlaneTranslator(ffAl)
+      } else { // TODO this is too slow
+        val ds = DicomSeries.getBySopInstanceUID(SOPInstanceUID).head
+        val psmAl = {
+          ds.attributeListList.find(al => Util.sopOfAl(al).equalsIgnoreCase(SOPInstanceUID)).get
+        }
+        val ffAl = floodField.dicom
+
+        ffAl.put(psmAl.get(TagByName.RTImageSID))
+        ffAl.put(psmAl.get(TagByName.RadiationMachineSAD))
+        new IsoImagePlaneTranslator(ffAl)
+      }
+    }
+
+    val center_pix = trans.iso2Pix(center2DDouble_iso)
+    val coordinateList = PSMUtil.pixelCoordinatesWithinRadius(trans, floodField.dicomImageNormalized, center_pix)
+    val ff_cu = coordinateList.map(c => floodField.dicomImageNormalized.get(c.getX, c.getY)).sum / coordinateList.size
+    ff_cu
+  }
+
+  def ffTimesPSM(psmGridWithFF: PSMGridWithFF): Double = {
+    getFloodField_cu(psmGridWithFF) * mean_cu
+  }
 
 }
 
@@ -130,11 +179,13 @@ object PSMBeam extends Logging {
 
     def right_mm = column[Option[Double]]("right_mm")
 
-    def floodField_cu = column[Option[Double]]("floodField_cu")
-
     def wholeDetector_cu = column[Option[Double]]("wholeDetector_cu")
 
     def beamResponseNormalized = column[Option[Double]]("beamResponseNormalized")
+
+    def RTImageSID = column[Option[Double]]("RTImageSID")
+
+    def RadiationMachineSAD = column[Option[Double]]("RadiationMachineSAD")
 
     def * =
       (
@@ -154,9 +205,10 @@ object PSMBeam extends Logging {
         bottom_mm,
         left_mm,
         right_mm,
-        floodField_cu,
         wholeDetector_cu,
-        beamResponseNormalized
+        beamResponseNormalized,
+        RTImageSID,
+        RadiationMachineSAD
       ) <> (PSMBeam.apply _ tupled, PSMBeam.unapply)
 
     def outputFK = foreignKey("PSMBeam_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
@@ -172,12 +224,27 @@ object PSMBeam extends Logging {
   }
 
   /**
-   * Get PSM beams by machine and data date time.
-   *
-   * @param machinePK Machine.
-   * @param dataDate  Data data from PSM output.
-   * @return List of beams for that machine and data date.
-   */
+    * Get PSM beams by machine.
+    *
+    * @param machinePK Machine.
+    * @return List of beams for that machine.
+    */
+  def getByMachine(machinePK: Long): Seq[PSMBeam] = {
+    val action = for {
+      output <- Output.query.filter(o => o.machinePK === machinePK)
+      psmBeam <- PSMBeam.query.filter(p => p.outputPK === output.outputPK)
+    } yield psmBeam
+    val list = Db.run(action.result)
+    list
+  }
+
+  /**
+    * Get PSM beams by machine and data date time.
+    *
+    * @param machinePK Machine.
+    * @param dataDate  Data data from PSM output.
+    * @return List of beams for that machine and data date.
+    */
   def getByMachineAndTime(machinePK: Long, dataDate: Timestamp): Seq[PSMBeam] = {
     val action = for {
       output <- Output.query.filter(o => (o.machinePK === machinePK) && (o.dataDate === dataDate))
@@ -188,8 +255,8 @@ object PSMBeam extends Logging {
   }
 
   /**
-   * Get a list of all rows for the given output
-   */
+    * Get a list of all rows for the given output
+    */
   def getByOutput(outputPK: Long): Seq[PSMBeam] = {
     val action = for {
       inst <- PSMBeam.query if inst.outputPK === outputPK
@@ -260,5 +327,6 @@ object PSMBeam extends Logging {
     // sort by data date
     history.toSeq.sortBy(_.output.dataDate.get.getTime)
   }
+
 
 }
