@@ -21,7 +21,6 @@ import org.aqa.Logging
 import org.aqa.db.Db.driver.api._
 import org.aqa.db.SymmetryAndFlatness.TopBottomLeftRightCenter
 import org.aqa.webrun.psm.PSMCache
-import org.aqa.webrun.psm.PSMGrid
 
 import java.sql.Timestamp
 
@@ -46,7 +45,6 @@ case class SymmetryAndFlatness(
                                 leftStdDev_cu: Double, // standard deviation of left point pixels in CU
                                 rightStdDev_cu: Double, // standard deviation of right point pixels in CU
                                 centerStdDev_cu: Double, // standard deviation of center point pixels in CU
-                                psmDataDate: Option[Timestamp], // if defined, references the PSM by its dataDate
                                 span_mm: Option[Double], // distance in mm between opposing measurement areas (both left-right and top-bottom).
                                 diameter_mm: Option[Double], // diameter in mm of the area sampled.
                                 RTImageSID_mm: Option[Double], // distance in mm from source to image (DICOM metadata 3002,0026)
@@ -63,6 +61,8 @@ case class SymmetryAndFlatness(
     result
   }
 
+  def insertOrUpdate(): Int = Db.run(SymmetryAndFlatness.query.insertOrUpdate(this))
+
   val isBaselineFunc: Boolean = isBaseline
 
   /** Coefficients of Variation. */
@@ -77,9 +77,20 @@ case class SymmetryAndFlatness(
    *
    * @return PSM grid and flood field if available, otherwise None.
    */
-  private def psmGridWithFFFrom(): Option[PSMCache.PSMGridWithFF] = {
-    if (KVP.isDefined && isFlatteningFilterFree.isDefined) {
-      PSMCache.get(outputPK, KVP.get, isFlatteningFilterFree.get)
+  def psmGridWithFFFrom(): Option[PSMCache.PSMGridWithFF] = {
+    if ( //
+      KVP.isDefined &&
+        isFlatteningFilterFree.isDefined &&
+        span_mm.isDefined &&
+        diameter_mm.isDefined
+    ) {
+      PSMCache.get( //
+        outputPK = outputPK,
+        KVP = KVP.get,
+        isFFF = isFlatteningFilterFree.get,
+        span_mm = span_mm.get,
+        diameter_mm = diameter_mm.get
+      )
     } else
       None
   }
@@ -98,10 +109,9 @@ case class SymmetryAndFlatness(
    *
    * @return True if it can do PSM.
    */
-  def canDoPsm: Boolean = floodFieldOf().isDefined
+  def canDoPSM: Boolean = floodFieldOf().isDefined
 
   // - - - - - - - - - - - - - - - - - - - - - - - -
-
 
   def topWithPSM_cu(): Option[Double] = {
     psmGridWithFFFrom() match {
@@ -112,7 +122,6 @@ case class SymmetryAndFlatness(
     }
   }
 
-
   def bottomWithPSM_cu(): Option[Double] = {
     psmGridWithFFFrom() match {
       case Some(gridWithFFF) =>
@@ -121,7 +130,6 @@ case class SymmetryAndFlatness(
         None
     }
   }
-
 
   def leftWithPSM_cu(): Option[Double] = {
     psmGridWithFFFrom() match {
@@ -132,7 +140,6 @@ case class SymmetryAndFlatness(
     }
   }
 
-
   def rightWithPSM_cu(): Option[Double] = {
     psmGridWithFFFrom() match {
       case Some(gridWithFFF) =>
@@ -141,7 +148,6 @@ case class SymmetryAndFlatness(
         None
     }
   }
-
 
   def centerWithPSM_cu(): Option[Double] = {
     psmGridWithFFFrom() match {
@@ -152,34 +158,7 @@ case class SymmetryAndFlatness(
     }
   }
 
-
-
-
-
-  // def topWithPSM_cu   (): Option[Double] = toPsmValue(psmGrid => psmGrid.topBeam   , top_cu   )
-  // def bottomWithPSM_cu(): Option[Double] = toPsmValue(psmGrid => psmGrid.bottomBeam, bottom_cu)
-
-  // def leftWithPSM_cu(): Option[Double] = toPsmValue(psmGrid => psmGrid.leftBeam, left_cu)
-
-  // def rightWithPSM_cu(): Option[Double] = toPsmValue(psmGrid => psmGrid.rightBeam, right_cu)
-
-  // def centerWithPSM_cu(): Option[Double] = toPsmValue(psmGrid => psmGrid.centerBeam, center_cu)
-
   // - - - - - - - - - - - - - - - - - - - - - - - -
-
-
-  /*
-  private def checkPsmMode(psmGrid: Option[PSMGrid]): Boolean = {
-    val ok = (psmGrid.isEmpty && psmDataDate.isEmpty) || (psmGrid.isDefined && psmDataDate.isDefined)
-
-    if (!ok)
-      logger.warn(
-        s"psmGrid parameter and psmDataDate must either both be defined or neither defined." +
-          s"  grid.isDefined: ${psmGrid.isDefined}   psmDataDate.isDefined  ${psmDataDate.isDefined}"
-      )
-    ok
-  }
-  */
 
   /**
    * Perform the math of calculating axial symmetry.  This function isolates and highlights the actual calculation performed.
@@ -197,7 +176,6 @@ case class SymmetryAndFlatness(
     }
   }
 
-
   /**
    * Perform the math of calculating transvers symmetry.  This function isolates and highlights the actual calculation performed.
    *
@@ -214,7 +192,6 @@ case class SymmetryAndFlatness(
     }
   }
 
-
   /**
    * Perform the math of calculating flatness.  This function isolates and highlights the actual calculation performed.
    *
@@ -228,8 +205,8 @@ case class SymmetryAndFlatness(
     v
   }
 
-
-  private def makeTBLRCNoPSM: SymmetryAndFlatness.TopBottomLeftRightCenter = SymmetryAndFlatness.TopBottomLeftRightCenter(top = top_cu, bottom = bottom_cu, left = left_cu, right = right_cu, center = center_cu)
+  private def makeTBLRCNoPSM: SymmetryAndFlatness.TopBottomLeftRightCenter =
+    SymmetryAndFlatness.TopBottomLeftRightCenter(top = top_cu, bottom = bottom_cu, left = left_cu, right = right_cu, center = center_cu)
 
   private def makeTBLRCWithPSM(): SymmetryAndFlatness.TopBottomLeftRightCenter = SymmetryAndFlatness.TopBottomLeftRightCenter( //
     top = topWithPSM_cu().get,
@@ -267,7 +244,7 @@ case class SymmetryAndFlatness(
    * @return Axial symmetry
    */
   def axialSymmetryWithPSM(): Option[Double] = {
-    if (canDoPsm) {
+    if (canDoPSM) {
       val v = axialSymmetryCalculation(topWithPSM_cu().get, bottomWithPSM_cu().get)
       Some(v)
     } else
@@ -280,7 +257,7 @@ case class SymmetryAndFlatness(
    * @return Transverse symmetry
    */
   def transverseSymmetryWithPSM(): Option[Double] = {
-    if (canDoPsm) {
+    if (canDoPSM) {
       val v = transverseSymmetryCalculation(leftWithPSM_cu().get, rightWithPSM_cu().get)
       Some(v)
     } else
@@ -294,7 +271,7 @@ case class SymmetryAndFlatness(
    * @return Flatness
    */
   def flatnessWithPSM(): Option[Double] = {
-    if (canDoPsm) {
+    if (canDoPSM) {
       val list = Seq(
         topWithPSM_cu(),
         bottomWithPSM_cu(),
@@ -392,7 +369,7 @@ case class SymmetryAndFlatness(
   }
 
   def profileConstancyWithPSM(baseline: SymmetryAndFlatness): Option[Double] = {
-    if (canDoPsm && baseline.canDoPsm) {
+    if (canDoPSM && baseline.canDoPSM) {
       val value = makeTBLRCWithPSM()
       val baselineValue = baseline.makeTBLRCWithPSM()
       val v = Some(constancyCalculation(value, baselineValue))
@@ -458,7 +435,93 @@ case class SymmetryAndFlatness(
       profileConstancyNoPSMPass(baseline)
   }
 
-  def insertOrUpdate(): Int = Db.run(SymmetryAndFlatness.query.insertOrUpdate(this))
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  // paramaterized get functions
+
+  def getTopCu(withPSM: Boolean): Double = {
+    if (withPSM)
+      topWithPSM_cu().get
+    else
+      top_cu
+  }
+
+
+  def getBottomCu(withPSM: Boolean): Double = {
+    if (withPSM)
+      bottomWithPSM_cu().get
+    else
+      bottom_cu
+  }
+
+  def getLeftCu(withPSM: Boolean): Double = {
+    if (withPSM)
+      leftWithPSM_cu().get
+    else
+      left_cu
+  }
+
+
+  def getRightCu(withPSM: Boolean): Double = {
+    if (withPSM)
+      rightWithPSM_cu().get
+    else
+      right_cu
+  }
+
+
+  def getCenterCu(withPSM: Boolean): Double = {
+    if (withPSM)
+      centerWithPSM_cu().get
+    else
+      center_cu
+  }
+
+
+  def getAxialSymmetry(withPSM: Boolean): Double = {
+    if (withPSM)
+      axialSymmetryWithPSM().get
+    else
+      axialSymmetryNoPSM()
+  }
+
+
+  def getTransverseSymmetry(withPSM: Boolean): Double = {
+    if (withPSM)
+      transverseSymmetryWithPSM().get
+    else
+      transverseSymmetryNoPSM()
+  }
+
+
+  def getFlatness(withPSM: Boolean): Double = {
+    if (withPSM)
+      flatnessWithPSM().get
+    else
+      flatnessNoPSM()
+  }
+
+
+  def getConstancy(withPSM: Boolean, baseline: SymmetryAndFlatness): Double = {
+    if (withPSM)
+      profileConstancyWithPSM(baseline).get
+    else
+      profileConstancyNoPSM(baseline)
+  }
+
+  /**
+   * True if the sampling points are spatially compatible with PSM analysis.
+   *
+   * @return True if defined and close enough.
+   */
+  def isPSMSpatiallyCompatible(): Boolean = {
+    val spanOk = span_mm.isDefined && ((Config.PSMSpan_mm - span_mm.get).abs < SymmetryAndFlatness.SpanTolerance_mm)
+    val diameterOk = diameter_mm.isDefined && (((Config.PSMRadius_mm * 2) - diameter_mm.get).abs < SymmetryAndFlatness.DiameterTolerance_mm)
+
+    spanOk && diameterOk
+  }
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   override def toString: String = {
     "    symmetryAndFlatnessPK: " + symmetryAndFlatnessPK + "\n" +
@@ -475,7 +538,6 @@ case class SymmetryAndFlatness(
       "    leftStdDev_cu: " + leftStdDev_cu + "\n" +
       "    rightStdDev_cu: " + rightStdDev_cu + "\n" +
       "    centerStdDev_cu: " + centerStdDev_cu + "\n" +
-      "    hasPsm: " + psmDataDate.isDefined + "\n" +
       "    span_mm: " + span_mm + "\n" +
       "    diameter_mm: " + diameter_mm + "\n" +
       "    RTImageSID_mm: " + RTImageSID_mm + "\n"
@@ -526,8 +588,6 @@ object SymmetryAndFlatness extends Logging {
 
     def centerStdDev_cu = column[Double]("centerStdDev_cu")
 
-    def psmDataDate = column[Option[Timestamp]]("psmDataDate")
-
     def span_mm = column[Option[Double]]("span_mm")
 
     def diameter_mm = column[Option[Double]]("diameter_mm")
@@ -556,7 +616,6 @@ object SymmetryAndFlatness extends Logging {
         leftStdDev_cu,
         rightStdDev_cu,
         centerStdDev_cu,
-        psmDataDate,
         span_mm,
         diameter_mm,
         RTImageSID_mm,
@@ -566,6 +625,12 @@ object SymmetryAndFlatness extends Logging {
 
     def outputFK = foreignKey("SymmetryAndFlatness_outputPKConstraint", outputPK, Output.query)(_.outputPK, onDelete = ForeignKeyAction.Cascade, onUpdate = ForeignKeyAction.Cascade)
   }
+
+  /** When comparing two spans, they must be at least this close together to considered equal. */
+  val SpanTolerance_mm: Double = 2.0
+
+  /** When comparing two diameters, they must be at least this close together to considered equal. */
+  val DiameterTolerance_mm: Double = 0.5
 
   val query = TableQuery[SymmetryAndFlatnessTable]
 
@@ -607,26 +672,16 @@ object SymmetryAndFlatness extends Logging {
   case class SymmetryAndFlatnessHistory(output: Output, symmetryAndFlatness: SymmetryAndFlatness, baselineOutput: Output, baseline: SymmetryAndFlatness) extends HasOutput {
     override def getOutput: Output = output
 
-    val psmGrid: Option[PSMGrid] = {
-      if (symmetryAndFlatness.psmDataDate.isDefined)
-        PSMGrid.get(output.machinePK.get, symmetryAndFlatness.psmDataDate.get)
-      else
-        None
-    }
-
-    val psmGridBaseline: Option[PSMGrid] = {
-      if (baseline.psmDataDate.isDefined)
-        PSMGrid.get(output.machinePK.get, baseline.psmDataDate.get)
-      else
-        None
-    }
-
     /*
-    val axialSymmetry: Option[Double] = symmetryAndFlatness.axialSymmetry(psmGrid, floodField)
-    val transverseSymmetry: Option[Double] = symmetryAndFlatness.transverseSymmetry(psmGrid, floodField)
-    val flatness: Option[Double] = symmetryAndFlatness.flatness(psmGrid, floodField)
-    val profileConstancy: Option[Double] = symmetryAndFlatness.profileConstancy(psmGrid, baseline, psmGridBaseline, floodField)
+    val psmGrid: Option[PSMGrid] = {
+      if (symmetryAndFlatness.XsmDataDate.isDefined)
+        PSMGrid.get(output.machinePK.get, symmetryAndFlatness.XsmDataDate.get)
+      else
+        None
+    }
     */
+
+
   }
 
   private case class OutputSymFlat(output: Output, sf: SymmetryAndFlatness) {}
@@ -681,11 +736,11 @@ object SymmetryAndFlatness extends Logging {
                beamName: String,
                span_mm: Option[Double],
                diameter_mm: Option[Double],
-               hasPsm: Boolean,
+               hasPSM: Boolean,
                RTImageSID_mm: Option[Double],
                procedurePK: Long,
              ): Seq[SymmetryAndFlatnessHistory] = {
-    val notHasPsm = !hasPsm
+
     val search = for {
       output <- Output.valid.filter(o => (o.machinePK === machinePK) && (o.procedurePK === procedurePK))
       symmetryAndFlatness <- SymmetryAndFlatness.query.filter(c =>
@@ -699,8 +754,7 @@ object SymmetryAndFlatness extends Logging {
     def sfOk(sf: SymmetryAndFlatness): Boolean = {
 
       val psmSame: Boolean = {
-        (sf.psmDataDate.isDefined && hasPsm) ||
-          (sf.psmDataDate.isEmpty && notHasPsm)
+        (sf.canDoPSM && hasPSM) || (!hasPSM)
       }
 
       val spanOk: Boolean = {
@@ -744,7 +798,7 @@ object SymmetryAndFlatness extends Logging {
     val tsList = {
       val list = Db.run(sr)
       val filteredList = list.filter(os => sfOk(os._2))
-      filteredList.map(os => OutputSymFlat(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime + "  " + os.sf.beamName + "  " + os.sf.psmDataDate.isDefined.toString)
+      filteredList.map(os => OutputSymFlat(os._1, os._2)).sortBy(os => os.output.dataDate.get.getTime + "  " + os.sf.beamName + "  " + os.sf.canDoPSM.toString)
     }
 
     associateBaseline(tsList)
@@ -783,7 +837,7 @@ object SymmetryAndFlatness extends Logging {
    *
    * @param machinePK     Match this machine
    * @param beamName      Match this beam
-   * @param hasPsm        Matching this
+   * @param hasPSM        Matching this
    * @param span_mm       Distance between opposing sample points.
    * @param diameter_mm   Diameter of each sample point.
    * @param RTImageSID_mm Source to image distance in mm.
@@ -797,7 +851,7 @@ object SymmetryAndFlatness extends Logging {
                    diameter_mm: Option[Double],
                    RTImageSID_mm: Option[Double],
                    beamName: String,
-                   hasPsm: Boolean,
+                   hasPSM: Boolean,
                    dataDate: Timestamp,
                    procedurePK: Long
                  ): Option[SymmetryAndFlatnessHistory] = {
@@ -807,7 +861,7 @@ object SymmetryAndFlatness extends Logging {
       beamName,
       span_mm,
       diameter_mm,
-      hasPsm,
+      hasPSM,
       RTImageSID_mm,
       procedurePK
     ).reverse

@@ -4,6 +4,7 @@ import org.aqa.db.FloodField
 import org.aqa.db.Output
 import org.aqa.db.PSMBeam
 import org.aqa.db.SymmetryAndFlatness
+import org.aqa.Config
 import org.aqa.Logging
 
 import java.awt.geom.Point2D
@@ -86,7 +87,7 @@ object PSMCache extends Logging {
    */
   private case class Mach(machinePK: Long, psmGridList: Seq[PSMGrid], floodFieldList: Seq[FloodField]) {
 
-    def findMatch(dataDate: Date, KVP: Double, isFFF: Boolean): Option[PSMGridWithFF] = {
+    def findMatch(dataDate: Date, KVP: Double, isFFF: Boolean, span_mm: Double, diameter_mm: Double): Option[PSMGridWithFF] = {
 
       // the latest matching flood field captured before the given date
       val floodField = {
@@ -99,6 +100,15 @@ object PSMCache extends Logging {
         floodFieldList.filter(qualifies).sortBy(_.dataDate_ms).lastOption
       }
 
+      def spansAreApproximatelyEqual(psmGridSpan_mm: Double): Boolean = {
+        (psmGridSpan_mm - span_mm).abs < SymmetryAndFlatness.SpanTolerance_mm
+      }
+
+      def diametersAreApproximatelyEqual(): Boolean = {
+        ((Config.PSMRadius_mm * 2) - diameter_mm).abs < SymmetryAndFlatness.DiameterTolerance_mm
+      }
+
+
       // find a PSM that was captured after the flood field but before the given date.
       val psm = {
         if (floodField.isEmpty)
@@ -107,7 +117,10 @@ object PSMCache extends Logging {
           // True if PSM was captured after the flood field but before the given date.
           def qualifies(psmGrid: PSMGrid): Boolean = {
             (psmGrid.dataDate_ms < dataDate.getTime) &&
-              (psmGrid.dataDate_ms > floodField.get.dataDate_ms)
+              (psmGrid.dataDate_ms > floodField.get.dataDate_ms) &&
+              spansAreApproximatelyEqual(psmGrid.span) &&
+              diametersAreApproximatelyEqual()
+
           }
 
           psmGridList.filter(qualifies).sortBy(_.dataDate_ms).lastOption
@@ -178,12 +191,12 @@ object PSMCache extends Logging {
    * @param isFFF     True if FFF required, otherwise a standard beam.
    * @return PSM info if available, otherwise None.
    */
-  def get(machinePK: Long, dataDate: Date, KVP: Double, isFFF: Boolean): Option[PSMGridWithFF] = {
+  def get(machinePK: Long, dataDate: Date, KVP: Double, isFFF: Boolean, span_mm: Double, diameter_mm: Double): Option[PSMGridWithFF] = {
 
     if (!psmAndFloodFieldCache.contains(machinePK))
       populate(machinePK)
 
-    psmAndFloodFieldCache(machinePK).findMatch(dataDate, KVP, isFFF)
+    psmAndFloodFieldCache(machinePK).findMatch(dataDate, KVP, isFFF, span_mm, diameter_mm)
   }
 
   /**
@@ -194,7 +207,7 @@ object PSMCache extends Logging {
    * @param isFFF    True if FFF required, otherwise a standard beam.
    * @return PSM info if available, otherwise None.
    */
-  def get(outputPK: Long, KVP: Double, isFFF: Boolean): Option[PSMGridWithFF] = {
+  def get(outputPK: Long, KVP: Double, isFFF: Boolean, span_mm: Double, diameter_mm: Double): Option[PSMGridWithFF] = {
 
     if (!outputForPSMCache.contains(outputPK))
       populateOutput(outputPK)
@@ -204,7 +217,7 @@ object PSMCache extends Logging {
     if (output.isEmpty || output.get.machinePK.isEmpty || output.get.dataDate.isEmpty)
       throw new InvalidParameterException(s"Unexpected exception.  outputPK must exist and machinePK and dataDate must be non-empty: $outputPK")
 
-    get(output.get.machinePK.get, output.get.dataDate.get, KVP, isFFF)
+    get(output.get.machinePK.get, output.get.dataDate.get, KVP, isFFF, span_mm, diameter_mm)
   }
 
   /**
@@ -214,8 +227,19 @@ object PSMCache extends Logging {
    * @return PSM info if available, otherwise None.
    */
   def get(sf: SymmetryAndFlatness): Option[PSMGridWithFF] = {
-    if (sf.KVP.isDefined && sf.isFlatteningFilterFree.isDefined)
-      get(sf.outputPK, sf.KVP.get, sf.isFlatteningFilterFree.get)
+    if ( //
+      sf.KVP.isDefined &&
+        sf.isFlatteningFilterFree.isDefined &&
+        sf.span_mm.isDefined &&
+        sf.diameter_mm.isDefined
+    )
+      get( //
+        outputPK = sf.outputPK,
+        KVP = sf.KVP.get,
+        isFFF = sf.isFlatteningFilterFree.get,
+        span_mm = sf.span_mm.get,
+        diameter_mm = sf.diameter_mm.get
+      )
     else
       None
   }

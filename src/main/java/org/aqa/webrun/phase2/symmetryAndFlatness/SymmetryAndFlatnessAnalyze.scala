@@ -14,7 +14,6 @@ import org.aqa.webrun.phase2.symmetryAndFlatness.SymmetryAndFlatnessRun.Symmetry
 import org.aqa.Config
 import org.aqa.webrun.psm.PSMGrid
 import org.aqa.Logging
-import org.aqa.db.Output
 import org.aqa.db.PSMBeam
 
 import java.awt.Rectangle
@@ -24,31 +23,32 @@ import java.awt.image.BufferedImage
 import java.sql.Timestamp
 
 /**
- * Perform the core analysis.
- *
- * @param outputPK                                Attach to this output.
- * @param procedurePK                             Procedure.
- * @param machinePK                               Machine.
- * @param dataDate                                Output's data date
- * @param attributeList                           DICOM of this beam.
- * @param beamName                                Name of beam.
- * @param collimatorCenter                        Collimator centering offset.
- * @param floodField                              PhaseAny flood field.
- * @param symmetryAndFlatnessBaselineRedoBeamList List of beams that were marked as baselines by the user.
- * @param isFlatteningFilterFree                  True if this is an FFF beam.
- */
+  * Perform the core analysis.
+  *
+  * @param outputPK                                Attach to this output.
+  * @param procedurePK                             Procedure.
+  * @param machinePK                               Machine.
+  * @param dataDate                                Output's data date
+  * @param attributeList                           DICOM of this beam.
+  * @param beamName                                Name of beam.
+  * @param collimatorCenter                        Collimator centering offset.
+  * @param symmetryAndFlatnessBaselineRedoBeamList List of beams that were marked as baselines by the user.
+  * @param isFlatteningFilterFree                  True if this is an FFF beam.
+  * @param withPSM                                 If true, use PSM defined areas for sampling image
+  */
 case class SymmetryAndFlatnessAnalyze( //
-                                       outputPK: Long,
-                                       procedurePK: Long,
-                                       machinePK: Long,
-                                       dataDate: Timestamp,
-                                       attributeList: AttributeList,
-                                       beamName: String,
-                                       collimatorCenter: Point2D.Double,
-                                       // floodField: Option[AttributeList],
-                                       symmetryAndFlatnessBaselineRedoBeamList: Seq[String],
-                                       isFlatteningFilterFree: Boolean
-                                     ) extends Logging {
+    outputPK: Long,
+    procedurePK: Long,
+    machinePK: Long,
+    dataDate: Timestamp,
+    attributeList: AttributeList,
+    beamName: String,
+    collimatorCenter: Point2D.Double,
+    // floodField: Option[AttributeList],
+    symmetryAndFlatnessBaselineRedoBeamList: Seq[String],
+    isFlatteningFilterFree: Boolean,
+    withPSM: Boolean
+) extends Logging {
 
   private def circleRadiusInPixels(isoImageTrans: IsoImagePlaneTranslator, radius_mm: Double): Double = {
     val imagePlaneCenterInPixels = isoImageTrans.iso2Pix(0, 0)
@@ -71,12 +71,18 @@ case class SymmetryAndFlatnessAnalyze( //
   private val scaledImage: DicomImage = new DicomImage(attributeList).scalePixels(attributeList)
 
   /**
-   * Get the average pixel value for one spot in HU or CU or whatever units the image is using.
-   *
-   * @param point : Center of circle in image.
-   * @return Mean value of pixels in circle in CU.
-   */
-  private def evalPoint(point: SymmetryAndFlatnessPoint, image: DicomImage, useCollimatorCentering: Boolean): Double = {
+    * Get the average pixel value for one spot in HU or CU or whatever units the image is using.
+    *
+    * @param point                  Center of circle in image.
+    * @param image                  Process this image
+    * @param useCollimatorCentering If true, apply collimator centering.
+    * @return Mean value of pixels in circle in CU.
+    */
+  private def evalPoint( //
+      point: SymmetryAndFlatnessPoint,
+      image: DicomImage,
+      useCollimatorCentering: Boolean
+  ): Double = {
     val center =
       if (useCollimatorCentering)
         new Point2D.Double(point.x_mm + collimatorCenter.getX, point.y_mm + collimatorCenter.getY)
@@ -89,11 +95,11 @@ case class SymmetryAndFlatnessAnalyze( //
   }
 
   /**
-   * Get the standard deviation of the pixel values in CU for one spot in HU or CU or whatever units the image is using.
-   *
-   * @param point : Center of circle in image.
-   * @return Standard deviation of pixels in circle in CU.
-   */
+    * Get the standard deviation of the pixel values in CU for one spot in HU or CU or whatever units the image is using.
+    *
+    * @param point : Center of circle in image.
+    * @return Standard deviation of pixels in circle in CU.
+    */
   private def evalPointStdDev(point: SymmetryAndFlatnessPoint): Double = {
     val center = new Point2D.Double(point.x_mm + collimatorCenter.getX, point.y_mm + collimatorCenter.getY)
     val pixList = Phase2Util.makeCenterDosePointList(attributeList, center, radius_mm = Config.SymmetryAndFlatnessDiameter_mm / 2)
@@ -124,10 +130,10 @@ case class SymmetryAndFlatnessAnalyze( //
   private val axial_pct: IndexedSeq[Double] = (0 until translator.height).map(y => translator.pix2Iso(0, y).getY)
 
   private def makeAnnotatedImage( //
-                                  correctedImage: DicomImage,
-                                  symmetryAndFlatness: SymmetryAndFlatness,
-                                  psmGrid: Option[PSMGrid] = None // if defined, use the spacing in this grid
-                                ): BufferedImage = {
+      correctedImage: DicomImage,
+      symmetryAndFlatness: SymmetryAndFlatness,
+      psmGrid: Option[PSMGrid] = None // if defined, use the spacing in this grid
+  ): BufferedImage = {
     val image = correctedImage.toDeepColorBufferedImage(Config.DeepColorPercentDrop)
     Config.applyWatermark(image)
     val graphics = ImageUtil.getGraphics(image)
@@ -187,59 +193,42 @@ case class SymmetryAndFlatnessAnalyze( //
        * Get the distance between the centers of opposing measurement points.
        */
       val span_mm: Double = {
-        if (psmGrid.isEmpty) {
-          // no PSM, so use the configured values.
-          val xList = Config.SymmetryAndFlatnessPointList.map(_.x_mm)
-          val yList = Config.SymmetryAndFlatnessPointList.map(_.y_mm)
-          val x = (xList.max - xList.min).abs
-          val y = (yList.max - yList.min).abs
-          Math.min(x, y)
-        } else
-          psmGrid.get.span
-
+        if (withPSM)
+          Config.PSMSpan_mm
+        else
+          Config.SymmetrySpan_mm
       }
-
-      val psmDataDate = if (psmGrid.isDefined) {
-        val psmOutput = Output.get(psmGrid.get.resultList.head.psmBeam.outputPK).get
-        psmOutput.dataDate
-      } else
-        None
-
-      val doPsm = psmGrid.isDefined
 
       def beamToPoint(name: String, beam: PSMBeam): SymmetryAndFlatnessPoint =
         SymmetryAndFlatnessPoint(name, beam.xCenter_mm, beam.yCenter_mm)
 
-      def calcCu(psmBeam: Option[PSMBeam], symFlatPoint: SymmetryAndFlatnessPoint): Double = {
-        if (doPsm) {
-          val psmPoint = SymmetryAndFlatnessPoint("dummyName", psmBeam.get.xCenter_mm, psmBeam.get.yCenter_mm)
-          val qaWholeDetector = evalPoint(psmPoint, scaledImage, useCollimatorCentering = false)
-          qaWholeDetector
-        } else
-          evalPoint(symFlatPoint, scaledImage, useCollimatorCentering = true)
 
+      val radius_mm: Double = if (withPSM) Config.PSMRadius_mm else Config.CenterDoseRadius_mm
+
+      def makeValueList(center: Point2D.Double): Seq[Float] = {
+        val pointList = Phase2Util.makeCenterDosePointList(attributeList, center, radius_mm)
+        pointList.map(p => scaledImage.get(p.x, p.y))
       }
 
+      def meanOf(valueList: Seq[Float]): Double = valueList.map(_.toDouble).sum / valueList.size
+
       // @formatter:off
+      val pointTop   : Point2D.Double = if (withPSM) Config.PSMTopPoint    else Config.SymmetryPointTop   .asPoint
+      val pointBottom: Point2D.Double = if (withPSM) Config.PSMBottomPoint else Config.SymmetryPointBottom.asPoint
+      val pointLeft  : Point2D.Double = if (withPSM) Config.PSMLeftPoint   else Config.SymmetryPointLeft  .asPoint
+      val pointRight : Point2D.Double = if (withPSM) Config.PSMRightPoint  else Config.SymmetryPointRight .asPoint
+      val pointCenter: Point2D.Double = if (withPSM) Config.PSMCenterPoint else Config.SymmetryPointCenter.asPoint
 
-      val top_cu    = calcCu(psmGrid.map(_.topBeam   ), Config.SymmetryPointTop)
-      val bottom_cu = calcCu(psmGrid.map(_.bottomBeam), Config.SymmetryPointBottom)
-      val left_cu   = calcCu(psmGrid.map(_.leftBeam  ), Config.SymmetryPointLeft)
-      val right_cu  = calcCu(psmGrid.map(_.rightBeam ), Config.SymmetryPointRight)
-      val center_cu = calcCu(psmGrid.map(_.centerBeam), Config.SymmetryPointCenter)
+      val valueListTop    = makeValueList(pointTop   )
+      val valueListBottom = makeValueList(pointBottom)
+      val valueListLeft   = makeValueList(pointLeft  )
+      val valueListRight  = makeValueList(pointRight )
+      val valueListCenter = makeValueList(pointCenter)
 
-      val topPoint    = if (doPsm) beamToPoint("top"   , psmGrid.get.topBeam   ) else Config.SymmetryPointTop
-      val bottomPoint = if (doPsm) beamToPoint("bottom", psmGrid.get.bottomBeam) else Config.SymmetryPointBottom
-      val leftPoint   = if (doPsm) beamToPoint("left"  , psmGrid.get.leftBeam  ) else Config.SymmetryPointLeft
-      val rightPoint  = if (doPsm) beamToPoint("right" , psmGrid.get.rightBeam ) else Config.SymmetryPointRight
-      val centerPoint = if (doPsm) beamToPoint("center", psmGrid.get.centerBeam) else Config.SymmetryPointCenter
       // @formatter:on
 
       val diameter_mm: Double = {
-        if (psmGrid.isDefined)
-          Config.PSMRadius_mm * 2
-        else
-          Config.SymmetryAndFlatnessDiameter_mm
+        Config.SymmetryAndFlatnessDiameter_mm
       }
 
       new SymmetryAndFlatness( //
@@ -249,19 +238,20 @@ case class SymmetryAndFlatnessAnalyze( //
         beamName = beamName,
         isBaseline = symmetryAndFlatnessBaselineRedoBeamList.contains(beamName),
 
-        top_cu = top_cu,
-        bottom_cu = bottom_cu,
-        left_cu = left_cu,
-        right_cu = right_cu,
-        center_cu = center_cu,
+        // @formatter:off
+        top_cu =    meanOf(valueListTop   ),
+        bottom_cu = meanOf(valueListBottom),
+        left_cu =   meanOf(valueListLeft  ),
+        right_cu =  meanOf(valueListRight ),
+        center_cu = meanOf(valueListCenter),
 
-        topStdDev_cu = evalPointStdDev(topPoint),
-        bottomStdDev_cu = evalPointStdDev(bottomPoint),
-        leftStdDev_cu = evalPointStdDev(leftPoint),
-        rightStdDev_cu = evalPointStdDev(rightPoint),
-        centerStdDev_cu = evalPointStdDev(centerPoint),
+        topStdDev_cu    = ImageUtil.stdDev(valueListTop   ),
+        bottomStdDev_cu = ImageUtil.stdDev(valueListBottom),
+        leftStdDev_cu   = ImageUtil.stdDev(valueListLeft  ),
+        rightStdDev_cu  = ImageUtil.stdDev(valueListRight ),
+        centerStdDev_cu = ImageUtil.stdDev(valueListCenter),
+        // @formatter:on
 
-        psmDataDate = psmDataDate, // psmImageHash_md5,
         span_mm = Some(span_mm),
         diameter_mm = Some(diameter_mm),
         RTImageSID_mm = Some(attributeList.get(TagByName.RTImageSID).getDoubleValues.head),
@@ -274,12 +264,14 @@ case class SymmetryAndFlatnessAnalyze( //
     logger.info("Getting baseline values for beam " + beamName)
 
     // Get the baseline for the given beam of the given type (dataName).  If it does not exist, then use this one to establish it.
-    val baseline = SymmetryAndFlatness.getBaseline(machinePK, //
+    val baseline = SymmetryAndFlatness.getBaseline( //
+      machinePK,
       span_mm = symmetryAndFlatness.span_mm,
       diameter_mm = symmetryAndFlatness.diameter_mm,
       RTImageSID_mm = symmetryAndFlatness.RTImageSID_mm,
       beamName = beamName,
-      hasPsm = psmGrid.isDefined,
+      hasPSM = psmGrid.isDefined,
+      // hasPSM = false,
       dataDate = dataDate,
       procedurePK = procedurePK
     ) match {
@@ -289,11 +281,11 @@ case class SymmetryAndFlatnessAnalyze( //
 
     logger.info("Making annotated image of beam " + beamName)
     val annotatedImage = makeAnnotatedImage(correctedImage, symmetryAndFlatness, psmGrid)
-    val psmGridBaseline = {
-      if (baseline.psmDataDate.isDefined)
-        PSMGrid.get(machinePK, baseline.psmDataDate.get)
-      else
-        None
+    val psmGridBaseline: Option[PSMGrid] = {
+      baseline.psmGridWithFFFrom() match {
+        case Some(pf) => Some(pf.psmGrid)
+        case _ => None
+      }
     }
     val result = SymmetryAndFlatnessRun.SymmetryAndFlatnessBeamResult( //
       symmetryAndFlatness,

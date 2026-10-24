@@ -103,7 +103,8 @@ object SymmetryAndFlatnessRun extends Logging {
       beamName,
       collimatorCenter,
       symmetryAndFlatnessBaselineRedoBeamList = Seq(),
-      isFlatteningFilterFree = false
+      isFlatteningFilterFree = false,
+      withPSM = false
     )
 
     symmetryAndFlatnessAnalyze.analyze( //
@@ -249,19 +250,10 @@ object SymmetryAndFlatnessRun extends Logging {
       def doBeam(beamName: String): Seq[SymmetryAndFlatnessBeamResult] = {
 
         val attributeList = getAttributeList(beamName, runReq)
-        val floodField = floodFieldList.find(ff => {
-          val fft = makeFloodFieldType(beamName)
-          (ff.FlatteningFilterFree == fft.isFFF) && (ff.KVP == fft.KVP)
-        })
 
-        def doAnalyze(psmGrid: Option[PSMGrid]): SymmetryAndFlatnessBeamResult = {
+        def doAnalyze(withPSM: Boolean): SymmetryAndFlatnessBeamResult = {
 
-          val image: DicomImage = {
-            if (psmGrid.isDefined)
-              runReq.derivedMap(beamName).originalImage
-            else
-              runReq.derivedMap(beamName).pixelCorrectedImage
-          }
+          val image: DicomImage = runReq.derivedMap(beamName).originalImage
 
           val symmetryAndFlatnessAnalyze = SymmetryAndFlatnessAnalyze( //
             extendedData.output.outputPK.get,
@@ -272,23 +264,18 @@ object SymmetryAndFlatnessRun extends Logging {
             beamName,
             collimatorCenteringResource.centerOfBeam(beamName),
             runReq.symmetryAndFlatnessBaselineRedoBeamList,
-            isFlatteningFilterFree = makeFloodFieldType(beamName).isFFF
+            isFlatteningFilterFree = makeFloodFieldType(beamName).isFFF,
+            withPSM
           )
 
           val result = symmetryAndFlatnessAnalyze.analyze(image, psmGrid = psmGrid)
           result
         }
 
-        val withoutPSMAndFloodField = Some(doAnalyze(psmGrid = None))
+        val legacySpacing = doAnalyze(withPSM = false)
+        val withPSM = doAnalyze(withPSM = true)
 
-        val withPsmAndFloodField =
-          if (floodField.isEmpty)
-            None
-          else {
-            Some(doAnalyze(psmGrid = psmGrid))
-          }
-
-        Seq(withoutPSMAndFloodField, withPsmAndFloodField).flatten
+        Seq(legacySpacing, withPSM)
       }
 
       // only process beams that are both configured and have been uploaded
@@ -316,7 +303,7 @@ object SymmetryAndFlatnessRun extends Logging {
       val pass = {
         val list = {
           resultList.map(r => {
-            if (r.symmetryAndFlatness.canDoPsm)
+            if (r.symmetryAndFlatness.canDoPSM)
               r.symmetryAndFlatness.allWithPSMPass(r.baseline)
             else
               r.symmetryAndFlatness.allNoPSMPass(r.baseline)

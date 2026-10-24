@@ -43,7 +43,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, hasPs
     list
       .filter(sf =>
         sf.beamName.equalsIgnoreCase(beamName) &&
-          ((sf.psmDataDate.isDefined && hasPsm) || (sf.psmDataDate.isEmpty && (!hasPsm)))
+          (sf.canDoPSM == hasPsm)
       )
       .head
   }

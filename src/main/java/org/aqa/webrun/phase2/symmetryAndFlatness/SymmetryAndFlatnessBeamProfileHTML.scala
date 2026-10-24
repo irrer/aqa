@@ -16,6 +16,7 @@
 
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
+import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.run.ProcedureStatus
@@ -25,7 +26,6 @@ import org.aqa.web.WebServer
 import org.aqa.webrun.ExtendedData
 import org.aqa.webrun.phase2.Phase2Util
 import org.aqa.webrun.phase2.RunReq
-import org.aqa.webrun.psm.PSMGrid
 
 import java.awt.Color
 import java.io.File
@@ -40,6 +40,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
       subDir: File,
       extendedData: ExtendedData,
       result: SymmetryAndFlatnessRun.SymmetryAndFlatnessBeamResult,
+      withPSM: Boolean
   ): (Elem, String) = {
 
     val graphTransverse = new C3Chart(
@@ -77,8 +78,10 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
         (new SymmetryAndFlatnessSubHTML).pathOf +
           "?outputPK=" + extendedData.output.outputPK.get +
           "&" + SymmetryAndFlatnessSubHTML.beamNameTag + "=" + result.symmetryAndFlatness.beamName +
-          "&" + SymmetryAndFlatnessSubHTML.hasPsmTag + "=" + result.symmetryAndFlatness.psmDataDate.isDefined
+          "&" + SymmetryAndFlatnessSubHTML.hasPsmTag + "=" + withPSM
       }
+
+      Trace.trace(s"withPSM: $withPSM      dynamicUrl: $dynamicUrl")
 
       <div class="row">
 
@@ -90,7 +93,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
           <div class="col-md-5 col-md-offset-1">
             {
         <center id="beamImage"><img class="img-responsive" src={
-          WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.symmetryAndFlatness.beamName, result.symmetryAndFlatness.psmDataDate.isDefined))
+          WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.symmetryAndFlatness.beamName, withPSM))
         }/> </center>
       }
           </div>
@@ -147,36 +150,35 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
     $(document).ready(function(){ $('#beamImage').zoom(); });
 """
 
-    val historyScriptRef = SymmetryAndFlatnessHistoryRestlet.makeReference(result.symmetryAndFlatness.beamName, extendedData.output.outputPK.get, result.symmetryAndFlatness.psmDataDate.isDefined)
+    val historyScriptRef = SymmetryAndFlatnessHistoryRestlet.makeReference(result.symmetryAndFlatness.beamName, extendedData.output.outputPK.get, withPSM)
 
     val javascript = "<script>\n" + graphTransverse.javascript + graphAxial.javascript + zoomScript + psmJs + "\n</script>\n" + historyScriptRef
     (content, javascript)
   }
 
   def makeDisplay(subDir: File, extendedData: ExtendedData, result: SymmetryAndFlatnessRun.SymmetryAndFlatnessBeamResult, runReq: RunReq): Unit = {
+    val status = ProcedureStatus.pass
 
-    val psmGrid = {
-      if (result.symmetryAndFlatness.psmDataDate.isDefined)
-        PSMGrid.get(extendedData.machine.machinePK.get, result.symmetryAndFlatness.psmDataDate.get)
-      else
-        None
+    def doHtml(withPSM: Boolean): Unit = {
+      val elemJavascript = makeContent(subDir, extendedData, result, withPSM = withPSM)
+      val html = {
+        val title = "Symmetry and Flatness " + result.symmetryAndFlatness.beamName
+        val runScript = Some(elemJavascript._2)
+        Phase2Util.wrapSubProcedure(extendedData, elemJavascript._1, title = title, status, runScript = runScript , runReq.rtimageMap)
+      }
+      val file = SymmetryAndFlatnessHTML.beamHtmlFile(subDir, result.symmetryAndFlatness.beamName, hasPsm = withPSM)
+
+      if (true) { // TODO rm
+
+        val beam = result.symmetryAndFlatness.beamName
+
+        Trace.trace(s"$beam    psm: $withPSM     html: $html")
+      }
+      Util.writeBinaryFile(file, html.getBytes)
     }
 
-    val psmGridBaseline = {
-      if (result.baseline.psmDataDate.isDefined)
-        PSMGrid.get(extendedData.machine.machinePK.get, result.baseline.psmDataDate.get)
-      else
-        None
-    }
-
-    val status =
-      if (result.symmetryAndFlatness.allNoPSMPass(result.baseline))
-        ProcedureStatus.pass
-      else
-        ProcedureStatus.fail
-    val elemJavascript = makeContent(subDir, extendedData, result)
-    val html = Phase2Util.wrapSubProcedure(extendedData, elemJavascript._1, title = "Symmetry and Flatness " + result.symmetryAndFlatness.beamName, status, Some(elemJavascript._2), runReq.rtimageMap)
-    Util.writeBinaryFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, result.symmetryAndFlatness.beamName, result.symmetryAndFlatness.psmDataDate.isDefined), html.getBytes)
+    doHtml(withPSM = false)
+    doHtml(withPSM = true)
   }
 
 }

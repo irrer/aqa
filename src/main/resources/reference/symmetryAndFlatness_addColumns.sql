@@ -15,3 +15,14 @@ ALTER TABLE IF EXISTS public."symmetryAndFlatness"
 ALTER TABLE IF EXISTS public."symmetryAndFlatness"
     ADD COLUMN "isFlatteningFilterFree" boolean;
 
+---------------------------------------------------------------------------------------------------
+
+-- delete this column:
+
+-- Column: public."symmetryAndFlatness"."psmDataDate"
+
+-- ALTER TABLE IF EXISTS public."symmetryAndFlatness" DROP COLUMN IF EXISTS "psmDataDate";
+
+ALTER TABLE IF EXISTS public."symmetryAndFlatness"
+    ADD COLUMN "psmDataDate" timestamp without time zone;
+

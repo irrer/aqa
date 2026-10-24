@@ -41,10 +41,10 @@ import scala.xml.Node
 import scala.xml.XML
 
 /**
-  * This class extracts configuration information from the configuration file.  Refer
-  * to <code>Config.configFileName</code> for details indicating what the different
-  * configuration values are used for.
-  */
+ * This class extracts configuration information from the configuration file.  Refer
+ * to <code>Config.configFileName</code> for details indicating what the different
+ * configuration values are used for.
+ */
 object Config extends Logging {
 
   private val configFileName = "AQAConfig.xml"
@@ -115,11 +115,11 @@ object Config extends Logging {
   }
 
   /**
-    * Read the configuration file.
-    *
-    * @param dir : Directory from which to read configuration file.
-    * @return DOM of configuration, or nothing on failure
-    */
+   * Read the configuration file.
+   *
+   * @param dir : Directory from which to read configuration file.
+   * @return DOM of configuration, or nothing on failure
+   */
   private def readFile(dir: File, name: String): Option[Elem] = {
     val file = new File(dir, name)
     logger.info("Trying config file " + file.getAbsolutePath + " ...")
@@ -142,9 +142,9 @@ object Config extends Logging {
   }
 
   /**
-    * If a fatal error occurs during the reading of the configuration file, then the application
-    * is toast, so log an error and exit with a failed status.
-    */
+   * If a fatal error occurs during the reading of the configuration file, then the application
+   * is toast, so log an error and exit with a failed status.
+   */
   private def epicFail(name: String): Unit = {
     val tried = indentList(directoryList.map(d => d.getAbsolutePath))
 
@@ -157,13 +157,13 @@ object Config extends Logging {
     val elem = readFile(dirList.head, name)
     elem match {
       case Some(_) => elem
-      case _       => getDoc(dirList.tail, name)
+      case _ => getDoc(dirList.tail, name)
     }
   }
 
   /**
-    * Get the list of possible passwords to use for the java key store for serving web pages via HTTPS.  If not configured, then return an empty list.
-    */
+   * Get the list of possible passwords to use for the java key store for serving web pages via HTTPS.  If not configured, then return an empty list.
+   */
   private def getJavaKeyStorePasswordList: List[String] = {
     val name = "JavaKeyStorePassword"
     try {
@@ -260,9 +260,9 @@ object Config extends Logging {
   //  }
 
   /**
-    * Get the value matching the given name.  If it does not exist or there is
-    * some sort of other problem then return the default.
-    */
+   * Get the value matching the given name.  If it does not exist or there is
+   * some sort of other problem then return the default.
+   */
   private def logMainText(name: String, default: String): String = {
     getMainTextOption(name) match {
       case Some(value: String) =>
@@ -302,9 +302,9 @@ object Config extends Logging {
     }
 
     val jf: File = Util.thisJarFile match {
-      case f if f.isDirectory         => getDevJar
+      case f if f.isDirectory => getDevJar
       case f if f.isFile && f.canRead => f
-      case f                          => logger.warn("Unable to find the jar file being used.  Assuming " + f.getAbsolutePath); f
+      case f => logger.warn("Unable to find the jar file being used.  Assuming " + f.getAbsolutePath); f
     }
     val fileDate = if (jf.canRead) " : " + new Date(jf.lastModified) else "  can not read file"
     logText("jarFile", jf.getAbsolutePath + fileDate)
@@ -327,8 +327,8 @@ object Config extends Logging {
   val HTTPPort: Int = logMainText("HTTPPort", "80").toInt
 
   /**
-    * Get the list of allowed IP addresses.  If empty, allow everything.
-    */
+   * Get the list of allowed IP addresses.  If empty, allow everything.
+   */
   private def getAllowedHttpIpList: List[String] = {
     val nodeList = document \ "AllowedHttpIpList" \ "AllowedHttpIp"
     val allowedList = nodeList.toList.map(n => n.head.text.trim)
@@ -337,9 +337,9 @@ object Config extends Logging {
   }
 
   /**
-    * Get the URL of the LDAP service to use.  If this is not given in the
-    * configuration file, then disable LDAP.
-    */
+   * Get the URL of the LDAP service to use.  If this is not given in the
+   * configuration file, then disable LDAP.
+   */
   private def getLdapUrl: Option[String] = {
     val tag = "LdapUrl"
     try {
@@ -367,8 +367,8 @@ object Config extends Logging {
   val AMQPBrokerPort: Option[String] = getMainTextOption("AMQPBrokerPort")
 
   /**
-    * List of IP addresses allowed to access this server.
-    */
+   * List of IP addresses allowed to access this server.
+   */
   val AllowedHttpIpList: List[String] = getAllowedHttpIpList
 
   val MinPasswordSize: Int = logMainText("MinPasswordSize", "8").toInt
@@ -523,13 +523,13 @@ object Config extends Logging {
   }
 
   /**
-    * Give the name of a wedge beam and a list of beams that are compatible for being the background of the wedge beam.
-    *
-    * wedge: Beam name for wedge
-    *
-    * background: List of beam names for background beam for comparison (percent calculation).  The beams are searched in
-    * the order given, and the first one found (is present in the input data) is used as the background.
-    */
+   * Give the name of a wedge beam and a list of beams that are compatible for being the background of the wedge beam.
+   *
+   * wedge: Beam name for wedge
+   *
+   * background: List of beam names for background beam for comparison (percent calculation).  The beams are searched in
+   * the order given, and the first one found (is present in the input data) is used as the background.
+   */
   case class WedgeBeam(wedge: String, backgroundList: Seq[String]) {
     override def toString: String = "Wedge: " + wedge + "    background: " + backgroundList.mkString("    ")
   }
@@ -555,15 +555,15 @@ object Config extends Logging {
   }
 
   /**
-    * Encapsulate the configuration for pair of VMAT beams.
-    */
+   * Encapsulate the configuration for pair of VMAT beams.
+   */
   case class VMATBeamPair(name: String, MLC: String, OPEN: String, IsolationBorder_mm: Double) {
     override def toString: String = name + "    MLC: " + "%-14s".format(MLC) + "    OPEN: " + "%-14s".format(OPEN) + "    IsolationBorder_mm: " + "%6.3f".format(IsolationBorder_mm)
   }
 
   /**
-    * Convert VMAT beam pair list from XML to list of <code>VMATBeamPair</code>s.
-    */
+   * Convert VMAT beam pair list from XML to list of <code>VMATBeamPair</code>s.
+   */
   private def getVMATBeamPairList: Seq[VMATBeamPair] = {
     def nodeToVMATBeamPair(node: Node) = {
       VMATBeamPair((node \ "@Name").head.text, (node \ "@MLC").head.text, (node \ "@OPEN").head.text, (node \ "@IsolationBorder_mm").head.text.toDouble)
@@ -586,8 +586,8 @@ object Config extends Logging {
   }
 
   /**
-    * Directory containing the definitive static files.
-    */
+   * Directory containing the definitive static files.
+   */
   val staticDirFile: File = {
     val locations = List(""".\""", """src\main\resources\""").map(name => new File(name + Config.staticDirName))
 
@@ -607,10 +607,10 @@ object Config extends Logging {
   private val rtplanDirFile = new File(staticDirFile, "rtplan")
 
   /**
-    * Get the directory containing the DICOM file used as a template to make a simple RTPLAN.
-    *
-    * @return Directory, if it exists.
-    */
+   * Get the directory containing the DICOM file used as a template to make a simple RTPLAN.
+   *
+   * @return Directory, if it exists.
+   */
   private def getSimpleRtplanTemplateDir: Option[File] = {
     val tagName = "SimpleRtplanTemplateDir"
     val rtplanFileName = getMainTextOption(tagName)
@@ -681,8 +681,8 @@ object Config extends Logging {
   }
 
   /**
-    * A DICOM tag that should be anonymized.
-    */
+   * A DICOM tag that should be anonymized.
+   */
   case class ToBeAnonymized(Name: String, AttrTag: AttributeTag, Value: Option[String]) {
     override def toString: String = {
       val v = if (Value.isDefined) " : " + Value.get else ""
@@ -691,8 +691,8 @@ object Config extends Logging {
   }
 
   /**
-    * Construct lookup table for finding DICOM attributes to be anonymized and how to anonymize them.
-    */
+   * Construct lookup table for finding DICOM attributes to be anonymized and how to anonymize them.
+   */
   private def getToBeAnonymizedList: Map[AttributeTag, ToBeAnonymized] = {
     def makeToBeAnon(node: Node): ToBeAnonymized = {
       val Name: Option[String] = {
@@ -723,7 +723,7 @@ object Config extends Logging {
 
       (Name, Tag) match {
         case (Some(n), Some(t)) => new ToBeAnonymized(n, t, Value)
-        case (Some(n), _)       => new ToBeAnonymized(n, ToBeAnonymized.tagFromName(n), Value)
+        case (Some(n), _) => new ToBeAnonymized(n, ToBeAnonymized.tagFromName(n), Value)
         case (_, Some(t)) =>
           val nm = DicomUtil.dictionary.getNameFromTag(t) // try to get the name from the dictionary
           if (nm == null)
@@ -742,8 +742,8 @@ object Config extends Logging {
   }
 
   /**
-    * A standard plan used as a basis for a customized plan.
-    */
+   * A standard plan used as a basis for a customized plan.
+   */
   case class PlanFileConfig(procedure: String, manufacturer: String, collimatorModel: String, file: File) {
     val dicomFile = new DicomFile(file)
     val fileIsValid: Boolean = dicomFile.attributeList.isDefined
@@ -898,6 +898,19 @@ object Config extends Logging {
   val SymmetryPointLeft: SymmetryAndFlatnessPoint = getSymPoint("SymmetryPointLeft")
   val SymmetryPointRight: SymmetryAndFlatnessPoint = getSymPoint("SymmetryPointRight")
   val SymmetryPointCenter: SymmetryAndFlatnessPoint = getSymPoint("SymmetryPointCenter")
+
+  val SymmetrySpan_mm: Double = {
+
+    val list = Seq(
+      SymmetryPointTop,
+      SymmetryPointBottom,
+      SymmetryPointLeft,
+      SymmetryPointRight,
+      SymmetryPointCenter).flatMap(p => Seq(p.x_mm, p.y_mm))
+
+    val span = list.max - list.min
+    span
+  }
 
   val LeafPositionMaxError_mm: Double = logMainText("LeafPositionMaxError_mm", "1.0").toDouble
   val LeafPositionIsolationDistance_mm: Double = logMainText("LeafPositionIsolationDistance_mm", "0.5").toDouble
@@ -1057,6 +1070,33 @@ object Config extends Logging {
   private val PSMMaxFloodFieldAge_day: Double = logMainText("PSMMaxFloodFieldAge_day", "732.0").toDouble
   val PSMMaxFloodFieldAge_ms: Long = (PSMMaxFloodFieldAge_day * 24 * 60 * 60 * 1000).round
 
+  private def getPSMPoint(tag: String): Point2D.Double = {
+    val x_mm = (document \ tag \ "@x_mm").head.text.toDouble
+    val y_mm = (document \ tag \ "@y_mm").head.text.toDouble
+    new Point2D.Double(x_mm, y_mm)
+  }
+
+  // @formatter:off
+  val PSMTopPoint   : Point2D.Double = getPSMPoint("PSMPointTop"   )
+  val PSMBottomPoint: Point2D.Double = getPSMPoint("PSMPointBottom")
+  val PSMLeftPoint  : Point2D.Double = getPSMPoint("PSMPointLeft"  )
+  val PSMRightPoint : Point2D.Double = getPSMPoint("PSMPointRight" )
+  val PSMCenterPoint: Point2D.Double = getPSMPoint("PSMPointCenter")
+  // @formatter:on
+
+  /** Distance between most extreme points. */
+  val PSMSpan_mm: Double = {
+    val list = Seq(
+      PSMTopPoint,
+      PSMBottomPoint,
+      PSMLeftPoint,
+      PSMRightPoint,
+      PSMCenterPoint
+    ).flatMap(p => Seq(p.getX, p.getY))
+    val span = list.max - list.min
+    span
+  }
+
   // =================================================================================
 
   val StakittVerticalMargin_mm: Double = logMainText("StakittVerticalMargin_mm", 0.5.toString).toDouble
@@ -1083,10 +1123,10 @@ object Config extends Logging {
   logger.info(toString)
 
   /**
-    * Self test.
-    *
-    * @param args Not used.
-    */
+   * Self test.
+   *
+   * @param args Not used.
+   */
   def main(args: Array[String]): Unit = {
     val startTime = System.currentTimeMillis
     println("validate: " + validate) // loading forces configuration to be read

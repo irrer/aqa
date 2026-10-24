@@ -20,8 +20,6 @@ import org.aqa.Util
 import org.aqa.db.Output
 import org.aqa.db.SymmetryAndFlatness
 
-import java.sql.Timestamp
-
 class SymmetryAndFlatnessCsv(metadataCache: MetadataCache) extends Phase2Csv[SymmetryAndFlatness.SymmetryAndFlatnessHistory](metadataCache: MetadataCache) {
 
   // abbreviation for the long name
@@ -51,6 +49,7 @@ class SymmetryAndFlatnessCsv(metadataCache: MetadataCache) extends Phase2Csv[Sym
 
   }
 
+  /*
   private def optDate(ts: Option[Timestamp]): String = {
     if (ts.isDefined) {
       Util.formatDate(Util.standardDateFormat, ts.get).replace('T', ' ')
@@ -58,7 +57,6 @@ class SymmetryAndFlatnessCsv(metadataCache: MetadataCache) extends Phase2Csv[Sym
       "NA"
   }
 
-  /*
   private def psmGridOf(sf: SF): Option[PSMGrid] = {
     if (sf.symmetryAndFlatness.psmDataDate.isDefined)
       PSMGrid.get(sf.output.machinePK.get, sf.symmetryAndFlatness.psmDataDate.get)
@@ -127,7 +125,6 @@ class SymmetryAndFlatnessCsv(metadataCache: MetadataCache) extends Phase2Csv[Sym
         "explicit: Designated by user as a baseline.  implicit: Used as baseline when an explicit one is not defined.  If blank, then it is not used as a baseline.",
         (sf: SF) => baselineDesignation(sf)
       ),
-      CsvCol("PSM Date", "Date and time that PSM was delivered.  Used only when available.", (sf: SF) => optDate(sf.symmetryAndFlatness.psmDataDate)),
       CsvCol("Span", "Distance in mm between centers of opposing sample points.", (sf: SF) => sf.symmetryAndFlatness.span_mm.get),
       CsvCol(
         "Diameter",
@@ -170,7 +167,6 @@ class SymmetryAndFlatnessCsv(metadataCache: MetadataCache) extends Phase2Csv[Sym
       CsvCol("Left COV", "Coefficient of Variation (stdDev/mean) of pixel values in the left hand circle of the image.", (sf: SF) => sf.symmetryAndFlatness.leftCOV),
       CsvCol("Right COV", "Coefficient of Variation (stdDev/mean) of pixel values in the right hand circle of the image.", (sf: SF) => sf.symmetryAndFlatness.rightCOV),
       CsvCol("Center COV", "Coefficient of Variation (stdDev/mean) of pixel values in center circle of the image.", (sf: SF) => sf.symmetryAndFlatness.centerCOV),
-      CsvCol("PSM Date", "If present, indicates the date of the Pixel Sensitivity map applied to this result.", (sf: SF) => optDate(sf.symmetryAndFlatness.psmDataDate)),
       CsvCol(
         "span",
         "Distance in mm between opposing sample points.",

@@ -1354,6 +1354,13 @@ Note that when building a package for release, the Maven build process uses the 
      to be valid.  Specified as a floating point number in days.  Default: 732.0 (about 2 years) -->
     <PSMMaxFloodFieldAge_day>10732.0</PSMMaxFloodFieldAge_day>
 
+    <!-- Coordinates of centers of PSM points.  All are in mm, relative to the center of the image, and in the isoplane. -->
+    <PSMPointTop    x_mm=  '0.0'                 y_mm='-66.6666666666666666'/>
+    <PSMPointBottom x_mm=  '0.0'                 y_mm= '66.6666666666666666'/>
+    <PSMPointLeft   x_mm='-66.6666666666666666'  y_mm=  '0.0'/>
+    <PSMPointRight  x_mm= '66.6666666666666666'  y_mm=  '0.0'/>
+    <PSMPointCenter x_mm=  '0.0'                 y_mm=  '0.0'/>
+
     <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
     <!-- Stakitt configuration -->
