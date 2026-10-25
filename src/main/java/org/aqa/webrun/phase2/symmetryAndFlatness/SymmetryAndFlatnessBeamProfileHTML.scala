@@ -16,7 +16,6 @@
 
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Logging
 import org.aqa.Util
 import org.aqa.run.ProcedureStatus
@@ -80,8 +79,6 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
           "&" + SymmetryAndFlatnessSubHTML.beamNameTag + "=" + result.symmetryAndFlatness.beamName +
           "&" + SymmetryAndFlatnessSubHTML.hasPsmTag + "=" + withPSM
       }
-
-      Trace.trace(s"withPSM: $withPSM      dynamicUrl: $dynamicUrl")
 
       <div class="row">
 
@@ -168,12 +165,6 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
       }
       val file = SymmetryAndFlatnessHTML.beamHtmlFile(subDir, result.symmetryAndFlatness.beamName, hasPsm = withPSM)
 
-      if (true) { // TODO rm
-
-        val beam = result.symmetryAndFlatness.beamName
-
-        Trace.trace(s"$beam    psm: $withPSM     html: $html")
-      }
       Util.writeBinaryFile(file, html.getBytes)
     }
 

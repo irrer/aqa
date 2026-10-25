@@ -17,7 +17,6 @@
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
 import edu.umro.ScalaUtil.PrettyXML
-import edu.umro.ScalaUtil.Trace
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
@@ -144,7 +143,6 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       </tr>
     </thead>
   }
-
 
   private def pctRounded(pct: Double) = {
     val factor = 1000000000L
@@ -463,14 +461,33 @@ object SymmetryAndFlatnessSubHTML extends Logging {
         }
       }
 
+      val spanAndDiameter = {
+        val span_mm = if (beamData.symmetryAndFlatness.span_mm.isDefined) beamData.symmetryAndFlatness.span_mm.get else Config.SymmetrySpan_mm
+        val diameter_mm = if (beamData.symmetryAndFlatness.diameter_mm.isDefined) beamData.symmetryAndFlatness.diameter_mm.get else Config.SymmetryAndFlatnessDiameter_mm
+        val spanTitle = {
+          s"Distance in mm between centers of right-to-left and top-to-bottom sampling${WebUtil.titleNewline}areas.  The standard for Phase 2 was ${Config.SymmetrySpan_mm} mm, but to implement PSMs it${WebUtil.titleNewline}had to be reduced to ${Util.fmtDbl(Config.PSMSpan_mm)} mm because of the mechanical limits of EPID positioning. "
+        }
+        <div>
+          <span title={spanTitle}>Span:
+            {WebUtil.setPrecisionAttr(<span>{Util.fmtDbl(span_mm)}</span>, span_mm)}
+          </span>
+          <p title="Diameter of each sample area in mm.">Diameter:
+            {WebUtil.setPrecisionAttr(<span>{Util.fmtDbl(diameter_mm)}</span>, diameter_mm)}
+          </p>
+        </div>
+      }
+
       <div class="row">
-        <div class="col-md-3 col-md-offset-1">
+        <div class="col-md-3">
           <h3 style={if (withPsm) psmStyle else ""}>
             {beamData.symmetryAndFlatness.beamName}{psmElem}
           </h3>
         </div>
-        <div class="col-md-2 col-md-offset-1">
+        <div class="col-md-2 col-md-offset-1" style="margin-top:24px;">
           {WebUtil.showPrecision}
+        </div>
+        <div class="col-md-3 col-md-offset-1" style="margin-top:24px;margin-left:80px;">
+          {spanAndDiameter}
         </div>
       </div>
     }
@@ -856,8 +873,6 @@ class SymmetryAndFlatnessSubHTML extends Restlet with Logging with SubUrlAdmin {
     val valueMap = getValueMap(request)
 
     def has(tag: String) = valueMap.contains(tag)
-
-    Trace.trace("hey") // TODO rm
 
     val SF = SymmetryAndFlatnessSubHTML
 
