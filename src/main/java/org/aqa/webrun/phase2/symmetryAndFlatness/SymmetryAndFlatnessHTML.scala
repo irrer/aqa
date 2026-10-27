@@ -19,6 +19,7 @@ package org.aqa.webrun.phase2.symmetryAndFlatness
 import org.aqa.Config
 import org.aqa.Logging
 import org.aqa.Util
+import org.aqa.db.SymmetryAndFlatness
 import org.aqa.run.ProcedureStatus
 import org.aqa.web.WebServer
 import org.aqa.web.WebUtil
@@ -38,6 +39,16 @@ object SymmetryAndFlatnessHTML extends Logging {
   private val subDirName = "SymmetryAndFlatness"
 
   /**
+    * Explain what span is.
+    */
+  val spanTitle: String = {
+    s"Distance between centers of right-to-left and top-to-bottom sampling${WebUtil.titleNewline}areas in mm.  The standard for Phase 2 was ${Config.SymmetrySpan_mm} mm, but to implement PSMs it${WebUtil.titleNewline}had to be reduced to ${Util
+      .fmtDbl(Config.PSMSpan_mm)} mm because of the mechanical limits of EPID positioning. "
+    s"Distance between centers of right-to-left and top-to-bottom sampling areas in mm.  The standard for Phase 2 was ${Config.SymmetrySpan_mm} mm, but to implement PSMs it had to be reduced to ${Util
+      .fmtDbl(Config.PSMSpan_mm)} mm because of the mechanical limits of EPID positioning. "
+  }
+
+  /**
     * Make the directory to contain symmetry, flatness, and constancy HTML report.
     *
     * @param outputDir Main output directory.
@@ -49,17 +60,29 @@ object SymmetryAndFlatnessHTML extends Logging {
     subDir
   }
 
-  def annotatedImageFile(subDir: File, beamName: String, hasPsm: Boolean): File = {
-    val fileName = "Sym_Flat_" + WebUtil.stringToUrlSafe(beamName + "__" + hasPsm.toString) + ".png"
+  def annotatedImageFile(subDir: File, sf: SymmetryAndFlatness): File = {
+    val spanText = {
+      if (sf.getSpan_mm == Config.SymmetrySpan_mm)
+        ""
+      else
+        "_" + sf.getSpan_mm.round.toString
+    }
+    val fileName = "Sym_Flat_" + WebUtil.stringToUrlSafe(sf.beamName + spanText) + ".png"
     new File(subDir, fileName)
   }
 
   /**
     * Get the file of the HTML for the given beam.
     */
-  def beamHtmlFile(subDir: File, beamName: String, hasPsm: Boolean): File = {
-    val psmUrl = if (hasPsm) "_PSM" else ""
-    val fileName = WebUtil.stringToUrlSafe(beamName) + psmUrl + ".html"
+  def beamHtmlFile(subDir: File, symFlat: SymmetryAndFlatness, withPSM: Boolean): File = {
+    val psmUrlText = {
+      0 match {
+        case _ if withPSM                            => "_PSM"
+        case _ if symFlat.isPSMSpatiallyCompatible() => s"_PSM_${symFlat.getSpan_mm.round}"
+        case _                                       => ""
+      }
+    }
+    val fileName = WebUtil.stringToUrlSafe(symFlat.beamName) + psmUrlText + ".html"
     new File(subDir, fileName)
   }
 
@@ -82,7 +105,7 @@ object SymmetryAndFlatnessHTML extends Logging {
   def makeDisplay(extendedData: ExtendedData, resultList: List[SymmetryAndFlatnessRun.SymmetryAndFlatnessBeamResult], status: ProcedureStatus.Value, runReq: RunReq): Elem = {
     val subDir = makeSubDir(extendedData.output.dir)
     val mainHtmlFile = new File(subDir, htmlFileName)
-    resultList.par.foreach(rb => Util.writePng(rb.annotatedImage, annotatedImageFile(subDir, rb.symmetryAndFlatness.beamName, rb.symmetryAndFlatness.canDoPSM)))
+    resultList.par.foreach(rb => Util.writePng(rb.annotatedImage, annotatedImageFile(subDir, rb.symmetryAndFlatness)))
 
     val dynamicContent = {
       val url = (new SymmetryAndFlatnessSubHTML).pathOf + "?outputPK=" + extendedData.output.outputPK.get

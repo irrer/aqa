@@ -65,9 +65,10 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   /** Used to specify the name of a beam in a URL. */
   val beamNameTag = "BeamName"
 
-  /** Used to specify the name of a beam in a URL. */
-  val hasPsmTag = "hasPsm"
+  /** Used to specify whether PSM should be used.  If true, use PSM.  If false or not specified, then do not use PSM. */
+  val withPsmTag = "withPsm"
 
+  /** The CSS styling used to in indicate that this data was */
   val psmStyle = "color:white;background:lightblue; border-left:10px solid lightblue; border-right:10px solid lightblue;"
 
   private def titleAxialSymmetry =
@@ -159,7 +160,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       if (symFlatDataSet.symmetryAndFlatness.allNoPSMPass(symFlatDataSet.baseline)) "normal" else "danger"
     }
     val detailUrl = WebServer.urlOfResultsFile(
-      SymmetryAndFlatnessHTML.beamHtmlFile(subDir, symFlatDataSet.symmetryAndFlatness.beamName, symFlatDataSet.symmetryAndFlatness.canDoPSM)
+      SymmetryAndFlatnessHTML.beamHtmlFile(subDir, symFlatDataSet.symmetryAndFlatness, symFlatDataSet.symmetryAndFlatness.canDoPSM)
     )
     val pk = symFlatDataSet.symmetryAndFlatness.symmetryAndFlatnessPK.get
     val id = "baseline" + pk
@@ -204,11 +205,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       symFlatData.rtplan
     )
     val imgUrl = WebServer.urlOfResultsFile(
-      SymmetryAndFlatnessHTML.annotatedImageFile(
-        SymmetryAndFlatnessHTML.makeSubDir(symFlatData.output.dir),
-        symFlatData.symmetryAndFlatness.beamName,
-        symFlatData.symmetryAndFlatness.canDoPSM
-      )
+      SymmetryAndFlatnessHTML.annotatedImageFile(SymmetryAndFlatnessHTML.makeSubDir(symFlatData.output.dir), symFlatData.symmetryAndFlatness)
     )
     val imgSmall = {
         <img src={imgUrl} width="100"/>
@@ -462,17 +459,18 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       }
 
       val spanAndDiameter = {
-        val span_mm = if (beamData.symmetryAndFlatness.span_mm.isDefined) beamData.symmetryAndFlatness.span_mm.get else Config.SymmetrySpan_mm
+        val span_mm = beamData.symmetryAndFlatness.getSpan_mm
         val diameter_mm = if (beamData.symmetryAndFlatness.diameter_mm.isDefined) beamData.symmetryAndFlatness.diameter_mm.get else Config.SymmetryAndFlatnessDiameter_mm
-        val spanTitle = {
-          s"Distance in mm between centers of right-to-left and top-to-bottom sampling${WebUtil.titleNewline}areas.  The standard for Phase 2 was ${Config.SymmetrySpan_mm} mm, but to implement PSMs it${WebUtil.titleNewline}had to be reduced to ${Util.fmtDbl(Config.PSMSpan_mm)} mm because of the mechanical limits of EPID positioning. "
-        }
         <div>
-          <span title={spanTitle}>Span:
-            {WebUtil.setPrecisionAttr(<span>{Util.fmtDbl(span_mm)}</span>, span_mm)}
+          <span title={SymmetryAndFlatnessHTML.spanTitle}>Span:
+            {WebUtil.setPrecisionAttr(<span>
+            {Util.fmtDbl(span_mm)}
+          </span>, span_mm)}
           </span>
           <p title="Diameter of each sample area in mm.">Diameter:
-            {WebUtil.setPrecisionAttr(<span>{Util.fmtDbl(diameter_mm)}</span>, diameter_mm)}
+            {WebUtil.setPrecisionAttr(<span>
+            {Util.fmtDbl(diameter_mm)}
+          </span>, diameter_mm)}
           </p>
         </div>
       }
@@ -764,7 +762,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     val output = Output.get(outputPK).get
     val machinePK = Output.get(outputPK).get.machinePK.get
     val beamName = valueMap(beamNameTag).replaceAll("%20", " ")
-    val hasPsm = valueMap.contains(hasPsmTag) && valueMap(hasPsmTag).toBoolean
+    val hasPsm = valueMap.contains(withPsmTag) && valueMap(withPsmTag).toBoolean
 
     val symFlat = {
       val list = SymmetryAndFlatness.getByOutput(outputPK)

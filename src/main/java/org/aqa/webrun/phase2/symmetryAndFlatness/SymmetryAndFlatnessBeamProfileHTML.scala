@@ -77,7 +77,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
         (new SymmetryAndFlatnessSubHTML).pathOf +
           "?outputPK=" + extendedData.output.outputPK.get +
           "&" + SymmetryAndFlatnessSubHTML.beamNameTag + "=" + result.symmetryAndFlatness.beamName +
-          "&" + SymmetryAndFlatnessSubHTML.hasPsmTag + "=" + withPSM
+          "&" + SymmetryAndFlatnessSubHTML.withPsmTag + "=" + withPSM
       }
 
       <div class="row">
@@ -90,7 +90,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
           <div class="col-md-5 col-md-offset-1">
             {
         <center id="beamImage"><img class="img-responsive" src={
-          WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.symmetryAndFlatness.beamName, withPSM))
+          WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.annotatedImageFile(subDir, result.symmetryAndFlatness))
         }/> </center>
       }
           </div>
@@ -163,7 +163,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
         val runScript = Some(elemJavascript._2)
         Phase2Util.wrapSubProcedure(extendedData, elemJavascript._1, title = title, status, runScript = runScript , runReq.rtimageMap)
       }
-      val file = SymmetryAndFlatnessHTML.beamHtmlFile(subDir, result.symmetryAndFlatness.beamName, hasPsm = withPSM)
+      val file = SymmetryAndFlatnessHTML.beamHtmlFile(subDir, result.symmetryAndFlatness, withPSM)
 
       Util.writeBinaryFile(file, html.getBytes)
     }

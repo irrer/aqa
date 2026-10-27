@@ -29,6 +29,6 @@ import org.aqa.db.SymmetryAndFlatness
   * @param baseline Baseline for this beam.  May be the same as <code>symmetryAndFLatness</code>
   * @param al Attribute list for this DICOM RTIMAGE.
   */
-case class SymmetryAndFlatnessDataSet(symmetryAndFlatness: SymmetryAndFlatness, output: Output, baseline: SymmetryAndFlatness, al: AttributeList, rtplan: AttributeList) {
+case class SymmetryAndFlatnessDataSet(symmetryAndFlatness: SymmetryAndFlatness, output: Output, baseline: SymmetryAndFlatness, al: AttributeList, rtplan: AttributeList, withPSM: Boolean) {
   val time: Long = Util.getOutputDateTime(Seq(al)).get
 }

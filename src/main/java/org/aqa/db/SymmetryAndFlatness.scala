@@ -25,32 +25,32 @@ import org.aqa.webrun.psm.PSMCache
 import java.sql.Timestamp
 
 /**
- * Represent the results of a symmetry, flatness, and constancy analysis.
- *
- * Note that the limit for the number columns in Slick is 22, and this is exactly 22 columns.
- */
+  * Represent the results of a symmetry, flatness, and constancy analysis.
+  *
+  * Note that the limit for the number columns in Slick is 22, and this is exactly 22 columns.
+  */
 case class SymmetryAndFlatness(
-                                symmetryAndFlatnessPK: Option[Long], // primary key
-                                outputPK: Long, // output primary key
-                                SOPInstanceUID: String, // UID of source image
-                                beamName: String, // name of beam in plan
-                                isBaseline: Boolean, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.
-                                top_cu: Double, // average value of top point pixels in CU
-                                bottom_cu: Double, // average value of bottom point pixels in CU
-                                left_cu: Double, // average value of left point pixels in CU
-                                right_cu: Double, // average value of right point pixels in CU
-                                center_cu: Double, // average value of center point pixels in CU
-                                topStdDev_cu: Double, // standard deviation of top point pixels in CU
-                                bottomStdDev_cu: Double, // standard deviation of bottom point pixels in CU
-                                leftStdDev_cu: Double, // standard deviation of left point pixels in CU
-                                rightStdDev_cu: Double, // standard deviation of right point pixels in CU
-                                centerStdDev_cu: Double, // standard deviation of center point pixels in CU
-                                span_mm: Option[Double], // distance in mm between opposing measurement areas (both left-right and top-bottom).
-                                diameter_mm: Option[Double], // diameter in mm of the area sampled.
-                                RTImageSID_mm: Option[Double], // distance in mm from source to image (DICOM metadata 3002,0026)
-                                KVP: Option[Double], // Peak kilo voltage output of the X-Ray generator used (DICOM metadata 0018,0060)
-                                isFlatteningFilterFree: Option[Boolean] // True if this is an FFF beam. (see DICOM metadata 3002,0051 FluenceMode and 3002,0052 FluenceModeID in RTPLAN)
-                              ) extends Logging {
+    symmetryAndFlatnessPK: Option[Long], // primary key
+    outputPK: Long, // output primary key
+    SOPInstanceUID: String, // UID of source image
+    beamName: String, // name of beam in plan
+    isBaseline: Boolean, // If true, then this is to be used as a baseline.  If not preceded chronologically by a baseline, then it will be used as a base even if it is false.  Defaults to false.
+    top_cu: Double, // average value of top point pixels in CU
+    bottom_cu: Double, // average value of bottom point pixels in CU
+    left_cu: Double, // average value of left point pixels in CU
+    right_cu: Double, // average value of right point pixels in CU
+    center_cu: Double, // average value of center point pixels in CU
+    topStdDev_cu: Double, // standard deviation of top point pixels in CU
+    bottomStdDev_cu: Double, // standard deviation of bottom point pixels in CU
+    leftStdDev_cu: Double, // standard deviation of left point pixels in CU
+    rightStdDev_cu: Double, // standard deviation of right point pixels in CU
+    centerStdDev_cu: Double, // standard deviation of center point pixels in CU
+    span_mm: Option[Double], // distance in mm between opposing measurement areas (both left-right and top-bottom).
+    diameter_mm: Option[Double], // diameter in mm of the area sampled.
+    RTImageSID_mm: Option[Double], // distance in mm from source to image (DICOM metadata 3002,0026)
+    KVP: Option[Double], // Peak kilo voltage output of the X-Ray generator used (DICOM metadata 0018,0060)
+    isFlatteningFilterFree: Option[Boolean] // True if this is an FFF beam. (see DICOM metadata 3002,0051 FluenceMode and 3002,0052 FluenceModeID in RTPLAN)
+) extends Logging {
 
   def insert: SymmetryAndFlatness = {
     val insertQuery = SymmetryAndFlatness.query returning SymmetryAndFlatness.query.map(_.symmetryAndFlatnessPK) into
@@ -73,16 +73,16 @@ case class SymmetryAndFlatness(
   val centerCOV: Double = centerStdDev_cu / center_cu
 
   /**
-   * Get the PSM grid and flood field for this instance.
-   *
-   * @return PSM grid and flood field if available, otherwise None.
-   */
+    * Get the PSM grid and flood field for this instance.
+    *
+    * @return PSM grid and flood field if available, otherwise None.
+    */
   def psmGridWithFFFrom(): Option[PSMCache.PSMGridWithFF] = {
     if ( //
       KVP.isDefined &&
-        isFlatteningFilterFree.isDefined &&
-        span_mm.isDefined &&
-        diameter_mm.isDefined
+      isFlatteningFilterFree.isDefined &&
+      span_mm.isDefined &&
+      diameter_mm.isDefined
     ) {
       PSMCache.get( //
         outputPK = outputPK,
@@ -96,19 +96,19 @@ case class SymmetryAndFlatness(
   }
 
   /**
-   * Get the flood field for this record.
-   *
-   * @return flood field if available, None if not.
-   */
+    * Get the flood field for this record.
+    *
+    * @return flood field if available, None if not.
+    */
   private def floodFieldOf(): Option[FloodField] = psmGridWithFFFrom().map(_.floodField)
 
   // - - - - - - - - - - - - - - - - - - - - - - - -
 
   /**
-   * Determine if this instance can use PSM, meaning that compatible PSM and flood field data is available..
-   *
-   * @return True if it can do PSM.
-   */
+    * Determine if this instance can use PSM, meaning that compatible PSM and flood field data is available..
+    *
+    * @return True if it can do PSM.
+    */
   def canDoPSM: Boolean = floodFieldOf().isDefined
 
   // - - - - - - - - - - - - - - - - - - - - - - - -
@@ -161,12 +161,12 @@ case class SymmetryAndFlatness(
   // - - - - - - - - - - - - - - - - - - - - - - - -
 
   /**
-   * Perform the math of calculating axial symmetry.  This function isolates and highlights the actual calculation performed.
-   *
-   * @param topValue_cu    Top value in CU.
-   * @param bottomValue_cu Bottom value in CU.
-   * @return axial symmetry.
-   */
+    * Perform the math of calculating axial symmetry.  This function isolates and highlights the actual calculation performed.
+    *
+    * @param topValue_cu    Top value in CU.
+    * @param bottomValue_cu Bottom value in CU.
+    * @return axial symmetry.
+    */
   private def axialSymmetryCalculation(topValue_cu: Double, bottomValue_cu: Double): Double = {
     if (bottomValue_cu == 0) {
       logger.warn("Unexpected error.  Invalid value of 0 given for bottom cu.")
@@ -177,12 +177,12 @@ case class SymmetryAndFlatness(
   }
 
   /**
-   * Perform the math of calculating transvers symmetry.  This function isolates and highlights the actual calculation performed.
-   *
-   * @param rightValue_cu Top value in CU.
-   * @param leftValue_cu  Bottom value in CU.
-   * @return axial symmetry.
-   */
+    * Perform the math of calculating transvers symmetry.  This function isolates and highlights the actual calculation performed.
+    *
+    * @param rightValue_cu Top value in CU.
+    * @param leftValue_cu  Bottom value in CU.
+    * @return axial symmetry.
+    */
   private def transverseSymmetryCalculation(rightValue_cu: Double, leftValue_cu: Double): Double = {
     if (leftValue_cu == 0) {
       logger.warn("Unexpected error.  Invalid value of 0 given for left cu.")
@@ -193,11 +193,11 @@ case class SymmetryAndFlatness(
   }
 
   /**
-   * Perform the math of calculating flatness.  This function isolates and highlights the actual calculation performed.
-   *
-   * @param list List of all 5 values in cu.
-   * @return axial symmetry.
-   */
+    * Perform the math of calculating flatness.  This function isolates and highlights the actual calculation performed.
+    *
+    * @param list List of all 5 values in cu.
+    * @return axial symmetry.
+    */
   private def flatnessCalculation(list: Seq[Double]): Double = {
     val min_cu = list.min
     val max_cu = list.max
@@ -519,6 +519,16 @@ case class SymmetryAndFlatness(
     val diameterOk = diameter_mm.isDefined && (((Config.PSMRadius_mm * 2) - diameter_mm.get).abs < SymmetryAndFlatness.DiameterTolerance_mm)
 
     spanOk && diameterOk
+  }
+
+
+  /**
+   * Get the span (distance between centers of opposing sample areas) in mm.
+   *
+   * @return Span.
+   */
+  def getSpan_mm: Double = {
+    if (span_mm.isDefined) span_mm.get else Config.SymmetrySpan_mm
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

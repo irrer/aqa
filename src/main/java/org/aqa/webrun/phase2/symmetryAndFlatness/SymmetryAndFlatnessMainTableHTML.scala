@@ -124,11 +124,19 @@ case class SymmetryAndFlatnessMainTableHTML() extends Logging {
     </thead>
   }
 
-  private def detailsColumn(
-                             subDir: File,
-                             symFlatDataSet: SymmetryAndFlatnessDataSet,
-                             withPsm: Boolean
-                           ): Elem = {
+  /**
+   * Generate the HTML for the column containing a link to the beam details.
+   *
+   * @param subDir         Directory containing just the data for sym-flat.
+   * @param symFlatDataSet Data set to display when link is clicked.
+   * @param withPsm        If true, use PSM, else no PSM.
+   * @return HTML for cell for Beam column in table.
+   */
+  private def beamColumn(
+                          subDir: File,
+                          symFlatDataSet: SymmetryAndFlatnessDataSet,
+                          withPsm: Boolean
+                        ): Elem = {
 
     val errorClass = {
       val pass: Boolean = {
@@ -140,7 +148,7 @@ case class SymmetryAndFlatnessMainTableHTML() extends Logging {
       if (pass) "normal" else "danger"
     }
     val detailUrl = WebServer.urlOfResultsFile(
-      SymmetryAndFlatnessHTML.beamHtmlFile(subDir, symFlatDataSet.symmetryAndFlatness.beamName, withPsm)
+      SymmetryAndFlatnessHTML.beamHtmlFile(subDir, symFlatDataSet.symmetryAndFlatness, withPsm)
     )
     val pk = symFlatDataSet.symmetryAndFlatness.symmetryAndFlatnessPK.get
     val id = "baseline" + pk
@@ -151,6 +159,16 @@ case class SymmetryAndFlatnessMainTableHTML() extends Logging {
         <span>PSM</span>
       else
         <span></span>
+    }
+
+    val spanElem = {
+      val span = symFlatDataSet.symmetryAndFlatness.getSpan_mm
+      val e = WebUtil.setPrecisionAttr(<span>
+        {Util.fmtDbl(span)}
+      </span>, span)
+      <p title={SymmetryAndFlatnessHTML.spanTitle}>Span:
+        {e}
+      </p>
     }
 
     val input =
@@ -170,7 +188,9 @@ case class SymmetryAndFlatnessMainTableHTML() extends Logging {
           {symFlatDataSet.symmetryAndFlatness.beamName}<br>
           {Phase2Util.jawDescription(symFlatDataSet.al, symFlatDataSet.rtplan)}
         </br>{Phase2Util.angleDescription(symFlatDataSet.al)}{psmElem}
-        </a> <br></br> <label title="Check to use this beam as a baseline." for={id}>Baseline</label>{input}<br></br>
+        </a>{spanElem}<p>
+        <label title="Check to use this beam as a baseline." for={id}>Baseline</label>{input}
+      </p>
         <a href={baselineUrl}>View Baseline</a>
       </td>
     }
@@ -187,8 +207,7 @@ case class SymmetryAndFlatnessMainTableHTML() extends Logging {
     val imgUrl = WebServer.urlOfResultsFile(
       SymmetryAndFlatnessHTML.annotatedImageFile(
         SymmetryAndFlatnessHTML.makeSubDir(symFlatData.output.dir),
-        symFlatData.symmetryAndFlatness.beamName,
-        symFlatData.symmetryAndFlatness.canDoPSM
+        symFlatData.symmetryAndFlatness
       )
     )
     val imgSmall = {
@@ -225,7 +244,7 @@ case class SymmetryAndFlatnessMainTableHTML() extends Logging {
   }
 
   private def makeRow(symFlatData: SymmetryAndFlatnessDataSet): Seq[Elem] = {
-    val withPsm = symFlatData.symmetryAndFlatness.canDoPSM
+    val withPsm = symFlatData.withPSM && symFlatData.symmetryAndFlatness.canDoPSM
 
     val subDir = SymmetryAndFlatnessHTML.makeSubDir(symFlatData.output.dir)
 
@@ -233,7 +252,7 @@ case class SymmetryAndFlatnessMainTableHTML() extends Logging {
       Seq(
         {
           <tr align="center">
-            {detailsColumn(subDir, symFlatData, withPsm)}
+            {beamColumn(subDir, symFlatData, withPsm)}
             {imageColumn(symFlatData)}
             <td style="text-align: center;" title={titleAxialSymmetry}>Axial Symmetry</td>
             {fmtBaselineColumn(symFlatData.baseline.getAxialSymmetry(withPsm))}
@@ -250,8 +269,8 @@ case class SymmetryAndFlatnessMainTableHTML() extends Logging {
             <td style="text-align: center;" title={titleTransverseSymmetry}>Transverse Symmetry</td>
             {fmtBaselineColumn(symFlatData.baseline.getTransverseSymmetry(withPsm))}
             {
-            val pct = symFlatData.symmetryAndFlatness.getTransverseSymmetry(withPsm) - symFlatData.baseline.getTransverseSymmetry(withPsm)
-            fmtDifferenceColumn(pct, Config.SymmetryPercentLimit)
+              val pct = symFlatData.symmetryAndFlatness.getTransverseSymmetry(withPsm) - symFlatData.baseline.getTransverseSymmetry(withPsm)
+              fmtDifferenceColumn(pct, Config.SymmetryPercentLimit)
             }
             { symmetryPercentLimitColumn }
             {fmtValueColumn(symFlatData.symmetryAndFlatness.getTransverseSymmetry(withPsm))}
@@ -261,8 +280,8 @@ case class SymmetryAndFlatnessMainTableHTML() extends Logging {
             <td style="text-align: center;" title={titleFlatness}>Flatness</td>
             {fmtBaselineColumn(symFlatData.baseline.getFlatness(withPsm))}
             {
-            val pct = symFlatData.symmetryAndFlatness.getFlatness(withPsm) - symFlatData.baseline.getFlatness(withPsm)
-            fmtDifferenceColumn(pct, Config.FlatnessPercentLimit)}
+              val pct = symFlatData.symmetryAndFlatness.getFlatness(withPsm) - symFlatData.baseline.getFlatness(withPsm)
+              fmtDifferenceColumn(pct, Config.FlatnessPercentLimit)}
             { flatnessPercentLimitColumn }
             {fmtValueColumn(symFlatData.symmetryAndFlatness.getFlatness(withPsm))}
           </tr>
@@ -381,39 +400,53 @@ case class SymmetryAndFlatnessMainTableHTML() extends Logging {
     val rtplanAl = getRtplanAl(output.inputPK, alList)
 
     /**
+     * Get the attribute list of the given sym-flat instance.
+     *
+     * @param sf For this sym-flat.
+     * @return Attribute list, if available.
+     */
+    def alOf(sf: SymmetryAndFlatness): Option[AttributeList] = {
+      val aa = alList.find(a => Util.sopOfAl(a).equals(sf.SOPInstanceUID))
+      if (aa.isEmpty)
+        logger.warn(s"Could not find RTIMAGE SOP ${sf.SOPInstanceUID}    Beam Name: ${sf.beamName}")
+      aa
+    }
+
+    /**
      * Make a data set that contains all the relevant information associated with a SymmetryFlatness row.
      *
      * @param sf Basis of data
      * @return Convenient set of data
      */
-    def makeDataSet(sf: SymmetryAndFlatness): Option[SymmetryAndFlatnessDataSet] = {
+    def makeDataSet(sf: SymmetryAndFlatness, withPSM: Boolean): Option[SymmetryAndFlatnessDataSet] = {
       try {
         logger.info("Making data set for: " + sf)
-        val baseline = {
+
+        def baseline = {
           val bl = SymmetryAndFlatness.getBaseline( //
             output.machinePK.get,
             span_mm = sf.span_mm,
             diameter_mm = sf.diameter_mm,
             RTImageSID_mm = sf.RTImageSID_mm,
             beamName = sf.beamName,
-            hasPSM = sf.canDoPSM,
+            hasPSM = withPSM && sf.canDoPSM,
             dataDate = dataDate,
             procedurePK = output.procedurePK
           )
           bl.get.baseline
         }
 
-        val al: Option[AttributeList] = {
-          val aa = alList.find(a => Util.sopOfAl(a).equals(sf.SOPInstanceUID))
-          if (aa.isEmpty)
-            logger.warn(s"Could not find RTIMAGE SOP ${sf.SOPInstanceUID}    Beam Name: ${sf.beamName}")
-          aa
+        // if all this is true, then create a data set:
+        //   The attribute list is available
+        //   The RTPLAN is available
+        //   Either PSM is not requested, or, PSM is requested and can be performed
+        (alOf(sf), rtplanAl, (!withPSM) || (withPSM == sf.canDoPSM)) match {
+          case (Some(al), Some(rtplan), true) =>
+            Some(SymmetryAndFlatnessDataSet(sf, output, baseline, al, rtplan, withPSM))
+          case _ =>
+            None
         }
 
-        if (al.isDefined && rtplanAl.isDefined)
-          Some(SymmetryAndFlatnessDataSet(sf, output, baseline, al.get, rtplanAl.get))
-        else
-          None
       } catch {
         case t: Throwable =>
           logger.error(s"Unexpected error on $sf : ${fmtEx(t)}")
@@ -421,7 +454,7 @@ case class SymmetryAndFlatnessMainTableHTML() extends Logging {
       }
     }
 
-    val symFlatDataList = symFlatList.flatMap(sf => makeDataSet(sf)).sortBy(_.time)
+    val symFlatDataList = symFlatList.flatMap(sf => Seq(makeDataSet(sf, withPSM = false), makeDataSet(sf, withPSM = true)).flatten).sortBy(_.time)
 
     val elem = makeContent(output, symFlatDataList)
     val text = PrettyXML.xmlToText(elem)
