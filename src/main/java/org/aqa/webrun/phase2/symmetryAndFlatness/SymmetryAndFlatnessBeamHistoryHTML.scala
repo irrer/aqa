@@ -33,7 +33,7 @@ import java.sql.Timestamp
 /**
   * Analyze DICOM files for symmetry and flatness.
   */
-class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, withPsm: Boolean) extends Logging {
+class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, withPsm: Boolean, span_mm: Long) extends Logging {
 
   val output: Output = Output.get(outputPK).get
   val machinePK: Long = output.machinePK.get
@@ -43,7 +43,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, withP
     list
       .filter(sf =>
         sf.beamName.equalsIgnoreCase(beamName) &&
-          (sf.canDoPSM == withPsm)
+          (sf.getSpan_mm.round == span_mm)
       )
       .head
   }
@@ -51,7 +51,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, withP
   private val history = SymmetryAndFlatness.history( //
     machinePK = machinePK,
     beamName = beamName,
-    span_mm = symFlat.getSpan_mm.round,
+    span_mm = span_mm,
     diameter_mm = symFlat.diameter_mm,
     RTImageSID_mm = symFlat.RTImageSID_mm,
     output.procedurePK
@@ -218,45 +218,45 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, withP
       .get
 
     val chartAxial = {
-      val valueList = history.map(h => h.symmetryAndFlatness.axialSymmetryNoPSM())
+      val valueList = history.map(h => h.symmetryAndFlatness.getAxialSymmetry(withPsm))
       makeChart(
         axialSymmetryNameNoPSM,
         toleranceRange = Config.SymmetryPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
-        Some(sfAndBaseline.symmetryAndFlatness.axialSymmetryNoPSM()),
+        Some(sfAndBaseline.symmetryAndFlatness.getAxialSymmetry(withPsm)),
         valueList
       )
     }
 
     val chartTransverse = {
-      val valueList = history.map(h => h.symmetryAndFlatness.transverseSymmetryNoPSM())
+      val valueList = history.map(h => h.symmetryAndFlatness.getTransverseSymmetry(withPsm))
       makeChart(
         transverseSymmetryNameNoPSM,
         toleranceRange = Config.SymmetryPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
-        Some(sfAndBaseline.symmetryAndFlatness.transverseSymmetryNoPSM()),
+        Some(sfAndBaseline.symmetryAndFlatness.getTransverseSymmetry(withPsm)),
         valueList
       )
     }
 
     val chartFlatness = {
-      val valueList = history.map(h => h.symmetryAndFlatness.flatnessNoPSM())
+      val valueList = history.map(h => h.symmetryAndFlatness.getFlatness(withPsm))
       makeChart(
         flatnessNameNoPSM,
         toleranceRange = Config.FlatnessPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
-        Some(sfAndBaseline.symmetryAndFlatness.flatnessNoPSM()),
+        Some(sfAndBaseline.symmetryAndFlatness.getFlatness(withPsm)),
         valueList
       )
     }
 
     val chartProfileConstancy = {
-      val valueList = history.map(h => h.symmetryAndFlatness.profileConstancyNoPSM(sfAndBaseline.symmetryAndFlatness))
+      val valueList = history.map(h => h.symmetryAndFlatness.getConstancy(withPsm, sfAndBaseline.symmetryAndFlatness))
       makeChart(
         profileConstancyNameNoPSM,
         toleranceRange = Config.ProfileConstancyPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
-        Some(sfAndBaseline.symmetryAndFlatness.profileConstancyNoPSM(sfAndBaseline.symmetryAndFlatness)),
+        Some(sfAndBaseline.symmetryAndFlatness.getConstancy(withPsm, sfAndBaseline.symmetryAndFlatness)),
         valueList
       )
     }

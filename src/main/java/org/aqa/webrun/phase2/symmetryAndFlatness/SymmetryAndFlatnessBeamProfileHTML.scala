@@ -148,7 +148,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
     $(document).ready(function(){ $('#beamImage').zoom(); });
 """
 
-    val historyScriptRef = SymmetryAndFlatnessHistoryRestlet.makeReference(result.symmetryAndFlatness.beamName, extendedData.output.outputPK.get, withPSM)
+    val historyScriptRef = SymmetryAndFlatnessHistoryRestlet.makeReference(result.symmetryAndFlatness.beamName, extendedData.output.outputPK.get, result.symmetryAndFlatness.getSpan_mm, withPSM)
 
     val javascript = "<script>\n" + graphTransverse.javascript + graphAxial.javascript + zoomScript + psmJs + "\n</script>\n" + historyScriptRef
     (content, javascript)

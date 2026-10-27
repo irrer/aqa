@@ -17,6 +17,7 @@
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
 import org.aqa.web.WebUtil._
+import org.aqa.Config
 import org.aqa.Logging
 import org.restlet.Request
 import org.restlet.Response
@@ -30,8 +31,13 @@ import org.restlet.data.Status
 object SymmetryAndFlatnessHistoryRestlet {
   private val path = new String((new SymmetryAndFlatnessHistoryRestlet).pathOf)
 
-  def makeReference(beamName: String, outputPK: Long, withPsm: Boolean): String = {
-    s"<script src='$path?${SymmetryAndFlatnessSubHTML.outputPKTag}=$outputPK&amp;${SymmetryAndFlatnessSubHTML.beamNameTag}=$beamName&amp;${SymmetryAndFlatnessSubHTML.withPsmTag}=${withPsm.toString}'></script>"
+  def makeReference(beamName: String, outputPK: Long, span_mm: Double, withPsm: Boolean): String = {
+    s"<script src='$path?" +
+      s"${SymmetryAndFlatnessSubHTML.outputPKTag}=$outputPK&amp;" +
+      s"${SymmetryAndFlatnessSubHTML.beamNameTag}=$beamName&amp;" +
+      s"${SymmetryAndFlatnessSubHTML.withPsmTag}=${withPsm.toString}&amp;" +
+      s"${SymmetryAndFlatnessSubHTML.spanTag}=${span_mm.round}" +
+      s"'></script>"
   }
 }
 
@@ -47,7 +53,16 @@ class SymmetryAndFlatnessHistoryRestlet extends Restlet with SubUrlRoot with Log
         valueMap.contains(SymmetryAndFlatnessSubHTML.withPsmTag) &&
         valueMap(SymmetryAndFlatnessSubHTML.withPsmTag).toBoolean
       }
-      val js = new SymmetryAndFlatnessBeamHistoryHTML(beamName, outputPK, withPsm).javascript
+
+      val span_mm: Long = {
+        if (valueMap.contains(SymmetryAndFlatnessSubHTML.spanTag))
+          valueMap(SymmetryAndFlatnessSubHTML.spanTag).toLong
+        else
+          Config.SymmetrySpan_mm.round
+
+      }
+
+      val js = new SymmetryAndFlatnessBeamHistoryHTML(beamName, outputPK, withPsm, span_mm).javascript
       response.setStatus(Status.SUCCESS_OK)
       response.setEntity(js, MediaType.APPLICATION_JAVASCRIPT)
     } catch {
