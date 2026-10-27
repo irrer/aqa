@@ -322,22 +322,12 @@ case class SymmetryAndFlatnessMainTableHTML() extends Logging {
    */
   private def makeContent(output: Output, symFlatDataList: Seq[SymmetryAndFlatnessDataSet]): Elem = {
 
-    // show link to CSV
-    val csv: Elem = {
-      val url = (new SymmetryAndFlatnessSubHTML).pathOf + "/SymmetryFlatnessAndConstancy.csv?" + SymmetryAndFlatnessSubHTML.csvTag + "=true&" + SymmetryAndFlatnessSubHTML.outputPKTag + "=" + output.outputPK.get
-      <h4>
-        <a href={url} title="Download all Symmetry and Flatness for this machine as a CSV viewable in a spreadsheet." style="margin:20px;">CSV</a>
-      </h4>
-    }
-
     val content = {
       <div>
         <div class="row">
-          <div class="col-md-2 col-md-offset-1">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/>{csv}<br/>
-          </div>
           <div class="col-md-2">
             {WebUtil.showPrecision}
+            <p> </p>
           </div>
         </div>
         <table class="table table-responsive table-bordered">

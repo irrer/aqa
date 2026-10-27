@@ -35,15 +35,14 @@ import org.aqa.webrun.psm.PSMCache
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
-import org.restlet.data.MediaType
 import org.restlet.data.Status
 
 import java.io.File
 import scala.xml.Elem
 
 /**
- * Analyze DICOM files for symmetry and flatness.
- */
+  * Analyze DICOM files for symmetry and flatness.
+  */
 object SymmetryAndFlatnessSubHTML extends Logging {
 
   def titleDetails = "Click to view graphs and other details"
@@ -52,9 +51,6 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 
   /** PK of the SymmetryAndFlatness row to have its baseline changed. */
   private val symFlatPKTag = "symFlatPK"
-
-  /** Indicates that caller is requesting a CSV of the results. */
-  val csvTag = "csv"
 
   /** Indicates the value of the new baseline.  Must be either true or false. */
   private val baselineTag = "baseline"
@@ -117,47 +113,16 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     </thead>
   }
 
-  private def PSMTableHead: Elem = {
-    <thead>
-      <tr>
-        <th style="text-align: center;" title={titleDetails}>
-          Beam
-        </th>
-        <th style="text-align: center;" title={titleImage}>
-          Image
-        </th>
-        <th style="text-align: center;">
-          Measurement
-        </th>
-        <th style="text-align: center;">
-          Baseline %
-        </th>
-        <th style="text-align: center;" title="Difference of value from baseline">
-          Difference
-          <br/>
-        </th>
-        <th style="text-align: center;" title="Maximim allowed percent deviation from baseline">
-          Percent
-          <br/>
-          Limit
-        </th>
-        <th style="text-align: center;" title="Measured value">
-          Value %
-        </th>
-      </tr>
-    </thead>
-  }
-
   private def pctRounded(pct: Double) = {
     val factor = 1000000000L
     (pct * factor).round.toDouble / factor
   }
 
   private def detailsColumn(
-                             subDir: File,
-                             symFlatDataSet: SymmetryAndFlatnessDataSet,
-                             isPsm: Boolean
-                           ): Elem = {
+      subDir: File,
+      symFlatDataSet: SymmetryAndFlatnessDataSet,
+      isPsm: Boolean
+  ): Elem = {
 
     val errorClass = {
       if (symFlatDataSet.symmetryAndFlatness.allNoPSMPass(symFlatDataSet.baseline)) "normal" else "danger"
@@ -178,17 +143,19 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 
     val input =
       if (symFlatDataSet.symmetryAndFlatness.isBaseline) {
-          <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"} checked={baseline}/>
+        <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"} checked={baseline}/>
       } else {
-          <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"}/>
+        <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"}/>
       }
 
     val elem = {
       val baselineUrl = ViewOutput.viewOutputUrl(symFlatDataSet.baseline.outputPK)
 
-      <td style={"vertical-align: middle;" + {
-        if (isPsm) psmStyle else ""
-      }} class={errorClass} rowspan="4">
+      <td style={
+        "vertical-align: middle;" + {
+          if (isPsm) psmStyle else ""
+        }
+      } class={errorClass} rowspan="4">
         <a href={detailUrl} title={titleDetails}>
           {symFlatDataSet.symmetryAndFlatness.beamName}<br>
           {Phase2Util.jawDescription(symFlatDataSet.al, symFlatDataSet.rtplan)}
@@ -211,7 +178,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       SymmetryAndFlatnessHTML.annotatedImageFile(SymmetryAndFlatnessHTML.makeSubDir(symFlatData.output.dir), symFlatData.symmetryAndFlatness)
     )
     val imgSmall = {
-        <img src={imgUrl} width="100"/>
+      <img src={imgUrl} width="100"/>
     }
     val ref = {
       <a href={dicomHref}>
@@ -375,20 +342,12 @@ object SymmetryAndFlatnessSubHTML extends Logging {
    */
   def makeContent(output: Output, symFlatDataList: Seq[SymmetryAndFlatnessDataSet]): Elem = {
 
-    // show link to CSV
-    val csv: Elem = {
-      val url = (new SymmetryAndFlatnessSubHTML).pathOf + "/SymmetryFlatnessAndConstancy.csv?" + csvTag + "=true&" + outputPKTag + "=" + output.outputPK.get
-      <h4>
-        <a href={url} title="Download all Symmetry and Flatness for this machine as a CSV viewable in a spreadsheet." style="margin:20px;">CSV</a>
-      </h4>
-    }
-
     val content = {
       <div>
         <div class="row">
           jjjjjjjjjjjjjjjjj
           <div class="col-md-2 col-md-offset-1">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/>{csv}<br/>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/><br/>
           </div>
           <div class="col-md-2">
             {WebUtil.showPrecision}
@@ -855,18 +814,6 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       WebUtil.setResponse(text, response, Status.CLIENT_ERROR_FORBIDDEN)
     }
   }
-
-  /**
-   *
-   * @param valueMap Contains parameters indicating which data to process.
-   * @param response Put results here.
-   */
-  private def makeCsv(valueMap: ValueMapT, response: Response): Unit = {
-    val output = Output.get(valueMap(outputPKTag).toLong).get
-    val csvText = SymmetryAndFlatnessCSV.makeCsvFile(output)
-    response.setStatus(Status.SUCCESS_OK)
-    response.setEntity(csvText, MediaType.TEXT_CSV)
-  }
 }
 
 class SymmetryAndFlatnessSubHTML extends Restlet with Logging with SubUrlAdmin {
@@ -887,8 +834,6 @@ class SymmetryAndFlatnessSubHTML extends Restlet with Logging with SubUrlAdmin {
 
     try {
       0 match {
-        case _ if has(SF.csvTag) =>
-          SF.makeCsv(valueMap, response)
         case _ if has(SF.outputPKTag) && has(SF.beamNameTag) =>
           SF.showBeamData(valueMap, response)
         case _ if has(SF.outputPKTag) =>
