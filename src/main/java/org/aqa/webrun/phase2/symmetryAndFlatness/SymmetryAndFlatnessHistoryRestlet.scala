@@ -30,8 +30,8 @@ import org.restlet.data.Status
 object SymmetryAndFlatnessHistoryRestlet {
   private val path = new String((new SymmetryAndFlatnessHistoryRestlet).pathOf)
 
-  def makeReference(beamName: String, outputPK: Long, hasPsm: Boolean): String = {
-    s"<script src='$path?${SymmetryAndFlatnessSubHTML.outputPKTag}=$outputPK&amp;${SymmetryAndFlatnessSubHTML.beamNameTag}=$beamName&amp;${SymmetryAndFlatnessSubHTML.withPsmTag}=${hasPsm.toString}'></script>"
+  def makeReference(beamName: String, outputPK: Long, withPsm: Boolean): String = {
+    s"<script src='$path?${SymmetryAndFlatnessSubHTML.outputPKTag}=$outputPK&amp;${SymmetryAndFlatnessSubHTML.beamNameTag}=$beamName&amp;${SymmetryAndFlatnessSubHTML.withPsmTag}=${withPsm.toString}'></script>"
   }
 }
 
@@ -43,11 +43,11 @@ class SymmetryAndFlatnessHistoryRestlet extends Restlet with SubUrlRoot with Log
       val valueMap = getValueMap(request)
       val outputPK = valueMap(SymmetryAndFlatnessSubHTML.outputPKTag).toInt
       val beamName = valueMap(SymmetryAndFlatnessSubHTML.beamNameTag).replaceAll("%20", " ")
-      val hasPsm = {
+      val withPsm = {
         valueMap.contains(SymmetryAndFlatnessSubHTML.withPsmTag) &&
         valueMap(SymmetryAndFlatnessSubHTML.withPsmTag).toBoolean
       }
-      val js = new SymmetryAndFlatnessBeamHistoryHTML(beamName, outputPK, hasPsm).javascript
+      val js = new SymmetryAndFlatnessBeamHistoryHTML(beamName, outputPK, withPsm).javascript
       response.setStatus(Status.SUCCESS_OK)
       response.setEntity(js, MediaType.APPLICATION_JAVASCRIPT)
     } catch {

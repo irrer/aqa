@@ -33,7 +33,7 @@ import java.sql.Timestamp
 /**
   * Analyze DICOM files for symmetry and flatness.
   */
-class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, hasPsm: Boolean) extends Logging {
+class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, withPsm: Boolean) extends Logging {
 
   val output: Output = Output.get(outputPK).get
   val machinePK: Long = output.machinePK.get
@@ -43,7 +43,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, hasPs
     list
       .filter(sf =>
         sf.beamName.equalsIgnoreCase(beamName) &&
-          (sf.canDoPSM == hasPsm)
+          (sf.canDoPSM == withPsm)
       )
       .head
   }

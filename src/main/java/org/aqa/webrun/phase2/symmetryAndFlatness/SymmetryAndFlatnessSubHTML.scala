@@ -539,17 +539,17 @@ object SymmetryAndFlatnessSubHTML extends Logging {
    * @param beamData Data to show.
    * @return HTML to display.
    */
-  private def inputTable(beamData: SymmetryAndFlatness.SymmetryAndFlatnessHistory, hasPSM: Boolean): Elem = {
+  private def inputTable(beamData: SymmetryAndFlatness.SymmetryAndFlatnessHistory, withPSM: Boolean): Elem = {
 
     val analysis = {
       // @formatter:off
         <tr>
           <td>Analysis</td>
-          {td(beamData.symmetryAndFlatness.getTopCu   (hasPSM))}
-          {td(beamData.symmetryAndFlatness.getBottomCu(hasPSM))}
-          {td(beamData.symmetryAndFlatness.getLeftCu  (hasPSM))}
-          {td(beamData.symmetryAndFlatness.getRightCu (hasPSM))}
-          {td(beamData.symmetryAndFlatness.getCenterCu(hasPSM))}
+          {td(beamData.symmetryAndFlatness.getTopCu   (withPSM))}
+          {td(beamData.symmetryAndFlatness.getBottomCu(withPSM))}
+          {td(beamData.symmetryAndFlatness.getLeftCu  (withPSM))}
+          {td(beamData.symmetryAndFlatness.getRightCu (withPSM))}
+          {td(beamData.symmetryAndFlatness.getCenterCu(withPSM))}
         </tr>
     }
 
@@ -557,11 +557,11 @@ object SymmetryAndFlatnessSubHTML extends Logging {
         // @formatter:off
         <tr>
           <td>Baseline</td>
-          {td(beamData.baseline.getTopCu   (hasPSM))}
-          {td(beamData.baseline.getBottomCu(hasPSM))}
-          {td(beamData.baseline.getLeftCu  (hasPSM))}
-          {td(beamData.baseline.getRightCu (hasPSM))}
-          {td(beamData.baseline.getCenterCu(hasPSM))}
+          {td(beamData.baseline.getTopCu   (withPSM))}
+          {td(beamData.baseline.getBottomCu(withPSM))}
+          {td(beamData.baseline.getLeftCu  (withPSM))}
+          {td(beamData.baseline.getRightCu (withPSM))}
+          {td(beamData.baseline.getCenterCu(withPSM))}
         </tr>
         // @formatter:on
     }
