@@ -147,9 +147,14 @@ case class SymmetryAndFlatnessMainTableHTML() extends Logging {
       }
       if (pass) "normal" else "danger"
     }
-    val detailUrl = WebServer.urlOfResultsFile(
-      SymmetryAndFlatnessHTML.beamHtmlFile(subDir, symFlatDataSet.symmetryAndFlatness, withPsm)
-    )
+    val detailUrl = {
+      val sf = symFlatDataSet.symmetryAndFlatness
+      val fileUrl = WebServer.urlOfResultsFile(SymmetryAndFlatnessHTML.beamHtmlFile(subDir, sf, withPsm))
+      val bn = s"${SymmetryAndFlatnessSubHTML.beamNameTag}=${sf.beamName}"
+      val psm = s"${SymmetryAndFlatnessSubHTML.withPsmTag}=$withPsm"
+      val span = s"${SymmetryAndFlatnessSubHTML.spanTag}=${sf.getSpan_mm.round}"
+      s"$fileUrl?$bn&$psm&$span"
+    }
     val pk = symFlatDataSet.symmetryAndFlatness.symmetryAndFlatnessPK.get
     val id = "baseline" + pk
     val baseline = symFlatDataSet.symmetryAndFlatness.isBaseline.toString
@@ -425,11 +430,10 @@ case class SymmetryAndFlatnessMainTableHTML() extends Logging {
         def baseline = {
           val bl = SymmetryAndFlatness.getBaseline( //
             output.machinePK.get,
-            span_mm = sf.span_mm,
+            span_mm = sf.getSpan_mm.round,
             diameter_mm = sf.diameter_mm,
             RTImageSID_mm = sf.RTImageSID_mm,
             beamName = sf.beamName,
-            hasPSM = withPSM && sf.canDoPSM,
             dataDate = dataDate,
             procedurePK = output.procedurePK
           )

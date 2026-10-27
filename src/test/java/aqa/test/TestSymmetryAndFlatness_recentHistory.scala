@@ -48,9 +48,8 @@ class TestSymmetryAndFlatness_recentHistory extends FlatSpec with Matchers {
     SymmetryAndFlatness.history( //
       machinePK = machinePK,
       beamName = beamName,
-      span_mm = None,
+      span_mm = 150,
       diameter_mm = None,
-      hasPSM = false,
       RTImageSID_mm = None,
       Procedure.ProcOfPhase2.get.procedurePK.get
     )

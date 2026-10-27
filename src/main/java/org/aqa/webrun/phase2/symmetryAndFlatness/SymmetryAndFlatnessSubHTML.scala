@@ -65,6 +65,9 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   /** Used to specify the name of a beam in a URL. */
   val beamNameTag = "BeamName"
 
+  /** Used to specify the name of a beam in a URL. */
+  val spanTag = "span"
+
   /** Used to specify whether PSM should be used.  If true, use PSM.  If false or not specified, then do not use PSM. */
   val withPsmTag = "withPsm"
 
@@ -762,42 +765,50 @@ object SymmetryAndFlatnessSubHTML extends Logging {
     val output = Output.get(outputPK).get
     val machinePK = Output.get(outputPK).get.machinePK.get
     val beamName = valueMap(beamNameTag).replaceAll("%20", " ")
-    val hasPsm = valueMap.contains(withPsmTag) && valueMap(withPsmTag).toBoolean
+    val withPsm = valueMap.contains(withPsmTag) && valueMap(withPsmTag).toBoolean
+
+    val span: Long = {
+      if (valueMap.contains(spanTag))
+        valueMap(spanTag).toInt
+      else
+        Config.SymmetrySpan_mm.round
+    }
 
     val symFlat = {
       val list = SymmetryAndFlatness.getByOutput(outputPK)
       list
         .filter(sf =>
           sf.beamName.equalsIgnoreCase(beamName) &&
-            (!hasPsm) || sf.canDoPSM && hasPsm
+            (!withPsm) || sf.canDoPSM && withPsm
         )
         .head
     }
 
-    val history = SymmetryAndFlatness.history( //
-      machinePK = machinePK,
-      span_mm = symFlat.span_mm,
-      diameter_mm = symFlat.diameter_mm,
-      beamName = beamName,
-      hasPSM = hasPsm,
-      RTImageSID_mm = symFlat.RTImageSID_mm,
-      procedurePK = output.procedurePK
-    )
+    val history = {
+      SymmetryAndFlatness.history( //
+        machinePK = machinePK,
+        span_mm = span,
+        diameter_mm = symFlat.diameter_mm,
+        beamName = beamName,
+        RTImageSID_mm = symFlat.RTImageSID_mm,
+        procedurePK = output.procedurePK
+      )
+    }
 
-    val beamData = history.find(h => h.output.outputPK.get == outputPK).get
+    val beamData = history.find(h => (h.output.outputPK.get == outputPK) && (h.symmetryAndFlatness.getSpan_mm.round == span)).get
 
     // @formatter:off
     val content = {
       <div class="row">
         <div class="col-md-4 col-md-offset-4">
-          {resultTable(beamData, hasPsm)}
-          {inputTable(beamData, hasPsm)}
+          {resultTable(beamData, withPsm)}
+          {inputTable(beamData, withPsm)}
         </div>
         <div class="col-md-8 col-md-offset-2">
           {formulas}
         </div>
         <div class="col-md-6 col-md-offset-3" style="margin-bottom:70px;">
-          {if (hasPsm) psmCalcTable(beamData)}
+          {if (withPsm) psmCalcTable(beamData)}
         </div>
       </div>
     }

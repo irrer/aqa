@@ -51,9 +51,8 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, hasPs
   private val history = SymmetryAndFlatness.history( //
     machinePK = machinePK,
     beamName = beamName,
-    span_mm = symFlat.span_mm,
+    span_mm = symFlat.getSpan_mm.round,
     diameter_mm = symFlat.diameter_mm,
-    hasPsm,
     RTImageSID_mm = symFlat.RTImageSID_mm,
     output.procedurePK
   )
@@ -209,11 +208,10 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, hasPs
     val sfAndBaseline = SymmetryAndFlatness
       .getBaseline( //
         machinePK,
-        symFlat.span_mm,
+        symFlat.getSpan_mm.round,
         symFlat.diameter_mm,
         symFlat.RTImageSID_mm,
         beamName,
-        hasPsm,
         output.dataDate.get,
         output.procedurePK
       )

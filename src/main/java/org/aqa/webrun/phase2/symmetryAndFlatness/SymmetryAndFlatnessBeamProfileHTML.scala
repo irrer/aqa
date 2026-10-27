@@ -77,6 +77,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
         (new SymmetryAndFlatnessSubHTML).pathOf +
           "?outputPK=" + extendedData.output.outputPK.get +
           "&" + SymmetryAndFlatnessSubHTML.beamNameTag + "=" + result.symmetryAndFlatness.beamName +
+          "&" + SymmetryAndFlatnessSubHTML.spanTag + "=" + result.symmetryAndFlatness.getSpan_mm.round +
           "&" + SymmetryAndFlatnessSubHTML.withPsmTag + "=" + withPSM
       }
 
@@ -161,15 +162,15 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
       val html = {
         val title = "Symmetry and Flatness " + result.symmetryAndFlatness.beamName
         val runScript = Some(elemJavascript._2)
-        Phase2Util.wrapSubProcedure(extendedData, elemJavascript._1, title = title, status, runScript = runScript , runReq.rtimageMap)
+        Phase2Util.wrapSubProcedure(extendedData, elemJavascript._1, title = title, status, runScript = runScript, runReq.rtimageMap)
       }
       val file = SymmetryAndFlatnessHTML.beamHtmlFile(subDir, result.symmetryAndFlatness, withPSM)
-
       Util.writeBinaryFile(file, html.getBytes)
     }
 
+    // Make HTML to handle both the non-PSM and PSM cases. This is in case a PSM is submitted afterwards.
     doHtml(withPSM = false)
-    doHtml(withPSM = true)
+    if (result.symmetryAndFlatness.isPSMSpatiallyCompatible()) doHtml(withPSM = true)
   }
 
 }
