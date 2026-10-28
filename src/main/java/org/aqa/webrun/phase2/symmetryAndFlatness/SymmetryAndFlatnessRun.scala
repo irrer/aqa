@@ -48,15 +48,10 @@ object SymmetryAndFlatnessRun extends Logging {
 
   private def boolToStatus(pass: Boolean) = if (pass) ProcedureStatus.pass else ProcedureStatus.fail
 
-  val axialSymmetryNameNoPSM = "Axial Symmetry No PSM"
-  val transverseSymmetryNameNoPSM = "Transverse Symmetry No PSM"
-  val flatnessNameNoPSM = "Flatness No PSM"
-  val profileConstancyNameNoPSM = "Profile Constancy No PSM"
-
-  val axialSymmetryNameWithPSM = "Axial Symmetry With PSM"
-  val transverseSymmetryNameWithPSM = "Transverse Symmetry With PSM"
-  val flatnessNameWithPSM = "Flatness With PSM"
-  val profileConstancyNameWithPSM = "Profile Constancy With PSM"
+  val axialSymmetryName = "Axial Symmetry"
+  val transverseSymmetryName = "Transverse Symmetry"
+  val flatnessName = "Flatness"
+  val profileConstancyName = "Profile Constancy"
 
   /**
     * Encapsulate data for generating a report.

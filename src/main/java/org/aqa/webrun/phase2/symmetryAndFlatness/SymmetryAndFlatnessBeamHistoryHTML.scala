@@ -220,7 +220,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, withP
     val chartAxial = {
       val valueList = history.map(h => h.symmetryAndFlatness.getAxialSymmetry(withPsm))
       makeChart(
-        axialSymmetryNameNoPSM,
+        axialSymmetryName,
         toleranceRange = Config.SymmetryPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
         Some(sfAndBaseline.symmetryAndFlatness.getAxialSymmetry(withPsm)),
@@ -231,7 +231,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, withP
     val chartTransverse = {
       val valueList = history.map(h => h.symmetryAndFlatness.getTransverseSymmetry(withPsm))
       makeChart(
-        transverseSymmetryNameNoPSM,
+        transverseSymmetryName,
         toleranceRange = Config.SymmetryPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
         Some(sfAndBaseline.symmetryAndFlatness.getTransverseSymmetry(withPsm)),
@@ -242,7 +242,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, withP
     val chartFlatness = {
       val valueList = history.map(h => h.symmetryAndFlatness.getFlatness(withPsm))
       makeChart(
-        flatnessNameNoPSM,
+        flatnessName,
         toleranceRange = Config.FlatnessPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
         Some(sfAndBaseline.symmetryAndFlatness.getFlatness(withPsm)),
@@ -253,7 +253,7 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, withP
     val chartProfileConstancy = {
       val valueList = history.map(h => h.symmetryAndFlatness.getConstancy(withPsm, sfAndBaseline.symmetryAndFlatness))
       makeChart(
-        profileConstancyNameNoPSM,
+        profileConstancyName,
         toleranceRange = Config.ProfileConstancyPercentLimit,
         baselineDate = sfAndBaseline.baselineOutput.dataDate.get,
         Some(sfAndBaseline.symmetryAndFlatness.getConstancy(withPsm, sfAndBaseline.symmetryAndFlatness)),

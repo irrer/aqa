@@ -111,19 +111,19 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
             </div>
             <div class="row">
               <h2>Transverse Symmetry History</h2>
-              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.transverseSymmetryNameNoPSM))}
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.transverseSymmetryName))}
             </div>
             <div class="row">
               <h2>Axial Symmetry History</h2>
-              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.axialSymmetryNameNoPSM))}
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.axialSymmetryName))}
             </div>
             <div class="row">
               <h2>Flatness History</h2>
-              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.flatnessNameNoPSM))}
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.flatnessName))}
             </div>
             <div class="row">
               <h2>Profile Constancy History</h2>
-              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.profileConstancyNameNoPSM))}
+              {C3ChartHistory.htmlRef(C3Chart.idTagPrefix + Util.textToId(SymmetryAndFlatnessRun.profileConstancyName))}
             </div>
             <div class="row">
               <h2>EPID CU History</h2>
