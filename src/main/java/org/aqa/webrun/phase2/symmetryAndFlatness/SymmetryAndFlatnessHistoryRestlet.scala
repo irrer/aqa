@@ -48,7 +48,10 @@ class SymmetryAndFlatnessHistoryRestlet extends Restlet with SubUrlRoot with Log
       super.handle(request, response)
       val valueMap = getValueMap(request)
       val outputPK = valueMap(SymmetryAndFlatnessSubHTML.outputPKTag).toInt
-      val beamName = valueMap(SymmetryAndFlatnessSubHTML.beamNameTag).replaceAll("%20", " ")
+      val beamName = {
+        val vm = valueMap.map(kv => (kv._1.toLowerCase(), kv._2))
+        vm(SymmetryAndFlatnessSubHTML.beamNameTag.toLowerCase()).replaceAll("%20", " ")
+      }
       val withPsm = {
         valueMap.contains(SymmetryAndFlatnessSubHTML.withPsmTag) &&
         valueMap(SymmetryAndFlatnessSubHTML.withPsmTag).toBoolean
