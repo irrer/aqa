@@ -403,25 +403,25 @@ case class SymmetryAndFlatness(
   }
 
 
-  def axialSymmetryNoPSMPass(baseline: SymmetryAndFlatness): Boolean =
+  private def axialSymmetryNoPSMPass(baseline: SymmetryAndFlatness): Boolean =
     doesPass( //
       Some(axialSymmetryNoPSM()),
       Some(baseline.axialSymmetryNoPSM()),
       Config.SymmetryPercentLimit)
 
-  def transverseSymmetryNoPSMPass(baseline: SymmetryAndFlatness): Boolean =
+  private def transverseSymmetryNoPSMPass(baseline: SymmetryAndFlatness): Boolean =
     doesPass( //
       Some(transverseSymmetryNoPSM()),
       Some(baseline.transverseSymmetryNoPSM()),
       Config.SymmetryPercentLimit)
 
-  def flatnessNoPSMPass(baseline: SymmetryAndFlatness): Boolean =
+  private def flatnessNoPSMPass(baseline: SymmetryAndFlatness): Boolean =
     doesPass( //
       Some(flatnessNoPSM()),
       Some(baseline.flatnessNoPSM()),
       Config.FlatnessPercentLimit)
 
-  def profileConstancyNoPSMPass(baseline: SymmetryAndFlatness): Boolean =
+  private def profileConstancyNoPSMPass(baseline: SymmetryAndFlatness): Boolean =
     doesPass( //
       Some(profileConstancyNoPSM(baseline)),
       Some(baseline.profileConstancyNoPSM(baseline)),
@@ -514,7 +514,7 @@ case class SymmetryAndFlatness(
    *
    * @return True if defined and close enough.
    */
-  def isPSMSpatiallyCompatible(): Boolean = {
+  def isPSMSpatiallyCompatible: Boolean = {
     val spanOk = span_mm.isDefined && ((Config.PSMSpan_mm - span_mm.get).abs < SymmetryAndFlatness.SpanTolerance_mm)
     val diameterOk = diameter_mm.isDefined && (((Config.PSMRadius_mm * 2) - diameter_mm.get).abs < SymmetryAndFlatness.DiameterTolerance_mm)
 
@@ -525,10 +525,20 @@ case class SymmetryAndFlatness(
   /**
    * Get the span (distance between centers of opposing sample areas) in mm.
    *
-   * @return Span.
+   * @return Span in mm.
    */
   def getSpan_mm: Double = {
     if (span_mm.isDefined) span_mm.get else Config.SymmetrySpan_mm
+  }
+
+
+  /**
+   * Get the span (distance between centers of opposing sample areas) in mm.
+   *
+   * @return Diameter in mm.
+   */
+  def getDiameter_mm: Double = {
+    if (diameter_mm.isDefined) diameter_mm.get else Config.SymmetryAndFlatnessDiameter_mm
   }
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -837,7 +847,6 @@ object SymmetryAndFlatness extends Logging {
    *
    * @param machinePK     Match this machine
    * @param beamName      Match this beam
-   * @param hasPSM        Matching this
    * @param span_mm       Distance between opposing sample points.
    * @param diameter_mm   Diameter of each sample point.
    * @param RTImageSID_mm Source to image distance in mm.

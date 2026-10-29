@@ -17,8 +17,8 @@
 package org.aqa.webrun.phase2.symmetryAndFlatness
 
 import org.aqa.web.WebUtil._
-import org.aqa.Config
 import org.aqa.Logging
+import org.aqa.db.SymmetryAndFlatness
 import org.restlet.Request
 import org.restlet.Response
 import org.restlet.Restlet
@@ -31,12 +31,13 @@ import org.restlet.data.Status
 object SymmetryAndFlatnessHistoryRestlet {
   private val path = new String((new SymmetryAndFlatnessHistoryRestlet).pathOf)
 
-  def makeReference(beamName: String, outputPK: Long, span_mm: Double, withPsm: Boolean): String = {
+  def makeReference(beamName: String, outputPK: Long, span_mm: Double, withPsm: Boolean, diameter_mm: Double): String = {
     s"<script src='$path?" +
       s"${SymmetryAndFlatnessSubHTML.outputPKTag}=$outputPK&amp;" +
       s"${SymmetryAndFlatnessSubHTML.beamNameTag}=$beamName&amp;" +
       s"${SymmetryAndFlatnessSubHTML.withPsmTag}=${withPsm.toString}&amp;" +
-      s"${SymmetryAndFlatnessSubHTML.spanTag}=${span_mm.round}" +
+      s"${SymmetryAndFlatnessSubHTML.spanTag}=${span_mm.round}&amp;" +
+      s"${SymmetryAndFlatnessSubHTML.diameterTag}=${diameter_mm.round}" +
       s"'></script>"
   }
 }
@@ -52,20 +53,34 @@ class SymmetryAndFlatnessHistoryRestlet extends Restlet with SubUrlRoot with Log
         val vm = valueMap.map(kv => (kv._1.toLowerCase(), kv._2))
         vm(SymmetryAndFlatnessSubHTML.beamNameTag.toLowerCase()).replaceAll("%20", " ")
       }
+
       val withPsm = {
         valueMap.contains(SymmetryAndFlatnessSubHTML.withPsmTag) &&
         valueMap(SymmetryAndFlatnessSubHTML.withPsmTag).toBoolean
       }
 
+      // Get a list of beams for this output if needed.  For legacy data there will be one, for later data there will be two.
+      lazy val symFlatList = SymmetryAndFlatness.getByOutput(outputPK).filter(sf => sf.beamName.equalsIgnoreCase(beamName))
+
       val span_mm: Long = {
         if (valueMap.contains(SymmetryAndFlatnessSubHTML.spanTag))
           valueMap(SymmetryAndFlatnessSubHTML.spanTag).toLong
-        else
-          Config.SymmetrySpan_mm.round
-
+        else {
+          val spanList = symFlatList.flatMap(_.span_mm).sorted.map(_.round)
+          spanList.head
+        }
       }
 
-      val js = new SymmetryAndFlatnessBeamHistoryHTML(beamName, outputPK, withPsm, span_mm).javascript
+      val diameter_mm: Long = {
+        if (valueMap.contains(SymmetryAndFlatnessSubHTML.diameterTag))
+          valueMap(SymmetryAndFlatnessSubHTML.diameterTag).toLong
+        else {
+          val diameterList = symFlatList.flatMap(_.diameter_mm).sorted.map(_.round)
+          diameterList.head
+        }
+      }
+
+      val js = new SymmetryAndFlatnessBeamHistoryHTML(beamName, outputPK, withPsm, span_mm, diameter_mm).javascript
       response.setStatus(Status.SUCCESS_OK)
       response.setEntity(js, MediaType.APPLICATION_JAVASCRIPT)
     } catch {

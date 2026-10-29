@@ -78,6 +78,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
           "?outputPK=" + extendedData.output.outputPK.get +
           "&" + SymmetryAndFlatnessSubHTML.beamNameTag + "=" + result.symmetryAndFlatness.beamName +
           "&" + SymmetryAndFlatnessSubHTML.spanTag + "=" + result.symmetryAndFlatness.getSpan_mm.round +
+          "&" + SymmetryAndFlatnessSubHTML.diameterTag + "=" + result.symmetryAndFlatness.getDiameter_mm.round +
           "&" + SymmetryAndFlatnessSubHTML.withPsmTag + "=" + withPSM
       }
 
@@ -148,7 +149,13 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
     $(document).ready(function(){ $('#beamImage').zoom(); });
 """
 
-    val historyScriptRef = SymmetryAndFlatnessHistoryRestlet.makeReference(result.symmetryAndFlatness.beamName, extendedData.output.outputPK.get, result.symmetryAndFlatness.getSpan_mm, withPSM)
+    val historyScriptRef = SymmetryAndFlatnessHistoryRestlet.makeReference( //
+      result.symmetryAndFlatness.beamName,
+      extendedData.output.outputPK.get,
+      result.symmetryAndFlatness.getSpan_mm,
+      withPSM,
+      result.symmetryAndFlatness.getDiameter_mm
+    )
 
     val javascript = "<script>\n" + graphTransverse.javascript + graphAxial.javascript + zoomScript + psmJs + "\n</script>\n" + historyScriptRef
     (content, javascript)
@@ -170,7 +177,7 @@ object SymmetryAndFlatnessBeamProfileHTML extends Logging {
 
     // Make HTML to handle both the non-PSM and PSM cases. This is in case a PSM is submitted afterwards.
     doHtml(withPSM = false)
-    if (result.symmetryAndFlatness.isPSMSpatiallyCompatible()) doHtml(withPSM = true)
+    if (result.symmetryAndFlatness.isPSMSpatiallyCompatible) doHtml(withPSM = true)
   }
 
 }

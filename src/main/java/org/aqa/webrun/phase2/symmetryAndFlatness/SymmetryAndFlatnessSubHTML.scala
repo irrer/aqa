@@ -41,8 +41,8 @@ import java.io.File
 import scala.xml.Elem
 
 /**
-  * Analyze DICOM files for symmetry and flatness.
-  */
+ * Analyze DICOM files for symmetry and flatness.
+ */
 object SymmetryAndFlatnessSubHTML extends Logging {
 
   def titleDetails = "Click to view graphs and other details"
@@ -61,8 +61,11 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   /** Used to specify the name of a beam in a URL. */
   val beamNameTag = "BeamName"
 
-  /** Used to specify the name of a beam in a URL. */
+  /** Used to specify the span between of the areas measured. */
   val spanTag = "span"
+
+  /** Used to specify the diameter of the area measured. */
+  val diameterTag = "diameter"
 
   /** Used to specify whether PSM should be used.  If true, use PSM.  If false or not specified, then do not use PSM. */
   val withPsmTag = "withPsm"
@@ -119,10 +122,10 @@ object SymmetryAndFlatnessSubHTML extends Logging {
   }
 
   private def detailsColumn(
-      subDir: File,
-      symFlatDataSet: SymmetryAndFlatnessDataSet,
-      isPsm: Boolean
-  ): Elem = {
+                             subDir: File,
+                             symFlatDataSet: SymmetryAndFlatnessDataSet,
+                             isPsm: Boolean
+                           ): Elem = {
 
     val errorClass = {
       if (symFlatDataSet.symmetryAndFlatness.allNoPSMPass(symFlatDataSet.baseline)) "normal" else "danger"
@@ -143,19 +146,17 @@ object SymmetryAndFlatnessSubHTML extends Logging {
 
     val input =
       if (symFlatDataSet.symmetryAndFlatness.isBaseline) {
-        <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"} checked={baseline}/>
+          <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"} checked={baseline}/>
       } else {
-        <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"}/>
+          <input value={baseline} type="checkbox" id={id} onclick={"setBaselineState(this, " + pk + ")"}/>
       }
 
     val elem = {
       val baselineUrl = ViewOutput.viewOutputUrl(symFlatDataSet.baseline.outputPK)
 
-      <td style={
-        "vertical-align: middle;" + {
-          if (isPsm) psmStyle else ""
-        }
-      } class={errorClass} rowspan="4">
+      <td style={"vertical-align: middle;" + {
+        if (isPsm) psmStyle else ""
+      }} class={errorClass} rowspan="4">
         <a href={detailUrl} title={titleDetails}>
           {symFlatDataSet.symmetryAndFlatness.beamName}<br>
           {Phase2Util.jawDescription(symFlatDataSet.al, symFlatDataSet.rtplan)}
@@ -178,7 +179,7 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       SymmetryAndFlatnessHTML.annotatedImageFile(SymmetryAndFlatnessHTML.makeSubDir(symFlatData.output.dir), symFlatData.symmetryAndFlatness)
     )
     val imgSmall = {
-      <img src={imgUrl} width="100"/>
+        <img src={imgUrl} width="100"/>
     }
     val ref = {
       <a href={dicomHref}>
@@ -347,7 +348,8 @@ object SymmetryAndFlatnessSubHTML extends Logging {
         <div class="row">
           jjjjjjjjjjjjjjjjj
           <div class="col-md-2 col-md-offset-1">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/><br/>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css"/>
+            <br/>
           </div>
           <div class="col-md-2">
             {WebUtil.showPrecision}
@@ -733,6 +735,14 @@ object SymmetryAndFlatnessSubHTML extends Logging {
         Config.SymmetrySpan_mm.round
     }
 
+
+    val diameter: Long = {
+      if (valueMap.contains(diameterTag))
+        valueMap(diameterTag).toInt
+      else
+        Config.SymmetryAndFlatnessDiameter_mm.round
+    }
+
     val symFlat = {
       val list = SymmetryAndFlatness.getByOutput(outputPK)
       list
@@ -754,7 +764,10 @@ object SymmetryAndFlatnessSubHTML extends Logging {
       )
     }
 
-    val beamData = history.find(h => (h.output.outputPK.get == outputPK) && (h.symmetryAndFlatness.getSpan_mm.round == span)).get
+    val beamData = history.find(h => //
+      (h.output.outputPK.get == outputPK) &&
+        (h.symmetryAndFlatness.getSpan_mm.round == span) &&
+        (h.symmetryAndFlatness.getDiameter_mm.round == diameter)).get
 
     // @formatter:off
     val content = {

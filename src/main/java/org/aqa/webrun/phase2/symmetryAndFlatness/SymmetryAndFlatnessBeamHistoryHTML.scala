@@ -33,19 +33,21 @@ import java.sql.Timestamp
 /**
   * Analyze DICOM files for symmetry and flatness.
   */
-class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, withPsm: Boolean, span_mm: Long) extends Logging {
+class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, withPsm: Boolean, span_mm: Long, diameter: Long) extends Logging {
 
   val output: Output = Output.get(outputPK).get
   val machinePK: Long = output.machinePK.get
 
   private val symFlat = {
     val list = SymmetryAndFlatness.getByOutput(outputPK)
-    list
+    val sf = list
       .filter(sf =>
         sf.beamName.equalsIgnoreCase(beamName) &&
-          (sf.getSpan_mm.round == span_mm)
+          (sf.getSpan_mm.round == span_mm) &&
+          (sf.getDiameter_mm.round == diameter)
       )
       .head
+    sf
   }
 
   private val history = SymmetryAndFlatness.history( //
@@ -260,8 +262,6 @@ class SymmetryAndFlatnessBeamHistoryHTML(beamName: String, outputPK: Long, withP
         valueList
       )
     }
-
-    // TODO add charts for With PSM
 
     val chartEpidCU = {
 
