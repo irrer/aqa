@@ -99,13 +99,10 @@ case class WLIsoTable(
   }
 
   /** Analysis H */
-  def BB_X(wl: WinstonLutzGeneric): Double = { // H
-    val bb_x = wl.errorX_mm - T__0.get.errorX_mm
-    bb_x
-  }
+  def BB_X(wl: WinstonLutzGeneric): Double = T__0.get.errorX_mm - wl.errorX_mm // H
 
   /** Analysis I */
-  def BB_Z(wl: WinstonLutzGeneric): Double = wl.errorY_mm - T__0.get.errorY_mm // I
+  def BB_Z(wl: WinstonLutzGeneric): Double = T__0.get.errorY_mm - wl.errorY_mm // I
 
   /** Analysis J */
   def BB_Xp(wl: WinstonLutzGeneric, dX: Double, dZ: Double): Double = BB_X(wl) + dXOf(wl, dX, dZ) // J
@@ -181,13 +178,13 @@ object WLIsoTable {
   /**
    * Determine if all the data is present to construct a WL IsoTable data set.  If so, make one and return it.
    *
-   * @param pairList List of incoming DICOM and results.
+   * @param wlMap List of incoming DICOM and results.
    * @return IsoTable data set or None.
    */
   def make(wlMap: WLMap): Option[WLIsoTable] = {
 
     // @formatter:off
-    val T__0 : Option[WinstonLutzGeneric] = wlMap.find( 180, 270,   0 )
+    val T__0 : Option[WinstonLutzGeneric] = wlMap.find( 180, 270      )
     val T_30 : Option[WinstonLutzGeneric] = wlMap.find( 180, 270,  30 )
     val T_60 : Option[WinstonLutzGeneric] = wlMap.find( 180, 270,  60 )
     val T_90 : Option[WinstonLutzGeneric] = wlMap.find( 180, 270,  90 )
@@ -227,7 +224,7 @@ object WLIsoTable {
           T330
         ))
 
-      // Could not get the full set, try for the minimal set
+        // Could not get the full set, try for the minimal set
       case _ if listMinimal.flatten.size == listMinimal.size =>
         Some(WLIsoTable(
           T__0,
@@ -239,7 +236,7 @@ object WLIsoTable {
           None
         ))
 
-      // There were not the required beams for either the full or the minimal sets.
+        // There were not the required beams for either the full or the minimal sets.
       case _ => None
     }
 
