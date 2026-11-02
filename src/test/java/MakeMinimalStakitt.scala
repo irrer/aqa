@@ -36,6 +36,12 @@ object MakeMinimalStakitt {
   private val newFrameOfReferenceUID = UMROGUID.getUID
   private val newDoseReferenceUID = UMROGUID.getUID
 
+  private val PatientID = "$StakittTest"
+  private val PatientName = PatientID
+
+  private val StudyID = "Stakitt Phase3"
+  private val RadiationMachineName = "UM_TB5"
+
   private val newDateTime = new Date()
 
   private val oneMinute_ms = 60 * 1000
@@ -114,6 +120,11 @@ object MakeMinimalStakitt {
 
     def setAt(tag: AttributeTag, text: String): Unit = setAttr(rtplan, tag, text)
 
+    setAt(TagByName.PatientID, PatientID)
+    setAt(TagByName.PatientName, PatientName)
+    // setAt(TagByName.StudyID, StudyID)
+    // setAt(TagByName.RadiationMachineName, RadiationMachineName)
+
     setAt(TagByName.StudyInstanceUID, newStudyInstanceUID)
 
     setAt(TagByName.MediaStorageSOPInstanceUID, newRtplanSOPUID)
@@ -137,15 +148,19 @@ object MakeMinimalStakitt {
     }
 
     setBothAt(TagByName.ReferencedSOPInstanceUID, newRtplanSOPUID)
+    setBothAt(TagByName.PatientID, PatientID)
+    setBothAt(TagByName.PatientName, PatientName)
+    setBothAt(TagByName.StudyID, StudyID)
+    setBothAt(TagByName.RadiationMachineName, RadiationMachineName)
 
     // setAttr(c090, TagByName.ReferencedBeamNumber, c090BeamNumber.toString)
     // setAttr(c270, TagByName.ReferencedBeamNumber, c270BeamNumber.toString)
 
-    val c090UID = UMROGUID.UMRO_ROOT_GUID
+    val c090UID = UMROGUID.getUID
     setAttr(c090, TagByName.MediaStorageSOPInstanceUID, c090UID)
     setAttr(c090, TagByName.SOPInstanceUID, c090UID)
 
-    val c270UID = UMROGUID.UMRO_ROOT_GUID
+    val c270UID = UMROGUID.getUID
     setAttr(c270, TagByName.MediaStorageSOPInstanceUID, c270UID)
     setAttr(c270, TagByName.SOPInstanceUID, c270UID)
 
@@ -184,6 +199,10 @@ object MakeMinimalStakitt {
     setAt(TagByName.ContentDate, date)
 
     setAt(TagByName.ReferencedSOPInstanceUID, newRtplanSOPUID)
+    setAt(TagByName.PatientID, PatientID)
+    setAt(TagByName.PatientName, PatientName)
+    setAt(TagByName.StudyID, StudyID)
+    setAt(TagByName.RadiationMachineName, RadiationMachineName)
 
     setAt(TagByName.DeviceSerialNumber, DeviceSerialNumber)
 
