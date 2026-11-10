@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Regents of the University of Michigan
+ * Copyright 2026 Regents of the University of Michigan
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,45 +16,20 @@
 
 package org.aqa.customizeRtPlan
 
-import com.pixelmed.dicom.AttributeList
-import edu.umro.ScalaUtil.DicomUtil
-import org.aqa.customizeRtPlan.CustomizeRtPlanUtil.fixRtplanGeometry
-import org.aqa.customizeRtPlan.CustomizeRtPlanUtil.orderBeamsByRenaming
-import org.aqa.customizeRtPlan.CustomizeRtPlanUtil.removeVarianPrivateTagAttributes
-import org.aqa.customizeRtPlan.CustomizeRtPlanUtil.replaceAllUIDs
-import org.aqa.customizeRtPlan.CustomizeRtPlanUtil.setRtplanDateTimeToNow
-import org.aqa.db.Machine
 import org.aqa.db.Procedure
 
 /**
   * Make RTPLAN for Stakitt.
   *
+  * This is really a Phase3 plan that just has the collimator centering beams and a stakitt beam.
+  *
   */
 class MakeRtplanStakitt extends MakeRtplan {
 
-  override def name: String = "Stakitt"
+  override def name: String = "Phase3Stakitt"
 
-  override def planFileProcedureName: String = "Stakitt"
+  override def planFileProcedureName: String = "Phase3Stakitt"
 
-  override def procedure: Procedure = Procedure.ProcOfStakitt.get
-
-  override def makeRtplan(machine: Machine, userPK: Long, planSpecification: PlanSpecification, procName: String): AttributeList = {
-
-    val rtplan = DicomUtil.clone(CustomizeRtPlanUtil.getCollimatorCompatiblePlanForMachine(machine, procName).head.dicomFile.attributeList.get)
-
-    orderBeamsByRenaming(rtplan)
-
-    replaceAllUIDs(rtplan) // change UIDs so that this plan will be considered new and unique from all others.
-
-    planSpecification.setOverrides(rtplan)
-
-    setRtplanDateTimeToNow(rtplan)
-
-    fixRtplanGeometry(rtplan)
-
-    removeVarianPrivateTagAttributes(rtplan)
-
-    rtplan
-  }
+  override def procedure: Procedure = Procedure.ProcOfPhase3.get
 
 }
