@@ -4,8 +4,10 @@ import com.pixelmed.dicom.AttributeTag
 import edu.umro.DicomDict.TagByName
 import edu.umro.ScalaUtil.DicomUtil
 import edu.umro.util.UMROGUID
+import edu.umro.ScalaUtil.Trace
 import org.aqa.DicomFile
 import org.aqa.Util
+import org.aqa.VarianPrivateTag
 
 import java.io.File
 import java.util.Date
@@ -26,6 +28,9 @@ import java.util.Date
  * limitations under the License.
  */
 
+/**
+ * Failed attempt to create a Stakitt plan to run as Phase3.
+ */
 object MakeMinimalStakitt {
 
   private val dir = new File("""D:\tmp\stakittDicom\phase3\required""")
@@ -62,14 +67,21 @@ object MakeMinimalStakitt {
   private val c090 = getDicomFile("c090.dcm")
   private val c270 = getDicomFile("c270.dcm")
 
-  private val c090BeamNumber = 24
-  private val c270BeamNumber = 23
+  private val cmnC090BeamNumber = 24
+  private val cmnC270BeamNumber = 23
+  private val cmnStakittBeamNumber = 55
 
   private val aqaC090BeamNumber = 2
   private val aqaC270BeamNumber = 18
 
-  private val c090Beam = Util.getBeamOfRtimage(rtplan, c090BeamNumber).get
-  private val c270Beam = Util.getBeamOfRtimage(rtplan, c270BeamNumber).get
+  // when done, beam numbers should be as follows:
+  private val c090BeamNumber = 2
+  private val c270BeamNumber = 1
+  private val stakittBeamNumber = 3
+
+  private val c090Beam = Util.getBeamOfRtimage(rtplan, cmnC090BeamNumber).get
+  private val c270Beam = Util.getBeamOfRtimage(rtplan, cmnC270BeamNumber).get
+  private val stakittBeam = Util.getBeamOfRtimage(rtplan, cmnStakittBeamNumber).get
 
   private val DeviceSerialNumber = DicomUtil.findAllTag(rtplan, TagByName.DeviceSerialNumber).head.getSingleStringValueOrEmptyString()
 
@@ -81,8 +93,18 @@ object MakeMinimalStakitt {
     DicomUtil.findAllTag(al, tag).foreach(setValue)
   }
 
+  private def setAttr(al: AttributeList, tag: AttributeTag, int: Int): Unit = {
+    def setValue(attr: Attribute): Unit = {
+      attr.removeValues()
+      attr.addValue(int)
+    }
+    DicomUtil.findAllTag(al, tag).foreach(setValue)
+  }
+
   private val aqaCollimatorCenteringBeam090 = DicomUtil.getBeamOfRtimage(aqaRtplan, aqaC090BeamNumber).get
   private val aqaCollimatorCenteringBeam270 = DicomUtil.getBeamOfRtimage(aqaRtplan, aqaC270BeamNumber).get
+
+  // ----------------------------------------------------------------------------------------
 
   private def setRtplanAttributes(): Unit = {
 
@@ -93,11 +115,15 @@ object MakeMinimalStakitt {
       val tagList090 = aqaCollimatorCenteringBeam090.keySet().asScala
       tagList090.map(tag => c090Beam.put(aqaCollimatorCenteringBeam090.get(tag)))
       setAttr(c090Beam, TagByName.BeamName, "M10G0C90")
+      setAttr(c090Beam, TagByName.BeamNumber, c090BeamNumber)
 
       c270Beam.clear()
       val tagList270 = aqaCollimatorCenteringBeam270.keySet().asScala
       tagList270.map(tag => c270Beam.put(aqaCollimatorCenteringBeam270.get(tag)))
       setAttr(c270Beam, TagByName.BeamName, "M10G0C270")
+      setAttr(c270Beam, TagByName.BeamNumber, c270BeamNumber)
+
+      setAttr(stakittBeam, TagByName.BeamNumber, stakittBeamNumber)
     }
 
     if (true) {
@@ -105,20 +131,34 @@ object MakeMinimalStakitt {
       attrList.foreach(attr => {
         val v = attr.getIntegerValues.head
 
-        if (v == c090BeamNumber) {
+        if (v == cmnC090BeamNumber) {
           attr.removeValues()
-          attr.addValue(aqaC090BeamNumber)
+          attr.addValue(c090BeamNumber)
         }
 
-        if (v == c270BeamNumber) {
+        if (v == cmnC270BeamNumber) {
           attr.removeValues()
-          attr.addValue(aqaC270BeamNumber)
+          attr.addValue(c270BeamNumber)
+        }
+
+        if (v == cmnStakittBeamNumber) {
+          attr.removeValues()
+          attr.addValue(stakittBeamNumber)
         }
 
       })
     }
 
     def setAt(tag: AttributeTag, text: String): Unit = setAttr(rtplan, tag, text)
+
+    def setToInt(attr: Attribute, value: Int): Unit = {
+      attr.removeValues()
+      attr.addValue(value)
+    }
+
+    DicomUtil.findAllTag(rtplan, TagByName.PatientSetupNumber).zipWithIndex.foreach(si => setToInt(si._1, si._2 + 1))
+    DicomUtil.findAllTag(rtplan, TagByName.ReferencedPatientSetupNumber).zipWithIndex.foreach(si => setToInt(si._1, si._2 + 1))
+    DicomUtil.findAllTag(rtplan, TagByName.ReferencedBeamNumber).zipWithIndex.foreach(si => setToInt(si._1, si._2 + 1))
 
     setAt(TagByName.PatientID, PatientID)
     setAt(TagByName.PatientName, PatientName)
@@ -135,11 +175,31 @@ object MakeMinimalStakitt {
 
     setAt(TagByName.DoseReferenceUID, newDoseReferenceUID)
 
+    if (true) {
+      // DicomUtil.findAllTag(rtplan, TagByName.ReferencedPrimaryDoseRefUID).foreach(dr => { dr.removeValues(); dr.addValue(newDoseReferenceUID) })
+
+      val fgsList = DicomUtil.seqToAttr(rtplan, TagByName.FractionGroupSequence)
+
+      val rbsList = DicomUtil.seqToAttr(fgsList.head, TagByName.ReferencedBeamSequence)
+
+      Trace.trace()
+
+      rbsList.map(al => {
+        al.remove(VarianPrivateTag.ReferencedPrimaryDoseRefUID)
+        // al.put(VarianPrivateTag.newReferencedPrimaryDoseRefUID(newDoseReferenceUID))
+      })
+
+      Trace.trace()
+    }
+
     setAt(TagByName.InstanceCreationDate, newDate)
     setAt(TagByName.StudyDate, newDate)
     setAt(TagByName.RTPlanDate, newDate)
 
+    rtplan.remove(TagByName.DoseReferenceSequence)
   }
+
+  // ----------------------------------------------------------------------------------------
 
   private def setCenteringRtimageAttributes(): Unit = {
     def setBothAt(tag: AttributeTag, text: String): Unit = {
@@ -186,11 +246,24 @@ object MakeMinimalStakitt {
     setAttr(c270, TagByName.InstanceCreationTime, newTimeC270)
     setAttr(c270, TagByName.AcquisitionTime, newTimeC270)
     setAttr(c270, TagByName.ContentTime, newTimeC270)
+
+    setAttr(c090, TagByName.ReferencedBeamNumber, c090BeamNumber)
+    setAttr(c270, TagByName.ReferencedBeamNumber, c270BeamNumber)
   }
+
+  // ----------------------------------------------------------------------------------------
 
   private def setStakittRtimageAttributes(): Unit = {
 
     def setAt(tag: AttributeTag, text: String): Unit = setAttr(stakitt, tag, text)
+
+    def setAtInt(tag: AttributeTag, int: Int): Unit = {
+      def setValue(attr: Attribute): Unit = {
+        attr.removeValues()
+        attr.addValue(int)
+      }
+      DicomUtil.findAllTag(stakitt, tag).foreach(setValue)
+    }
 
     val date = c090.get(TagByName.AcquisitionDate).getSingleStringValueOrEmptyString()
 
@@ -217,7 +290,11 @@ object MakeMinimalStakitt {
     setAt(TagByName.InstanceCreationTime, newTimeStakitt)
     setAt(TagByName.AcquisitionTime, newTimeStakitt)
     setAt(TagByName.ContentTime, newTimeStakitt)
+
+    setAtInt(TagByName.ReferencedBeamNumber, stakittBeamNumber)
   }
+
+  // ----------------------------------------------------------------------------------------
 
   private def writeDicom(): Unit = {
     val outDir = new File(dir, "OUT_" + Util.currentTimeAsFileName)
