@@ -8,7 +8,6 @@ import edu.umro.ScalaUtil.DicomUtil
 import org.aqa.Logging
 import org.aqa.webrun.ExtendedData
 import org.aqa.Util
-import org.aqa.web.ViewOutput
 import org.aqa.web.WebUtil
 import org.aqa.webrun.psm.PSMBeamAnalysisResult
 import org.aqa.webrun.psm.PSMCharts
@@ -102,7 +101,6 @@ class PSMMainHTML(
         color = Some(Color.white)
       )
 
-
       val ffNormalizedTimesBeamResponsesRow = {
 
         val image = {
@@ -127,7 +125,6 @@ class PSMMainHTML(
         )
       }
 
-
       val beamResponsesWithNormalizationImg: DicomImage = {
 
         val centerResponse = grid.centerBeam.mean_cu.toFloat
@@ -151,7 +148,7 @@ class PSMMainHTML(
         resultList = resultList,
         color = Some(Color.white)
       )
-      */
+       */
 
       val psmRow: Option[PSMHtmlImage] = {
         if (psmImg.isDefined)
@@ -261,11 +258,6 @@ class PSMMainHTML(
           </div>
           <div class="col-md-3">
             {beamType}
-          </div>
-          <div class="col-md-2">
-            <p style="margin-top:9px;">
-              <a href={ViewOutput.viewOutputUrl(psmRunReq.floodField.outputPK)}>View Flood Field</a>
-            </p>
           </div>
           <div class="col-md-1">
             <p style="margin-top:9px;">
