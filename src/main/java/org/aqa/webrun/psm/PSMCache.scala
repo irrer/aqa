@@ -9,16 +9,17 @@ import org.aqa.Logging
 
 import java.awt.geom.Point2D
 import java.security.InvalidParameterException
+import java.text.SimpleDateFormat
 import java.util.Date
 
 /**
- * Cache PSM and flood field data.
- */
+  * Cache PSM and flood field data.
+  */
 object PSMCache extends Logging {
 
   /**
-   * Values stored in this cache.
-   */
+    * Values stored in this cache.
+    */
   case class PSMGridWithFF(psmGrid: PSMGrid, floodField: FloodField) {
 
     private def meanOfNormalizedFloodField_cu(xCenter_mm: Double, yCenter_mm: Double): Double = {
@@ -49,24 +50,23 @@ object PSMCache extends Logging {
     /** Mean CU of center area of normalized flood beam. */
     val floodCenter_cu: Double = meanOfNormalizedFloodField_cu(psmGrid.centerBeam.xCenter_mm, psmGrid.centerBeam.yCenter_mm)
 
-
-    def ffTimesPSMTop(): Double = {
+    private def ffTimesPSMTop(): Double = {
       psmGrid.topBeam.mean_cu * psmGrid.topBeam.getFloodField_cu(this)
     }
 
-    def ffTimesPSMBottom(): Double = {
+    private def ffTimesPSMBottom(): Double = {
       psmGrid.bottomBeam.mean_cu * psmGrid.bottomBeam.getFloodField_cu(this)
     }
 
-    def ffTimesPSMLeft(): Double = {
+    private def ffTimesPSMLeft(): Double = {
       psmGrid.leftBeam.mean_cu * psmGrid.leftBeam.getFloodField_cu(this)
     }
 
-    def ffTimesPSMRight(): Double = {
+    private def ffTimesPSMRight(): Double = {
       psmGrid.rightBeam.mean_cu * psmGrid.rightBeam.getFloodField_cu(this)
     }
 
-    def ffTimesPSMCenter(): Double = {
+    private def ffTimesPSMCenter(): Double = {
       psmGrid.centerBeam.mean_cu * psmGrid.centerBeam.getFloodField_cu(this)
     }
 
@@ -109,14 +109,20 @@ object PSMCache extends Logging {
       }
 
 
-      // find a PSM that was captured after the flood field but before the given date.
+      // find a PSM that was captured after the flood field but before or on the given date.  "on the date" means that the PSM was captured on the same day.
       val psm = {
         if (floodField.isEmpty)
           None
         else {
           // True if PSM was captured after the flood field but before the given date.
           def qualifies(psmGrid: PSMGrid): Boolean = {
-            (psmGrid.dataDate_ms < dataDate.getTime) &&
+            val endOfDay_ms = {
+              val dateFormat = new SimpleDateFormat("yyyyMMdd")
+              val startOfDay = dateFormat.parse(dateFormat.format(dataDate))
+              val next = startOfDay.getTime + (24 * 60 * 60 * 1000)
+              next
+            }
+            (psmGrid.dataDate_ms < endOfDay_ms) &&
               (psmGrid.dataDate_ms > floodField.get.dataDate_ms) &&
               spansAreApproximatelyEqual(psmGrid.span) &&
               diametersAreApproximatelyEqual()
