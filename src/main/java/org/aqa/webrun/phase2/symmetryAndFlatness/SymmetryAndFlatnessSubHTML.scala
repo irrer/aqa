@@ -420,8 +420,8 @@ object SymmetryAndFlatnessSubHTML extends Logging {
           val psmOutputPK = beamData.symmetryAndFlatness.psmGridWithFFFrom().get.psmGrid.centerBeam.outputPK
           val ffOutputPK = beamData.symmetryAndFlatness.psmGridWithFFFrom().get.floodField.outputPK
           <p title="Click to view PSM" style="text-align: center;">
-            <a href={ViewOutput.viewOutputUrl(psmOutputPK)}>PSM</a>
-            <a href={ViewOutput.viewOutputUrl(ffOutputPK)} style="white-space: nowrap;">Flood Field</a>
+            <a href={ViewOutput.viewOutputUrl(psmOutputPK)} title="Click to view PSM" >PSM</a>
+            <a href={ViewOutput.viewOutputUrl(ffOutputPK)} style="white-space: nowrap;" title="Click to view Flood Field" >Flood Field</a>
           </p>
         }
       }
