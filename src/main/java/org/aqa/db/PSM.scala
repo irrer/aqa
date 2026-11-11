@@ -35,7 +35,6 @@ case class PSM(
     psmPK: Option[Long], // primary key
     outputPK: Long, // output primary key
     imageHash_md5: String, // MD5 hash of image bytes
-    floodFieldImageHash_md5: String, // Image hash of flood field from which this was derived
     xMax_mm: Double, // X coordinate of maximum point determined by bicubic interpolation in mm
     yMax_mm: Double, // Y coordinate of maximum point determined by bicubic interpolation in mm
     Rows: Int, // Number of rows in the image.  DICOM metadata 0028,0010
@@ -76,33 +75,6 @@ case class PSM(
     new DicomImage(pixels)
   }
 
-  private var floodFieldDicom: Option[AttributeList] = None
-
-  private var floodFieldScaled: Option[DicomImage] = None
-
-  def getFloodFieldDicom: AttributeList = {
-    if (floodFieldDicom.isEmpty) {
-      // get the flood field as a scaled DICOM image.  Do this is separate steps so that if there is an exception it will point to the problem
-      val machinePK = Output.get(outputPK).get.machinePK.get
-      val ffSeq = FloodField.getByImageHash(machinePK, floodFieldImageHash_md5)
-      val ff = ffSeq.head
-      val ffDicom = ff.dicom
-      floodFieldDicom = Some(ffDicom)
-    }
-    floodFieldDicom.get
-  }
-
-  def getFloodFieldScaled: DicomImage = {
-    if (floodFieldScaled.isEmpty) {
-      // get the flood field as a scaled DICOM image.  Do this is separate steps so that if there is an exception it will point to the problem
-      val ffDicom = getFloodFieldDicom
-      val image = new DicomImage(ffDicom)
-      val scaled = image.scalePixels(ffDicom)
-      floodFieldScaled = Some(scaled) // save for next time
-    }
-    floodFieldScaled.get
-  }
-
   override def toString: String = {
 
     val centerPixelsScaled = PSMUtil.centerPixelsToString(imageScaled)
@@ -110,7 +82,6 @@ case class PSM(
     "    psmPK: " + psmPK + "\n" +
       "    outputPK: " + outputPK + "\n" +
       "    imageHash_md5: " + imageHash_md5.take(16) + "...\n" +
-      "    floodFieldImageHash_md5: " + floodFieldImageHash_md5.take(16) + "...\n" +
       "    xMax_mm: " + Util.fmtDbl(xMax_mm) + "\n" +
       "    yMax_mm: " + Util.fmtDbl(yMax_mm) + "\n" +
       "    Rows: " + Rows + "\n" +
@@ -152,7 +123,6 @@ object PSM extends Logging {
         psmPK.?,
         outputPK,
         imageHash_md5,
-        floodFieldImageHash_md5,
         xMax_mm,
         yMax_mm,
         Rows,
@@ -256,7 +226,6 @@ object PSM extends Logging {
       psmPK = None,
       outputPK = outputPK,
       imageHash_md5 = imageHash_md5,
-      floodFieldImageHash_md5 = floodFieldImageHash_md5,
       xMax_mm = xMax_mm,
       yMax_mm = yMax_mm,
       Rows = Rows,
