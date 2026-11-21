@@ -28,7 +28,7 @@ class SSAnalysis(extendedData: ExtendedData, wlMap: WLMap, isoCheck: WLIsoCheck,
     * @return cells for common content.
     */
   private def gantryAnglePrefix(gantry: Int, collimator: Int): Seq[Elem] = {
-    val beam = wlMap.find(gantry, collimator, 0).get
+    val beam = wlMap.find(gantry, collimator).get
     val elemList = Seq(
       toHtml(beam.gantryAngleRounded), /*     A */
       toHtml(beam.collimatorAngleRounded), /* B */
@@ -137,8 +137,8 @@ class SSAnalysis(extendedData: ExtendedData, wlMap: WLMap, isoCheck: WLIsoCheck,
       "ISO-Z", /*                       N2 */
       "Gantry flex", /*                 O2 */
       "Coll-Gantry-misalign", /*        P2 */
-      "MLC-dx", /*                      Q2 */
-      "MLC-dy" /*                       R2 */
+      "", /*                      Q2 */
+      "" /*                       R2 */
     )
 
     val titleList2 = Seq("X (mm)", "Y (mm)", "Z (mm)") /* V2 to X2 */
@@ -146,9 +146,7 @@ class SSAnalysis(extendedData: ExtendedData, wlMap: WLMap, isoCheck: WLIsoCheck,
     <tr>
       {makeRowIndex(2)}
       {titleList1.map(toHtml(_)) /*   A2 to R2 */}
-      {toHtml(isoCheck.mlcOffsetX) /* S2 */}
-      {toHtml(isoCheck.mlcOffsetY) /* T2 */}
-      {blankCell /*                   U2 */}
+      {blankCells(4) /*               S2 to U2 */}
       {titleList2.map(toHtml(_)) /*   V2 to X2 */}
       {blankCell /*                   Y2 */}
     </tr>
@@ -166,10 +164,7 @@ class SSAnalysis(extendedData: ExtendedData, wlMap: WLMap, isoCheck: WLIsoCheck,
       {toHtml(isoCheck.isoZ) /*                                 N3 */}
       {toHtml(isoCheck.gantryFlex) /*                           O3 */}
       {toHtml(isoCheck.collGantryMisalign) /*                   P3 */}
-      {toHtml(isoCheck.mlcDxG__0_C_90) /*                       Q3 */}
-      {toHtml(isoCheck.mlcDyG__0_C_90) /*                       R3 */}
-      {toHtml(isoCheck.mlcOffsetX_090) /*                       S3 */}
-      {toHtml(isoCheck.mlcOffsetY_090) /*                       T3 */}
+      {blankCells(4) /*                                   Q3 to T3 */}
       {toHtml("CBCT origin relative to BB at Table zero") /*    U3 */}
       {toHtml(0.0) /*                                           V3 */}
       {toHtml(0.0) /*                                           W3 */}
@@ -181,12 +176,8 @@ class SSAnalysis(extendedData: ExtendedData, wlMap: WLMap, isoCheck: WLIsoCheck,
   private def makeRow4: Elem = {
     <tr>
       {makeRowIndex(4)}
-      {gantryAnglePrefix(0, 270) /*               A4 to H4 */}
-      {blankCells(8) /*                                            I4 to P4 */}
-      {toHtml(isoCheck.mlcDxG__0_C270) /*                          Q4 */}
-      {toHtml(isoCheck.mlcDyG__0_C270) /*                          R4 */}
-      {toHtml(isoCheck.mlcOffsetX_270) /*                          S4 */}
-      {toHtml(isoCheck.mlcOffsetY_270) /*                          T4 */}
+      {gantryAnglePrefix(0, 270) /*                          A4 to H4 */}
+      {blankCells(12) /*                                     I4 to T4 */}
       {toHtml("Gantry isocenter relative to BB at Table zero") /*  U4 */}
       {toHtml(isoCheck.isoX) /*                                    V4 */}
       {toHtml(isoCheck.isoY) /*                                    W4 */}
@@ -202,10 +193,7 @@ class SSAnalysis(extendedData: ExtendedData, wlMap: WLMap, isoCheck: WLIsoCheck,
       {blankCell /*                                          I5 */}
       {toHtml(isoCheck.collYG_90) /*                         J5 */}
       {toHtml(isoCheck.collZG_90) /*                         K5 */}
-      {blankCells(5) /*                                      L5 to P5 */}
-      {toHtml(isoCheck.mlcDxG_90_C_90) /*                    Q5 */}
-      {toHtml(isoCheck.mlcDyG_90_C_90) /*                    R5 */}
-      {blankCells(2) /*                                      S5 to T5 */}
+      {blankCells(9) /*                                      L5 to T5 */}
       {toHtml("Table axis relative to BB at Table zero") /*  U5 */}
       {if (hasIt) toHtml(isoTable.get.get_IsoTable_X_Optimized) else blankCell /*          V5 */}
       {blankCell /*                                          S5 to T5 */}
@@ -223,9 +211,7 @@ class SSAnalysis(extendedData: ExtendedData, wlMap: WLMap, isoCheck: WLIsoCheck,
       {toHtml("ΔY") /*                               N6 */}
       {toHtml("ΔZ") /*                               O6 */}
       {blankCell /*                                  P6 */}
-      {toHtml(isoCheck.mlcDxG_90_C270) /*            Q6 */}
-      {toHtml(isoCheck.mlcDyG_90_C270) /*            R6 */}
-      {blankCells(7) /*                              S6 to Y6 */}
+      {blankCells(9) /*                              Q6 to Y6 */}
     </tr>
   }
 
@@ -238,9 +224,7 @@ class SSAnalysis(extendedData: ExtendedData, wlMap: WLMap, isoCheck: WLIsoCheck,
       {toHtml(isoCheck.isoYRange) /*                 N7 */}
       {toHtml(isoCheck.isoZRange) /*                 O7 */}
       {blankCell /*                                  P7 */}
-      {toHtml(isoCheck.mlcDxG180_C__0) /*            Q7 */}
-      {toHtml(isoCheck.mlcDyG180_C__0) /*            R7 */}
-      {blankCells(7) /*                              S7 to Y7 */}
+      {blankCells(9) /*                              Q7 to Y7 */}
     </tr>
   }
 
@@ -254,9 +238,7 @@ class SSAnalysis(extendedData: ExtendedData, wlMap: WLMap, isoCheck: WLIsoCheck,
       {blankCells(3) /*                              L8 to N8 */}
       {toHtmlPeach(isoCheck.gantryIsocentricity) /*  O8 */}
       {toHtml("Gantry Isocentricity") /*             P8 */}
-      {toHtml(isoCheck.mlcDxG180_C_90) /*            Q8 */}
-      {toHtml(isoCheck.mlcDyG180_C_90) /*            R8 */}
-      {blankCells(7) /*                              S8 to Y8 */}
+      {blankCells(9) /*                              Q8 to Y8 */}
     </tr>
   }
 
@@ -264,10 +246,7 @@ class SSAnalysis(extendedData: ExtendedData, wlMap: WLMap, isoCheck: WLIsoCheck,
     <tr>
       {makeRowIndex(9)}
       {gantryAnglePrefix(180, 270) /* A9 to H9 */}
-      {blankCells(8) /*                              I9 to P9 */}
-      {toHtml(isoCheck.mlcDxG180_C270) /*            Q9 */}
-      {toHtml(isoCheck.mlcDyG180_C270) /*            R9 */}
-      {blankCells(7) /*                              S9 to Y9 */}
+      {blankCells(17) /*              I9 to Y9 */}
     </tr>
   }
 
@@ -278,10 +257,7 @@ class SSAnalysis(extendedData: ExtendedData, wlMap: WLMap, isoCheck: WLIsoCheck,
       {blankCell /*                                  I10 */}
       {toHtml(isoCheck.collYG270) /*                 J10 */}
       {toHtml(isoCheck.collZG270) /*                 K10 */}
-      {blankCells(5) /*                              L10 to P10 */}
-      {toHtml(isoCheck.mlcDxG270_C_90) /*            Q10 */}
-      {toHtml(isoCheck.mlcDyG270_C_90) /*            R10 */}
-      {blankCells(7) /*                              S10 to Y10 */}
+      {blankCells(14) /*                             L10 to Y10 */}
     </tr>
   }
 
@@ -289,10 +265,7 @@ class SSAnalysis(extendedData: ExtendedData, wlMap: WLMap, isoCheck: WLIsoCheck,
     <tr>
       {makeRowIndex(11)}
       {gantryAnglePrefix(270, 270) /* A11 to H11 */}
-      {blankCells(8) /*                              I11 to P11 */}
-      {toHtml(isoCheck.mlcDxG270_C270) /*            Q11 */}
-      {toHtml(isoCheck.mlcDyG270_C270) /*            R11 */}
-      {blankCells(7) /*                              S11 to Y11 */}
+      {blankCells(17) /*                             I11 to Y11 */}
     </tr>
   }
 

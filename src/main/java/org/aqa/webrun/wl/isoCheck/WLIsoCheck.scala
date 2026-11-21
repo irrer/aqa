@@ -102,7 +102,15 @@ case class WLIsoCheck(
    * Analysis P3  spreadsheet coordinates
    * Analysis P3 ((I3-L3) + (J5-M3) + (L3-I8) + (M3-J10)) / 4
    */
-  val collGantryMisalign: Double = Seq(collXG__0 - isoX, collYG_90 - isoY, isoX - collXG180, isoY - collYG270).sum / 4
+  val collGantryMisalign: Double = {
+    val list = Seq( //
+      G__0_C270_caX - G__0_C_90_caX,
+      G_90_C270_caY - G_90_C_90_caY,
+      G180_C270_caX - G180_C_90_caX,
+      G270_C270_caY - G270_C_90_caY
+    )
+    list.sum / list.size
+  }
 
   // ------------------------------------------------------------------------------------------
   // mlcDx
@@ -218,18 +226,18 @@ object WLIsoCheck extends Logging {
   def make(wlMap: WLMap): Option[WLIsoCheck] = {
 
     // @formatter:off
-    val G__0_C_90_T__0: Option[WinstonLutzGeneric] = wlMap.find(  0,  90,   0)
-    val G__0_C270_T__0: Option[WinstonLutzGeneric] = wlMap.find(  0, 270,   0)
+    val G__0_C_90_T__0: Option[WinstonLutzGeneric] = wlMap.find(  0,  90)
+    val G__0_C270_T__0: Option[WinstonLutzGeneric] = wlMap.find(  0, 270)
 
-    val G_90_C_90_T__0: Option[WinstonLutzGeneric] = wlMap.find( 90,  90,   0)
-    val G_90_C270_T__0: Option[WinstonLutzGeneric] = wlMap.find( 90, 270,   0)
+    val G_90_C_90_T__0: Option[WinstonLutzGeneric] = wlMap.find( 90,  90)
+    val G_90_C270_T__0: Option[WinstonLutzGeneric] = wlMap.find( 90, 270)
 
-    val G180_C__0_T__0: Option[WinstonLutzGeneric] = wlMap.find(180,   0,   0)
-    val G180_C_90_T__0: Option[WinstonLutzGeneric] = wlMap.find(180,  90,   0)
-    val G180_C270_T__0: Option[WinstonLutzGeneric] = wlMap.find(180, 270,   0)
+    val G180_C__0_T__0: Option[WinstonLutzGeneric] = wlMap.find(180,   0)
+    val G180_C_90_T__0: Option[WinstonLutzGeneric] = wlMap.find(180,  90)
+    val G180_C270_T__0: Option[WinstonLutzGeneric] = wlMap.find(180, 270)
 
-    val G270_C_90_T__0: Option[WinstonLutzGeneric] = wlMap.find(270,  90,   0)
-    val G270_C270_T__0: Option[WinstonLutzGeneric] = wlMap.find(270, 270,   0)
+    val G270_C_90_T__0: Option[WinstonLutzGeneric] = wlMap.find(270,  90)
+    val G270_C270_T__0: Option[WinstonLutzGeneric] = wlMap.find(270, 270)
     // @formatter:on
 
     // list of all files required for WL IsoCheck
